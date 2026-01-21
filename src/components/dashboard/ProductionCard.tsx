@@ -76,10 +76,10 @@ export function ProductionCard({ delay = 0 }: { delay?: number }) {
 
   return (
     <div
-      className="bg-card rounded-xl p-6 shadow-sm border border-border card-hover animate-fade-in-up"
+      className="bg-card rounded-xl p-4 shadow-sm border border-border card-hover animate-fade-in-up"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-primary" />
           <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">
@@ -91,15 +91,15 @@ export function ProductionCard({ delay = 0 }: { delay?: number }) {
         </span>
       </div>
 
-      <div className="flex items-baseline gap-2 mb-4">
-        <span className="text-4xl font-bold text-foreground">
+      <div className="flex items-baseline gap-2 mb-3">
+        <span className="text-3xl font-bold text-foreground">
           {formatNumber(displayValue)}
         </span>
         <span className="text-muted-foreground">/ {formatNumber(target)}</span>
       </div>
 
       {/* Progress Bar */}
-      <div className="h-2 bg-muted rounded-full overflow-hidden mb-6">
+      <div className="h-2 bg-muted rounded-full overflow-hidden mb-4">
         <div
           className="h-full bg-primary rounded-full transition-all duration-1000 ease-out"
           style={{ width: `${progressWidth}%` }}
@@ -107,7 +107,7 @@ export function ProductionCard({ delay = 0 }: { delay?: number }) {
       </div>
 
       {/* Lines */}
-      <div className="flex gap-8 mb-4">
+      <div className="flex gap-8 mb-3">
         {lines.map((line, index) => (
           <div
             key={line.name}
