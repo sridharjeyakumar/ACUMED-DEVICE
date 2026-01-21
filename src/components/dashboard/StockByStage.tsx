@@ -63,18 +63,18 @@ export function StockByStage({ delay = 0 }: { delay?: number }) {
 
   return (
     <div
-      className="bg-card rounded-xl p-6 shadow-sm border border-border card-hover animate-fade-in-up"
+      className="bg-card rounded-xl p-4 shadow-sm border border-border card-hover animate-fade-in-up"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-3">
         <Package className="w-5 h-5 text-primary" />
         <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">
           Stock by Stage
         </h3>
       </div>
 
-      <div className="text-center mb-4">
-        <span className="text-4xl font-bold text-foreground">
+      <div className="text-center mb-3">
+        <span className="text-3xl font-bold text-foreground">
           {formatNumber(displayValue)}
         </span>
         <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">
@@ -83,7 +83,7 @@ export function StockByStage({ delay = 0 }: { delay?: number }) {
       </div>
 
       {/* Segmented Progress Bar */}
-      <div className="h-3 bg-muted rounded-full overflow-hidden flex mb-6">
+      <div className="h-2 bg-muted rounded-full overflow-hidden flex mb-4">
         {stages.map((stage, index) => (
           <div
             key={stage.label}
