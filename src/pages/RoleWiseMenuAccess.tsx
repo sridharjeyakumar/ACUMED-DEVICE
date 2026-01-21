@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface MenuAccess {
@@ -125,6 +126,8 @@ const RoleWiseMenuAccess = () => {
                         </div>
                     </motion.div>
 
+                    <StatsCards />
+
                     {/* Search Bar */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -199,8 +202,8 @@ const RoleWiseMenuAccess = () => {
                                                             <span
                                                                 key={i}
                                                                 className={`px-3 py-1 rounded-md text-xs font-medium ${access.startsWith('+')
-                                                                        ? 'bg-muted text-muted-foreground'
-                                                                        : 'bg-muted/50 text-foreground border border-border'
+                                                                    ? 'bg-muted text-muted-foreground'
+                                                                    : 'bg-muted/50 text-foreground border border-border'
                                                                     }`}
                                                             >
                                                                 {access}

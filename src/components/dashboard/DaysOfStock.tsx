@@ -41,8 +41,9 @@ export const DaysOfStock = ({ delay = 0 }: DaysOfStockProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: delay / 1000 }}
+            className="h-full"
         >
-            <Card className="p-6 bg-card border-border/50 shadow-lg hover:shadow-xl transition-all duration-300">
+            <Card className="p-6 bg-card border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 h-full">
                 <div className="flex items-center gap-2 mb-6">
                     <div className="p-2 bg-primary/10 rounded-lg">
                         <Calendar className="h-5 w-5 text-primary" />

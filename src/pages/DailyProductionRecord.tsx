@@ -3,7 +3,8 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Calendar, Download, Settings2, ChevronDown } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, FileBarChart, Calendar, Download, Settings2, ChevronDown } from "lucide-react";
+import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface DailyRecord {
@@ -123,6 +124,8 @@ const DailyProductionRecord = () => {
                             </Button>
                         </div>
                     </motion.div>
+
+                    <StatsCards />
 
                     {/* Search and Filter Bar */}
                     <motion.div

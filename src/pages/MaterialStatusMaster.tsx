@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Minus, ChevronDown } from "lucide-react";
+import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface MaterialStatus {
@@ -119,6 +120,8 @@ const MaterialStatusMaster = () => {
                         </div>
                     </motion.div>
 
+                    <StatsCards />
+
                     {/* Search and Filter Bar */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -214,8 +217,8 @@ const MaterialStatusMaster = () => {
                                                 <td className="px-6 py-4">
                                                     <span
                                                         className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${status.active
-                                                                ? "bg-green-100 text-green-700"
-                                                                : "bg-red-100 text-red-700"
+                                                            ? "bg-green-100 text-green-700"
+                                                            : "bg-red-100 text-red-700"
                                                             }`}
                                                     >
                                                         <div className={`w-1.5 h-1.5 rounded-full ${status.active ? "bg-green-600" : "bg-red-600"}`} />

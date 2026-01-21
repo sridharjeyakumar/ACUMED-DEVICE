@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Minus, ChevronDown } from "lucide-react";
+import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ProductStatus {
@@ -127,6 +128,8 @@ const ProductStatusMaster = () => {
                         </div>
                     </motion.div>
 
+                    <StatsCards />
+
                     {/* Search and Filter Bar */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -205,8 +208,8 @@ const ProductStatusMaster = () => {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {status.stockEffect === "ADD" ? (
-                                                        <span className="inline-flex px-3 py-1 rounded-sm text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">
-                                                            ADD STOCK
+                                                        <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 uppercase tracking-wider">
+                                                            ADD
                                                         </span>
                                                     ) : (
                                                         <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">

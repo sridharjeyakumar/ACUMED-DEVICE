@@ -3,7 +3,8 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Settings2, Download, Calendar } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Settings2, Download, Calendar, Pencil, Upload, ChevronDown } from "lucide-react";
+import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ProductionUpdateRecord {
@@ -149,6 +150,8 @@ const ProductionUpdate = () => {
                         </div>
                     </motion.div>
 
+                    <StatsCards />
+
                     {/* Search and Filter Bar */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -278,8 +281,8 @@ const ProductionUpdate = () => {
                                                 </td>
                                                 <td className="px-4 py-4">
                                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${record.status === "COMPLETED"
-                                                            ? "bg-green-100 text-green-700"
-                                                            : "bg-blue-100 text-blue-700"
+                                                        ? "bg-green-100 text-green-700"
+                                                        : "bg-blue-100 text-blue-700"
                                                         }`}>
                                                         {record.status}
                                                     </span>

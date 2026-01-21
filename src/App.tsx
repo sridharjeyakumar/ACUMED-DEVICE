@@ -19,6 +19,15 @@ import ProductionRejectedUpdate from "./pages/ProductionRejectedUpdate";
 import ProductionUpdate from "./pages/ProductionUpdate";
 import ProductMovement from "./pages/ProductMovement";
 import MaterialMovement from "./pages/MaterialMovement";
+import MaterialMaster from "./pages/MaterialMaster";
+import ProductionCapacity from "./pages/ProductionCapacity";
+import PackSizeMaster from "./pages/PackSizeMaster";
+import CartonTypeMaster from "./pages/CartonTypeMaster";
+import CartonCapacityMaster from "./pages/CartonCapacityMaster";
+import ProductBOM from "./pages/ProductBOM";
+import PackingBOM from "./pages/PackingBOM";
+import CollectionBinMaster from "./pages/CollectionBinMaster";
+import EmployeeMaster from "./pages/EmployeeMaster";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +41,15 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/company-master" element={<CompanyMaster />} />
           <Route path="/product-master" element={<ProductMaster />} />
+          <Route path="/material-master" element={<MaterialMaster />} />
+          <Route path="/production-capacity" element={<ProductionCapacity />} />
+          <Route path="/pack-size-master" element={<PackSizeMaster />} />
+          <Route path="/carton-type-master" element={<CartonTypeMaster />} />
+          <Route path="/carton-capacity-master" element={<CartonCapacityMaster />} />
+          <Route path="/product-bom" element={<ProductBOM />} />
+          <Route path="/packing-bom" element={<PackingBOM />} />
+          <Route path="/collection-bin-master" element={<CollectionBinMaster />} />
+          <Route path="/employee-master" element={<EmployeeMaster />} />
           <Route path="/role-master" element={<RoleMaster />} />
           <Route path="/role-wise-menu-access" element={<RoleWiseMenuAccess />} />
           <Route path="/product-status-master" element={<ProductStatusMaster />} />
