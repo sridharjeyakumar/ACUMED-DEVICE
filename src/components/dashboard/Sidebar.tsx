@@ -16,13 +16,25 @@ import {
   List,
   Settings,
   ChevronDown,
+  Trash2,
+  Shield,
+  ShieldCheck,
+  UserCircle,
+  Target,
+  Upload,
+  AlertCircle,
+  FileBarChart,
+  TrendingUp,
+  PackageOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link, useLocation } from "react-router-dom";
 
 interface NavItem {
   icon: React.ElementType;
   label: string;
   active?: boolean;
+  href?: string;
 }
 
 interface NavSection {
@@ -32,14 +44,14 @@ interface NavSection {
 
 const navSections: NavSection[] = [
   {
-    items: [{ icon: LayoutDashboard, label: "Dashboard", active: true }],
+    items: [{ icon: LayoutDashboard, label: "Dashboard", active: true, href: "/" }],
   },
   {
     title: "CONFIGURATION",
     items: [
-      { icon: Building2, label: "Company Master" },
-      { icon: Users, label: "Role Master" },
-      { icon: Key, label: "Role wise Menu Access" },
+      { icon: Building2, label: "Company Master", href: "/company-master" },
+      { icon: Users, label: "Role Master", href: "/role-master" },
+      { icon: Key, label: "Role wise Menu Access", href: "/role-wise-menu-access" },
       { icon: CheckCircle2, label: "Product Status Master" },
       { icon: XCircle, label: "Product Rejection Type Master" },
       { icon: Package, label: "Material Status Master" },
@@ -49,7 +61,7 @@ const navSections: NavSection[] = [
   {
     title: "MASTER",
     items: [
-      { icon: Package, label: "Product Master" },
+      { icon: Package, label: "Product Master", href: "/product-master" },
       { icon: Layers, label: "Material Master" },
       { icon: Factory, label: "Production Capacity" },
       { icon: Box, label: "Pack Size Master" },
@@ -57,12 +69,27 @@ const navSections: NavSection[] = [
       { icon: Archive, label: "Carton Capacity Master" },
       { icon: FileText, label: "Product BOM" },
       { icon: List, label: "Packing BOM" },
+      { icon: Trash2, label: "Collection Bin Master" },
+      { icon: ShieldCheck, label: "Product Status Master" },
+      { icon: Shield, label: "Material Status Master" },
+      { icon: UserCircle, label: "Employee Master" },
+    ],
+  },
+  {
+    title: "TRANSACTION",
+    items: [
+      { icon: Target, label: "Monthly Production Target", href: "/monthly-production-target" },
+      { icon: Upload, label: "Production Update" },
+      { icon: AlertCircle, label: "Production Rejected Update" },
+      { icon: FileBarChart, label: "Daily Production Record" },
+      { icon: TrendingUp, label: "Product movement" },
+      { icon: PackageOpen, label: "Material movement" },
     ],
   },
 ];
 
 export function Sidebar() {
-  const [expandedSections, setExpandedSections] = useState<string[]>(["CONFIGURATION", "MASTER"]);
+  const [expandedSections, setExpandedSections] = useState<string[]>(["CONFIGURATION", "MASTER", "TRANSACTION"]);
 
   const toggleSection = (title: string) => {
     setExpandedSections((prev) =>
@@ -75,12 +102,10 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-4 border-b border-sidebar-border animate-fade-in-up">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-lg">$</span>
-          </div>
+          <img src="/logo.png" alt="Acumed Devices Logo" className="w-10 h-10 object-contain" />
           <div>
             <h1 className="font-semibold text-foreground text-sm">ACUMED DEVICES</h1>
-            <p className="text-xs text-sidebar-muted">UNIT 01 PRODUCTION</p>
+            <p className="text-[10px] text-sidebar-muted leading-tight">Production & Inventory Management System</p>
           </div>
         </div>
       </div>
@@ -111,8 +136,8 @@ export function Sidebar() {
                     className="animate-slide-in-left"
                     style={{ animationDelay: `${itemIndex * 50}ms` }}
                   >
-                    <a
-                      href="#"
+                    <Link
+                      to={item.href || "#"}
                       className={cn(
                         "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                         item.active
@@ -122,7 +147,7 @@ export function Sidebar() {
                     >
                       <item.icon className="w-5 h-5" />
                       {item.label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
