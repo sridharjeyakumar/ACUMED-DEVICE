@@ -22,19 +22,22 @@ const Index = () => {
         <Header onRefresh={handleRefresh} />
         
         <div className="p-6" key={refreshKey}>
-          {/* Top Stats Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <ProductionCard delay={0} />
-            <StockByStage delay={150} />
-            <ActiveAlerts delay={300} />
-          </div>
-
-          {/* Bottom Row */}
+          {/* Main Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
+            {/* Left Column - Production & Chart */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <ProductionCard delay={0} />
+                <StockByStage delay={150} />
+              </div>
               <WeeklyChart delay={450} />
             </div>
-            <RawMaterialsStock delay={600} />
+
+            {/* Right Column - Alerts & Raw Materials */}
+            <div className="space-y-6">
+              <ActiveAlerts delay={300} />
+              <RawMaterialsStock delay={600} />
+            </div>
           </div>
         </div>
       </main>
