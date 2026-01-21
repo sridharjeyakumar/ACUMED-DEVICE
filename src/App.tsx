@@ -10,6 +10,15 @@ import ProductMaster from "./pages/ProductMaster";
 import RoleMaster from "./pages/RoleMaster";
 import MonthlyProductionTarget from "./pages/MonthlyProductionTarget";
 import RoleWiseMenuAccess from "./pages/RoleWiseMenuAccess";
+import ProductStatusMaster from "./pages/ProductStatusMaster";
+import ProductRejectionTypeMaster from "./pages/ProductRejectionTypeMaster";
+import MaterialStatusMaster from "./pages/MaterialStatusMaster";
+import MaterialRejectionTypeMaster from "./pages/MaterialRejectionTypeMaster";
+import DailyProductionRecord from "./pages/DailyProductionRecord";
+import ProductionRejectedUpdate from "./pages/ProductionRejectedUpdate";
+import ProductionUpdate from "./pages/ProductionUpdate";
+import ProductMovement from "./pages/ProductMovement";
+import MaterialMovement from "./pages/MaterialMovement";
 
 const queryClient = new QueryClient();
 
@@ -25,7 +34,16 @@ const App = () => (
           <Route path="/product-master" element={<ProductMaster />} />
           <Route path="/role-master" element={<RoleMaster />} />
           <Route path="/role-wise-menu-access" element={<RoleWiseMenuAccess />} />
+          <Route path="/product-status-master" element={<ProductStatusMaster />} />
+          <Route path="/product-rejection-type-master" element={<ProductRejectionTypeMaster />} />
+          <Route path="/material-status-master" element={<MaterialStatusMaster />} />
+          <Route path="/material-rejection-type-master" element={<MaterialRejectionTypeMaster />} />
           <Route path="/monthly-production-target" element={<MonthlyProductionTarget />} />
+          <Route path="/daily-production-record" element={<DailyProductionRecord />} />
+          <Route path="/production-rejected-update" element={<ProductionRejectedUpdate />} />
+          <Route path="/production-update" element={<ProductionUpdate />} />
+          <Route path="/product-movement" element={<ProductMovement />} />
+          <Route path="/material-movement" element={<MaterialMovement />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
