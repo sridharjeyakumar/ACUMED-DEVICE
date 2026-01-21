@@ -71,7 +71,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
+    <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col fixed top-0 left-0 z-40">
       {/* Logo */}
       <div className="p-4 border-b border-sidebar-border animate-fade-in-up">
         <div className="flex items-center gap-3">
