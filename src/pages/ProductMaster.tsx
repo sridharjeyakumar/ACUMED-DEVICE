@@ -33,21 +33,30 @@ const ProductMaster = () => {
 
     const products: Product[] = [
         {
-            id: "PRD-001",
-            name: "Cotton Tissue Sachet 24s",
-            shortname: "Cotton-TS",
-            weightPerPiece: 0.5,
-            uom: "KG",
-            wipesPerKG: 48,
+            id: "P0001",
+            name: "DUVET Wipes",
+            shortname: "-",
+            weightPerPiece: 2.7,
+            uom: "gms",
+            wipesPerKG: 370,
             status: "Active",
         },
         {
-            id: "PRD-002",
-            name: "Cotton Tissue Sachet 12s",
-            shortname: "Cotton-TS-12",
-            weightPerPiece: 0.25,
-            uom: "KG",
-            wipesPerKG: 48,
+            id: "P0002",
+            name: "DUVET XL Wipes",
+            shortname: "-",
+            weightPerPiece: 3.2,
+            uom: "gms",
+            wipesPerKG: 313,
+            status: "Active",
+        },
+        {
+            id: "P0003",
+            name: "DUVET Ultra Wipes",
+            shortname: "-",
+            weightPerPiece: 3.5,
+            uom: "gms",
+            wipesPerKG: 286,
             status: "Active",
         },
     ];
@@ -82,26 +91,25 @@ const ProductMaster = () => {
         <div className="flex min-h-screen bg-background">
             <Sidebar />
 
-            <main className="flex-1 overflow-auto ml-64">
-                <div className="p-8">
-                    {/* Page Header */}
+            <main className="flex-1 overflow-auto lg:ml-64">
+                <div className="p-4 md:p-6 lg:p-8">
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="mb-8"
+                        className="mb-6 md:mb-8"
                     >
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div>
-                                <h1 className="text-3xl font-bold text-foreground mb-2">Product Master</h1>
-                                <p className="text-muted-foreground">Manage and configure product catalog</p>
+                                <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Product Master</h1>
+                                <p className="text-sm md:text-base text-muted-foreground">Manage and configure product catalog</p>
                             </div>
                             <Button
                                 onClick={() => setIsAddModalOpen(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all w-full md:w-auto"
                             >
                                 <Plus className="w-5 h-5" />
-                                Add New Product
+                                <span className="whitespace-nowrap">Add New Product</span>
                             </Button>
                         </div>
                     </motion.div>
@@ -113,24 +121,24 @@ const ProductMaster = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
-                        className="mb-6"
+                        className="mb-4 md:mb-6"
                     >
-                        <Card className="p-4">
-                            <div className="flex items-center gap-4">
+                        <Card className="p-3 md:p-4">
+                            <div className="flex items-center gap-2 md:gap-4">
                                 <div className="flex-1 relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 md:w-5 md:h-5" />
                                     <Input
                                         type="text"
                                         placeholder="Search products..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10 pr-4 py-2 w-full"
+                                        className="pl-9 md:pl-10 pr-3 md:pr-4 py-2 w-full text-sm md:text-base"
                                     />
                                 </div>
-                                <span className="text-sm text-muted-foreground">
+                                <span className="hidden md:inline-block text-xs md:text-sm text-muted-foreground whitespace-nowrap">
                                     SHOWING 1-{filteredProducts.length} OF {products.length}
                                 </span>
-                                <Button variant="outline" size="icon">
+                                <Button variant="outline" size="icon" className="h-9 w-9 md:h-10 md:w-10">
                                     <Filter className="w-4 h-4" />
                                 </Button>
                             </div>
@@ -148,12 +156,12 @@ const ProductMaster = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">Product ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">Product Name</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">Shortname</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">Weight/Piece</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">UOM</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">Wipes/KG</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">product_id</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">product_name</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">product_shortname</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">weight per piece</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">uom</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">wipes per KG</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">Status</th>
                                         </tr>
                                     </thead>
@@ -173,9 +181,8 @@ const ProductMaster = () => {
                                                 <td className="px-6 py-4 text-sm">{product.uom}</td>
                                                 <td className="px-6 py-4 text-sm">{product.wipesPerKG}</td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${product.status === "Active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                                                        }`}>
-                                                        {product.status}
+                                                    <span className="text-sm font-semibold">
+                                                        TRUE
                                                     </span>
                                                 </td>
                                             </motion.tr>

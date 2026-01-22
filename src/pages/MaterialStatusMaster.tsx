@@ -11,7 +11,7 @@ interface MaterialStatus {
     id: string;
     name: string;
     description: string;
-    effectType: "ERROR" | "SUBTRACT"; // ERROR = Bold Text, SUBTRACT = Red Minus
+    effectType: "ADD" | "SUBTRACT";
     seqNo: number;
     active: boolean;
 }
@@ -28,44 +28,52 @@ const MaterialStatusMaster = () => {
 
     const materialStatuses: MaterialStatus[] = [
         {
-            id: "MS-001",
-            name: "Raw Material Available",
-            description: "READY FOR PRODUCTION USAGE",
-            effectType: "ERROR",
+            id: "RS",
+            name: "Receipt from Supplier",
+            description: "",
+            effectType: "ADD",
             seqNo: 1,
             active: true,
         },
         {
-            id: "MS-002",
-            name: "QC Pending",
-            description: "AWAITING QUALITY INSPECTION",
-            effectType: "ERROR",
+            id: "IP",
+            name: "Issued to production",
+            description: "",
+            effectType: "SUBTRACT",
             seqNo: 2,
             active: true,
         },
         {
-            id: "MS-003",
-            name: "In Transit",
-            description: "MOVING BETWEEN WAREHOUSE UNITS",
+            id: "RT",
+            name: "Returned to Supplier",
+            description: "",
             effectType: "SUBTRACT",
-            seqNo: 3,
-            active: true,
-        },
-        {
-            id: "MS-004",
-            name: "Scrapped",
-            description: "REMOVED FROM INVENTORY",
-            effectType: "ERROR",
             seqNo: 4,
             active: true,
         },
         {
-            id: "MS-005",
-            name: "On Hold",
-            description: "BLOCKED DUE TO DOCUMENTATION",
-            effectType: "SUBTRACT",
+            id: "RR",
+            name: "Return Receipt",
+            description: "",
+            effectType: "ADD",
             seqNo: 5,
-            active: false,
+            active: true,
+        },
+        {
+            id: "A1",
+            name: "Adjustment (Add)",
+            description: "",
+            effectType: "ADD",
+            seqNo: 6,
+            active: true,
+        },
+        {
+            id: "A2",
+            name: "Adjustment (Reduce)",
+            description: "",
+            effectType: "SUBTRACT",
+            seqNo: 7,
+            active: true,
         },
     ];
 
@@ -171,11 +179,11 @@ const MaterialStatusMaster = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">MAT STATUS ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">MATERIAL STATUS</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">EFFECT IN STOCK</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">SEQ NO.</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ACTIVE</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">prod status id</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">product status</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">effect in stock</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">seq no.</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">active</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -188,41 +196,28 @@ const MaterialStatusMaster = () => {
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm text-muted-foreground font-mono">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {status.id}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <div>
-                                                        <p className="text-sm font-bold text-foreground">{status.name}</p>
-                                                        <p className="text-[10px] text-muted-foreground uppercase font-medium mt-0.5">{status.description}</p>
-                                                    </div>
+                                                    <span className="text-sm font-semibold text-foreground">{status.name}</span>
                                                 </td>
-                                                <td className="px-6 py-4 pl-10">
-                                                    {status.effectType === "ERROR" ? (
-                                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                                            ERROR
-                                                        </span>
+                                                <td className="px-6 py-4">
+                                                    {status.effectType === "ADD" ? (
+                                                        <span className="text-sm font-semibold text-foreground">+</span>
                                                     ) : (
-                                                        <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center -ml-2">
-                                                            <Minus className="w-4 h-4 text-red-500" />
-                                                        </div>
+                                                        <span className="text-sm font-semibold text-foreground">-</span>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm font-bold text-foreground ml-4">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {status.seqNo}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span
-                                                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${status.active
-                                                            ? "bg-green-100 text-green-700"
-                                                            : "bg-red-100 text-red-700"
-                                                            }`}
-                                                    >
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${status.active ? "bg-green-600" : "bg-red-600"}`} />
-                                                        {status.active ? "YES" : "NO"}
+                                                    <span className="text-sm font-semibold text-foreground">
+                                                        Y
                                                     </span>
                                                 </td>
                                             </motion.tr>

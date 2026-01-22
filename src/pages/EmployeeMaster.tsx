@@ -12,16 +12,17 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 interface EmployeeRecord {
     id: string;
     empId: string;
-    firstName: string;
-    lastName: string;
-    gender: string;
-    bloodGroup: string;
-    department: string;
+    empName: string;
+    password: string;
     location: string;
-    mobile: string;
-    doj: string; // Date of Joining
-    status: "ACTIVE" | "INACTIVE";
-    imageUrl?: string;
+    department: string;
+    gender: string;
+    mobileNo: string;
+    dob: string;
+    doj: string;
+    dol: string;
+    photo: string;
+    status: "Active" | "Resigned";
 }
 
 const EmployeeMaster = () => {
@@ -43,79 +44,83 @@ const EmployeeMaster = () => {
     const records: EmployeeRecord[] = [
         {
             id: "1",
-            empId: "EMP - 1024",
-            firstName: "Arjun",
-            lastName: "Sharma",
-            gender: "MALE",
-            bloodGroup: "O+ POSITIVE",
-            department: "PRODUCTION",
-            location: "Mumbai Unit 01",
-            mobile: "+91 98765 43210",
-            doj: "12 Oct 2021",
-            status: "ACTIVE",
-            imageUrl: "https://i.pravatar.cc/150?u=arjun",
+            empId: "E-001",
+            empName: "JAMES P.M",
+            password: "encrypted",
+            location: "Corporate",
+            department: "Corporate",
+            gender: "M",
+            mobileNo: "",
+            dob: "",
+            doj: "",
+            dol: "",
+            photo: "",
+            status: "Active",
         },
         {
             id: "2",
-            empId: "EMP - 1056",
-            firstName: "Priya",
-            lastName: "Patel",
-            gender: "FEMALE",
-            bloodGroup: "B+ POSITIVE",
-            department: "QC DEPARTMENT",
-            location: "Pune Plant B",
-            mobile: "+91 99887 76655",
-            doj: "05 Jan 2022",
-            status: "ACTIVE",
-            imageUrl: "https://i.pravatar.cc/150?u=priya",
+            empId: "E-002",
+            empName: "JEROME M.J",
+            password: "encrypted",
+            location: "Corporate",
+            department: "Corporate",
+            gender: "M",
+            mobileNo: "",
+            dob: "",
+            doj: "",
+            dol: "",
+            photo: "",
+            status: "Active",
         },
         {
             id: "3",
-            empId: "EMP - 0982",
-            firstName: "Rohan",
-            lastName: "Deshmukh",
-            gender: "MALE",
-            bloodGroup: "AB- NEGATIVE",
-            department: "ENGINEERING",
-            location: "Mumbai Unit 01",
-            mobile: "+91 90011 22334",
-            doj: "15 Mar 2020",
-            status: "INACTIVE",
-            imageUrl: "https://i.pravatar.cc/150?u=rohan",
+            empId: "E-003",
+            empName: "SURESH",
+            password: "encrypted",
+            location: "Factory",
+            department: "Production",
+            gender: "M",
+            mobileNo: "",
+            dob: "",
+            doj: "",
+            dol: "############",
+            photo: "",
+            status: "Resigned",
         },
         {
             id: "4",
-            empId: "EMP - 1102",
-            firstName: "Saira",
-            lastName: "Khan",
-            gender: "FEMALE",
-            bloodGroup: "A+ POSITIVE",
-            department: "SUPPLY CHAIN",
-            location: "Nagpur Logistics",
-            mobile: "+91 88877 66554",
-            doj: "30 Aug 2023",
-            status: "ACTIVE",
-            imageUrl: "https://i.pravatar.cc/150?u=saira",
+            empId: "E-201",
+            empName: "RAMESH",
+            password: "encrypted",
+            location: "Factory",
+            department: "Production",
+            gender: "M",
+            mobileNo: "",
+            dob: "",
+            doj: "",
+            dol: "",
+            photo: "",
+            status: "Active",
         },
         {
             id: "5",
-            empId: "EMP - 1044",
-            firstName: "Vijay",
-            lastName: "Iyer",
-            gender: "MALE",
-            bloodGroup: "O- NEGATIVE",
-            department: "ADMINISTRATION",
-            location: "Mumbai Unit 01",
-            mobile: "+91 77665 44332",
-            doj: "21 Jun 2019",
-            status: "ACTIVE",
-            imageUrl: "https://i.pravatar.cc/150?u=vijay",
+            empId: "E-2002",
+            empName: "KALAIVANI",
+            password: "encrypted",
+            location: "Factory",
+            department: "Packing",
+            gender: "F",
+            mobileNo: "",
+            dob: "",
+            doj: "",
+            dol: "",
+            photo: "",
+            status: "Active",
         },
     ];
 
     const filteredRecords = records.filter((item) =>
-        item.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.empName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.empId.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -221,15 +226,18 @@ const EmployeeMaster = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PHOTO</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-20">EMP ID</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">EMP NAME</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">DEPARTMENT</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">LOCATION</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">MOBILE NO</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-20">emp id</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">emp name</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">password</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">location</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">department</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">gender</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">mobile no</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">DOB</th>
                                             <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">DOJ</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">STATUS</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">ACTIONS</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">DOL</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">photo</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">status</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -242,48 +250,44 @@ const EmployeeMaster = () => {
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
                                                 <td className="px-6 py-4 align-middle">
-                                                    <Avatar>
-                                                        <AvatarImage src={item.imageUrl} alt={item.firstName} />
-                                                        <AvatarFallback>{item.firstName[0]}{item.lastName[0]}</AvatarFallback>
-                                                    </Avatar>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-xs font-bold text-blue-600 block whitespace-nowrap">
+                                                    <span className="text-sm font-semibold text-blue-600">
                                                         {item.empId}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 align-middle">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-foreground mb-1">{item.firstName} {item.lastName}</span>
-                                                        <span className="text-[10px] font-medium text-gray-500 uppercase tracking-tight">{item.gender} • {item.bloodGroup}</span>
-                                                    </div>
+                                                    <span className="text-sm font-semibold text-foreground">{item.empName}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.password}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.location}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.department}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center align-middle">
-                                                    <span className="inline-block bg-gray-100 text-gray-700 font-bold text-[10px] px-2 py-1 rounded">
-                                                        {item.department}
-                                                    </span>
+                                                    <span className="text-sm font-semibold text-foreground">{item.gender}</span>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-foreground align-middle">
-                                                    {item.location}
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.mobileNo}</span>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm font-medium text-foreground align-middle whitespace-nowrap">
-                                                    {item.mobile}
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.dob}</span>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm font-medium text-foreground align-middle whitespace-nowrap">
-                                                    {item.doj}
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.doj}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.dol}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.photo}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center align-middle">
-                                                    <span className={`inline-block font-bold text-[10px] px-3 py-1 rounded-full ${item.status === 'ACTIVE'
-                                                        ? 'bg-green-50 text-green-600 border border-green-100'
-                                                        : 'bg-red-50 text-red-600 border border-red-100'
-                                                        }`}>
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {item.status}
                                                     </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center align-middle">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600">
-                                                        <Pencil className="w-4 h-4" />
-                                                    </Button>
                                                 </td>
                                             </motion.tr>
                                         ))}

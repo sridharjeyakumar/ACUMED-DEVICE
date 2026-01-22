@@ -15,7 +15,7 @@ interface MachineRecord {
     section: string;
     shortName: string;
     qtyPerMin: number;
-    uom: "UNITS" | "PACKS" | "CARTONS";
+    uom: "NOS" | "PACKS" | "CARTONS";
     avgHrsPerDay: number;
 }
 
@@ -35,53 +35,23 @@ const ProductionCapacity = () => {
     const machines: MachineRecord[] = [
         {
             id: "1",
-            machineId: "MAC-001",
-            machineName: "High-Speed Injection Molding",
-            section: "SECTION A - PLASTIC COMPONENT",
-            shortName: "INJ-HS-01",
-            qtyPerMin: 45,
-            uom: "UNITS",
-            avgHrsPerDay: 18.5,
+            machineId: "MAC1",
+            machineName: "Machine 1",
+            section: "",
+            shortName: "Machine 1",
+            qtyPerMin: 80,
+            uom: "NOS",
+            avgHrsPerDay: 6,
         },
         {
             id: "2",
-            machineId: "MAC-002",
-            machineName: "Blister Packaging Line",
-            section: "SECTION B - STERILE PACKING",
-            shortName: "BLIST-PKG-02",
-            qtyPerMin: 120,
-            uom: "PACKS",
-            avgHrsPerDay: 16.0,
-        },
-        {
-            id: "3",
-            machineId: "MAC-003",
-            machineName: "Automated Laser Cutter",
-            section: "SECTION A - PRECISION TOOLS",
-            shortName: "LSR-CUT-03",
-            qtyPerMin: 12,
-            uom: "UNITS",
-            avgHrsPerDay: 20.0,
-        },
-        {
-            id: "4",
-            machineId: "MAC-004",
-            machineName: "Carton Sealing Machine",
-            section: "SECTION C - LOGISTIC READY",
-            shortName: "CRT-SEAL-04",
-            qtyPerMin: 5,
-            uom: "CARTONS",
-            avgHrsPerDay: 12.5,
-        },
-        {
-            id: "5",
-            machineId: "MAC-005",
-            machineName: "Final Inspection Table",
-            section: "SECTION B - QUALITY CONTROL",
-            shortName: "QC-TAB-05",
-            qtyPerMin: 15,
-            uom: "UNITS",
-            avgHrsPerDay: 14.0,
+            machineId: "MAC2",
+            machineName: "Machine 2",
+            section: "",
+            shortName: "Machine 2",
+            qtyPerMin: 80,
+            uom: "NOS",
+            avgHrsPerDay: 6,
         },
     ];
 
@@ -205,13 +175,12 @@ const ProductionCapacity = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">MACHINE ID</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">MACHINE NAME</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">MACHINE SHORT NAME</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PROD QTY PER MINUTE</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">UOM</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">AVG PROD HRS PER DAY</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">ACTIONS</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">machine_id</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">machine name</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">machine short name</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">prod qty per minute</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">uom</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Avg Prod Hrs per day</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -227,29 +196,19 @@ const ProductionCapacity = () => {
                                                     {machine.machineId}
                                                 </td>
                                                 <td className="px-6 py-6 align-middle">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-foreground mb-1">{machine.machineName}</span>
-                                                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">{machine.section}</span>
-                                                    </div>
+                                                    <span className="text-sm font-semibold text-foreground">{machine.machineName}</span>
                                                 </td>
                                                 <td className="px-6 py-6 text-sm text-foreground align-middle">
                                                     {machine.shortName}
                                                 </td>
-                                                <td className="px-6 py-6 text-sm font-bold text-foreground text-center align-middle">
+                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
                                                     {machine.qtyPerMin}
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-middle">
-                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${getUomBadgeStyle(machine.uom)}`}>
-                                                        {machine.uom}
-                                                    </span>
+                                                    <span className="text-sm font-semibold">NOS</span>
                                                 </td>
-                                                <td className="px-6 py-6 text-sm font-bold text-foreground text-center align-middle">
+                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
                                                     {machine.avgHrsPerDay}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600">
-                                                        <Pencil className="w-4 h-4" />
-                                                    </Button>
                                                 </td>
                                             </motion.tr>
                                         ))}

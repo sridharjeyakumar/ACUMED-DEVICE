@@ -14,7 +14,7 @@ interface BinRecord {
     binName: string;
     location: string;
     shortName: string;
-    binType: "HAZARDOUS" | "RECYCLABLE" | "SCRAP" | "REWORK" | "GENERAL";
+    binType: "collection" | "Rejected";
     colorName: string;
     colorHex: string;
     tareWeight: number;
@@ -39,63 +39,39 @@ const CollectionBinMaster = () => {
     const records: BinRecord[] = [
         {
             id: "1",
-            binId: "BIN-HZM-01",
-            binName: "Hazardous Medical Bin",
-            location: "SECTION A-4 FLOOR",
-            shortName: "HZM01",
-            binType: "HAZARDOUS",
-            colorName: "Signal Red",
-            colorHex: "#EF4444", // Red-500
-            tareWeight: 2.50,
-            capacity: 25.00,
+            binId: "1",
+            binName: "Product collection Bin 1",
+            location: "",
+            shortName: "Bin 1",
+            binType: "collection",
+            colorName: "Blue",
+            colorHex: "#3B82F6",
+            tareWeight: 5,
+            capacity: 50,
         },
         {
             id: "2",
-            binId: "BIN-REC-02",
-            binName: "Plastic Recyclable",
-            location: "LOADING DOCK",
-            shortName: "REC02",
-            binType: "RECYCLABLE",
-            colorName: "Deep Blue",
-            colorHex: "#3B82F6", // Blue-500
-            tareWeight: 1.80,
-            capacity: 15.00,
+            binId: "2",
+            binName: "Product collection Bin 2",
+            location: "",
+            shortName: "Bin 2",
+            binType: "collection",
+            colorName: "Blue",
+            colorHex: "#3B82F6",
+            tareWeight: 5,
+            capacity: 50,
         },
         {
             id: "3",
-            binId: "BIN-SCR-05",
-            binName: "Metal Scrap Container",
-            location: "MAIN ASSEMBLY",
-            shortName: "SCR05",
-            binType: "SCRAP",
-            colorName: "Graphite Gray",
-            colorHex: "#6B7280", // Gray-500
-            tareWeight: 5.20,
-            capacity: 50.00,
-        },
-        {
-            id: "4",
-            binId: "BIN-REW-09",
-            binName: "Rework Station Box",
-            location: "QC LAB ENTRY",
-            shortName: "REW09",
-            binType: "REWORK",
-            colorName: "Caution Yellow",
-            colorHex: "#EAB308", // Yellow-500
-            tareWeight: 1.20,
-            capacity: 10.00,
-        },
-        {
-            id: "5",
-            binId: "BIN-GEN-04",
-            binName: "General Purpose Bin",
-            location: "STAFF LOUNGE",
-            shortName: "GEN04",
-            binType: "GENERAL",
-            colorName: "Emerald Green",
-            colorHex: "#10B981", // Green-500
-            tareWeight: 2.10,
-            capacity: 30.00,
+            binId: "91",
+            binName: "Rejected collection Bin 91",
+            location: "",
+            shortName: "Rej Bin 91",
+            binType: "Rejected",
+            colorName: "Red",
+            colorHex: "#EF4444",
+            tareWeight: 5,
+            capacity: 50,
         },
     ];
 
@@ -223,14 +199,13 @@ const CollectionBinMaster = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">BIN ID</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">BIN NAME</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">BIN SHORT NAME</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">BIN TYPE</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">COLOR</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">TARE WEIGHT (KG)</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">CAPACITY (KG)</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">ACTIONS</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">bin id</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">bin name</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">bin short name</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">bin type</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">color</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">tare weight kg</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">capacity kg</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -243,45 +218,31 @@ const CollectionBinMaster = () => {
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
                                                 <td className="px-6 py-6 align-middle">
-                                                    <span className="text-xs font-bold text-blue-600 block mb-1">
+                                                    <span className="text-sm font-semibold text-blue-600">
                                                         {item.binId}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-6 align-middle">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-foreground mb-1">{item.binName}</span>
-                                                        <span className="text-[10px] font-medium text-gray-400 uppercase tracking-tight">{item.location}</span>
-                                                    </div>
+                                                    <span className="text-sm font-semibold text-foreground">{item.binName}</span>
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="inline-block bg-gray-100 text-gray-700 font-bold text-[10px] px-2 py-1 rounded">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {item.shortName}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-middle">
-                                                    <span className={`inline-block font-bold text-[10px] px-2 py-1 rounded border ${getBadgeStyle(item.binType)}`}>
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {item.binType}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-6 text-sm font-medium text-foreground align-middle">
-                                                    <div className="flex items-center gap-2">
-                                                        <div
-                                                            className="w-3 h-3 rounded-full border border-black/10"
-                                                            style={{ backgroundColor: item.colorHex }}
-                                                        ></div>
-                                                        <span className="text-xs">{item.colorName}</span>
-                                                    </div>
+                                                <td className="px-6 py-6 text-sm font-semibold text-foreground align-middle">
+                                                    {item.colorName}
                                                 </td>
-                                                <td className="px-6 py-6 text-sm font-bold text-foreground text-center align-middle">
-                                                    {item.tareWeight.toFixed(2)}
+                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
+                                                    {item.tareWeight}
                                                 </td>
-                                                <td className="px-6 py-6 text-sm font-bold text-foreground text-center align-middle">
-                                                    {item.capacity.toFixed(2)}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600">
-                                                        <Pencil className="w-4 h-4" />
-                                                    </Button>
+                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
+                                                    {item.capacity}
                                                 </td>
                                             </motion.tr>
                                         ))}

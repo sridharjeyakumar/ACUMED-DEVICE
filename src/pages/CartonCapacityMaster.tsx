@@ -35,53 +35,63 @@ const CartonCapacityMaster = () => {
     const records: CartonCapacityRecord[] = [
         {
             id: "1",
-            capacityId: "CAP-STD-001",
-            capacityName: "Standard Export Bulk",
-            subtitle: "PRIMARY PACKAGING LINE",
-            shortName: "STD-BLK-500",
-            packSizeId: "PS-010",
-            materialId: "MAT-SS-316",
-            packsPerCarton: 500,
+            capacityId: "STER06",
+            capacityName: "Sterilization Carton - 6s",
+            subtitle: "",
+            shortName: "Sterilization Carton",
+            packSizeId: "PaCK06",
+            materialId: "PjM004",
+            packsPerCarton: 850,
         },
         {
             id: "2",
-            capacityId: "CAP-MED-042",
-            capacityName: "Medium Retail Shipper",
-            subtitle: "SECONDARY DISTRIBUTION",
-            shortName: "MED-RET-200",
-            packSizeId: "PS-025",
-            materialId: "MAT-PP-CLR",
-            packsPerCarton: 200,
+            capacityId: "STER12",
+            capacityName: "Sterilization Carton - 12s",
+            subtitle: "",
+            shortName: "Sterilization Carton",
+            packSizeId: "PaCK12",
+            materialId: "PjM004",
+            packsPerCarton: 412,
         },
         {
             id: "3",
-            capacityId: "CAP-LRG-015",
-            capacityName: "Large Hospital Pack",
-            subtitle: "DIRECT HOSPITAL SUPPLY",
-            shortName: "LRG-HSP-100",
-            packSizeId: "PS-050",
-            materialId: "MAT-GL-TY1",
-            packsPerCarton: 100,
+            capacityId: "STER24",
+            capacityName: "Sterilization Carton - 24s",
+            subtitle: "",
+            shortName: "Sterilization Carton",
+            packSizeId: "PaCK24",
+            materialId: "PjM004",
+            packsPerCarton: 206,
         },
         {
             id: "4",
-            capacityId: "CAP-SML-088",
-            capacityName: "Small Component Tray",
-            subtitle: "COMPONENT STORAGE",
-            shortName: "SML-CMP-1000",
-            packSizeId: "PS-001",
-            materialId: "MAT-AL-01",
-            packsPerCarton: 1000,
+            capacityId: "SHIP06",
+            capacityName: "Shipper Carton - 6s",
+            subtitle: "",
+            shortName: "Shipper Carton",
+            packSizeId: "PaCK06",
+            materialId: "PjM005",
+            packsPerCarton: 250,
         },
         {
             id: "5",
-            capacityId: "CAP-INT-054",
-            capacityName: "International Pouch Pack",
-            subtitle: "AIR FREIGHT OPTIMAL",
-            shortName: "INT-PCH-250",
-            packSizeId: "PS-025",
-            materialId: "MAT-TYV-90",
-            packsPerCarton: 250,
+            capacityId: "SHIP12",
+            capacityName: "Shipper Carton - 12s",
+            subtitle: "",
+            shortName: "Shipper Carton",
+            packSizeId: "PaCK12",
+            materialId: "PjM005",
+            packsPerCarton: 120,
+        },
+        {
+            id: "6",
+            capacityId: "SHIP24",
+            capacityName: "Shipper Carton - 24s",
+            subtitle: "",
+            shortName: "Shipper Carton",
+            packSizeId: "PaCK24",
+            materialId: "PjM005",
+            packsPerCarton: 60,
         },
     ];
 
@@ -200,13 +210,12 @@ const CartonCapacityMaster = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">CARTON CAPACITY ID</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">CARTON CAPACITY NAME</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">CARTON CAPACITY SHORTNAME</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PACK SIZE ID</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">MATERIAL ID</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PACKS PER CARTON</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">ACTIONS</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton_capacity_id</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton capacity name</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton capacity shortname</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">packsize_id</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material_id</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">packs per carton</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -218,37 +227,29 @@ const CartonCapacityMaster = () => {
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
-                                                <td className="px-6 py-6 text-sm font-bold text-blue-600 align-middle">
+                                                <td className="px-6 py-6 text-sm font-semibold text-blue-600 align-middle">
                                                     {item.capacityId}
                                                 </td>
                                                 <td className="px-6 py-6 align-middle">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-foreground mb-1">{item.capacityName}</span>
-                                                        <span className="text-[10px] font-medium text-gray-400 uppercase tracking-tight">{item.subtitle}</span>
-                                                    </div>
+                                                    <span className="text-sm font-semibold text-foreground">{item.capacityName}</span>
                                                 </td>
                                                 <td className="px-6 py-6 text-sm text-foreground align-middle">
                                                     {item.shortName}
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="inline-block bg-gray-100 text-gray-600 font-mono text-xs px-2 py-1 rounded">
+                                                    <span className="text-sm font-semibold text-blue-600">
                                                         {item.packSizeId}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="inline-block bg-gray-100 text-gray-600 font-mono text-xs px-2 py-1 rounded">
+                                                    <span className="text-sm font-semibold text-blue-600">
                                                         {item.materialId}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="inline-block bg-blue-50 text-blue-600 font-bold text-xs px-3 py-1 rounded-full border border-blue-100">
+                                                <td className={`px-6 py-6 text-center align-middle ${index === 0 ? 'bg-yellow-300' : ''}`}>
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {item.packsPerCarton}
                                                     </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600">
-                                                        <Pencil className="w-4 h-4" />
-                                                    </Button>
                                                 </td>
                                             </motion.tr>
                                         ))}

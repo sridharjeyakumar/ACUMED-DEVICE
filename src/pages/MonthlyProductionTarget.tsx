@@ -35,51 +35,75 @@ const MonthlyProductionTarget = () => {
     const targets: ProductionTarget[] = [
         {
             id: "1",
-            monthYear: "202312",
-            batchNo: "BT-2023-001",
-            productId: "ST-A200",
-            productName: "STENT A-SERIES",
-            packSizeId: "PK-10-UNIT",
-            targetQty: 5000,
-            actualQty: 5050,
-            remarks: "Standard batch",
-            finalRemarks: "Exceeded target by 1%",
+            monthYear: "202501",
+            batchNo: "DUVET002501",
+            productId: "P0001",
+            productName: "",
+            packSizeId: "PACK24",
+            targetQty: 41200,
+            actualQty: 41000,
+            remarks: "",
+            finalRemarks: "",
         },
         {
             id: "2",
-            monthYear: "202312",
-            batchNo: "BT-2023-002",
-            productId: "CT-G005",
-            productName: "CATHETER G-SERIES",
-            packSizeId: "PK-25-UNIT",
-            targetQty: 2500,
-            actualQty: 2100,
-            remarks: "Raw material delay",
-            finalRemarks: "Pending completion",
+            monthYear: "202501",
+            batchNo: "DUVET002501",
+            productId: "P0001",
+            productName: "",
+            packSizeId: "PACK12",
+            targetQty: 41200,
+            actualQty: 41000,
+            remarks: "",
+            finalRemarks: "",
         },
         {
             id: "3",
-            monthYear: "202312",
-            batchNo: "BT-2023-003",
-            productId: "VL-M010",
-            productName: "VALVE M-SERIES",
-            packSizeId: "PK-05-UNIT",
-            targetQty: 1200,
-            actualQty: 1200,
-            remarks: "Holiday schedule",
-            finalRemarks: "Target met exactly",
+            monthYear: "202501",
+            batchNo: "DUVET002501",
+            productId: "P0001",
+            productName: "",
+            packSizeId: "PACK06",
+            targetQty: 41200,
+            actualQty: 41000,
+            remarks: "",
+            finalRemarks: "",
         },
         {
             id: "4",
-            monthYear: "202311",
-            batchNo: "BT-2023-098",
-            productId: "ST-A200",
-            productName: "STENT A-SERIES",
-            packSizeId: "PK-10-UNIT",
-            targetQty: 4500,
-            actualQty: 4500,
-            remarks: "Full capacity",
-            finalRemarks: "Closed batch",
+            monthYear: "202501",
+            batchNo: "DUVET002501",
+            productId: "P0002",
+            productName: "",
+            packSizeId: "PaCK24",
+            targetQty: 41200,
+            actualQty: 41000,
+            remarks: "",
+            finalRemarks: "",
+        },
+        {
+            id: "5",
+            monthYear: "202501",
+            batchNo: "DUVETXL2501",
+            productId: "P0003",
+            productName: "",
+            packSizeId: "PaCK06",
+            targetQty: 41200,
+            actualQty: 41000,
+            remarks: "",
+            finalRemarks: "",
+        },
+        {
+            id: "6",
+            monthYear: "202501",
+            batchNo: "DUVETUL2501",
+            productId: "",
+            productName: "",
+            packSizeId: "",
+            targetQty: 0,
+            actualQty: 0,
+            remarks: "",
+            finalRemarks: "",
         },
     ];
 
@@ -206,14 +230,14 @@ const MonthlyProductionTarget = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">MONTH YEAR</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">BATCH NO.</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">PRODUCT ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">PACK SIZE ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">TARGET QTY</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ACTUAL QTY</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">REMARKS</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">FINAL REMARKS</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">month year (YYYYMM)</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">batch no.</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">remarks</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">product_id</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">packsize_id</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">target qty</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">actual qty</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">final</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -226,43 +250,42 @@ const MonthlyProductionTarget = () => {
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm font-bold text-foreground">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {target.monthYear}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm font-semibold text-blue-600 hover:underline cursor-pointer">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {target.batchNo}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <div>
-                                                        <p className="text-sm font-bold text-foreground">{target.productId}</p>
-                                                        <p className="text-[10px] text-muted-foreground uppercase font-medium">{target.productName}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm text-foreground">
-                                                        {target.packSizeId}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm font-bold text-foreground">
-                                                        {formatNumber(target.targetQty)}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`text-sm font-bold ${getActualQtyColor(target.actualQty, target.targetQty)}`}>
-                                                        {formatNumber(target.actualQty)}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm text-muted-foreground italic">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {target.remarks}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-xs text-muted-foreground">
+                                                    <span className="text-sm font-semibold text-foreground">
+                                                        {target.productId}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm font-semibold text-foreground">
+                                                        {target.packSizeId}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm font-semibold text-foreground">
+                                                        {target.targetQty || ''}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm font-semibold text-foreground">
+                                                        {target.actualQty || ''}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {target.finalRemarks}
                                                     </span>
                                                 </td>

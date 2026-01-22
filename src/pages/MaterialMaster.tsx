@@ -13,14 +13,16 @@ interface MaterialRecord {
     materialId: string;
     materialName: string;
     shortName: string;
-    type: "Raw Material" | "Packaging";
+    type: string;
     uom: string;
-    minStock: number;
-    reOrder: number;
-    safety: number;
-    minOrd: number;
-    ltMin: number;
-    ltMax: number;
+    minStock: number | string;
+    reOrder: number | string;
+    safety: number | string;
+    minOrd: number | string;
+    ltMin: number | string;
+    ltMax: number | string;
+    active: string;
+    kgsPerRoll: string;
 }
 
 const MaterialMaster = () => {
@@ -41,62 +43,23 @@ const MaterialMaster = () => {
     });
 
     const materials: MaterialRecord[] = [
-        {
-            id: "1",
-            materialId: "MAT-RM-001",
-            materialName: "Polypropylene Resin Grade A",
-            shortName: "PP-G1-RESIN",
-            type: "Raw Material",
-            uom: "KGs",
-            minStock: 500,
-            reOrder: 750,
-            safety: 200,
-            minOrd: 1000,
-            ltMin: 5,
-            ltMax: 10,
-        },
-        {
-            id: "2",
-            materialId: "MAT-PK-042",
-            materialName: "Sterile Barrier Film 400mm",
-            shortName: "ST-FILM-400",
-            type: "Packaging",
-            uom: "Roll",
-            minStock: 50,
-            reOrder: 100,
-            safety: 25,
-            minOrd: 20,
-            ltMin: 14,
-            ltMax: 21,
-        },
-        {
-            id: "3",
-            materialId: "MAT-RM-089",
-            materialName: "Titanium Rod Gr. 5 12mm",
-            shortName: "TI-RD-12MM",
-            type: "Raw Material",
-            uom: "Meters",
-            minStock: 100,
-            reOrder: 150,
-            safety: 50,
-            minOrd: 300,
-            ltMin: 30,
-            ltMax: 45,
-        },
-        {
-            id: "4",
-            materialId: "MAT-PK-102",
-            materialName: "Outer Carton BX-442",
-            shortName: "BX-442-OUT",
-            type: "Packaging",
-            uom: "Unit",
-            minStock: 2000,
-            reOrder: 3000,
-            safety: 500,
-            minOrd: 5000,
-            ltMin: 7,
-            ltMax: 10,
-        },
+        { id: "1", materialId: "PM-001", materialName: "Spunlace Nonwoven Fabric (65mm)", shortName: "Fabric (65mm)", type: "RM", uom: "KG", minStock: 1000, reOrder: 25, safety: "", minOrd: 1000, ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
+        { id: "2", materialId: "HM002", materialName: "Duvet Flexible Laminate", shortName: "Laminate Duvet", type: "RM", uom: "KG", minStock: 1000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
+        { id: "3", materialId: "PM-001", materialName: "Duvet Packing Carton - 24 pack", shortName: "Duvet 24s Pack", type: "PM", uom: "NOS", minStock: 100000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
+        { id: "4", materialId: "PM-002", materialName: "Duvet Packing Carton - 12 pack", shortName: "Duvet 12s Pack", type: "PM", uom: "NOS", minStock: 100000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
+        { id: "5", materialId: "PM-003", materialName: "Duvet Packing Carton - 6 pack", shortName: "Duvet 6s Pack", type: "PM", uom: "NOS", minStock: 100000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
+        { id: "6", materialId: "PM-014", materialName: "Sterilization Carton - Duvet", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
+        { id: "7", materialId: "PM-005", materialName: "Shipper Carton - Duvet", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
+        { id: "8", materialId: "PM-003", materialName: "Spunlace Nonwoven Fabric (120mm) for XL", shortName: "Fabric (120mm) for XL", type: "RM", uom: "KG", minStock: 1000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
+        { id: "9", materialId: "HM-014", materialName: "Duvet XL Flexible Laminate", shortName: "Laminate Duvet XL", type: "RM", uom: "KG", minStock: 1000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
+        { id: "10", materialId: "PM-006", materialName: "Duvet XL Packing Carton - 24 pack", shortName: "Duvet XL 24s Pack", type: "PM", uom: "NOS", minStock: 100000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
+        { id: "11", materialId: "PM-007", materialName: "Sterilization Carton - Duvet XL", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
+        { id: "12", materialId: "PM-008", materialName: "Shipper Carton - Duvet XL", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
+        { id: "13", materialId: "PM-005", materialName: "Spunlace Nonwoven Fabric (200mm) for Ultra", shortName: "Fabric (200mm) for Ultra", type: "RM", uom: "KG", minStock: 1000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
+        { id: "14", materialId: "HM-006", materialName: "Duvet Ultra Flexible Laminate", shortName: "Laminate Duvet Ultra", type: "RM", uom: "KG", minStock: 1000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
+        { id: "15", materialId: "PM-009", materialName: "Duvet Ultra Packing Carton - 6s pack", shortName: "Duvet Ultra 6s Pack", type: "PM", uom: "NOS", minStock: 100000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
+        { id: "16", materialId: "PM-010", materialName: "Sterilization Carton - Duvet Ultra", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
+        { id: "17", materialId: "PM-011", materialName: "Shipper Carton - Duvet Ultra", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
     ];
 
     const filteredMaterials = materials.filter((material) =>
@@ -218,17 +181,19 @@ const MaterialMaster = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">MATERIAL ID</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">MATERIAL NAME</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">SHORTNAME</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">TYPE</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">UOM</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">MIN STOCK</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">RE-ORDER</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">SAFETY</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">MIN ORD</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">LT MIN</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">LT MAX</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material_id</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material name</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Shortname</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material type</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">uom</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">min stock</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">re-order qty</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">safety stock</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">min order upin</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">Lead Time</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">Lead Time</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">Active</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">KGs per</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -241,53 +206,55 @@ const MaterialMaster = () => {
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
                                                 <td className="px-6 py-4 align-top">
-                                                    <span className="text-xs font-bold text-blue-600 hover:underline cursor-pointer">
+                                                    <span className="text-xs font-semibold text-blue-600">
                                                         {material.materialId}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 align-top">
-                                                    <span className="text-xs font-bold text-foreground">
+                                                    <span className="text-xs font-semibold text-foreground">
                                                         {material.materialName}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 align-top">
-                                                    <span className="text-xs text-muted-foreground uppercase">
+                                                    <span className="text-xs font-semibold text-foreground">
                                                         {material.shortName}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 align-top">
-                                                    <span className={`inline-block px-2 py-1 rounded-md text-[10px] font-medium leading-tight ${material.type === "Raw Material"
-                                                        ? "bg-blue-50 text-blue-700"
-                                                        : "bg-purple-50 text-purple-700"
-                                                        }`}>
+                                                    <span className="text-xs font-semibold text-foreground">
                                                         {material.type}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 align-top">
-                                                    <span className="text-xs text-foreground">
+                                                    <span className="text-xs font-semibold text-foreground">
                                                         {material.uom}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-center align-top">
-                                                    <span className="text-xs text-foreground font-medium">{material.minStock}</span>
+                                                <td className={`px-6 py-4 text-center align-top ${material.minStock === 25000 ? 'bg-yellow-300' : ''}`}>
+                                                    <span className="text-xs font-semibold text-foreground">{material.minStock}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center align-top">
-                                                    {/* Applying conditional styling as per mockup hint (red text) */}
-                                                    <span className={`text-xs font-medium ${material.reOrder > 700 ? 'text-red-500' : 'text-foreground'}`}>
+                                                    <span className="text-xs font-semibold text-foreground">
                                                         {material.reOrder}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center align-top">
-                                                    <span className="text-xs text-foreground font-medium">{material.safety}</span>
+                                                    <span className="text-xs font-semibold text-foreground">{material.safety}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center align-top">
-                                                    <span className="text-xs text-foreground font-medium">{material.minOrd}</span>
+                                                    <span className="text-xs font-semibold text-foreground">{material.minOrd}</span>
+                                                </td>
+                                                <td className={`px-6 py-4 text-center align-top ${material.ltMin === 7 ? 'bg-yellow-300' : ''}`}>
+                                                    <span className="text-xs font-semibold text-foreground">{material.ltMin}</span>
+                                                </td>
+                                                <td className={`px-6 py-4 text-center align-top ${material.ltMax === 10 ? 'bg-yellow-300' : ''}`}>
+                                                    <span className="text-xs font-semibold text-foreground">{material.ltMax}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center align-top">
-                                                    <span className="text-xs text-muted-foreground">{material.ltMin}</span>
+                                                    <span className="text-xs font-semibold text-foreground">{material.active}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center align-top">
-                                                    <span className="text-xs text-muted-foreground">{material.ltMax}</span>
+                                                    <span className="text-xs font-semibold text-foreground">{material.kgsPerRoll}</span>
                                                 </td>
                                             </motion.tr>
                                         ))}

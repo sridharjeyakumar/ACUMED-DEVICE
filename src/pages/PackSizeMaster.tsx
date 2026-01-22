@@ -31,43 +31,27 @@ const PackSizeMaster = () => {
     const packSizes: PackSizeRecord[] = [
         {
             id: "1",
-            packSizeId: "PS-100X",
-            packSizeName: "Standard 100 Unit Retail Pack",
-            division: "DIVISION: CONSUMER MEDICAL",
-            shortName: "ST-100-RP",
-            qtyPerCarton: 24,
+            packSizeId: "PaCK06",
+            packSizeName: "6s pack",
+            division: "",
+            shortName: "6s pack",
+            qtyPerCarton: 6,
         },
         {
             id: "2",
-            packSizeId: "PS-050B",
-            packSizeName: "Bulk Hospital 50 Pack",
-            division: "DIVISION: CLINICAL SUPPLIES",
-            shortName: "HOSP-50-BLK",
+            packSizeId: "PaCK12",
+            packSizeName: "12s pack",
+            division: "",
+            shortName: "12s pack",
             qtyPerCarton: 12,
         },
         {
             id: "3",
-            packSizeId: "PS-010S",
-            packSizeName: "Physician Sample 10 Pack",
-            division: "DIVISION: MARKETING",
-            shortName: "SMP-10-PHY",
-            qtyPerCarton: 50,
-        },
-        {
-            id: "4",
-            packSizeId: "PS-250E",
-            packSizeName: "Export Large 250 Unit Pack",
-            division: "DIVISION: INTERNATIONAL",
-            shortName: "EXP-250-LRG",
-            qtyPerCarton: 8,
-        },
-        {
-            id: "5",
-            packSizeId: "PS-001U",
-            packSizeName: "Single Unit Sterile Pack",
-            division: "DIVISION: SURGICAL DEVICES",
-            shortName: "SNG-01-STR",
-            qtyPerCarton: 100,
+            packSizeId: "PaCK24",
+            packSizeName: "24s pack",
+            division: "",
+            shortName: "24s pack",
+            qtyPerCarton: 24,
         },
     ];
 
@@ -180,11 +164,10 @@ const PackSizeMaster = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PACK SIZE ID</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PACK SIZE NAME</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PACK SHORT NAME</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">QTY PER CARTON</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">ACTIONS</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">packsize_id</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">packsize name</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">pack short name</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">qty per carton</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -196,25 +179,17 @@ const PackSizeMaster = () => {
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
-                                                <td className="px-6 py-6 text-sm font-bold text-blue-600 align-middle">
+                                                <td className="px-6 py-6 text-sm font-semibold text-blue-600 align-middle">
                                                     {item.packSizeId}
                                                 </td>
                                                 <td className="px-6 py-6 align-middle">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-foreground mb-1">{item.packSizeName}</span>
-                                                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">{item.division}</span>
-                                                    </div>
+                                                    <span className="text-sm font-semibold text-foreground">{item.packSizeName}</span>
                                                 </td>
                                                 <td className="px-6 py-6 text-sm text-foreground align-middle">
                                                     {item.shortName}
                                                 </td>
-                                                <td className="px-6 py-6 text-sm font-bold text-foreground text-center align-middle">
+                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
                                                     {item.qtyPerCarton}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600">
-                                                        <Pencil className="w-4 h-4" />
-                                                    </Button>
                                                 </td>
                                             </motion.tr>
                                         ))}

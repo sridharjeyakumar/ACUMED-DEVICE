@@ -3,9 +3,9 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Factory } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Factory, Menu } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Company {
     id: string;
@@ -20,6 +20,14 @@ const CompanyMaster = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedType, setSelectedType] = useState("All Types");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [formData, setFormData] = useState({
+        name: "",
+        type: "CORPORATE",
+        taxId: "",
+        address: "",
+        otherFields: "",
+    });
 
     const companies: Company[] = [
         {
@@ -71,31 +79,64 @@ const CompanyMaster = () => {
         return matchesSearch && matchesType;
     });
 
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log("Form submitted:", formData);
+        setIsAddModalOpen(false);
+        setFormData({
+            name: "",
+            type: "CORPORATE",
+            taxId: "",
+            address: "",
+            otherFields: "",
+        });
+    };
+
     return (
         <div className="flex min-h-screen bg-background">
-            <Sidebar />
+            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-            <main className="flex-1 overflow-auto ml-64">
+            <main className="flex-1 overflow-auto lg:ml-64 w-full">
+                {/* Mobile Header */}
+                <div className="lg:hidden sticky top-0 z-20 bg-background border-b border-border px-4 py-3 flex items-center gap-3">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSidebarOpen(true)}
+                        className="hover:bg-muted"
+                    >
+                        <Menu className="w-5 h-5" />
+                    </Button>
+                    <div className="flex items-center gap-2">
+                        <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+                        <h1 className="font-semibold text-sm">ACUMED DEVICES</h1>
+                    </div>
+                </div>
 
-                <div className="p-8">
+                <div className="p-4 sm:p-6 lg:p-8">
                     {/* Page Header */}
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="mb-8"
+                        className="mb-6 sm:mb-8"
                     >
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
-                                <h1 className="text-3xl font-bold text-foreground mb-2">Company Master</h1>
-                                <p className="text-muted-foreground">Configure and manage corporate entity profiles</p>
+                                <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Company Master</h1>
+                                <p className="text-sm sm:text-base text-muted-foreground">Configure and manage corporate entity profiles</p>
                             </div>
                             <Button
                                 onClick={() => setIsAddModalOpen(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all self-start sm:self-auto"
                             >
                                 <Plus className="w-5 h-5" />
-                                Add New Company
+                                <span className="hidden sm:inline">Add New Company</span>
+                                <span className="sm:hidden">Add Company</span>
                             </Button>
                         </div>
                     </motion.div>
@@ -110,7 +151,7 @@ const CompanyMaster = () => {
                         className="mb-6"
                     >
                         <Card className="p-4">
-                            <div className="flex items-center gap-4">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
                                 <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
@@ -121,20 +162,20 @@ const CompanyMaster = () => {
                                         className="pl-10 pr-4 py-2 w-full border-border focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                     <select
                                         value={selectedType}
                                         onChange={(e) => setSelectedType(e.target.value)}
-                                        className="px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="px-3 sm:px-4 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                     >
                                         <option>All Types</option>
                                         <option>CORPORATE</option>
                                         <option>FACTORY</option>
                                     </select>
-                                    <span className="text-sm text-muted-foreground ml-4">
-                                        SHOWING 1-5 OF 5
+                                    <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">
+                                        SHOWING 1-{filteredCompanies.length} OF {companies.length}
                                     </span>
-                                    <Button variant="outline" size="icon" className="ml-2">
+                                    <Button variant="outline" size="icon" className="hidden sm:flex">
                                         <Filter className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -153,19 +194,19 @@ const CompanyMaster = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                            <th className="text-left px-4 sm:px-6 py-3 sm:py-4 text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                                 ID
                                             </th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                            <th className="text-left px-4 sm:px-6 py-3 sm:py-4 text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                                 TYPE
                                             </th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                            <th className="text-left px-4 sm:px-6 py-3 sm:py-4 text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                                 COMPANY NAME
                                             </th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                            <th className="text-left px-4 sm:px-6 py-3 sm:py-4 text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">
                                                 ADDRESS
                                             </th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                            <th className="text-left px-4 sm:px-6 py-3 sm:py-4 text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">
                                                 OTHER FIELDS
                                             </th>
                                         </tr>
@@ -179,38 +220,38 @@ const CompanyMaster = () => {
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm text-muted-foreground font-mono">
+                                                <td className="px-4 sm:px-6 py-3 sm:py-4">
+                                                    <span className="text-xs sm:text-sm text-muted-foreground font-mono">
                                                         {company.id}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-4 sm:px-6 py-3 sm:py-4">
                                                     <span
-                                                        className={`inline - flex items - center px - 3 py - 1 rounded - full text - xs font - semibold ${company.type === "CORPORATE"
+                                                        className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold ${company.type === "CORPORATE"
                                                                 ? "bg-blue-100 text-blue-700"
                                                                 : "bg-green-100 text-green-700"
-                                                            } `}
+                                                            }`}
                                                     >
                                                         {company.type}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-4 sm:px-6 py-3 sm:py-4">
                                                     <div>
-                                                        <p className="text-sm font-semibold text-foreground">
+                                                        <p className="text-xs sm:text-sm font-semibold text-foreground">
                                                             {company.name}
                                                         </p>
-                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                                                             {company.taxId}
                                                         </p>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm text-foreground">
+                                                <td className="px-4 sm:px-6 py-3 sm:py-4 hidden md:table-cell">
+                                                    <span className="text-xs sm:text-sm text-foreground">
                                                         {company.address}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm text-muted-foreground italic">
+                                                <td className="px-4 sm:px-6 py-3 sm:py-4 hidden lg:table-cell">
+                                                    <span className="text-xs sm:text-sm text-muted-foreground italic">
                                                         {company.otherFields}
                                                     </span>
                                                 </td>
@@ -221,16 +262,18 @@ const CompanyMaster = () => {
                             </div>
 
                             {/* Pagination */}
-                            <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
-                                <span className="text-sm text-muted-foreground">PAGE 1 OF 1</span>
+                            <div className="border-t border-border px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-muted/20">
+                                <span className="text-xs sm:text-sm text-muted-foreground">PAGE 1 OF 1</span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" disabled>
-                                        <ChevronLeft className="w-4 h-4 mr-1" />
-                                        Previous
+                                    <Button variant="outline" size="sm" disabled className="text-xs">
+                                        <ChevronLeft className="w-3 sm:w-4 h-3 sm:h-4 mr-1" />
+                                        <span className="hidden sm:inline">Previous</span>
+                                        <span className="sm:hidden">Prev</span>
                                     </Button>
-                                    <Button variant="outline" size="sm" disabled>
-                                        Next
-                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                    <Button variant="outline" size="sm" disabled className="text-xs">
+                                        <span className="hidden sm:inline">Next</span>
+                                        <span className="sm:hidden">Next</span>
+                                        <ChevronRight className="w-3 sm:w-4 h-3 sm:h-4 ml-1" />
                                     </Button>
                                 </div>
                             </div>
@@ -238,6 +281,126 @@ const CompanyMaster = () => {
                     </motion.div>
                 </div>
             </main>
+
+            {/* Add Company Modal */}
+            <AnimatePresence>
+                {isAddModalOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsAddModalOpen(false)}
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-xl sm:text-2xl font-bold">Add New Company</h2>
+                                    <button
+                                        onClick={() => setIsAddModalOpen(false)}
+                                        className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Company Name <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input
+                                            name="name"
+                                            value={formData.name}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter company name"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Type <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="type"
+                                                value={formData.type}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                required
+                                            >
+                                                <option value="CORPORATE">CORPORATE</option>
+                                                <option value="FACTORY">FACTORY</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Tax ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="taxId"
+                                                value={formData.taxId}
+                                                onChange={handleInputChange}
+                                                placeholder="XX-XXX-XX"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Address
+                                        </label>
+                                        <Input
+                                            name="address"
+                                            value={formData.address}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter full address"
+                                        />
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Other Fields
+                                        </label>
+                                        <Input
+                                            name="otherFields"
+                                            value={formData.otherFields}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g., Established 1995"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setIsAddModalOpen(false)}
+                                            className="px-4 sm:px-6"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6"
+                                        >
+                                            Save Company
+                                        </Button>
+                                    </div>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

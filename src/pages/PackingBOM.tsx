@@ -37,58 +37,58 @@ const PackingBOM = () => {
     const records: PackingBOMRecord[] = [
         {
             id: "1",
-            bomId: "PK-BOM-001",
-            description: "Standard Retail Pack",
-            subtitle: "PRIMARY LOGISTICS",
-            packingFor: "Standard Export Unit",
-            productId: "PRD-ST-010",
-            packSizeId: "PS-10X",
-            materialId: "MAT-CRT-04",
-            packsPerCarton: 24,
+            bomId: "PBOM1",
+            description: "DUVET",
+            subtitle: "",
+            packingFor: "Packing",
+            productId: "P0001",
+            packSizeId: "PaCK24",
+            materialId: "PM001",
+            packsPerCarton: 1,
         },
         {
             id: "2",
-            bomId: "PK-BOM-002",
-            description: "Bulk Distribution 50",
-            subtitle: "WAREHOUSE TRANSFER",
-            packingFor: "Bulk Storage Container",
-            productId: "PRD-CH-042",
-            packSizeId: "PS-BULK",
-            materialId: "MAT-CRT-09",
-            packsPerCarton: 50,
+            bomId: "PBOM2",
+            description: "DUVET",
+            subtitle: "",
+            packingFor: "Packing",
+            productId: "P0001",
+            packSizeId: "PaCK12",
+            materialId: "PM002",
+            packsPerCarton: 1,
         },
         {
             id: "3",
-            bomId: "PK-BOM-003",
-            description: "Hospital Display Set",
-            subtitle: "SPECIAL PROMO LINE",
-            packingFor: "Point of Sale Pack",
-            productId: "PRD-GW-015",
-            packSizeId: "PS-DISP",
-            materialId: "MAT-BOX-21",
-            packsPerCarton: 12,
+            bomId: "PBOM3",
+            description: "DUVET",
+            subtitle: "",
+            packingFor: "Packing",
+            productId: "P0001",
+            packSizeId: "PaCK06",
+            materialId: "PM003",
+            packsPerCarton: 1,
         },
         {
             id: "4",
-            bomId: "PK-BOM-004",
-            description: "Trial Kit Assembly",
-            subtitle: "SAMPLE MANAGEMENT",
-            packingFor: "Starter Trial Box",
-            productId: "PRD-ST-010",
-            packSizeId: "PS-SAMPLE",
-            materialId: "MAT-ENV-01",
-            packsPerCarton: 5,
+            bomId: "PBOM4",
+            description: "DUVET XL",
+            subtitle: "",
+            packingFor: "Packing",
+            productId: "P0002",
+            packSizeId: "PaCK24",
+            materialId: "PM006",
+            packsPerCarton: 1,
         },
         {
             id: "5",
-            bomId: "PK-BOM-005",
-            description: "Double Wall Shipper",
-            subtitle: "HEAVY DUTY LINE",
-            packingFor: "Reinforced Outer Case",
-            productId: "PRD-CH-054",
-            packSizeId: "PS-100X",
-            materialId: "MAT-CRT-12",
-            packsPerCarton: 100,
+            bomId: "PBOM5",
+            description: "DUVET Ultra",
+            subtitle: "",
+            packingFor: "Packing",
+            productId: "P0003",
+            packSizeId: "PaCK06",
+            materialId: "PM009",
+            packsPerCarton: 1,
         },
     ];
 
@@ -208,14 +208,13 @@ const PackingBOM = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-32">BOM ID</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">BOM DESCRIPTION</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PACKING FOR</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PRODUCT ID</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PACK SIZE ID</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">MATERIAL ID</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-24">PACKS PER CARTON</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">ACTIONS</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-32">bom_id</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">bom description</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">packing for</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">product_id</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">packsize_id</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material_id</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-24">packs per carton</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -228,41 +227,33 @@ const PackingBOM = () => {
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
                                                 <td className="px-6 py-6 align-middle">
-                                                    <span className="text-xs font-bold text-blue-600 block mb-1">
+                                                    <span className="text-sm font-semibold text-blue-600">
                                                         {item.bomId}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-6 align-middle">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-foreground mb-1">{item.description}</span>
-                                                        <span className="text-[10px] font-medium text-gray-400 uppercase tracking-tight">{item.subtitle}</span>
-                                                    </div>
+                                                    <span className="text-sm font-semibold text-foreground">{item.description}</span>
                                                 </td>
                                                 <td className="px-6 py-6 text-sm text-foreground align-middle">
                                                     {item.packingFor}
                                                 </td>
                                                 <td className="px-6 py-6 align-middle text-center">
-                                                    <span className="inline-block bg-blue-50 text-blue-600 font-bold text-[10px] px-2 py-1 rounded border border-blue-100">
+                                                    <span className="text-sm font-semibold text-blue-600">
                                                         {item.productId}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="inline-block bg-gray-100 text-gray-600 font-mono text-[10px] px-2 py-1 rounded">
+                                                    <span className="text-sm font-semibold text-blue-600">
                                                         {item.packSizeId}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="inline-block bg-gray-100 text-gray-600 font-mono text-[10px] px-2 py-1 rounded">
+                                                    <span className="text-sm font-semibold text-blue-600">
                                                         {item.materialId}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-6 text-sm font-bold text-foreground text-center align-middle">
+                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
                                                     {item.packsPerCarton}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600">
-                                                        <Pencil className="w-4 h-4" />
-                                                    </Button>
                                                 </td>
                                             </motion.tr>
                                         ))}

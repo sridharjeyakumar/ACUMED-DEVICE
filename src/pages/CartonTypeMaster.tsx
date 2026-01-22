@@ -33,48 +33,21 @@ const CartonTypeMaster = () => {
     const cartonTypes: CartonTypeRecord[] = [
         {
             id: "1",
-            cartonTypeId: "CT-COR-01",
-            cartonTypeName: "5-Ply Heavy Corrugated",
-            material: "MATERIAL: KRAFT PAPER",
-            shortName: "5P-HC-BROWN",
-            colorName: "Kraft Brown",
+            cartonTypeId: "STER",
+            cartonTypeName: "Sterilization",
+            material: "",
+            shortName: "Sterilization",
+            colorName: "Brown",
             colorHex: "#8B4513",
         },
         {
             id: "2",
-            cartonTypeId: "CT-DUP-04",
-            cartonTypeName: "Premium White Duplex",
-            material: "MATERIAL: DUPLEX BOARD",
-            shortName: "PR-DUP-WHT",
-            colorName: "Arctic White",
-            colorHex: "#F5F5F5",
-        },
-        {
-            id: "3",
-            cartonTypeId: "CT-EXP-08",
-            cartonTypeName: "Export Grade Reinforced",
-            material: "MATERIAL: DOUBLE WALL BOARD",
-            shortName: "EXP-R-BLU",
-            colorName: "Navy Blue",
-            colorHex: "#000080",
-        },
-        {
-            id: "4",
-            cartonTypeId: "CT-SML-02",
-            cartonTypeName: "Small Component Folding",
-            material: "MATERIAL: SBS BOARD",
-            shortName: "SM-FLD-GRY",
-            colorName: "Neutral Gray",
-            colorHex: "#808080",
-        },
-        {
-            id: "5",
-            cartonTypeId: "CT-HAZ-09",
-            cartonTypeName: "Hazardous Material Liner",
-            material: "MATERIAL: REINFORCED POLY",
-            shortName: "HAZ-LN-RED",
-            colorName: "Danger Red",
-            colorHex: "#FF0000",
+            cartonTypeId: "SHIP",
+            cartonTypeName: "Shipper",
+            material: "",
+            shortName: "Shipper",
+            colorName: "White",
+            colorHex: "#FFFFFF",
         },
     ];
 
@@ -188,11 +161,10 @@ const CartonTypeMaster = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">CARTON TYPE ID</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">CARTON TYPE NAME</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">CARTON TYPE SHORTNAME</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">COLOR</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">ACTIONS</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">cartontype_id</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton type name</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton type shortname</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Color</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -204,31 +176,17 @@ const CartonTypeMaster = () => {
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
-                                                <td className="px-6 py-6 text-sm font-bold text-blue-600 align-middle">
+                                                <td className="px-6 py-6 text-sm font-semibold text-blue-600 align-middle">
                                                     {item.cartonTypeId}
                                                 </td>
                                                 <td className="px-6 py-6 align-middle">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-foreground mb-1">{item.cartonTypeName}</span>
-                                                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">{item.material}</span>
-                                                    </div>
+                                                    <span className="text-sm font-semibold text-foreground">{item.cartonTypeName}</span>
                                                 </td>
                                                 <td className="px-6 py-6 text-sm text-foreground align-middle">
                                                     {item.shortName}
                                                 </td>
-                                                <td className="px-6 py-6 text-sm font-medium text-foreground align-middle">
-                                                    <div className="flex items-center gap-2">
-                                                        <div
-                                                            className="w-3 h-3 rounded-full border border-black/10"
-                                                            style={{ backgroundColor: item.colorHex }}
-                                                        ></div>
-                                                        {item.colorName}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600">
-                                                        <Pencil className="w-4 h-4" />
-                                                    </Button>
+                                                <td className="px-6 py-6 text-sm font-semibold text-foreground align-middle">
+                                                    {item.colorName}
                                                 </td>
                                             </motion.tr>
                                         ))}

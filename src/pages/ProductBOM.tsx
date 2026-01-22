@@ -14,7 +14,7 @@ interface BOMRecord {
     description: string;
     subtitle: string;
     productId: string;
-    outputQty: number;
+    outputQty: number | null;
     outputUom: string;
     materialId: string;
     inputQty: number;
@@ -39,63 +39,75 @@ const ProductBOM = () => {
     const records: BOMRecord[] = [
         {
             id: "1",
-            bomId: "BOM-ST-001",
-            description: "Main Assembly Stent A",
-            subtitle: "HIGH PRECISION LINE",
-            productId: "PRD-010-ST",
-            outputQty: 1000,
-            outputUom: "UNITS",
-            materialId: "MAT-NT-01",
-            inputQty: 12.5,
+            bomId: "BOM1",
+            description: "DUVET",
+            subtitle: "",
+            productId: "P0001",
+            outputQty: 3000,
+            outputUom: "NOS",
+            materialId: "RM001",
+            inputQty: 1,
             inputUom: "KG",
         },
         {
             id: "2",
-            bomId: "BOM-CH-042",
-            description: "Catheter Coating Phase",
-            subtitle: "STERILE CLEAN ROOM 4",
-            productId: "PRD-042-CH",
-            outputQty: 500,
-            outputUom: "UNITS",
-            materialId: "MAT-SIL-08",
-            inputQty: 2500,
-            inputUom: "ML",
+            bomId: "BOM1",
+            description: "DUVET",
+            subtitle: "",
+            productId: "P0001",
+            outputQty: 1200,
+            outputUom: "NOS",
+            materialId: "RM002",
+            inputQty: 1,
+            inputUom: "KG",
         },
         {
             id: "3",
-            bomId: "BOM-GW-015",
-            description: "Wire Extrusion Master",
-            subtitle: "EXTRUSION PLANT A",
-            productId: "PRD-015-GW",
-            outputQty: 5000,
-            outputUom: "MTRS",
-            materialId: "MAT-PK-22",
-            inputQty: 45.0,
+            bomId: "BOM2",
+            description: "DUVET XL",
+            subtitle: "",
+            productId: "P0002",
+            outputQty: null,
+            outputUom: "NOS",
+            materialId: "RM003",
+            inputQty: 1,
             inputUom: "KG",
         },
         {
             id: "4",
-            bomId: "BOM-ST-088",
-            description: "Sub-Component Assembly",
-            subtitle: "MANUAL INSPECTION",
-            productId: "PRD-010-ST",
-            outputQty: 100,
-            outputUom: "SETS",
-            materialId: "MAT-SS-316",
-            inputQty: 0.85,
+            bomId: "BOM2",
+            description: "DUVET XL",
+            subtitle: "",
+            productId: "P0002",
+            outputQty: null,
+            outputUom: "NOS",
+            materialId: "RM004",
+            inputQty: 1,
             inputUom: "KG",
         },
         {
             id: "5",
-            bomId: "BOM-CH-054",
-            description: "Luer Lock Integration",
-            subtitle: "COMPONENT FINISHING",
-            productId: "PRD-054-CH",
-            outputQty: 1000,
-            outputUom: "UNITS",
-            materialId: "MAT-PL-ABS",
-            inputQty: 1050,
-            inputUom: "UNITS",
+            bomId: "BOM3",
+            description: "DUVET Ultra",
+            subtitle: "",
+            productId: "P0003",
+            outputQty: null,
+            outputUom: "NOS",
+            materialId: "RM005",
+            inputQty: 1,
+            inputUom: "KG",
+        },
+        {
+            id: "6",
+            bomId: "BOM3",
+            description: "DUVET Ultra",
+            subtitle: "",
+            productId: "P0003",
+            outputQty: null,
+            outputUom: "NOS",
+            materialId: "RM006",
+            inputQty: 1,
+            inputUom: "KG",
         },
     ];
 
@@ -216,15 +228,14 @@ const ProductBOM = () => {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-32">BOM ID</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">BOM DESCRIPTION</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PRODUCT ID</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">OUTPUT QTY</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">OUTPUT UOM</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">MATERIAL ID</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">INPUT QTY</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">INPUT UOM</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">ACTIONS</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-32">bom_id</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">bom description</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">product_id</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">output qty</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">output uom</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material_id</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">input qty</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">input uom</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -237,46 +248,38 @@ const ProductBOM = () => {
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
                                                 <td className="px-6 py-6 align-top">
-                                                    <span className="text-xs font-bold text-blue-600 block mb-1">
+                                                    <span className="text-sm font-semibold text-blue-600">
                                                         {item.bomId}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-6 align-top">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-foreground mb-1">{item.description}</span>
-                                                        <span className="text-[10px] font-medium text-gray-400 uppercase tracking-tight">{item.subtitle}</span>
-                                                    </div>
+                                                    <span className="text-sm font-semibold text-foreground">{item.description}</span>
                                                 </td>
                                                 <td className="px-6 py-6 align-top text-center">
-                                                    <span className="inline-block bg-blue-50 text-blue-600 font-bold text-[10px] px-2 py-1 rounded border border-blue-100">
+                                                    <span className="text-sm font-semibold text-blue-600">
                                                         {item.productId}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-6 text-sm font-bold text-foreground text-center align-top">
-                                                    {item.outputQty.toLocaleString()}
+                                                <td className={`px-6 py-6 text-sm font-semibold text-foreground text-center align-top ${(index === 2 || index === 5) ? 'bg-yellow-300' : ''}`}>
+                                                    {item.outputQty ? item.outputQty.toLocaleString() : ''}
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-top">
-                                                    <span className="inline-block bg-gray-100 text-gray-500 font-bold text-[10px] px-2 py-1 rounded">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {item.outputUom}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-top">
-                                                    <span className="inline-block bg-gray-100 text-gray-600 font-mono text-[10px] px-2 py-1 rounded border border-gray-200">
+                                                    <span className="text-sm font-semibold text-blue-600">
                                                         {item.materialId}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-6 text-sm font-bold text-foreground text-center align-top">
+                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-top">
                                                     {item.inputQty}
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-top">
-                                                    <span className="inline-block bg-gray-100 text-gray-500 font-bold text-[10px] px-2 py-1 rounded">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {item.inputUom}
                                                     </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-top">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600">
-                                                        <Pencil className="w-4 h-4" />
-                                                    </Button>
                                                 </td>
                                             </motion.tr>
                                         ))}

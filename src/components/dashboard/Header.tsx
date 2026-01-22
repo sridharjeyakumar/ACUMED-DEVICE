@@ -17,33 +17,36 @@ export function Header({ onRefresh }: HeaderProps) {
 
   return (
     <header className="bg-card border-b border-border px-6 py-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-1 sm:gap-2 md:gap-4">
         {/* Search */}
-        <div className="relative w-96 animate-fade-in-up">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="relative flex-1 md:w-96 min-w-0 animate-fade-in-up">
+          <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Search data, reports, transactions..."
-            className="pl-10 bg-muted border-0 focus-visible:ring-1 focus-visible:ring-primary"
+            placeholder="Search..."
+            className="pl-7 sm:pl-10 bg-muted border-0 focus-visible:ring-1 focus-visible:ring-primary text-xs sm:text-sm h-8 sm:h-10"
           />
         </div>
 
-        {/* Right side */}
-        <div className="flex items-center gap-4 animate-fade-in-up animate-delay-100">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Demo Role:</span>
-            <button className="flex items-center gap-1 font-medium text-foreground hover:text-primary transition-colors">
-              Super Admin
-              <ChevronDown className="w-4 h-4" />
-            </button>
-          </div>
-          <button className="relative p-2 rounded-lg hover:bg-muted transition-colors">
-            <Bell className="w-5 h-5 text-muted-foreground" />
-            <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
+        {/* Demo Role */}
+        <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm animate-fade-in-up animate-delay-100 whitespace-nowrap shrink-0">
+          <span className="text-muted-foreground">Demo Role:</span>
+          <button className="flex items-center gap-0.5 sm:gap-1 font-medium text-foreground hover:text-primary transition-colors text-xs sm:text-sm">
+            <span className="hidden sm:inline">Super Admin</span>
+            <span className="sm:hidden">Admin</span>
+            <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4" />
+          </button>
+        </div>
+
+        {/* Notification and Profile - at the rightmost side */}
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-4 animate-fade-in-up animate-delay-100 shrink-0">
+          <button className="relative p-1.5 sm:p-2 rounded-lg hover:bg-muted transition-colors">
+            <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+            <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-3 h-3 sm:w-4 sm:h-4 bg-destructive text-destructive-foreground text-[10px] sm:text-xs rounded-full flex items-center justify-center">
               3
             </span>
           </button>
-          <div className="w-9 h-9 rounded-full bg-foreground flex items-center justify-center text-xs font-medium text-background">
+          <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-foreground flex items-center justify-center text-[10px] sm:text-xs font-medium text-background">
             RK
           </div>
         </div>
