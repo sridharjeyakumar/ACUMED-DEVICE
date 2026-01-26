@@ -26,6 +26,8 @@ import {
   FileBarChart,
   TrendingUp,
   PackageOpen,
+  Menu as MenuIcon,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
@@ -47,10 +49,19 @@ const navSections: NavSection[] = [
     items: [{ icon: LayoutDashboard, label: "Dashboard", active: true, href: "/" }],
   },
   {
+    title: "SYSTEM",
+    items: [
+      { icon: MenuIcon, label: "Menu Master", href: "/menu-master" },
+      { icon: Users, label: "Role Master", href: "/role-master" },
+      { icon: Key, label: "Menu Access Master", href: "/menu-access-master" },
+      { icon: UserCircle, label: "User Master", href: "/user-master" },
+      { icon: Clock, label: "User Login History", href: "/user-login-history" },
+    ],
+  },
+  {
     title: "CONFIGURATION",
     items: [
       { icon: Building2, label: "Company Master", href: "/company-master" },
-      { icon: Users, label: "Role Master", href: "/role-master" },
       { icon: Key, label: "Role wise Menu Access", href: "/role-wise-menu-access" },
       { icon: CheckCircle2, label: "Product Status Master", href: "/product-status-master" },
       { icon: XCircle, label: "Product Rejection Type Master", href: "/product-rejection-type-master" },
@@ -94,7 +105,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
-  const [expandedSections, setExpandedSections] = useState<string[]>(["CONFIGURATION", "MASTER", "TRANSACTION"]);
+  const [expandedSections, setExpandedSections] = useState<string[]>(["SYSTEM", "CONFIGURATION", "MASTER", "TRANSACTION"]);
 
   const toggleSection = (title: string) => {
     setExpandedSections((prev) =>

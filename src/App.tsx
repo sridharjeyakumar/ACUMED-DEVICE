@@ -28,6 +28,10 @@ import ProductBOM from "./pages/ProductBOM";
 import PackingBOM from "./pages/PackingBOM";
 import CollectionBinMaster from "./pages/CollectionBinMaster";
 import EmployeeMaster from "./pages/EmployeeMaster";
+import MenuMaster from "./pages/MenuMaster";
+import MenuAccessMaster from "./pages/MenuAccessMaster";
+import UserMaster from "./pages/UserMaster";
+import UserLoginHistory from "./pages/UserLoginHistory";
 
 const queryClient = new QueryClient();
 
@@ -50,7 +54,11 @@ const App = () => (
           <Route path="/packing-bom" element={<PackingBOM />} />
           <Route path="/collection-bin-master" element={<CollectionBinMaster />} />
           <Route path="/employee-master" element={<EmployeeMaster />} />
+          <Route path="/menu-master" element={<MenuMaster />} />
           <Route path="/role-master" element={<RoleMaster />} />
+          <Route path="/menu-access-master" element={<MenuAccessMaster />} />
+          <Route path="/user-master" element={<UserMaster />} />
+          <Route path="/user-login-history" element={<UserLoginHistory />} />
           <Route path="/role-wise-menu-access" element={<RoleWiseMenuAccess />} />
           <Route path="/product-status-master" element={<ProductStatusMaster />} />
           <Route path="/product-rejection-type-master" element={<ProductRejectionTypeMaster />} />
