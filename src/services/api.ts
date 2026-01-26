@@ -1,13 +1,21 @@
 // Use environment variable in production, or proxy in development
 // In production, set VITE_API_URL in Vercel environment variables
 // Example: https://your-backend.railway.app/api
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.DEV ? '/api' : '');
+const getApiBaseUrl = () => {
+  // In development, use proxy to local backend
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+  
+  // In production on Vercel, API is on the same domain
+  // Use relative path since backend is deployed as serverless functions
+  return '/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
-  if (!API_BASE_URL && !import.meta.env.DEV) {
-    throw new Error('VITE_API_URL environment variable is not set. Please configure your backend URL in Vercel environment variables.');
-  }
+  // API_BASE_URL is always set (either '/api' for proxy or '/api' for same domain)
   
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
