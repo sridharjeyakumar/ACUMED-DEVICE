@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: acumed-devices-api
+    env: node
+    buildCommand: npm install
+    startCommand: npm run server
+    envVars:
+      - key: Database
+        sync: false
+    healthCheckPath: /api/health
+

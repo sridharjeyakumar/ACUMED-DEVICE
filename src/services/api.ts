@@ -1,7 +1,14 @@
-// Use proxy in development, or direct URL if VITE_API_URL is set
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// Use environment variable in production, or proxy in development
+// In production, set VITE_API_URL in Vercel environment variables
+// Example: https://your-backend.railway.app/api
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.DEV ? '/api' : '');
 
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
+  if (!API_BASE_URL && !import.meta.env.DEV) {
+    throw new Error('VITE_API_URL environment variable is not set. Please configure your backend URL in Vercel environment variables.');
+  }
+  
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
