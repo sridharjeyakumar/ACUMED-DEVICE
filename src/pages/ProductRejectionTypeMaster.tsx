@@ -3,7 +3,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Minus, ChevronDown, AlertCircle } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Minus, ChevronDown, AlertCircle, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,6 +19,9 @@ interface RejectionType {
 const ProductRejectionTypeMaster = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [selectedType, setSelectedType] = useState<RejectionType | null>(null);
     const [formData, setFormData] = useState({
         name: "",
         description: "",
@@ -90,6 +93,41 @@ const ProductRejectionTypeMaster = () => {
             effectType: "ERROR",
             active: true,
         });
+    };
+
+    const handleEdit = (type: RejectionType) => {
+        setSelectedType(type);
+        setFormData({
+            name: type.name,
+            description: type.description,
+            effectType: type.effectType,
+            active: type.active,
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const handleEditSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log("Edit submitted:", { ...selectedType, ...formData });
+        setIsEditModalOpen(false);
+        setSelectedType(null);
+        setFormData({
+            name: "",
+            description: "",
+            effectType: "ERROR",
+            active: true,
+        });
+    };
+
+    const handleDelete = (type: RejectionType) => {
+        setSelectedType(type);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = () => {
+        console.log("Deleting rejection type:", selectedType);
+        setIsDeleteDialogOpen(false);
+        setSelectedType(null);
     };
 
     return (
@@ -176,6 +214,7 @@ const ProductRejectionTypeMaster = () => {
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">EFFECT IN STOCK</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">SEQ NO.</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ACTIVE</th>
+                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ACTIONS</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -224,6 +263,32 @@ const ProductRejectionTypeMaster = () => {
                                                         <div className={`w-1.5 h-1.5 rounded-full ${type.active ? "bg-green-600" : "bg-red-600"}`} />
                                                         {type.active ? "YES" : "NO"}
                                                     </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEdit(type);
+                                                            }}
+                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDelete(type);
+                                                            }}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
                                                 </td>
                                             </motion.tr>
                                         ))}
