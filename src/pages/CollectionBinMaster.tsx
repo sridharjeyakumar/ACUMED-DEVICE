@@ -24,6 +24,9 @@ interface BinRecord {
 const CollectionBinMaster = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [selectedBin, setSelectedBin] = useState<BinRecord | null>(null);
     const [formData, setFormData] = useState({
         binId: "",
         binName: "",
@@ -110,6 +113,51 @@ const CollectionBinMaster = () => {
             tareWeight: "",
             capacity: "",
         });
+    };
+
+    const handleEdit = (bin: BinRecord) => {
+        setSelectedBin(bin);
+        setFormData({
+            binId: bin.binId,
+            binName: bin.binName,
+            location: bin.location,
+            shortName: bin.shortName,
+            binType: bin.binType === "collection" ? "GENERAL" : bin.binType,
+            colorName: bin.colorName,
+            colorHex: bin.colorHex,
+            tareWeight: bin.tareWeight.toString(),
+            capacity: bin.capacity.toString(),
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const handleEditSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log("Edit submitted:", { ...selectedBin, ...formData });
+        setIsEditModalOpen(false);
+        setSelectedBin(null);
+        setFormData({
+            binId: "",
+            binName: "",
+            location: "",
+            shortName: "",
+            binType: "GENERAL",
+            colorName: "",
+            colorHex: "#000000",
+            tareWeight: "",
+            capacity: "",
+        });
+    };
+
+    const handleDelete = (bin: BinRecord) => {
+        setSelectedBin(bin);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = () => {
+        console.log("Deleting bin:", selectedBin);
+        setIsDeleteDialogOpen(false);
+        setSelectedBin(null);
     };
 
     return (
@@ -206,6 +254,7 @@ const CollectionBinMaster = () => {
                                             <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">color</th>
                                             <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">tare weight kg</th>
                                             <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">capacity kg</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -243,6 +292,32 @@ const CollectionBinMaster = () => {
                                                 </td>
                                                 <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
                                                     {item.capacity}
+                                                </td>
+                                                <td className="px-6 py-6 text-center align-middle">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEdit(item);
+                                                            }}
+                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDelete(item);
+                                                            }}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
                                                 </td>
                                             </motion.tr>
                                         ))}
@@ -376,6 +451,167 @@ const CollectionBinMaster = () => {
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
                                     </div>
                                 </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Modal */}
+            <AnimatePresence>
+                {isEditModalOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsEditModalOpen(false)}
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-2xl font-bold">Edit Bin</h2>
+                                    <button
+                                        onClick={() => setIsEditModalOpen(false)}
+                                        className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                                    <div className="grid grid-cols-2 gap-6 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Bin ID <span className="text-red-500">*</span></label>
+                                            <Input name="binId" value={formData.binId} onChange={handleInputChange} placeholder="BIN-XXX-XX" required />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
+                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-CODE" />
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Name <span className="text-red-500">*</span></label>
+                                        <Input name="binName" value={formData.binName} onChange={handleInputChange} required />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Location / Section</label>
+                                        <Input name="location" value={formData.location} onChange={handleInputChange} placeholder="e.g. SECTION A-4 FLOOR" />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Type</label>
+                                        <select
+                                            name="binType"
+                                            value={formData.binType}
+                                            onChange={handleInputChange}
+                                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        >
+                                            <option value="GENERAL">General</option>
+                                            <option value="HAZARDOUS">Hazardous</option>
+                                            <option value="RECYCLABLE">Recyclable</option>
+                                            <option value="SCRAP">Scrap</option>
+                                            <option value="REWORK">Rework</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-6 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Color Name</label>
+                                            <Input name="colorName" value={formData.colorName} onChange={handleInputChange} placeholder="Color Name" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Color Hex</label>
+                                            <div className="flex gap-2">
+                                                <Input type="color" name="colorHex" value={formData.colorHex} onChange={handleInputChange} className="w-12 p-1" />
+                                                <Input name="colorHex" value={formData.colorHex} onChange={handleInputChange} placeholder="#000000" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-6 mb-6">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Tare Weight (KG)</label>
+                                            <Input type="number" step="0.01" name="tareWeight" value={formData.tareWeight} onChange={handleInputChange} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Capacity (KG)</label>
+                                            <Input type="number" step="0.01" name="capacity" value={formData.capacity} onChange={handleInputChange} />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
+                                    </div>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
+                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
+                                    <button
+                                        onClick={() => setIsDeleteDialogOpen(false)}
+                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                <div className="p-6">
+                                    <p className="text-foreground mb-4">
+                                        Are you sure you want to delete <strong>{selectedBin?.binName}</strong>?
+                                    </p>
+                                    <p className="text-sm text-muted-foreground mb-6">
+                                        This action cannot be undone.
+                                    </p>
+
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            onClick={confirmDelete}
+                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                        >
+                                            Delete
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     </>

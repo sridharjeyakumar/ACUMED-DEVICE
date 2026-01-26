@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatsCards } from "@/components/dashboard/StatsCards";
-import { Search, Plus, Filter, Pencil, Truck, ChevronDown } from "lucide-react";
+import { Search, Plus, Filter, Pencil, Truck, ChevronDown, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 
@@ -21,6 +21,9 @@ interface CartonTypeRecord {
 const CartonTypeMaster = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [selectedCartonType, setSelectedCartonType] = useState<CartonTypeRecord | null>(null);
     const [formData, setFormData] = useState({
         cartonTypeId: "",
         cartonTypeName: "",
@@ -72,6 +75,45 @@ const CartonTypeMaster = () => {
             colorName: "",
             colorHex: "#000000",
         });
+    };
+
+    const handleEdit = (cartonType: CartonTypeRecord) => {
+        setSelectedCartonType(cartonType);
+        setFormData({
+            cartonTypeId: cartonType.cartonTypeId,
+            cartonTypeName: cartonType.cartonTypeName,
+            material: cartonType.material,
+            shortName: cartonType.shortName,
+            colorName: cartonType.colorName,
+            colorHex: cartonType.colorHex,
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const handleEditSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log("Edit submitted:", { ...selectedCartonType, ...formData });
+        setIsEditModalOpen(false);
+        setSelectedCartonType(null);
+        setFormData({
+            cartonTypeId: "",
+            cartonTypeName: "",
+            material: "",
+            shortName: "",
+            colorName: "",
+            colorHex: "#000000",
+        });
+    };
+
+    const handleDelete = (cartonType: CartonTypeRecord) => {
+        setSelectedCartonType(cartonType);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = () => {
+        console.log("Deleting carton type:", selectedCartonType);
+        setIsDeleteDialogOpen(false);
+        setSelectedCartonType(null);
     };
 
     return (
@@ -165,6 +207,7 @@ const CartonTypeMaster = () => {
                                             <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton type name</th>
                                             <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton type shortname</th>
                                             <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Color</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -187,6 +230,32 @@ const CartonTypeMaster = () => {
                                                 </td>
                                                 <td className="px-6 py-6 text-sm font-semibold text-foreground align-middle">
                                                     {item.colorName}
+                                                </td>
+                                                <td className="px-6 py-6 text-center align-middle">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEdit(item);
+                                                            }}
+                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDelete(item);
+                                                            }}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
                                                 </td>
                                             </motion.tr>
                                         ))}
@@ -293,6 +362,140 @@ const CartonTypeMaster = () => {
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
                                     </div>
                                 </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Modal */}
+            <AnimatePresence>
+                {isEditModalOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsEditModalOpen(false)}
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-2xl font-bold">Edit Carton Type</h2>
+                                    <button
+                                        onClick={() => setIsEditModalOpen(false)}
+                                        className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                                    <div className="grid grid-cols-2 gap-6 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Carton Type ID <span className="text-red-500">*</span></label>
+                                            <Input name="cartonTypeId" value={formData.cartonTypeId} onChange={handleInputChange} placeholder="CT-XXX-XX" required />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
+                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-CODE" />
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Carton Type Name <span className="text-red-500">*</span></label>
+                                        <Input name="cartonTypeName" value={formData.cartonTypeName} onChange={handleInputChange} required />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Material</label>
+                                        <Input name="material" value={formData.material} onChange={handleInputChange} placeholder="e.g. MATERIAL: KRAFT PAPER" />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-6 mb-6">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Color Name</label>
+                                            <Input name="colorName" value={formData.colorName} onChange={handleInputChange} placeholder="Color Name" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Color Hex</label>
+                                            <div className="flex gap-2">
+                                                <Input type="color" name="colorHex" value={formData.colorHex} onChange={handleInputChange} className="w-12 p-1" />
+                                                <Input name="colorHex" value={formData.colorHex} onChange={handleInputChange} placeholder="#000000" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
+                                    </div>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
+                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
+                                    <button
+                                        onClick={() => setIsDeleteDialogOpen(false)}
+                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                <div className="p-6">
+                                    <p className="text-foreground mb-4">
+                                        Are you sure you want to delete <strong>{selectedCartonType?.cartonTypeName}</strong>?
+                                    </p>
+                                    <p className="text-sm text-muted-foreground mb-6">
+                                        This action cannot be undone.
+                                    </p>
+
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            onClick={confirmDelete}
+                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                        >
+                                            Delete
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     </>

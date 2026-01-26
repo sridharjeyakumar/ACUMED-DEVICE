@@ -3,7 +3,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, ChevronDown } from "lucide-react";
+import { Search, Plus, Filter, Pencil, ChevronDown, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
@@ -28,6 +28,9 @@ interface EmployeeRecord {
 const EmployeeMaster = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRecord | null>(null);
     const [formData, setFormData] = useState({
         empId: "",
         firstName: "",
@@ -135,6 +138,53 @@ const EmployeeMaster = () => {
         // Reset form
     };
 
+    const handleEdit = (employee: EmployeeRecord) => {
+        setSelectedEmployee(employee);
+        setFormData({
+            empId: employee.empId,
+            firstName: employee.empName.split(' ')[0] || "",
+            lastName: employee.empName.split(' ').slice(1).join(' ') || "",
+            gender: employee.gender === "M" ? "Male" : employee.gender === "F" ? "Female" : "Male",
+            bloodGroup: "",
+            department: employee.department,
+            location: employee.location,
+            mobile: employee.mobileNo,
+            doj: employee.doj,
+            status: employee.status === "Active" ? "ACTIVE" : "INACTIVE",
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const handleEditSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log("Edit submitted:", { ...selectedEmployee, ...formData });
+        setIsEditModalOpen(false);
+        setSelectedEmployee(null);
+        setFormData({
+            empId: "",
+            firstName: "",
+            lastName: "",
+            gender: "Male",
+            bloodGroup: "",
+            department: "",
+            location: "",
+            mobile: "",
+            doj: "",
+            status: "ACTIVE",
+        });
+    };
+
+    const handleDelete = (employee: EmployeeRecord) => {
+        setSelectedEmployee(employee);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = () => {
+        console.log("Deleting employee:", selectedEmployee);
+        setIsDeleteDialogOpen(false);
+        setSelectedEmployee(null);
+    };
+
     return (
         <div className="flex min-h-screen bg-background">
             <Sidebar />
@@ -238,6 +288,7 @@ const EmployeeMaster = () => {
                                             <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">DOL</th>
                                             <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">photo</th>
                                             <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">status</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -288,6 +339,32 @@ const EmployeeMaster = () => {
                                                     <span className="text-sm font-semibold text-foreground">
                                                         {item.status}
                                                     </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center align-middle">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEdit(item);
+                                                            }}
+                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDelete(item);
+                                                            }}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
                                                 </td>
                                             </motion.tr>
                                         ))}
@@ -416,6 +493,162 @@ const EmployeeMaster = () => {
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
                                     </div>
                                 </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Modal */}
+            <AnimatePresence>
+                {isEditModalOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsEditModalOpen(false)}
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-2xl font-bold">Edit Employee</h2>
+                                    <button
+                                        onClick={() => setIsEditModalOpen(false)}
+                                        className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">First Name <span className="text-red-500">*</span></label>
+                                            <Input name="firstName" value={formData.firstName} onChange={handleInputChange} required />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Last Name <span className="text-red-500">*</span></label>
+                                            <Input name="lastName" value={formData.lastName} onChange={handleInputChange} required />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Emp ID <span className="text-red-500">*</span></label>
+                                            <Input name="empId" value={formData.empId} onChange={handleInputChange} placeholder="EMP - XXXX" required />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Gender</label>
+                                            <select
+                                                name="gender"
+                                                value={formData.gender}
+                                                onChange={handleInputChange}
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                                            >
+                                                <option value="Male">Male</option>
+                                                <option value="Female">Female</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Blood Group</label>
+                                            <Input name="bloodGroup" value={formData.bloodGroup} onChange={handleInputChange} placeholder="e.g. O+ POSITIVE" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Department</label>
+                                            <Input name="department" value={formData.department} onChange={handleInputChange} placeholder="e.g. PRODUCTION" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Location</label>
+                                            <Input name="location" value={formData.location} onChange={handleInputChange} />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 mb-6">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Mobile No</label>
+                                            <Input name="mobile" value={formData.mobile} onChange={handleInputChange} placeholder="+91 XXXXX XXXXX" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Date of Joining</label>
+                                            <Input type="date" name="doj" value={formData.doj} onChange={handleInputChange} />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
+                                    </div>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
+                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
+                                    <button
+                                        onClick={() => setIsDeleteDialogOpen(false)}
+                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                <div className="p-6">
+                                    <p className="text-foreground mb-4">
+                                        Are you sure you want to delete <strong>{selectedEmployee?.empName}</strong>?
+                                    </p>
+                                    <p className="text-sm text-muted-foreground mb-6">
+                                        This action cannot be undone.
+                                    </p>
+
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            onClick={confirmDelete}
+                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                        >
+                                            Delete
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     </>

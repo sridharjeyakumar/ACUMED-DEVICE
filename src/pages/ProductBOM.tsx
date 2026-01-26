@@ -3,7 +3,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, FileText, ChevronDown } from "lucide-react";
+import { Search, Plus, Filter, Pencil, FileText, ChevronDown, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
@@ -24,6 +24,9 @@ interface BOMRecord {
 const ProductBOM = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [selectedBOM, setSelectedBOM] = useState<BOMRecord | null>(null);
     const [formData, setFormData] = useState({
         bomId: "",
         description: "",
@@ -137,6 +140,51 @@ const ProductBOM = () => {
         });
     };
 
+    const handleEdit = (bom: BOMRecord) => {
+        setSelectedBOM(bom);
+        setFormData({
+            bomId: bom.bomId,
+            description: bom.description,
+            subtitle: bom.subtitle,
+            productId: bom.productId,
+            outputQty: bom.outputQty?.toString() || "",
+            outputUom: bom.outputUom,
+            materialId: bom.materialId,
+            inputQty: bom.inputQty.toString(),
+            inputUom: bom.inputUom,
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const handleEditSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log("Edit submitted:", { ...selectedBOM, ...formData });
+        setIsEditModalOpen(false);
+        setSelectedBOM(null);
+        setFormData({
+            bomId: "",
+            description: "",
+            subtitle: "",
+            productId: "",
+            outputQty: "",
+            outputUom: "",
+            materialId: "",
+            inputQty: "",
+            inputUom: "",
+        });
+    };
+
+    const handleDelete = (bom: BOMRecord) => {
+        setSelectedBOM(bom);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = () => {
+        console.log("Deleting BOM:", selectedBOM);
+        setIsDeleteDialogOpen(false);
+        setSelectedBOM(null);
+    };
+
     return (
         <div className="flex min-h-screen bg-background">
             <Sidebar />
@@ -236,6 +284,7 @@ const ProductBOM = () => {
                                             <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material_id</th>
                                             <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">input qty</th>
                                             <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">input uom</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -280,6 +329,32 @@ const ProductBOM = () => {
                                                     <span className="text-sm font-semibold text-foreground">
                                                         {item.inputUom}
                                                     </span>
+                                                </td>
+                                                <td className="px-6 py-6 text-center align-top">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEdit(item);
+                                                            }}
+                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDelete(item);
+                                                            }}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
                                                 </td>
                                             </motion.tr>
                                         ))}
@@ -407,6 +482,161 @@ const ProductBOM = () => {
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
                                     </div>
                                 </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Modal */}
+            <AnimatePresence>
+                {isEditModalOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsEditModalOpen(false)}
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-2xl font-bold">Edit BOM</h2>
+                                    <button
+                                        onClick={() => setIsEditModalOpen(false)}
+                                        className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">BOM ID <span className="text-red-500">*</span></label>
+                                            <Input name="bomId" value={formData.bomId} onChange={handleInputChange} placeholder="BOM-XXX-XX" required />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Description</label>
+                                            <Input name="description" value={formData.description} onChange={handleInputChange} required />
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Line / Subtitle</label>
+                                        <Input name="subtitle" value={formData.subtitle} onChange={handleInputChange} placeholder="e.g. HIGH PRECISION LINE" />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-2">
+                                        <div className="col-span-2">
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2 border-b pb-1">Output Configuration</h3>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Product ID</label>
+                                            <Input name="productId" value={formData.productId} onChange={handleInputChange} placeholder="PRD-XXX-XX" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">Output Qty</label>
+                                                <Input type="number" name="outputQty" value={formData.outputQty} onChange={handleInputChange} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">UOM</label>
+                                                <Input name="outputUom" value={formData.outputUom} onChange={handleInputChange} />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6 mt-4">
+                                        <div className="col-span-2">
+                                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-2 border-b pb-1">Input Material Mapping</h3>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Material ID</label>
+                                            <Input name="materialId" value={formData.materialId} onChange={handleInputChange} placeholder="MAT-XXX-XX" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">Input Qty</label>
+                                                <Input type="number" name="inputQty" value={formData.inputQty} onChange={handleInputChange} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">UOM</label>
+                                                <Input name="inputUom" value={formData.inputUom} onChange={handleInputChange} />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
+                                    </div>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
+                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
+                                    <button
+                                        onClick={() => setIsDeleteDialogOpen(false)}
+                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                <div className="p-6">
+                                    <p className="text-foreground mb-4">
+                                        Are you sure you want to delete <strong>{selectedBOM?.description}</strong>?
+                                    </p>
+                                    <p className="text-sm text-muted-foreground mb-6">
+                                        This action cannot be undone.
+                                    </p>
+
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            onClick={confirmDelete}
+                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                        >
+                                            Delete
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     </>
