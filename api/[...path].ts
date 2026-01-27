@@ -7,6 +7,8 @@ import MenuAccessMaster from '../server/models/MenuAccessMaster';
 import UserMaster from '../server/models/UserMaster';
 import UserLoginHistory from '../server/models/UserLoginHistory';
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
 
 // Cache database connection
 let dbConnected = false;
@@ -46,23 +48,71 @@ function parsePath(req: VercelRequest): { resource: string; id?: string; subReso
   return { resource, id, subResource };
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    setCorsHeaders(res);
-    return res.status(200).end();
-  }
+const logPath = path.join(process.cwd(), '.cursor', 'debug.log');
 
-  // Set CORS headers for all responses
-  setCorsHeaders(res);
-
+function logBackend(location: string, message: string, data: any) {
+  const logEntry = {location,message,data,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H2,H3,H4,H5'};
+  const logStr = JSON.stringify(logEntry);
+  console.error('[DEBUG]', logStr);
   try {
+    if (!fs.existsSync(path.dirname(logPath))) {
+      fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    }
+    fs.appendFileSync(logPath, logStr + '\n');
+  } catch(e: any) {
+    console.error('[DEBUG] Log write failed:', e.message);
+  }
+  try {
+    fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:logStr}).catch(()=>{});
+  } catch(e){}
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Immediate console log that will always work
+  console.error('[API HANDLER] Called', { method: req.method, url: req.url });
+  try {
+    // #region agent log
+    logBackend('api/[...path].ts:70', 'Handler entry', {method:req.method,url:req.url,hasBody:!!req.body,query:req.query,bodyType:typeof req.body});
+    // #endregion
+  
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      setCorsHeaders(res);
+      return res.status(200).end();
+    }
+
+    // Set CORS headers for all responses
+    setCorsHeaders(res);
+
+    // Parse request body if it's a string (Vercel sometimes sends body as string)
+    if (typeof req.body === 'string' && req.body) {
+      try {
+        req.body = JSON.parse(req.body);
+        // #region agent log
+        logBackend('api/[...path].ts:86', 'Body parsed from string', {body:req.body});
+        // #endregion
+      } catch (e) {
+        // #region agent log
+        logBackend('api/[...path].ts:90', 'Body parse failed', {error:(e as Error).message,bodyString:req.body});
+        // #endregion
+      }
+    }
+
+    // #region agent log
+    logBackend('api/[...path].ts:100', 'Before DB connection', {});
+    // #endregion
     // Ensure database connection
     await ensureDbConnection();
+    // #region agent log
+    logBackend('api/[...path].ts:72', 'After DB connection', {dbConnected});
+    // #endregion
     
     // Parse the path
     const { resource, id, subResource } = parsePath(req);
     const method = req.method || 'GET';
+    // #region agent log
+    logBackend('api/[...path].ts:83', 'Path parsed', {resource,id,subResource,method,url:req.url,query:req.query});
+    // #endregion
     
     // Log for debugging (remove in production if needed)
     console.log(`[API] ${method} ${req.url} - Resource: ${resource}, ID: ${id}, SubResource: ${subResource}`);
@@ -78,6 +128,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Menu Master routes
     if (resource === 'menus') {
+      console.error('[API] Menu routes entered', { method, id, resource, hasBody: !!req.body });
+      // #region agent log
+      logBackend('api/[...path].ts:129', 'Menu routes entered', {method,id,hasBody:!!req.body,body:req.body});
+      // #endregion
       if (method === 'GET' && !id) {
         const menus = await MenuMaster.find().sort({ menu_id: 1 });
         return res.json(menus);
@@ -88,33 +142,82 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json(menu);
       }
       if (method === 'POST') {
-        const { menu_id, menu_desc, active } = req.body;
-        const menu = new MenuMaster({ menu_id, menu_desc, active: active !== false });
-        await menu.save();
-        return res.status(201).json(menu);
+        // #region agent log
+        logBackend('api/[...path].ts:119', 'POST handler entered', {body:req.body,bodyType:typeof req.body});
+        // #endregion
+        try {
+          const { menu_id, menu_desc, active } = req.body;
+          // #region agent log
+          logBackend('api/[...path].ts:125', 'POST body parsed', {menu_id,menu_desc,active});
+          // #endregion
+          const menu = new MenuMaster({ menu_id, menu_desc, active: active !== false });
+          // #region agent log
+          logBackend('api/[...path].ts:132', 'Before menu.save()', {menu_id});
+          // #endregion
+          await menu.save();
+          // #region agent log
+          logBackend('api/[...path].ts:138', 'After menu.save() success', {menu_id});
+          // #endregion
+          return res.status(201).json(menu);
+        } catch (error: any) {
+          // #region agent log
+          logBackend('api/[...path].ts:145', 'POST error caught', {error:error.message,code:error.code,name:error.name,stack:error.stack});
+          // #endregion
+          console.error('[API] Menu create error:', error);
+          if (error.code === 11000) {
+            return res.status(400).json({ error: 'Menu ID already exists' });
+          }
+          if (error.name === 'ValidationError') {
+            return res.status(400).json({ error: 'Validation failed', details: error.message });
+          }
+          throw error;
+        }
       }
       if (method === 'PUT' && id) {
+        console.error('[API] PUT handler reached', { id, hasBody: !!req.body, body: req.body, method, resource });
+        // #region agent log
+        logBackend('api/[...path].ts:177', 'PUT handler entered', {id,body:req.body});
+        // #endregion
         try {
+          console.error('[API] PUT handler - inside try block', { id });
           const body = req.body || {};
           const { menu_desc, active } = body;
+          // #region agent log
+          logBackend('api/[...path].ts:167', 'PUT body parsed', {id,menu_desc,active});
+          // #endregion
           
           const updateData: any = {};
           if (menu_desc !== undefined && menu_desc !== null) updateData.menu_desc = menu_desc;
           if (active !== undefined) updateData.active = active !== false;
           
           if (Object.keys(updateData).length === 0) {
+            // #region agent log
+            logBackend('api/[...path].ts:180', 'PUT validation failed - no update data', {id});
+            // #endregion
             return res.status(400).json({ error: 'At least one field must be provided for update' });
           }
           
+          // #region agent log
+          logBackend('api/[...path].ts:189', 'Before findOneAndUpdate', {id,updateData});
+          // #endregion
           const menu = await MenuMaster.findOneAndUpdate(
             { menu_id: id },
             updateData,
             { new: true, runValidators: true }
           );
+          // #region agent log
+          logBackend('api/[...path].ts:199', 'After findOneAndUpdate', {id,menuFound:!!menu});
+          // #endregion
           if (!menu) return res.status(404).json({ error: 'Menu not found' });
           return res.json(menu);
         } catch (error: any) {
+          // #region agent log
+          logBackend('api/[...path].ts:206', 'PUT error caught', {id,error:error.message,code:error.code,name:error.name,stack:error.stack});
+          // #endregion
           console.error('[API] Menu update error:', error);
+          if (error.name === 'ValidationError') {
+            return res.status(400).json({ error: 'Validation failed', details: error.message });
+          }
           return res.status(400).json({ 
             error: 'Failed to update menu', 
             details: error.message 
@@ -122,11 +225,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
       if (method === 'DELETE' && id) {
+        console.error('[API] DELETE handler reached', { id, method, resource });
+        // #region agent log
+        logBackend('api/[...path].ts:226', 'DELETE handler entered', {id});
+        // #endregion
         try {
+          console.error('[API] DELETE handler - inside try block', { id });
+          // #region agent log
+          logBackend('api/[...path].ts:219', 'Before findOneAndDelete', {id});
+          // #endregion
           const menu = await MenuMaster.findOneAndDelete({ menu_id: id });
+          // #region agent log
+          logBackend('api/[...path].ts:221', 'After findOneAndDelete', {id,menuFound:!!menu});
+          // #endregion
           if (!menu) return res.status(404).json({ error: 'Menu not found' });
           return res.json({ message: 'Menu deleted successfully' });
         } catch (error: any) {
+          // #region agent log
+          logBackend('api/[...path].ts:225', 'DELETE error caught', {id,error:error.message,code:error.code,name:error.name,stack:error.stack});
+          // #endregion
           console.error('[API] Menu delete error:', error);
           return res.status(400).json({ 
             error: 'Failed to delete menu', 
@@ -355,6 +472,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(`[API] Route not found: ${method} ${req.url}`);
     return res.status(404).json({ error: 'Route not found', path: req.url });
   } catch (error: any) {
+    // #region agent log
+    logBackend('api/[...path].ts:470', 'Global error handler', {error:error.message,code:error.code,name:error.name,url:req.url,method:req.method,stack:error.stack});
+    // #endregion
     console.error('[API] Error:', {
       message: error.message,
       stack: error.stack,

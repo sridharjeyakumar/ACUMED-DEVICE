@@ -2,9 +2,15 @@
 const API_BASE_URL = '/api';
 
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/services/api.ts:4',message:'fetchAPI called',data:{endpoint,method:options.method},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3,H5'})}).catch(()=>{});
+  // #endregion
   // API_BASE_URL is always set (either '/api' for proxy or '/api' for same domain)
   
   try {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/services/api.ts:9',message:'Before fetch request',data:{url:`${API_BASE_URL}${endpoint}`,method:options.method,hasBody:!!options.body},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers: {
@@ -12,14 +18,26 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
         ...options.headers,
       },
     });
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/services/api.ts:18',message:'After fetch response',data:{status:response.status,statusText:response.statusText,ok:response.ok,endpoint},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }));
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/services/api.ts:22',message:'Response not OK',data:{status:response.status,error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
       throw new Error(error.error || 'Request failed');
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/services/api.ts:26',message:'fetchAPI success',data:{endpoint},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
     return response.json();
   } catch (error: any) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/services/api.ts:29',message:'fetchAPI error',data:{endpoint,error:error.message,name:error.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
     // Handle network errors (server not running, CORS, etc.)
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
       throw new Error('Cannot connect to server. Please check your network connection and try again.');

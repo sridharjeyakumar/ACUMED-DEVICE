@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, Menu as MenuIcon } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { menuAPI } from "@/services/api";
@@ -26,6 +26,7 @@ export default function MenuMasterPage() {
     const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
     const [menus, setMenus] = useState<Menu[]>([]);
     const [loading, setLoading] = useState(true);
+    const isSubmittingRef = useRef(false);
     const [formData, setFormData] = useState({
         menu_id: "",
         menu_desc: "",
@@ -64,6 +65,9 @@ export default function MenuMasterPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
+        if (isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
         try {
             await menuAPI.create(formData);
             toast({
@@ -79,6 +83,8 @@ export default function MenuMasterPage() {
                 description: error.message || "Failed to create menu",
                 variant: "destructive",
             });
+        } finally {
+            isSubmittingRef.current = false;
         }
     };
 
@@ -94,7 +100,10 @@ export default function MenuMasterPage() {
 
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
+        if (isSubmittingRef.current) return;
         if (!selectedMenu) return;
+        isSubmittingRef.current = true;
         try {
             await menuAPI.update(selectedMenu.menu_id, {
                 menu_desc: formData.menu_desc,
@@ -114,6 +123,8 @@ export default function MenuMasterPage() {
                 description: error.message || "Failed to update menu",
                 variant: "destructive",
             });
+        } finally {
+            isSubmittingRef.current = false;
         }
     };
 
@@ -123,7 +134,9 @@ export default function MenuMasterPage() {
     };
 
     const confirmDelete = async () => {
+        if (isSubmittingRef.current) return;
         if (!selectedMenu) return;
+        isSubmittingRef.current = true;
         try {
             await menuAPI.delete(selectedMenu.menu_id);
             toast({
@@ -139,6 +152,8 @@ export default function MenuMasterPage() {
                 description: error.message || "Failed to delete menu",
                 variant: "destructive",
             });
+        } finally {
+            isSubmittingRef.current = false;
         }
     };
 
@@ -243,7 +258,7 @@ export default function MenuMasterPage() {
                                                 initial={{ opacity: 0, x: -20 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors cursor-pointer"
+                                                className="hover:bg-muted/30 transition-colors"
                                             >
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-muted-foreground font-mono">
@@ -310,100 +325,257 @@ export default function MenuMasterPage() {
                         </Card>
                     </motion.div>
 
-                    {/* Modals - Same as original, truncated for brevity */}
-                    <AnimatePresence>
-                        {isAddModalOpen && (
-                            <>
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="fixed inset-0 bg-black/50 z-50"
-                                    onClick={() => setIsAddModalOpen(false)}
-                                />
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                                >
-                                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-                                        <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                            <h2 className="text-2xl font-bold">Add New Menu</h2>
-                                            <button
-                                                onClick={() => setIsAddModalOpen(false)}
-                                                className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
-                                            >
-                                                <X className="w-6 h-6" />
-                                            </button>
-                                        </div>
-                                        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                            <div className="mb-6">
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Menu ID <span className="text-red-500">*</span>
-                                                </label>
-                                                <Input
-                                                    name="menu_id"
-                                                    value={formData.menu_id}
-                                                    onChange={handleInputChange}
-                                                    placeholder="e.g., M00, T01, D00"
-                                                    required
-                                                    maxLength={3}
-                                                />
-                                            </div>
-                                            <div className="mb-6">
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Menu Description <span className="text-red-500">*</span>
-                                                </label>
-                                                <Input
-                                                    name="menu_desc"
-                                                    value={formData.menu_desc}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter menu description"
-                                                    required
-                                                    maxLength={100}
-                                                />
-                                            </div>
-                                            <div className="mb-6">
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        name="active"
-                                                        checked={formData.active}
-                                                        onChange={handleInputChange}
-                                                        className="w-4 h-4 text-blue-600"
-                                                    />
-                                                    <span className="text-sm font-medium">Active</span>
-                                                </label>
-                                            </div>
-                                            <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    onClick={() => setIsAddModalOpen(false)}
-                                                    className="px-6"
-                                                >
-                                                    Cancel
-                                                </Button>
-                                                <Button
-                                                    type="submit"
-                                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6"
-                                                >
-                                                    Save Menu
-                                                </Button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </motion.div>
-                            </>
-                        )}
-                    </AnimatePresence>
-
-                    {/* Edit and Delete modals similar structure - keeping code concise */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.4 }}
+                        className="mt-8 text-center"
+                    >
+                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="font-semibold">ALL SYSTEMS OPERATIONAL</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Real-time Data Sync • ACUMED DEVICES Manufacturing Cloud v4.2
+                        </p>
+                    </motion.div>
                 </div>
             </main>
+
+            {/* Add Modal */}
+            <AnimatePresence>
+                {isAddModalOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsAddModalOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-2xl font-bold">Add New Menu</h2>
+                                    <button
+                                        onClick={() => setIsAddModalOpen(false)}
+                                        className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Menu ID <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input
+                                            name="menu_id"
+                                            value={formData.menu_id}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g., M00, T01, D00"
+                                            required
+                                            maxLength={3}
+                                        />
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Menu Description <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input
+                                            name="menu_desc"
+                                            value={formData.menu_desc}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter menu description"
+                                            required
+                                            maxLength={100}
+                                        />
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={handleInputChange}
+                                                className="w-4 h-4 text-blue-600"
+                                            />
+                                            <span className="text-sm font-medium">Active</span>
+                                        </label>
+                                    </div>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setIsAddModalOpen(false)}
+                                            className="px-6"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                                            disabled={isSubmittingRef.current}
+                                        >
+                                            Save Menu
+                                        </Button>
+                                    </div>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Modal */}
+            <AnimatePresence>
+                {isEditModalOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsEditModalOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-2xl font-bold">Edit Menu</h2>
+                                    <button
+                                        onClick={() => setIsEditModalOpen(false)}
+                                        className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Menu ID <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input
+                                            name="menu_id"
+                                            value={formData.menu_id}
+                                            onChange={handleInputChange}
+                                            required
+                                            disabled
+                                        />
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Menu Description <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input
+                                            name="menu_desc"
+                                            value={formData.menu_desc}
+                                            onChange={handleInputChange}
+                                            required
+                                            maxLength={100}
+                                        />
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={handleInputChange}
+                                                className="w-4 h-4 text-blue-600"
+                                            />
+                                            <span className="text-sm font-medium">Active</span>
+                                        </label>
+                                    </div>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setIsEditModalOpen(false)}
+                                            className="px-6"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                                            disabled={isSubmittingRef.current}
+                                        >
+                                            Update Menu
+                                        </Button>
+                                    </div>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
+                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
+                                    <button
+                                        onClick={() => setIsDeleteDialogOpen(false)}
+                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6">
+                                    <p className="text-foreground mb-4">
+                                        Are you sure you want to delete menu <strong>{selectedMenu?.menu_desc}</strong> ({selectedMenu?.menu_id})?
+                                    </p>
+                                    <p className="text-sm text-muted-foreground mb-6">
+                                        This action cannot be undone.
+                                    </p>
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            onClick={confirmDelete}
+                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                            disabled={isSubmittingRef.current}
+                                        >
+                                            Delete
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
-
 
