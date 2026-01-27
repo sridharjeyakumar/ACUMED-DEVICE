@@ -65,3 +65,4 @@ If `db` is "disconnected", the database connection failed.
 - **"Cannot connect to server"** - Backend server not running
 - **"MongoDB connection error"** - Check `.env` file and connection string
 
+

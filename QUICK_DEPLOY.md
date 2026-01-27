@@ -67,3 +67,4 @@ If Railway doesn't work, use Render:
 - **CORS errors**: Backend CORS is configured to allow all origins
 - **Still 404**: Make sure you set `VITE_API_URL` in Vercel and redeployed
 
+

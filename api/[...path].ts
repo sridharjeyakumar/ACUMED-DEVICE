@@ -1,37 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
 import mongoose from 'mongoose';
 import connectDB from '../server/db/connection';
-import menuRoutes from '../server/routes/menuRoutes';
-import roleRoutes from '../server/routes/roleRoutes';
-import menuAccessRoutes from '../server/routes/menuAccessRoutes';
-import userRoutes from '../server/routes/userRoutes';
-import userLoginHistoryRoutes from '../server/routes/userLoginHistoryRoutes';
+import MenuMaster from '../server/models/MenuMaster';
+import RoleMaster from '../server/models/RoleMaster';
+import MenuAccessMaster from '../server/models/MenuAccessMaster';
+import UserMaster from '../server/models/UserMaster';
+import UserLoginHistory from '../server/models/UserLoginHistory';
+import bcrypt from 'bcryptjs';
 
-// Create Express app (cached across invocations)
-let app: express.Application | null = null;
+// Cache database connection
 let dbConnected = false;
 
-async function getApp(): Promise<express.Application> {
-  if (app) {
-    return app;
-  }
-
-  app = express();
-
-  // Middleware
-  app.use(cors({
-    origin: [
-      'https://acumed-devices-production-inventory.vercel.app',
-      'http://localhost:8080',
-      'http://localhost:5173',
-    ],
-    credentials: true,
-  }));
-  app.use(express.json());
-
-  // Connect to database
+async function ensureDbConnection() {
   if (!dbConnected) {
     try {
       await connectDB();
@@ -41,68 +21,351 @@ async function getApp(): Promise<express.Application> {
       throw error;
     }
   }
-
-  // Routes (remove /api prefix since Vercel already handles it)
-  app.use('/menus', menuRoutes);
-  app.use('/roles', roleRoutes);
-  app.use('/menu-access', menuAccessRoutes);
-  app.use('/users', userRoutes);
-  app.use('/user-login-history', userLoginHistoryRoutes);
-
-  // Health check
-  app.get('/health', (req: Request, res: Response) => {
-    res.json({ 
-      status: 'ok', 
-      message: 'Server is running', 
-      db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' 
-    });
-  });
-
-  return app;
 }
 
-// Vercel serverless function handler
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  try {
-    const expressApp = await getApp();
-    
-    // Get the path from Vercel's route parameter
-    // For /api/menus, req.query.path will be ['menus']
-    // For /api/health, req.query.path will be ['health']
-    const pathArray = (req.query?.path as string[] | string) || [];
-    const pathParts = Array.isArray(pathArray) ? pathArray : [pathArray];
-    const path = '/' + (pathParts.length > 0 ? pathParts.join('/') : '');
-    
-    // Preserve query string if exists
-    const queryString = req.url?.includes('?') ? req.url.split('?')[1] : '';
-    const fullPath = queryString ? `${path}?${queryString}` : path;
-    
-    // Create Express-compatible request object
-    const expressReq = {
-      ...req,
-      url: fullPath,
-      path: path,
-      originalUrl: fullPath,
-      method: req.method || 'GET',
-      headers: req.headers,
-      body: req.body,
-      query: { ...req.query, path: undefined }, // Remove path from query
-      params: {},
-    } as any;
+// Set CORS headers
+function setCorsHeaders(res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
 
-    // Handle the request with Express
-    return new Promise<void>((resolve, reject) => {
-      expressApp(expressReq, res as any, (err?: any) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
+// Helper to parse path
+function parsePath(req: VercelRequest): { resource: string; id?: string; subResource?: string } {
+  const pathArray = (req.query?.path as string[] | string) || [];
+  const parts = Array.isArray(pathArray) ? pathArray : [pathArray];
+  
+  if (parts.length === 0) {
+    return { resource: '' };
+  }
+  
+  const resource = parts[0];
+  const id = parts[1];
+  const subResource = parts[2];
+  
+  return { resource, id, subResource };
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    setCorsHeaders(res);
+    return res.status(200).end();
+  }
+
+  // Set CORS headers for all responses
+  setCorsHeaders(res);
+
+  try {
+    // Ensure database connection
+    await ensureDbConnection();
+    
+    // Parse the path
+    const { resource, id, subResource } = parsePath(req);
+    const method = req.method || 'GET';
+    
+    // Log for debugging (remove in production if needed)
+    console.log(`[API] ${method} ${req.url} - Resource: ${resource}, ID: ${id}, SubResource: ${subResource}`);
+
+    // Health check
+    if (resource === 'health' || (resource === '' && req.url?.includes('health'))) {
+      return res.json({
+        status: 'ok',
+        message: 'Server is running',
+        db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
       });
-    });
+    }
+
+    // Menu Master routes
+    if (resource === 'menus') {
+      if (method === 'GET' && !id) {
+        const menus = await MenuMaster.find().sort({ menu_id: 1 });
+        return res.json(menus);
+      }
+      if (method === 'GET' && id) {
+        const menu = await MenuMaster.findOne({ menu_id: id });
+        if (!menu) return res.status(404).json({ error: 'Menu not found' });
+        return res.json(menu);
+      }
+      if (method === 'POST') {
+        const { menu_id, menu_desc, active } = req.body;
+        const menu = new MenuMaster({ menu_id, menu_desc, active: active !== false });
+        await menu.save();
+        return res.status(201).json(menu);
+      }
+      if (method === 'PUT' && id) {
+        try {
+          const body = req.body || {};
+          const { menu_desc, active } = body;
+          
+          const updateData: any = {};
+          if (menu_desc !== undefined && menu_desc !== null) updateData.menu_desc = menu_desc;
+          if (active !== undefined) updateData.active = active !== false;
+          
+          if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ error: 'At least one field must be provided for update' });
+          }
+          
+          const menu = await MenuMaster.findOneAndUpdate(
+            { menu_id: id },
+            updateData,
+            { new: true, runValidators: true }
+          );
+          if (!menu) return res.status(404).json({ error: 'Menu not found' });
+          return res.json(menu);
+        } catch (error: any) {
+          console.error('[API] Menu update error:', error);
+          return res.status(400).json({ 
+            error: 'Failed to update menu', 
+            details: error.message 
+          });
+        }
+      }
+      if (method === 'DELETE' && id) {
+        try {
+          const menu = await MenuMaster.findOneAndDelete({ menu_id: id });
+          if (!menu) return res.status(404).json({ error: 'Menu not found' });
+          return res.json({ message: 'Menu deleted successfully' });
+        } catch (error: any) {
+          console.error('[API] Menu delete error:', error);
+          return res.status(400).json({ 
+            error: 'Failed to delete menu', 
+            details: error.message 
+          });
+        }
+      }
+    }
+
+    // Role Master routes
+    if (resource === 'roles') {
+      if (method === 'GET' && !id) {
+        const roles = await RoleMaster.find().sort({ roll_id: 1 });
+        return res.json(roles);
+      }
+      if (method === 'GET' && id) {
+        const role = await RoleMaster.findOne({ roll_id: id });
+        if (!role) return res.status(404).json({ error: 'Role not found' });
+        return res.json(role);
+      }
+      if (method === 'POST') {
+        const { roll_id, roll_description, remarks, active } = req.body;
+        const role = new RoleMaster({ roll_id, roll_description, remarks, active: active !== false });
+        await role.save();
+        return res.status(201).json(role);
+      }
+      if (method === 'PUT' && id) {
+        const { roll_description, remarks, active } = req.body;
+        const role = await RoleMaster.findOneAndUpdate(
+          { roll_id: id },
+          { roll_description, remarks, active: active !== false },
+          { new: true, runValidators: true }
+        );
+        if (!role) return res.status(404).json({ error: 'Role not found' });
+        return res.json(role);
+      }
+      if (method === 'DELETE' && id) {
+        const role = await RoleMaster.findOneAndDelete({ roll_id: id });
+        if (!role) return res.status(404).json({ error: 'Role not found' });
+        return res.json({ message: 'Role deleted successfully' });
+      }
+    }
+
+    // Menu Access Master routes
+    if (resource === 'menu-access') {
+      if (method === 'GET' && !id) {
+        const accesses = await MenuAccessMaster.find().sort({ rold_id: 1, menu_id: 1 });
+        return res.json(accesses);
+      }
+      if (method === 'GET' && id && subResource) {
+        // GET /api/menu-access/:roldId/:menuId
+        const access = await MenuAccessMaster.findOne({ rold_id: id, menu_id: subResource });
+        if (!access) return res.status(404).json({ error: 'Menu access not found' });
+        return res.json(access);
+      }
+      if (method === 'POST') {
+        const { rold_id, menu_id, access, can_add, can_edit, can_view, can_cancel } = req.body;
+        const menuAccess = new MenuAccessMaster({
+          rold_id,
+          menu_id,
+          access: access !== false,
+          can_add: can_add !== false,
+          can_edit: can_edit !== false,
+          can_view: can_view !== false,
+          can_cancel: can_cancel !== false,
+        });
+        try {
+          await menuAccess.save();
+          return res.status(201).json(menuAccess);
+        } catch (error: any) {
+          if (error.code === 11000) {
+            return res.status(400).json({ error: 'Menu access already exists for this role and menu' });
+          }
+          throw error;
+        }
+      }
+      if (method === 'PUT' && id && subResource) {
+        // PUT /api/menu-access/:roldId/:menuId
+        try {
+          const body = req.body || {};
+          const { access, can_add, can_edit, can_view, can_cancel } = body;
+          
+          const menuAccess = await MenuAccessMaster.findOneAndUpdate(
+            { rold_id: id, menu_id: subResource },
+            {
+              rold_id: id,
+              menu_id: subResource,
+              access: access !== false,
+              can_add: can_add !== false,
+              can_edit: can_edit !== false,
+              can_view: can_view !== false,
+              can_cancel: can_cancel !== false,
+            },
+            { new: true, runValidators: true, upsert: true }
+          );
+          return res.json(menuAccess);
+        } catch (error: any) {
+          console.error('[API] Menu access update error:', error);
+          if (error.code === 11000) {
+            return res.status(400).json({ error: 'Menu access already exists for this role and menu' });
+          }
+          return res.status(400).json({ 
+            error: 'Failed to update menu access', 
+            details: error.message 
+          });
+        }
+      }
+      if (method === 'DELETE' && id && subResource) {
+        // DELETE /api/menu-access/:roldId/:menuId
+        const menuAccess = await MenuAccessMaster.findOneAndDelete({ rold_id: id, menu_id: subResource });
+        if (!menuAccess) return res.status(404).json({ error: 'Menu access not found' });
+        return res.json({ message: 'Menu access deleted successfully' });
+      }
+    }
+
+    // User Master routes
+    if (resource === 'users') {
+      if (method === 'GET' && !id) {
+        const users = await UserMaster.find().select('-hash_password').sort({ user_id: 1 });
+        return res.json(users);
+      }
+      if (method === 'GET' && id) {
+        const user = await UserMaster.findOne({ user_id: id }).select('-hash_password');
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        return res.json(user);
+      }
+      if (method === 'POST') {
+        const { user_id, employee_id, password, N_password_expiry_days, active } = req.body;
+        const hash_password = await bcrypt.hash(password || 'defaultPassword123', 10);
+        const passwordExpiryDate = new Date();
+        passwordExpiryDate.setDate(passwordExpiryDate.getDate() + (N_password_expiry_days || 90));
+        const user = new UserMaster({
+          user_id,
+          employee_id,
+          hash_password,
+          Date_password_changed_date: new Date(),
+          Date_password_expiry_date: passwordExpiryDate,
+          N_password_expiry_days: N_password_expiry_days || 90,
+          active: active !== false,
+        });
+        const savedUser = await user.save();
+        const userResponse = savedUser.toObject() as any;
+        delete userResponse.hash_password;
+        return res.status(201).json(userResponse);
+      }
+      if (method === 'PUT' && id) {
+        const { employee_id, password, N_password_expiry_days, active } = req.body;
+        const updateData: any = { employee_id, active: active !== false };
+        if (password) {
+          updateData.hash_password = await bcrypt.hash(password, 10);
+          updateData.Date_password_changed_date = new Date();
+        }
+        if (N_password_expiry_days) {
+          const passwordExpiryDate = new Date();
+          passwordExpiryDate.setDate(passwordExpiryDate.getDate() + N_password_expiry_days);
+          updateData.Date_password_expiry_date = passwordExpiryDate;
+          updateData.N_password_expiry_days = N_password_expiry_days;
+        }
+        const user = await UserMaster.findOneAndUpdate(
+          { user_id: id },
+          updateData,
+          { new: true, runValidators: true }
+        ).select('-hash_password');
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        return res.json(user);
+      }
+      if (method === 'DELETE' && id) {
+        const user = await UserMaster.findOneAndDelete({ user_id: id });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        return res.json({ message: 'User deleted successfully' });
+      }
+    }
+
+    // User Login History routes
+    if (resource === 'user-login-history') {
+      if (method === 'GET' && !id) {
+        // GET /api/user-login-history
+        const histories = await UserLoginHistory.find().sort({ Date_login_Date: -1, Time_login_Time: -1 });
+        return res.json(histories);
+      }
+      if (method === 'GET' && id === 'user' && subResource) {
+        // GET /api/user-login-history/user/:userId
+        const histories = await UserLoginHistory.find({ user_id: subResource })
+          .sort({ Date_login_Date: -1, Time_login_Time: -1 });
+        return res.json(histories);
+      }
+      if (method === 'GET' && id) {
+        // GET /api/user-login-history/:id
+        const history = await UserLoginHistory.findById(id);
+        if (!history) return res.status(404).json({ error: 'Login history not found' });
+        return res.json(history);
+      }
+      if (method === 'POST') {
+        const { user_id, Date_login_Date, Time_login_Time, Date_Logout_Date, Time_Logout_Time } = req.body;
+        const loginHistory = new UserLoginHistory({
+          user_id,
+          Date_login_Date: Date_login_Date ? new Date(Date_login_Date) : new Date(),
+          Time_login_Time: Time_login_Time || new Date().toTimeString().slice(0, 8),
+          Date_Logout_Date: Date_Logout_Date ? new Date(Date_Logout_Date) : undefined,
+          Time_Logout_Time: Time_Logout_Time || undefined,
+        });
+        await loginHistory.save();
+        return res.status(201).json(loginHistory);
+      }
+      if (method === 'PUT' && id) {
+        // PUT /api/user-login-history/:id
+        const { Date_login_Date, Time_login_Time, Date_Logout_Date, Time_Logout_Time } = req.body;
+        const updateData: any = {};
+        if (Date_login_Date) updateData.Date_login_Date = new Date(Date_login_Date);
+        if (Time_login_Time) updateData.Time_login_Time = Time_login_Time;
+        if (Date_Logout_Date) updateData.Date_Logout_Date = new Date(Date_Logout_Date);
+        if (Time_Logout_Time) updateData.Time_Logout_Time = Time_Logout_Time;
+        const history = await UserLoginHistory.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
+        if (!history) return res.status(404).json({ error: 'Login history not found' });
+        return res.json(history);
+      }
+      if (method === 'DELETE' && id) {
+        // DELETE /api/user-login-history/:id
+        const history = await UserLoginHistory.findByIdAndDelete(id);
+        if (!history) return res.status(404).json({ error: 'Login history not found' });
+        return res.json({ message: 'Login history deleted successfully' });
+      }
+    }
+
+    // 404 for unknown routes
+    console.log(`[API] Route not found: ${method} ${req.url}`);
+    return res.status(404).json({ error: 'Route not found', path: req.url });
   } catch (error: any) {
-    console.error('Handler error:', error);
-    res.status(500).json({ error: error.message || 'Internal server error' });
+    console.error('[API] Error:', {
+      message: error.message,
+      stack: error.stack,
+      url: req.url,
+      method: req.method,
+    });
+    
+    // Return error response
+    return res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
   }
 }
-

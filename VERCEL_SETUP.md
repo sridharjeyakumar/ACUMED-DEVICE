@@ -127,3 +127,4 @@ If you encounter issues:
 3. Test backend health endpoint directly
 4. Check browser console for specific errors
 
+

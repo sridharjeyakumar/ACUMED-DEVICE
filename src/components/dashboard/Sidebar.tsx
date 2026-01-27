@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -30,7 +32,8 @@ import {
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link, useLocation } from "react-router-dom";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface NavItem {
   icon: React.ElementType;
@@ -105,6 +108,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
+  const pathname = usePathname();
   const [expandedSections, setExpandedSections] = useState<string[]>(["SYSTEM", "CONFIGURATION", "MASTER", "TRANSACTION"]);
 
   const toggleSection = (title: string) => {
@@ -147,6 +151,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                 <button
                   onClick={() => toggleSection(section.title!)}
                   className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-sidebar-muted hover:text-foreground transition-colors"
+                  suppressHydrationWarning
                 >
                   {section.title}
                   <ChevronDown
@@ -166,10 +171,10 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                       style={{ animationDelay: `${itemIndex * 50}ms` }}
                     >
                       <Link
-                        to={item.href || "#"}
+                        href={item.href || "#"}
                         className={cn(
                           "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                          item.active
+                          pathname === item.href || (item.href === "/" && pathname === "/")
                             ? "bg-sidebar-accent text-sidebar-accent-foreground"
                             : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
                         )}

@@ -1,18 +1,5 @@
-// Use environment variable in production, or proxy in development
-// In production, set VITE_API_URL in Vercel environment variables
-// Example: https://your-backend.railway.app/api
-const getApiBaseUrl = () => {
-  // In development, use proxy to local backend
-  if (import.meta.env.DEV) {
-    return '/api';
-  }
-  
-  // In production on Vercel, API is on the same domain
-  // Use relative path since backend is deployed as serverless functions
-  return '/api';
-};
-
-const API_BASE_URL = getApiBaseUrl();
+// Next.js API routes - always use relative path
+const API_BASE_URL = '/api';
 
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   // API_BASE_URL is always set (either '/api' for proxy or '/api' for same domain)
@@ -35,7 +22,7 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   } catch (error: any) {
     // Handle network errors (server not running, CORS, etc.)
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      throw new Error('Cannot connect to server. Please make sure the backend server is running on http://localhost:3001');
+      throw new Error('Cannot connect to server. Please check your network connection and try again.');
     }
     throw error;
   }

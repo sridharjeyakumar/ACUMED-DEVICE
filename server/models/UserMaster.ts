@@ -69,3 +69,4 @@ const UserMaster = mongoose.model<IUserMaster>('UserMaster', UserMasterSchema);
 
 export default UserMaster;
 
+

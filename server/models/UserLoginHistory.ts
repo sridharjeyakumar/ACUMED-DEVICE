@@ -44,3 +44,4 @@ const UserLoginHistory = mongoose.model<IUserLoginHistory>('UserLoginHistory', U
 
 export default UserLoginHistory;
 
+

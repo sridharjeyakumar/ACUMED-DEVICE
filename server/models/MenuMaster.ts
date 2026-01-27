@@ -36,3 +36,4 @@ const MenuMaster = mongoose.model<IMenuMaster>('MenuMaster', MenuMasterSchema);
 
 export default MenuMaster;
 
+

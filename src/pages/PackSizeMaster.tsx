@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
@@ -17,7 +19,7 @@ interface PackSizeRecord {
     qtyPerCarton: number;
 }
 
-const PackSizeMaster = () => {
+export default function PackSizeMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -486,6 +488,4 @@ const PackSizeMaster = () => {
             </AnimatePresence>
         </div>
     );
-};
-
-export default PackSizeMaster;
+}

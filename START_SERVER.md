@@ -52,3 +52,4 @@ Health check: http://localhost:3001/api/health
   - Terminal 1: `npm run server` (backend)
   - Terminal 2: `npm run dev` (frontend)
 
+

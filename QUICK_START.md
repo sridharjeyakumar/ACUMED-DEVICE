@@ -53,3 +53,4 @@ npm run dev
 - **MongoDB connection failed:** Check your .env file has the correct Database connection string
 - **CORS errors:** The proxy in vite.config.ts should handle this, but make sure both servers are running
 
+

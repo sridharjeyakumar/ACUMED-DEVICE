@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
@@ -19,7 +21,7 @@ interface MachineRecord {
     avgHrsPerDay: number;
 }
 
-const ProductionCapacity = () => {
+export default function ProductionCapacityPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -547,6 +549,4 @@ const ProductionCapacity = () => {
             </AnimatePresence>
         </div>
     );
-};
-
-export default ProductionCapacity;
+}
