@@ -16,6 +16,22 @@ interface Role {
     roll_description: string;
     remarks: string;
     active: boolean;
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date | string; // Date
+}
+
+// Helper function to format dates consistently (prevents hydration errors)
+function formatDateTime(date: Date | string | undefined): string {
+    if (!date) return "-";
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "-";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
 }
 
 export default function RoleMasterPage() {
@@ -226,6 +242,12 @@ export default function RoleMasterPage() {
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
                                                 STATUS
                                             </th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
+                                                LAST MODIFIED USER ID
+                                            </th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">
+                                                LAST MODIFIED DATE & TIME
+                                            </th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">
                                                 ACTIONS
                                             </th>
@@ -234,13 +256,13 @@ export default function RoleMasterPage() {
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading...
                                                 </td>
                                             </tr>
                                         ) : filteredRoles.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
                                                     No roles found
                                                 </td>
                                             </tr>
@@ -273,6 +295,18 @@ export default function RoleMasterPage() {
                                                         role.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                     }`}>
                                                         {role.active ? "Active" : "Inactive"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground font-mono">
+                                                        {role.last_modified_user_id || "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground">
+                                                        {role.last_modified_date_time 
+                                                            ? formatDateTime(role.last_modified_date_time)
+                                                            : "-"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">

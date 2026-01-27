@@ -19,6 +19,22 @@ interface MenuAccess {
     can_edit: boolean;
     can_view: boolean;
     can_cancel: boolean;
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date | string; // Date
+}
+
+// Helper function to format dates consistently (prevents hydration errors)
+function formatDateTime(date: Date | string | undefined): string {
+    if (!date) return "-";
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "-";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
 }
 
 export default function MenuAccessMasterPage() {
@@ -231,19 +247,21 @@ export default function MenuAccessMasterPage() {
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">EDIT</th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">VIEW</th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">CANCEL</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">ACTIONS</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={8} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading...
                                                 </td>
                                             </tr>
                                         ) : filteredAccesses.length === 0 ? (
                                             <tr>
-                                                <td colSpan={8} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
                                                     No menu accesses found
                                                 </td>
                                             </tr>
@@ -276,6 +294,18 @@ export default function MenuAccessMasterPage() {
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <span className={`w-3 h-3 rounded-full inline-block ${access.can_cancel ? "bg-green-500" : "bg-red-500"}`}></span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground font-mono">
+                                                        {access.last_modified_user_id || "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground">
+                                                        {access.last_modified_date_time 
+                                                            ? formatDateTime(access.last_modified_date_time)
+                                                            : "-"}
+                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center justify-center gap-2">

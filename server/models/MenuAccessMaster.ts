@@ -8,6 +8,8 @@ export interface IMenuAccessMaster extends Document {
   can_edit: boolean;
   can_view: boolean;
   can_cancel: boolean;
+  last_modified_user_id?: string; // Char(5)
+  last_modified_date_time?: Date; // Date
 }
 
 const MenuAccessMasterSchema: Schema = new Schema({
@@ -49,6 +51,16 @@ const MenuAccessMasterSchema: Schema = new Schema({
     type: Boolean,
     required: true,
     default: true,
+  },
+  last_modified_user_id: {
+    type: String,
+    required: false,
+    maxlength: 5,
+    trim: true,
+  },
+  last_modified_date_time: {
+    type: Date,
+    required: false,
   },
 }, {
   timestamps: true,

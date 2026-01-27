@@ -4,12 +4,15 @@ export interface IUserMaster extends Document {
   user_id: string; // Char(10) - PK
   employee_id: string; // Char(5) - FK
   hash_password: string;
+  role_id?: string; // Char(3) - FK to RoleMaster
   Date_password_changed_date?: Date;
   Date_password_expiry_date?: Date;
   N_password_expiry_days?: number; // Number(3)
   Date_last_login_date?: Date;
   Time_last_login_time?: string;
   active: boolean;
+  last_modified_user_id?: string; // Char(5)
+  last_modified_date_time?: Date; // Date
 }
 
 const UserMasterSchema: Schema = new Schema({
@@ -29,6 +32,13 @@ const UserMasterSchema: Schema = new Schema({
   hash_password: {
     type: String,
     required: true,
+  },
+  role_id: {
+    type: String,
+    required: false,
+    maxlength: 3,
+    trim: true,
+    ref: 'RoleMaster',
   },
   Date_password_changed_date: {
     type: Date,
@@ -56,6 +66,16 @@ const UserMasterSchema: Schema = new Schema({
     type: Boolean,
     required: true,
     default: true,
+  },
+  last_modified_user_id: {
+    type: String,
+    required: false,
+    maxlength: 5,
+    trim: true,
+  },
+  last_modified_date_time: {
+    type: Date,
+    required: false,
   },
 }, {
   timestamps: true,

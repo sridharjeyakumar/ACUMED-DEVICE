@@ -12,10 +12,32 @@ import { userAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
-    user_id: string;
-    employee_id: string;
-    active: boolean;
-    last_login?: string;
+    user_id: string; // Char(10) - PK
+    employee_id: string; // Char(5) - FK
+    role_id?: string; // Char(3) - FK
+    password_changed_date?: Date | string; // Date
+    password_expiry_date?: Date | string; // Date
+    password_expiry_days?: number; // N(3)
+    last_login_date?: Date | string; // Date
+    last_login_time?: string; // Time
+    active: boolean; // Boolean
+}
+
+// Helper function to format dates consistently (prevents hydration errors)
+function formatDate(date: Date | string | undefined): string {
+    if (!date) return "-";
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "-";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${month}/${day}/${year}`;
+}
+
+// Helper function to format time
+function formatTime(time: string | undefined): string {
+    if (!time) return "-";
+    return time;
 }
 
 export default function UserMasterPage() {
@@ -30,6 +52,7 @@ export default function UserMasterPage() {
     const [formData, setFormData] = useState({
         user_id: "",
         employee_id: "",
+        role_id: "",
         password: "",
         password_expiry_days: 90,
         active: true,
@@ -46,8 +69,13 @@ export default function UserMasterPage() {
             setUsers(data.map((u: any) => ({
                 user_id: u.user_id,
                 employee_id: u.employee_id,
-                active: u.active,
-                last_login: u.Date_last_login_date ? `${u.Date_last_login_date.split('T')[0]} ${u.Time_last_login_time || ''}` : undefined,
+                role_id: u.role_id || u.roll_id,
+                password_changed_date: u.password_changed_date || u.Date_password_changed_date,
+                password_expiry_date: u.password_expiry_date || u.Date_password_expiry_date,
+                password_expiry_days: u.password_expiry_days || u.N_password_expiry_days,
+                last_login_date: u.last_login_date || u.Date_last_login_date,
+                last_login_time: u.last_login_time || u.Time_last_login_time,
+                active: u.active !== false,
             })));
         } catch (error: any) {
             toast({
@@ -62,7 +90,8 @@ export default function UserMasterPage() {
 
     const filteredUsers = users.filter((user) =>
         user.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.employee_id.toLowerCase().includes(searchQuery.toLowerCase())
+        user.employee_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (user.role_id && user.role_id.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,6 +105,7 @@ export default function UserMasterPage() {
             await userAPI.create({
                 user_id: formData.user_id,
                 employee_id: formData.employee_id,
+                role_id: formData.role_id,
                 password: formData.password,
                 N_password_expiry_days: formData.password_expiry_days,
                 active: formData.active,
@@ -85,7 +115,7 @@ export default function UserMasterPage() {
                 description: "User created successfully",
             });
             setIsAddModalOpen(false);
-            setFormData({ user_id: "", employee_id: "", password: "", password_expiry_days: 90, active: true });
+            setFormData({ user_id: "", employee_id: "", role_id: "", password: "", password_expiry_days: 90, active: true });
             loadUsers();
         } catch (error: any) {
             toast({
@@ -101,8 +131,9 @@ export default function UserMasterPage() {
         setFormData({
             user_id: user.user_id,
             employee_id: user.employee_id,
+            role_id: user.role_id || "",
             password: "",
-            password_expiry_days: 90,
+            password_expiry_days: user.password_expiry_days || 90,
             active: user.active,
         });
         setIsEditModalOpen(true);
@@ -114,6 +145,7 @@ export default function UserMasterPage() {
         try {
             const updateData: any = {
                 employee_id: formData.employee_id,
+                role_id: formData.role_id,
                 active: formData.active,
             };
             if (formData.password) {
@@ -129,7 +161,7 @@ export default function UserMasterPage() {
             });
             setIsEditModalOpen(false);
             setSelectedUser(null);
-            setFormData({ user_id: "", employee_id: "", password: "", password_expiry_days: 90, active: true });
+            setFormData({ user_id: "", employee_id: "", role_id: "", password: "", password_expiry_days: 90, active: true });
             loadUsers();
         } catch (error: any) {
             toast({
@@ -206,7 +238,7 @@ export default function UserMasterPage() {
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search users by ID or employee ID..."
+                                        placeholder="Search users by ID, employee ID, or role ID..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-10 pr-4 py-2 w-full"
@@ -232,23 +264,28 @@ export default function UserMasterPage() {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">USER ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">EMPLOYEE ID</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">STATUS</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">LAST LOGIN</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">ACTIONS</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">USER ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">EMPLOYEE ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">ROLE ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">PASSWORD CHANGED DATE</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">PASSWORD EXPIRY DATE</th>
+                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">PASSWORD EXPIRY DAYS</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST LOGIN DATE</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST LOGIN TIME</th>
+                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIVE</th>
+                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading...
                                                 </td>
                                             </tr>
                                         ) : filteredUsers.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
                                                     No users found
                                                 </td>
                                             </tr>
@@ -267,15 +304,30 @@ export default function UserMasterPage() {
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-foreground">{user.employee_id}</span>
                                                 </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground font-mono">{user.role_id || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground">{formatDate(user.password_changed_date)}</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground">{formatDate(user.password_expiry_date)}</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="text-sm text-foreground">{user.password_expiry_days || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground">{formatDate(user.last_login_date)}</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground">{formatTime(user.last_login_time)}</span>
+                                                </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
                                                         user.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                     }`}>
-                                                        {user.active ? "Active" : "Inactive"}
+                                                        {user.active ? "TRUE" : "FALSE"}
                                                     </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm text-muted-foreground">{user.last_login || "Never"}</span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center justify-center gap-2">
@@ -352,11 +404,15 @@ export default function UserMasterPage() {
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">User ID <span className="text-red-500">*</span></label>
-                                        <Input name="user_id" value={formData.user_id} onChange={handleInputChange} placeholder="e.g., AD, OP1" required maxLength={10} />
+                                        <Input name="user_id" value={formData.user_id} onChange={handleInputChange} placeholder="e.g., E1001" required maxLength={10} />
                                     </div>
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Employee ID <span className="text-red-500">*</span></label>
                                         <Input name="employee_id" value={formData.employee_id} onChange={handleInputChange} placeholder="e.g., E1001" required maxLength={5} />
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Role ID <span className="text-red-500">*</span></label>
+                                        <Input name="role_id" value={formData.role_id} onChange={handleInputChange} placeholder="e.g., ADM, MGR, OPR" required maxLength={3} />
                                     </div>
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Password <span className="text-red-500">*</span></label>
@@ -402,6 +458,10 @@ export default function UserMasterPage() {
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Employee ID <span className="text-red-500">*</span></label>
                                         <Input name="employee_id" value={formData.employee_id} onChange={handleInputChange} required />
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Role ID <span className="text-red-500">*</span></label>
+                                        <Input name="role_id" value={formData.role_id} onChange={handleInputChange} placeholder="e.g., ADM, MGR, OPR" required maxLength={3} />
                                     </div>
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">New Password</label>
@@ -455,5 +515,3 @@ export default function UserMasterPage() {
         </div>
     );
 }
-
-

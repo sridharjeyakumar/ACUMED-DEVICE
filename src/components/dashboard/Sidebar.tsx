@@ -29,6 +29,7 @@ import {
   PackageOpen,
   Menu as MenuIcon,
   Clock,
+  Award,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -51,19 +52,16 @@ const navSections: NavSection[] = [
     items: [{ icon: LayoutDashboard, label: "Dashboard", active: true, href: "/" }],
   },
   {
-    title: "SYSTEM",
+    title: "CONFIGURATION",
     items: [
       { icon: MenuIcon, label: "Menu Master", href: "/menu-master" },
       { icon: Users, label: "Role Master", href: "/role-master" },
       { icon: Key, label: "Menu Access Master", href: "/menu-access-master" },
       { icon: UserCircle, label: "User Master", href: "/user-master" },
       { icon: Clock, label: "User Login History", href: "/user-login-history" },
-    ],
-  },
-  {
-    title: "CONFIGURATION",
-    items: [
       { icon: Building2, label: "Company Master", href: "/company-master" },
+      { icon: Factory, label: "Department Master", href: "/department-master" },
+      { icon: Award, label: "Employee Grade Master", href: "/employee-grade-master" },
       { icon: Key, label: "Role wise Menu Access", href: "/role-wise-menu-access" },
       { icon: CheckCircle2, label: "Product Status Master", href: "/product-status-master" },
       { icon: Package, label: "Material Status Master", href: "/material-status-master" },
@@ -106,7 +104,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const [expandedSections, setExpandedSections] = useState<string[]>(["SYSTEM", "CONFIGURATION", "MASTER", "TRANSACTION"]);
+  const [expandedSections, setExpandedSections] = useState<string[]>(["CONFIGURATION", "MASTER", "TRANSACTION"]);
 
   const toggleSection = (title: string) => {
     setExpandedSections((prev) =>

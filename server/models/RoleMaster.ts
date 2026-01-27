@@ -5,6 +5,8 @@ export interface IRoleMaster extends Document {
   roll_description: string; // Char(50)
   remarks: string; // Char(100)
   active: boolean;
+  last_modified_user_id?: string; // Char(5)
+  last_modified_date_time?: Date; // Date
 }
 
 const RoleMasterSchema: Schema = new Schema({
@@ -31,6 +33,16 @@ const RoleMasterSchema: Schema = new Schema({
     type: Boolean,
     required: true,
     default: true,
+  },
+  last_modified_user_id: {
+    type: String,
+    required: false,
+    maxlength: 5,
+    trim: true,
+  },
+  last_modified_date_time: {
+    type: Date,
+    required: false,
   },
 }, {
   timestamps: true,

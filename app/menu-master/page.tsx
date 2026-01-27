@@ -15,6 +15,22 @@ interface Menu {
     menu_id: string;
     menu_desc: string;
     active: boolean;
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date | string; // Date
+}
+
+// Helper function to format dates consistently (prevents hydration errors)
+function formatDateTime(date: Date | string | undefined): string {
+    if (!date) return "-";
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "-";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
 }
 
 export default function MenuMasterPage() {
@@ -34,15 +50,33 @@ export default function MenuMasterPage() {
     });
 
     useEffect(() => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:52',message:'useEffect mounted, calling loadMenus',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
+        // #endregion
         loadMenus();
     }, []);
 
     const loadMenus = async () => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:56',message:'loadMenus called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4,H5'})}).catch(()=>{});
+        // #endregion
         try {
             setLoading(true);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:59',message:'Before menuAPI.getAll',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2,H4'})}).catch(()=>{});
+            // #endregion
             const data = await menuAPI.getAll();
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:62',message:'After menuAPI.getAll',data:{dataType:Array.isArray(data)?'array':'other',dataLength:Array.isArray(data)?data.length:'N/A',firstItem:Array.isArray(data)&&data.length>0?data[0]:null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H2,H5'})}).catch(()=>{});
+            // #endregion
             setMenus(data);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:65',message:'setMenus called',data:{menusCount:data.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H7'})}).catch(()=>{});
+            // #endregion
         } catch (error: any) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:67',message:'loadMenus error',data:{error:error.message,errorName:error.name,errorStack:error.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+            // #endregion
             toast({
                 title: "Error",
                 description: error.message || "Failed to load menus",
@@ -66,10 +100,19 @@ export default function MenuMasterPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:82',message:'handleSubmit called',data:{formData,isSubmitting:isSubmittingRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3,H4'})}).catch(()=>{});
+        // #endregion
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:88',message:'Before menuAPI.create',data:{formData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             await menuAPI.create(formData);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:90',message:'After menuAPI.create success',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             toast({
                 title: "Success",
                 description: "Menu created successfully",
@@ -78,6 +121,9 @@ export default function MenuMasterPage() {
             setFormData({ menu_id: "", menu_desc: "", active: true });
             loadMenus();
         } catch (error: any) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:99',message:'handleSubmit error',data:{error:error.message,errorName:error.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             toast({
                 title: "Error",
                 description: error.message || "Failed to create menu",
@@ -101,14 +147,23 @@ export default function MenuMasterPage() {
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:117',message:'handleEditSubmit called',data:{selectedMenuId:selectedMenu?.menu_id,formData,isSubmitting:isSubmittingRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3,H4'})}).catch(()=>{});
+        // #endregion
         if (isSubmittingRef.current) return;
         if (!selectedMenu) return;
         isSubmittingRef.current = true;
         try {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:124',message:'Before menuAPI.update',data:{id:selectedMenu.menu_id,updateData:{menu_desc:formData.menu_desc,active:formData.active}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             await menuAPI.update(selectedMenu.menu_id, {
                 menu_desc: formData.menu_desc,
                 active: formData.active,
             });
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:130',message:'After menuAPI.update success',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             toast({
                 title: "Success",
                 description: "Menu updated successfully",
@@ -118,6 +173,9 @@ export default function MenuMasterPage() {
             setFormData({ menu_id: "", menu_desc: "", active: true });
             loadMenus();
         } catch (error: any) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:140',message:'handleEditSubmit error',data:{error:error.message,errorName:error.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             toast({
                 title: "Error",
                 description: error.message || "Failed to update menu",
@@ -134,11 +192,20 @@ export default function MenuMasterPage() {
     };
 
     const confirmDelete = async () => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:191',message:'confirmDelete called',data:{selectedMenuId:selectedMenu?.menu_id,isSubmitting:isSubmittingRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3,H4'})}).catch(()=>{});
+        // #endregion
         if (isSubmittingRef.current) return;
         if (!selectedMenu) return;
         isSubmittingRef.current = true;
         try {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:196',message:'Before menuAPI.delete',data:{id:selectedMenu.menu_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             await menuAPI.delete(selectedMenu.menu_id);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:198',message:'After menuAPI.delete success',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             toast({
                 title: "Success",
                 description: "Menu deleted successfully",
@@ -147,6 +214,9 @@ export default function MenuMasterPage() {
             setSelectedMenu(null);
             loadMenus();
         } catch (error: any) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:208',message:'confirmDelete error',data:{error:error.message,errorName:error.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             toast({
                 title: "Error",
                 description: error.message || "Failed to delete menu",
@@ -233,6 +303,12 @@ export default function MenuMasterPage() {
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
                                                 STATUS
                                             </th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
+                                                LAST MODIFIED USER ID
+                                            </th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">
+                                                LAST MODIFIED DATE & TIME
+                                            </th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">
                                                 ACTIONS
                                             </th>
@@ -241,13 +317,13 @@ export default function MenuMasterPage() {
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={4} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading...
                                                 </td>
                                             </tr>
                                         ) : filteredMenus.length === 0 ? (
                                             <tr>
-                                                <td colSpan={4} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
                                                     No menus found
                                                 </td>
                                             </tr>
@@ -275,6 +351,18 @@ export default function MenuMasterPage() {
                                                         menu.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                     }`}>
                                                         {menu.active ? "Active" : "Inactive"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground font-mono">
+                                                        {menu.last_modified_user_id || "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground">
+                                                        {menu.last_modified_date_time 
+                                                            ? formatDateTime(menu.last_modified_date_time)
+                                                            : "-"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">

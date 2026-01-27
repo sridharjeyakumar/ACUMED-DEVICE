@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, X, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
 
 interface MaterialStatus {
     id: string;
@@ -16,14 +17,31 @@ interface MaterialStatus {
     effectType: "ADD" | "SUBTRACT";
     seqNo: number;
     active: boolean;
+    last_modified_user_id: string; // Char(5)
+    last_modified_date_time: Date; // Date
+}
+
+// Helper function to format dates consistently (prevents hydration errors)
+function formatDateTime(date: Date | string): string {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "-";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
 }
 
 export default function MaterialStatusMasterPage() {
+    const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<MaterialStatus | null>(null);
+    const isSubmittingRef = useRef(false);
     const [formData, setFormData] = useState({
         name: "",
         description: "",
@@ -31,7 +49,7 @@ export default function MaterialStatusMasterPage() {
         active: true,
     });
 
-    const materialStatuses: MaterialStatus[] = [
+    const [materialStatuses, setMaterialStatuses] = useState<MaterialStatus[]>([
         {
             id: "RS",
             name: "Receipt from Supplier",
@@ -39,6 +57,8 @@ export default function MaterialStatusMasterPage() {
             effectType: "ADD",
             seqNo: 1,
             active: true,
+            last_modified_user_id: "",
+            last_modified_date_time: new Date(),
         },
         {
             id: "IP",
@@ -47,6 +67,8 @@ export default function MaterialStatusMasterPage() {
             effectType: "SUBTRACT",
             seqNo: 2,
             active: true,
+            last_modified_user_id: "",
+            last_modified_date_time: new Date(),
         },
         {
             id: "RT",
@@ -55,6 +77,8 @@ export default function MaterialStatusMasterPage() {
             effectType: "SUBTRACT",
             seqNo: 4,
             active: true,
+            last_modified_user_id: "",
+            last_modified_date_time: new Date(),
         },
         {
             id: "RR",
@@ -63,6 +87,8 @@ export default function MaterialStatusMasterPage() {
             effectType: "ADD",
             seqNo: 5,
             active: true,
+            last_modified_user_id: "",
+            last_modified_date_time: new Date(),
         },
         {
             id: "A1",
@@ -71,6 +97,8 @@ export default function MaterialStatusMasterPage() {
             effectType: "ADD",
             seqNo: 6,
             active: true,
+            last_modified_user_id: "",
+            last_modified_date_time: new Date(),
         },
         {
             id: "A2",
@@ -79,8 +107,10 @@ export default function MaterialStatusMasterPage() {
             effectType: "SUBTRACT",
             seqNo: 7,
             active: true,
+            last_modified_user_id: "",
+            last_modified_date_time: new Date(),
         },
-    ];
+    ]);
 
     const filteredStatuses = materialStatuses.filter((status) =>
         status.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -92,16 +122,44 @@ export default function MaterialStatusMasterPage() {
         setFormData({ ...formData, [e.target.name]: value });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
-        setIsAddModalOpen(false);
-        setFormData({
-            name: "",
-            description: "",
-            effectType: "ADD",
-            active: true,
-        });
+        e.stopPropagation();
+        if (isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
+        try {
+            // TODO: Replace with actual API call
+            const newStatus: MaterialStatus = {
+                id: `MS-${Date.now().toString().slice(-3)}`, // Generate temporary ID
+                name: formData.name,
+                description: formData.description,
+                effectType: formData.effectType,
+                seqNo: materialStatuses.length + 1,
+                active: formData.active,
+                last_modified_user_id: "ADMIN", // TODO: Get from auth context
+                last_modified_date_time: new Date(),
+            };
+            setMaterialStatuses([...materialStatuses, newStatus]);
+            toast({
+                title: "Success",
+                description: "Material status created successfully",
+            });
+            setIsAddModalOpen(false);
+            setFormData({
+                name: "",
+                description: "",
+                effectType: "ADD",
+                active: true,
+            });
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to create material status",
+                variant: "destructive",
+            });
+        } finally {
+            isSubmittingRef.current = false;
+        }
     };
 
     const handleEdit = (status: MaterialStatus) => {
@@ -115,17 +173,49 @@ export default function MaterialStatusMasterPage() {
         setIsEditModalOpen(true);
     };
 
-    const handleEditSubmit = (e: React.FormEvent) => {
+    const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Edit submitted:", { ...selectedStatus, ...formData });
-        setIsEditModalOpen(false);
-        setSelectedStatus(null);
-        setFormData({
-            name: "",
-            description: "",
-            effectType: "ADD",
-            active: true,
-        });
+        e.stopPropagation();
+        if (isSubmittingRef.current) return;
+        if (!selectedStatus) return;
+        isSubmittingRef.current = true;
+        try {
+            // TODO: Replace with actual API call
+            const updatedStatuses = materialStatuses.map((s) =>
+                s.id === selectedStatus.id
+                    ? {
+                        ...s,
+                        name: formData.name,
+                        description: formData.description,
+                        effectType: formData.effectType,
+                        active: formData.active,
+                        last_modified_user_id: "ADMIN", // TODO: Get from auth context
+                        last_modified_date_time: new Date(),
+                    }
+                    : s
+            );
+            setMaterialStatuses(updatedStatuses);
+            toast({
+                title: "Success",
+                description: "Material status updated successfully",
+            });
+            setIsEditModalOpen(false);
+            setSelectedStatus(null);
+            setFormData({
+                name: "",
+                description: "",
+                effectType: "ADD",
+                active: true,
+            });
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to update material status",
+                variant: "destructive",
+            });
+        } finally {
+            isSubmittingRef.current = false;
+        }
     };
 
     const handleDelete = (status: MaterialStatus) => {
@@ -133,10 +223,28 @@ export default function MaterialStatusMasterPage() {
         setIsDeleteDialogOpen(true);
     };
 
-    const confirmDelete = () => {
-        console.log("Deleting material status:", selectedStatus);
-        setIsDeleteDialogOpen(false);
-        setSelectedStatus(null);
+    const confirmDelete = async () => {
+        if (isSubmittingRef.current) return;
+        if (!selectedStatus) return;
+        isSubmittingRef.current = true;
+        try {
+            // TODO: Replace with actual API call
+            setMaterialStatuses(materialStatuses.filter((s) => s.id !== selectedStatus.id));
+            toast({
+                title: "Success",
+                description: "Material status deleted successfully",
+            });
+            setIsDeleteDialogOpen(false);
+            setSelectedStatus(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to delete material status",
+                variant: "destructive",
+            });
+        } finally {
+            isSubmittingRef.current = false;
+        }
     };
 
     return (
@@ -211,11 +319,20 @@ export default function MaterialStatusMasterPage() {
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">effect in stock</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">seq no.</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">active</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-32">LAST MODIFIED USER ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-40">LAST MODIFIED DATE & TIME</th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredStatuses.map((status, index) => (
+                                        {filteredStatuses.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={8} className="px-6 py-4 text-center text-muted-foreground">
+                                                    No material statuses found
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredStatuses.map((status, index) => (
                                             <motion.tr
                                                 key={status.id}
                                                 initial={{ opacity: 0, x: -20 }}
@@ -244,8 +361,20 @@ export default function MaterialStatusMasterPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        Y
+                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                        status.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                    }`}>
+                                                        {status.active ? "TRUE" : "FALSE"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground font-mono">{status.last_modified_user_id || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground">
+                                                        {status.last_modified_date_time 
+                                                            ? formatDateTime(status.last_modified_date_time)
+                                                            : "-"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -275,7 +404,8 @@ export default function MaterialStatusMasterPage() {
                                                     </div>
                                                 </td>
                                             </motion.tr>
-                                        ))}
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -283,8 +413,14 @@ export default function MaterialStatusMasterPage() {
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
                                 <span className="text-sm text-muted-foreground">PAGE 1 OF 1</span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" disabled>Previous</Button>
-                                    <Button variant="outline" size="sm" disabled>Next</Button>
+                                    <Button variant="outline" size="sm" disabled>
+                                        <ChevronLeft className="w-4 h-4 mr-1" />
+                                        Previous
+                                    </Button>
+                                    <Button variant="outline" size="sm" disabled>
+                                        Next
+                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                    </Button>
                                 </div>
                             </div>
                         </Card>

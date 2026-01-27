@@ -13,14 +13,44 @@ import path from 'path';
 // Cache database connection
 let dbConnected = false;
 
+const logPath = path.join(process.cwd(), '.cursor', 'debug.log');
+
+function logBackend(location: string, message: string, data: any) {
+  const logEntry = {location,message,data,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H2,H3,H4,H5'};
+  const logStr = JSON.stringify(logEntry);
+  console.error('[DEBUG]', logStr);
+  try {
+    if (!fs.existsSync(path.dirname(logPath))) {
+      fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    }
+    fs.appendFileSync(logPath, logStr + '\n');
+  } catch(e: any) {
+    console.error('[DEBUG] Log write failed:', e.message);
+  }
+  try {
+    fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:logStr}).catch(()=>{});
+  } catch(e){}
+}
+
 async function ensureDbConnection() {
   if (!dbConnected) {
     try {
+      logBackend('api/[...path].ts:16', 'ensureDbConnection - attempting connection', {readyState: mongoose.connection.readyState});
       await connectDB();
       dbConnected = true;
-    } catch (error) {
+      logBackend('api/[...path].ts:20', 'ensureDbConnection - connection successful', {readyState: mongoose.connection.readyState});
+    } catch (error: any) {
+      logBackend('api/[...path].ts:23', 'ensureDbConnection - connection failed', {error: error.message, stack: error.stack});
       console.error('Database connection error:', error);
+      dbConnected = false;
       throw error;
+    }
+  } else {
+    // Verify connection is still alive
+    if (mongoose.connection.readyState !== 1) {
+      logBackend('api/[...path].ts:30', 'ensureDbConnection - connection lost, reconnecting', {readyState: mongoose.connection.readyState});
+      dbConnected = false;
+      await ensureDbConnection();
     }
   }
 }
@@ -46,25 +76,6 @@ function parsePath(req: VercelRequest): { resource: string; id?: string; subReso
   const subResource = parts[2];
   
   return { resource, id, subResource };
-}
-
-const logPath = path.join(process.cwd(), '.cursor', 'debug.log');
-
-function logBackend(location: string, message: string, data: any) {
-  const logEntry = {location,message,data,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H2,H3,H4,H5'};
-  const logStr = JSON.stringify(logEntry);
-  console.error('[DEBUG]', logStr);
-  try {
-    if (!fs.existsSync(path.dirname(logPath))) {
-      fs.mkdirSync(path.dirname(logPath), { recursive: true });
-    }
-    fs.appendFileSync(logPath, logStr + '\n');
-  } catch(e: any) {
-    console.error('[DEBUG] Log write failed:', e.message);
-  }
-  try {
-    fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:logStr}).catch(()=>{});
-  } catch(e){}
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -133,13 +144,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       logBackend('api/[...path].ts:129', 'Menu routes entered', {method,id,hasBody:!!req.body,body:req.body});
       // #endregion
       if (method === 'GET' && !id) {
-        const menus = await MenuMaster.find().sort({ menu_id: 1 });
-        return res.json(menus);
+        try {
+          logBackend('api/[...path].ts:136', 'GET menus - before query', {dbState: mongoose.connection.readyState});
+          // Check if database is connected
+          if (mongoose.connection.readyState !== 1) {
+            logBackend('api/[...path].ts:139', 'GET menus - DB not connected', {readyState: mongoose.connection.readyState});
+            return res.status(500).json({ error: 'Database not connected', readyState: mongoose.connection.readyState });
+          }
+          const menus = await MenuMaster.find().sort({ menu_id: 1 }).lean();
+          // #region agent log
+          logBackend('api/[...path].ts:154', 'GET menus - query success', {count: menus.length, firstMenu: menus.length > 0 ? menus[0] : null, allMenus: menus});
+          // #endregion
+          return res.json(menus);
+        } catch (error: any) {
+          logBackend('api/[...path].ts:146', 'GET menus - error', {error: error.message, code: error.code, name: error.name, stack: error.stack});
+          console.error('[API] GET menus error:', error);
+          return res.status(500).json({ 
+            error: error.message || 'Failed to fetch menus',
+            ...(process.env.NODE_ENV === 'development' && { details: error.stack })
+          });
+        }
       }
       if (method === 'GET' && id) {
-        const menu = await MenuMaster.findOne({ menu_id: id });
-        if (!menu) return res.status(404).json({ error: 'Menu not found' });
-        return res.json(menu);
+        try {
+          const menu = await MenuMaster.findOne({ menu_id: id });
+          if (!menu) return res.status(404).json({ error: 'Menu not found' });
+          return res.json(menu);
+        } catch (error: any) {
+          console.error('[API] GET menu error:', error);
+          return res.status(500).json({ error: error.message || 'Failed to fetch menu' });
+        }
       }
       if (method === 'POST') {
         // #region agent log
@@ -150,7 +184,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // #region agent log
           logBackend('api/[...path].ts:125', 'POST body parsed', {menu_id,menu_desc,active});
           // #endregion
-          const menu = new MenuMaster({ menu_id, menu_desc, active: active !== false });
+          const menu = new MenuMaster({ 
+            menu_id, 
+            menu_desc, 
+            active: active !== false,
+            last_modified_user_id: req.body.last_modified_user_id || 'ADMIN',
+            last_modified_date_time: new Date(),
+          });
           // #region agent log
           logBackend('api/[...path].ts:132', 'Before menu.save()', {menu_id});
           // #endregion
@@ -189,6 +229,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const updateData: any = {};
           if (menu_desc !== undefined && menu_desc !== null) updateData.menu_desc = menu_desc;
           if (active !== undefined) updateData.active = active !== false;
+          updateData.last_modified_user_id = req.body.last_modified_user_id || 'ADMIN';
+          updateData.last_modified_date_time = new Date();
           
           if (Object.keys(updateData).length === 0) {
             // #region agent log
@@ -206,7 +248,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             { new: true, runValidators: true }
           );
           // #region agent log
-          logBackend('api/[...path].ts:199', 'After findOneAndUpdate', {id,menuFound:!!menu});
+          logBackend('api/[...path].ts:249', 'After findOneAndUpdate', {id,menuFound:!!menu,menu:menu?menu.toObject():null,updateData});
           // #endregion
           if (!menu) return res.status(404).json({ error: 'Menu not found' });
           return res.json(menu);
@@ -236,7 +278,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // #endregion
           const menu = await MenuMaster.findOneAndDelete({ menu_id: id });
           // #region agent log
-          logBackend('api/[...path].ts:221', 'After findOneAndDelete', {id,menuFound:!!menu});
+          logBackend('api/[...path].ts:277', 'After findOneAndDelete', {id,menuFound:!!menu,menu:menu?menu.toObject():null});
           // #endregion
           if (!menu) return res.status(404).json({ error: 'Menu not found' });
           return res.json({ message: 'Menu deleted successfully' });
@@ -266,7 +308,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       if (method === 'POST') {
         const { roll_id, roll_description, remarks, active } = req.body;
-        const role = new RoleMaster({ roll_id, roll_description, remarks, active: active !== false });
+        const role = new RoleMaster({ 
+          roll_id, 
+          roll_description, 
+          remarks, 
+          active: active !== false,
+          last_modified_user_id: req.body.last_modified_user_id || 'ADMIN',
+          last_modified_date_time: new Date(),
+        });
         await role.save();
         return res.status(201).json(role);
       }
@@ -274,7 +323,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { roll_description, remarks, active } = req.body;
         const role = await RoleMaster.findOneAndUpdate(
           { roll_id: id },
-          { roll_description, remarks, active: active !== false },
+          { 
+            roll_description, 
+            remarks, 
+            active: active !== false,
+            last_modified_user_id: req.body.last_modified_user_id || 'ADMIN',
+            last_modified_date_time: new Date(),
+          },
           { new: true, runValidators: true }
         );
         if (!role) return res.status(404).json({ error: 'Role not found' });
@@ -309,6 +364,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           can_edit: can_edit !== false,
           can_view: can_view !== false,
           can_cancel: can_cancel !== false,
+          last_modified_user_id: req.body.last_modified_user_id || 'ADMIN',
+          last_modified_date_time: new Date(),
         });
         try {
           await menuAccess.save();
@@ -336,6 +393,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               can_edit: can_edit !== false,
               can_view: can_view !== false,
               can_cancel: can_cancel !== false,
+              last_modified_user_id: req.body.last_modified_user_id || 'ADMIN',
+              last_modified_date_time: new Date(),
             },
             { new: true, runValidators: true, upsert: true }
           );
@@ -371,7 +430,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json(user);
       }
       if (method === 'POST') {
-        const { user_id, employee_id, password, N_password_expiry_days, active } = req.body;
+        const { user_id, employee_id, password, role_id, N_password_expiry_days, active } = req.body;
         const hash_password = await bcrypt.hash(password || 'defaultPassword123', 10);
         const passwordExpiryDate = new Date();
         passwordExpiryDate.setDate(passwordExpiryDate.getDate() + (N_password_expiry_days || 90));
@@ -379,10 +438,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           user_id,
           employee_id,
           hash_password,
+          role_id: role_id || req.body.roll_id,
           Date_password_changed_date: new Date(),
           Date_password_expiry_date: passwordExpiryDate,
           N_password_expiry_days: N_password_expiry_days || 90,
           active: active !== false,
+          last_modified_user_id: req.body.last_modified_user_id || 'ADMIN',
+          last_modified_date_time: new Date(),
         });
         const savedUser = await user.save();
         const userResponse = savedUser.toObject() as any;
@@ -390,8 +452,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(201).json(userResponse);
       }
       if (method === 'PUT' && id) {
-        const { employee_id, password, N_password_expiry_days, active } = req.body;
+        const { employee_id, password, role_id, N_password_expiry_days, active } = req.body;
         const updateData: any = { employee_id, active: active !== false };
+        if (role_id !== undefined) updateData.role_id = role_id;
+        updateData.last_modified_user_id = req.body.last_modified_user_id || 'ADMIN';
+        updateData.last_modified_date_time = new Date();
         if (password) {
           updateData.hash_password = await bcrypt.hash(password, 10);
           updateData.Date_password_changed_date = new Date();
