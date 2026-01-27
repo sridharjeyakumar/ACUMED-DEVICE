@@ -12,6 +12,10 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'ACUMED DEVICES - Production Inventory',
   description: 'Production Inventory Management System',
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({
