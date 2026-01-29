@@ -54,3 +54,4 @@ npm run dev
 - **CORS errors:** The proxy in vite.config.ts should handle this, but make sure both servers are running
 
 
+

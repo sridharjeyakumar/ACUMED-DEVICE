@@ -539,7 +539,7 @@ export default function MenuMasterPage() {
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Edit Menu</h2>
+                                    <h2 className="text-2xl font-bold">Edit Menu 1</h2>
                                     <button
                                         onClick={() => setIsEditModalOpen(false)}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"

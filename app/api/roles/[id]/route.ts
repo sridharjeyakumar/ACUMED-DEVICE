@@ -4,10 +4,30 @@ import RoleMaster from '@/server/models/RoleMaster';
 
 // Ensure DB connection
 let dbConnected = false;
+
 async function ensureDbConnection() {
-  if (!dbConnected) {
-    await connectDB();
+  const mongoose = await import('mongoose');
+  // Check if already connected
+  if (mongoose.default.connection.readyState === 1) {
     dbConnected = true;
+    return; // Already connected
+  }
+  
+  if (!dbConnected) {
+    try {
+      await connectDB();
+      dbConnected = true;
+    } catch (error: any) {
+      dbConnected = false;
+      console.error('Database connection error:', error);
+      throw error;
+    }
+  } else {
+    // Verify connection is still alive
+    if (mongoose.default.connection.readyState !== 1) {
+      dbConnected = false;
+      await ensureDbConnection();
+    }
   }
 }
 
@@ -40,9 +60,17 @@ export async function PUT(
     await ensureDbConnection();
     const body = await request.json();
     const { roll_description, remarks, active } = body;
+    
+    const updateData: any = {};
+    if (roll_description !== undefined && roll_description !== null) updateData.roll_description = roll_description;
+    if (remarks !== undefined && remarks !== null) updateData.remarks = remarks;
+    if (active !== undefined) updateData.active = active !== false;
+    updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
+    updateData.last_modified_date_time = new Date();
+    
     const role = await RoleMaster.findOneAndUpdate(
       { roll_id: params.id },
-      { roll_description, remarks, active: active !== false },
+      updateData,
       { new: true, runValidators: true }
     );
     if (!role) {
@@ -50,8 +78,15 @@ export async function PUT(
     }
     return NextResponse.json(role);
   } catch (error: any) {
+    console.error('Error updating role:', error);
+    if (error.name === 'ValidationError') {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.message },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { error: 'Failed to update role' },
+      { error: error.message || 'Failed to update role' },
       { status: 500 }
     );
   }

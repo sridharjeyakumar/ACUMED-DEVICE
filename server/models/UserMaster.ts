@@ -85,7 +85,8 @@ const UserMasterSchema: Schema = new Schema({
 UserMasterSchema.index({ user_id: 1 });
 UserMasterSchema.index({ employee_id: 1 });
 
-const UserMaster = mongoose.model<IUserMaster>('UserMaster', UserMasterSchema);
+// Check if model already exists to prevent overwrite error in Next.js hot reloading
+const UserMaster = mongoose.models.UserMaster || mongoose.model<IUserMaster>('UserMaster', UserMasterSchema);
 
 export default UserMaster;
 

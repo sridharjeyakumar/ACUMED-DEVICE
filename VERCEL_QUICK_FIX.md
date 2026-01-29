@@ -55,3 +55,4 @@ Vercel will automatically redeploy with the backend!
 Both frontend and backend will deploy together on Vercel. No separate backend deployment needed!
 
 
+

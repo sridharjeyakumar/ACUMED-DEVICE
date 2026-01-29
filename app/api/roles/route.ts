@@ -4,10 +4,12 @@ import RoleMaster from '@/server/models/RoleMaster';
 
 // Ensure DB connection
 let dbConnected = false;
+
 async function ensureDbConnection() {
-  // Check if already connected
   const mongoose = await import('mongoose');
+  // Check if already connected
   if (mongoose.default.connection.readyState === 1) {
+    dbConnected = true;
     return; // Already connected
   }
   
@@ -16,8 +18,15 @@ async function ensureDbConnection() {
       await connectDB();
       dbConnected = true;
     } catch (error: any) {
-      dbConnected = false; // Reset on error
+      dbConnected = false;
+      console.error('Database connection error:', error);
       throw error;
+    }
+  } else {
+    // Verify connection is still alive
+    if (mongoose.default.connection.readyState !== 1) {
+      dbConnected = false;
+      await ensureDbConnection();
     }
   }
 }
@@ -43,18 +52,32 @@ export async function POST(request: NextRequest) {
     await ensureDbConnection();
     const body = await request.json();
     const { roll_id, roll_description, remarks, active } = body;
-    const role = new RoleMaster({ roll_id, roll_description, remarks, active: active !== false });
+    const role = new RoleMaster({ 
+      roll_id, 
+      roll_description, 
+      remarks, 
+      active: active !== false,
+      last_modified_user_id: body.last_modified_user_id || 'ADMIN',
+      last_modified_date_time: new Date(),
+    });
     await role.save();
     return NextResponse.json(role, { status: 201 });
   } catch (error: any) {
+    console.error('Error creating role:', error);
     if (error.code === 11000) {
       return NextResponse.json(
         { error: 'Role ID already exists' },
         { status: 400 }
       );
     }
+    if (error.name === 'ValidationError') {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.message },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { error: 'Failed to create role' },
+      { error: error.message || 'Failed to create role' },
       { status: 500 }
     );
   }

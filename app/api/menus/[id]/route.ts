@@ -4,10 +4,30 @@ import MenuMaster from '@/server/models/MenuMaster';
 
 // Ensure DB connection
 let dbConnected = false;
+
 async function ensureDbConnection() {
-  if (!dbConnected) {
-    await connectDB();
+  const mongoose = await import('mongoose');
+  // Check if already connected
+  if (mongoose.default.connection.readyState === 1) {
     dbConnected = true;
+    return; // Already connected
+  }
+  
+  if (!dbConnected) {
+    try {
+      await connectDB();
+      dbConnected = true;
+    } catch (error: any) {
+      dbConnected = false;
+      console.error('Database connection error:', error);
+      throw error;
+    }
+  } else {
+    // Verify connection is still alive
+    if (mongoose.default.connection.readyState !== 1) {
+      dbConnected = false;
+      await ensureDbConnection();
+    }
   }
 }
 
@@ -40,9 +60,23 @@ export async function PUT(
     await ensureDbConnection();
     const body = await request.json();
     const { menu_desc, active } = body;
+    
+    const updateData: any = {};
+    if (menu_desc !== undefined && menu_desc !== null) updateData.menu_desc = menu_desc;
+    if (active !== undefined) updateData.active = active !== false;
+    updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
+    updateData.last_modified_date_time = new Date();
+    
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'At least one field must be provided for update' },
+        { status: 400 }
+      );
+    }
+    
     const menu = await MenuMaster.findOneAndUpdate(
       { menu_id: params.id },
-      { menu_desc, active: active !== false },
+      updateData,
       { new: true, runValidators: true }
     );
     if (!menu) {
@@ -50,8 +84,15 @@ export async function PUT(
     }
     return NextResponse.json(menu);
   } catch (error: any) {
+    console.error('Error updating menu:', error);
+    if (error.name === 'ValidationError') {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.message },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { error: 'Failed to update menu' },
+      { error: error.message || 'Failed to update menu' },
       { status: 500 }
     );
   }

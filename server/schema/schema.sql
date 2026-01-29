@@ -124,3 +124,4 @@ CREATE TABLE UserLoginHistory (
 -- - createdAt (DATETIME) - Auto-generated
 -- - updatedAt (DATETIME) - Auto-generated
 
+

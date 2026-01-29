@@ -248,3 +248,4 @@ All master tables include the following audit fields:
 3. The `last_modified_user_id` and `last_modified_date_time` fields are automatically set by the API handlers on create/update operations.
 4. Default password for seeded users: `password123`
 
+

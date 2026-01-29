@@ -4,28 +4,30 @@ import MenuMaster from '@/server/models/MenuMaster';
 
 // Ensure DB connection
 let dbConnected = false;
-let connectionAttempted = false;
 
 async function ensureDbConnection() {
-  // Check if already connected
   const mongoose = await import('mongoose');
+  // Check if already connected
   if (mongoose.default.connection.readyState === 1) {
+    dbConnected = true;
     return; // Already connected
   }
   
-  if (!dbConnected && !connectionAttempted) {
-    connectionAttempted = true;
+  if (!dbConnected) {
     try {
       await connectDB();
       dbConnected = true;
     } catch (error: any) {
       dbConnected = false;
-      connectionAttempted = false; // Allow retry
+      console.error('Database connection error:', error);
       throw error;
     }
-  } else if (!dbConnected) {
-    // Connection was attempted but failed
-    throw new Error('Database connection failed. Please check your Database environment variable.');
+  } else {
+    // Verify connection is still alive
+    if (mongoose.default.connection.readyState !== 1) {
+      dbConnected = false;
+      await ensureDbConnection();
+    }
   }
 }
 
@@ -64,18 +66,31 @@ export async function POST(request: NextRequest) {
     await ensureDbConnection();
     const body = await request.json();
     const { menu_id, menu_desc, active } = body;
-    const menu = new MenuMaster({ menu_id, menu_desc, active: active !== false });
+    const menu = new MenuMaster({ 
+      menu_id, 
+      menu_desc, 
+      active: active !== false,
+      last_modified_user_id: body.last_modified_user_id || 'ADMIN',
+      last_modified_date_time: new Date(),
+    });
     await menu.save();
     return NextResponse.json(menu, { status: 201 });
   } catch (error: any) {
+    console.error('Error creating menu:', error);
     if (error.code === 11000) {
       return NextResponse.json(
         { error: 'Menu ID already exists' },
         { status: 400 }
       );
     }
+    if (error.name === 'ValidationError') {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.message },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { error: 'Failed to create menu' },
+      { error: error.message || 'Failed to create menu' },
       { status: 500 }
     );
   }
