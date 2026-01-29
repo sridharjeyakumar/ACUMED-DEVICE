@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface Product {
     id: string;
@@ -25,6 +27,7 @@ export default function ProductMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [filterStatus, setFilterStatus] = useState<string>("all");
     const [formData, setFormData] = useState({
         productId: "",
         productName: "",
@@ -66,10 +69,14 @@ export default function ProductMasterPage() {
         },
     ];
 
-    const filteredProducts = products.filter((product) =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.shortname.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredProducts = products.filter((product) => {
+        const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            product.shortname.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesStatus = filterStatus === "all" || product.status === filterStatus;
+        
+        return matchesSearch && matchesStatus;
+    });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -184,9 +191,63 @@ export default function ProductMasterPage() {
                                 <span className="hidden md:inline-block text-xs md:text-sm text-muted-foreground whitespace-nowrap">
                                     SHOWING 1-{filteredProducts.length} OF {products.length}
                                 </span>
-                                <Button variant="outline" size="icon" className="h-9 w-9 md:h-10 md:w-10">
-                                    <Filter className="w-4 h-4" />
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="h-9 w-9 md:h-10 md:w-10 hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                        <div className="flex flex-wrap gap-6 items-start">
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Status</Label>
+                                                <div className="flex flex-wrap gap-3">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="product-status-all" 
+                                                            name="productStatus"
+                                                            checked={filterStatus === "all"}
+                                                            onChange={() => setFilterStatus("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="product-status-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="product-status-active" 
+                                                            name="productStatus"
+                                                            checked={filterStatus === "Active"}
+                                                            onChange={() => setFilterStatus("Active")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="product-status-active" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="product-status-inactive" 
+                                                            name="productStatus"
+                                                            checked={filterStatus === "Inactive"}
+                                                            onChange={() => setFilterStatus("Inactive")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="product-status-inactive" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => setFilterStatus("all")}
+                                            >
+                                                Clear Filter
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

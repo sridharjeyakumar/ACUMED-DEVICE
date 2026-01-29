@@ -9,6 +9,8 @@ import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } fr
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface ProductStatus {
     prod_status_id: string; // Char(3) - PK
@@ -41,6 +43,8 @@ export default function ProductStatusMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<ProductStatus | null>(null);
+    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterStockMovement, setFilterStockMovement] = useState<string>("all");
     const isSubmittingRef = useRef(false);
     const [statuses, setStatuses] = useState<ProductStatus[]>([
         {
@@ -153,10 +157,22 @@ export default function ProductStatusMasterPage() {
         active: true,
     });
 
-    const filteredStatuses = statuses.filter((status) =>
-        status.prod_status_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        status.product_status.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredStatuses = statuses.filter((status) => {
+        const matchesSearch = status.prod_status_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            status.product_status.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "active" && status.active === true) ||
+            (filterActive === "inactive" && status.active === false);
+        
+        const matchesStockMovement = filterStockMovement === "all" || 
+            status.stock_movement === filterStockMovement ||
+            (filterStockMovement === "empty" && !status.stock_movement);
+        
+        return matchesSearch && matchesActive && matchesStockMovement;
+    });
+
+    const uniqueStockMovements = Array.from(new Set(statuses.map(s => s.stock_movement).filter(s => s)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -349,9 +365,98 @@ export default function ProductStatusMasterPage() {
                                 <span className="text-sm text-muted-foreground">
                                     SHOWING 1-{filteredStatuses.length} OF {statuses.length}
                                 </span>
-                                <Button variant="outline" size="icon">
-                                    <Filter className="w-4 h-4" />
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                        <div className="flex flex-wrap gap-6 items-start">
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Status</Label>
+                                                <div className="flex flex-wrap gap-3">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ps-active-all" 
+                                                            name="psActiveStatus"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ps-active-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ps-active-true" 
+                                                            name="psActiveStatus"
+                                                            checked={filterActive === "active"}
+                                                            onChange={() => setFilterActive("active")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ps-active-true" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ps-active-false" 
+                                                            name="psActiveStatus"
+                                                            checked={filterActive === "inactive"}
+                                                            onChange={() => setFilterActive("inactive")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ps-active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {uniqueStockMovements.length > 0 && (
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Stock Movement</Label>
+                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="ps-movement-all" 
+                                                                name="psMovementFilter"
+                                                                checked={filterStockMovement === "all"}
+                                                                onChange={() => setFilterStockMovement("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="ps-movement-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueStockMovements.map((movement) => (
+                                                            <div key={movement} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`ps-movement-${movement}`} 
+                                                                    name="psMovementFilter"
+                                                                    checked={filterStockMovement === movement}
+                                                                    onChange={() => setFilterStockMovement(movement)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`ps-movement-${movement}`} className="text-sm font-normal cursor-pointer">{movement}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="flex items-end">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    onClick={() => {
+                                                        setFilterActive("all");
+                                                        setFilterStockMovement("all");
+                                                    }}
+                                                >
+                                                    Clear Filters
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

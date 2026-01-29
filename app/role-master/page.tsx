@@ -10,6 +10,8 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { roleAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface Role {
     roll_id: string;
@@ -43,6 +45,7 @@ export default function RoleMasterPage() {
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
+    const [filterActive, setFilterActive] = useState<string>("all");
     const [formData, setFormData] = useState({
         roll_id: "",
         roll_description: "",
@@ -70,11 +73,17 @@ export default function RoleMasterPage() {
         }
     };
 
-    const filteredRoles = roles.filter((role) =>
-        role.roll_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        role.roll_description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (role.remarks && role.remarks.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    const filteredRoles = roles.filter((role) => {
+        const matchesSearch = role.roll_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            role.roll_description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (role.remarks && role.remarks.toLowerCase().includes(searchQuery.toLowerCase()));
+        
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "active" && role.active === true) ||
+            (filterActive === "inactive" && role.active === false);
+        
+        return matchesSearch && matchesActive;
+    });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -213,9 +222,63 @@ export default function RoleMasterPage() {
                                 <span className="text-sm text-muted-foreground">
                                     SHOWING 1-{filteredRoles.length} OF {roles.length}
                                 </span>
-                                <Button variant="outline" size="icon">
-                                    <Filter className="w-4 h-4" />
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56" align="end">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-sm font-semibold">Status</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="role-active-all" 
+                                                            name="roleActiveStatus"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="role-active-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="role-active-true" 
+                                                            name="roleActiveStatus"
+                                                            checked={filterActive === "active"}
+                                                            onChange={() => setFilterActive("active")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="role-active-true" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="role-active-false" 
+                                                            name="roleActiveStatus"
+                                                            checked={filterActive === "inactive"}
+                                                            onChange={() => setFilterActive("inactive")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="role-active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => setFilterActive("all")}
+                                            >
+                                                Clear Filter
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

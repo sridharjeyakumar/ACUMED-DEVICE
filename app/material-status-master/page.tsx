@@ -9,6 +9,8 @@ import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } fr
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface MaterialStatus {
     id: string;
@@ -42,6 +44,8 @@ export default function MaterialStatusMasterPage() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<MaterialStatus | null>(null);
     const isSubmittingRef = useRef(false);
+    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterEffectType, setFilterEffectType] = useState<string>("all");
     const [formData, setFormData] = useState({
         name: "",
         description: "",
@@ -112,10 +116,18 @@ export default function MaterialStatusMasterPage() {
         },
     ]);
 
-    const filteredStatuses = materialStatuses.filter((status) =>
-        status.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        status.id.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredStatuses = materialStatuses.filter((status) => {
+        const matchesSearch = status.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            status.id.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "active" && status.active === true) ||
+            (filterActive === "inactive" && status.active === false);
+        
+        const matchesEffectType = filterEffectType === "all" || status.effectType === filterEffectType;
+        
+        return matchesSearch && matchesActive && matchesEffectType;
+    });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const value = e.target.type === "checkbox" ? (e.target as HTMLInputElement).checked : e.target.value;
@@ -297,9 +309,105 @@ export default function MaterialStatusMasterPage() {
                                 <span className="text-xs md:text-sm text-muted-foreground whitespace-nowrap">
                                     SHOWING 1-{filteredStatuses.length} OF {materialStatuses.length}
                                 </span>
-                                <Button variant="outline" size="icon" className="h-9 w-9 md:h-10 md:w-10">
-                                    <Filter className="w-4 h-4" />
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="h-9 w-9 md:h-10 md:w-10 hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                        <div className="flex flex-wrap gap-6 items-start">
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Status</Label>
+                                                <div className="flex flex-wrap gap-3">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ms-active-all" 
+                                                            name="msActiveStatus"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ms-active-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ms-active-true" 
+                                                            name="msActiveStatus"
+                                                            checked={filterActive === "active"}
+                                                            onChange={() => setFilterActive("active")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ms-active-true" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ms-active-false" 
+                                                            name="msActiveStatus"
+                                                            checked={filterActive === "inactive"}
+                                                            onChange={() => setFilterActive("inactive")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ms-active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Effect Type</Label>
+                                                <div className="flex flex-wrap gap-3">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ms-effect-all" 
+                                                            name="msEffectFilter"
+                                                            checked={filterEffectType === "all"}
+                                                            onChange={() => setFilterEffectType("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ms-effect-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ms-effect-add" 
+                                                            name="msEffectFilter"
+                                                            checked={filterEffectType === "ADD"}
+                                                            onChange={() => setFilterEffectType("ADD")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ms-effect-add" className="text-sm font-normal cursor-pointer">Add</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ms-effect-subtract" 
+                                                            name="msEffectFilter"
+                                                            checked={filterEffectType === "SUBTRACT"}
+                                                            onChange={() => setFilterEffectType("SUBTRACT")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ms-effect-subtract" className="text-sm font-normal cursor-pointer">Subtract</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-end">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    onClick={() => {
+                                                        setFilterActive("all");
+                                                        setFilterEffectType("all");
+                                                    }}
+                                                >
+                                                    Clear Filters
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

@@ -9,6 +9,8 @@ import { Search, Plus, Filter, Pencil, FileText, ChevronDown, Trash2 } from "luc
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface BOMRecord {
     id: string;
@@ -29,6 +31,8 @@ export default function ProductBOMPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedBOM, setSelectedBOM] = useState<BOMRecord | null>(null);
+    const [filterProduct, setFilterProduct] = useState<string>("all");
+    const [filterMaterial, setFilterMaterial] = useState<string>("all");
     const [formData, setFormData] = useState({
         bomId: "",
         description: "",
@@ -116,10 +120,18 @@ export default function ProductBOMPage() {
         },
     ];
 
-    const filteredRecords = records.filter((item) =>
-        item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.bomId.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredRecords = records.filter((item) => {
+        const matchesSearch = item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.bomId.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesProduct = filterProduct === "all" || item.productId === filterProduct;
+        const matchesMaterial = filterMaterial === "all" || item.materialId === filterMaterial;
+        
+        return matchesSearch && matchesProduct && matchesMaterial;
+    });
+
+    const uniqueProducts = Array.from(new Set(records.map(r => r.productId)));
+    const uniqueMaterials = Array.from(new Set(records.map(r => r.materialId)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -236,20 +248,109 @@ export default function ProductBOMPage() {
                                 </div>
 
                                 <div className="flex gap-3">
-                                    <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors pointer-events-none">
-                                        <span className="text-xs font-medium">All Products</span>
-                                        <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                                    </button>
-                                    <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors pointer-events-none">
-                                        <span className="text-xs font-medium">All Materials</span>
-                                        <Filter className="w-3 h-3 text-muted-foreground" />
-                                    </button>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
+                                                <span className="text-xs font-medium">
+                                                    {filterProduct === "all" ? "All Products" : filterProduct}
+                                                </span>
+                                                <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-56" align="start">
+                                            <div className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label className="text-sm font-semibold">Product</Label>
+                                                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="bom-product-all" 
+                                                                name="bomProductFilter"
+                                                                checked={filterProduct === "all"}
+                                                                onChange={() => setFilterProduct("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="bom-product-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueProducts.map((prod) => (
+                                                            <div key={prod} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`bom-product-${prod}`} 
+                                                                    name="bomProductFilter"
+                                                                    checked={filterProduct === prod}
+                                                                    onChange={() => setFilterProduct(prod)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`bom-product-${prod}`} className="text-sm font-normal cursor-pointer">{prod}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
+                                                <span className="text-xs font-medium">
+                                                    {filterMaterial === "all" ? "All Materials" : filterMaterial}
+                                                </span>
+                                                <Filter className="w-3 h-3 text-muted-foreground" />
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-56" align="start">
+                                            <div className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label className="text-sm font-semibold">Material</Label>
+                                                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="bom-material-all" 
+                                                                name="bomMaterialFilter"
+                                                                checked={filterMaterial === "all"}
+                                                                onChange={() => setFilterMaterial("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="bom-material-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueMaterials.map((mat) => (
+                                                            <div key={mat} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`bom-material-${mat}`} 
+                                                                    name="bomMaterialFilter"
+                                                                    checked={filterMaterial === mat}
+                                                                    onChange={() => setFilterMaterial(mat)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`bom-material-${mat}`} className="text-sm font-normal cursor-pointer">{mat}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    className="w-full"
+                                                    onClick={() => {
+                                                        setFilterProduct("all");
+                                                        setFilterMaterial("all");
+                                                    }}
+                                                >
+                                                    Clear Filters
+                                                </Button>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
 
                                 <div className="h-6 w-px bg-border mx-2"></div>
 
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-5 OF 42 RECORDS
+                                    SHOWING 1-{filteredRecords.length} OF {records.length} RECORDS
                                 </span>
 
                                 <div className="flex items-center gap-2 ml-auto">

@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, X, Calendar, Download, Settings2, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface RejectionRecord {
     id: string;
@@ -26,6 +28,8 @@ export default function ProductionRejectedUpdatePage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<RejectionRecord | null>(null);
+    const [filterProduct, setFilterProduct] = useState<string>("all");
+    const [filterMachine, setFilterMachine] = useState<string>("all");
     const [formData, setFormData] = useState({
         batchNo: "",
         date: "",
@@ -68,10 +72,18 @@ export default function ProductionRejectedUpdatePage() {
         },
     ];
 
-    const filteredRecords = records.filter((record) =>
-        record.batchNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        record.productId.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredRecords = records.filter((record) => {
+        const matchesSearch = record.batchNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            record.productId.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesProduct = filterProduct === "all" || record.productId === filterProduct;
+        const matchesMachine = filterMachine === "all" || record.machineId === filterMachine;
+        
+        return matchesSearch && matchesProduct && matchesMachine;
+    });
+
+    const uniqueProducts = Array.from(new Set(records.map(r => r.productId)));
+    const uniqueMachines = Array.from(new Set(records.map(r => r.machineId)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -181,9 +193,91 @@ export default function ProductionRejectedUpdatePage() {
                                     SHOWING 1-{filteredRecords.length} OF {records.length}
                                 </span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10">
-                                        <Filter className="w-4 h-4" />
-                                    </Button>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 hover:text-foreground">
+                                                <Filter className="w-4 h-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                            <div className="flex flex-wrap gap-6 items-start">
+                                                {uniqueProducts.length > 0 && (
+                                                    <div className="flex flex-col gap-2 min-w-[120px]">
+                                                        <Label className="text-sm font-semibold">Product</Label>
+                                                        <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                            <div className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id="pru-product-all" 
+                                                                    name="pruProductFilter"
+                                                                    checked={filterProduct === "all"}
+                                                                    onChange={() => setFilterProduct("all")}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor="pru-product-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                            </div>
+                                                            {uniqueProducts.map((prod) => (
+                                                                <div key={prod} className="flex items-center space-x-2">
+                                                                    <input 
+                                                                        type="radio" 
+                                                                        id={`pru-product-${prod}`} 
+                                                                        name="pruProductFilter"
+                                                                        checked={filterProduct === prod}
+                                                                        onChange={() => setFilterProduct(prod)}
+                                                                        className="h-4 w-4"
+                                                                    />
+                                                                    <Label htmlFor={`pru-product-${prod}`} className="text-sm font-normal cursor-pointer">{prod}</Label>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {uniqueMachines.length > 0 && (
+                                                    <div className="flex flex-col gap-2 min-w-[120px]">
+                                                        <Label className="text-sm font-semibold">Machine</Label>
+                                                        <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                            <div className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id="pru-machine-all" 
+                                                                    name="pruMachineFilter"
+                                                                    checked={filterMachine === "all"}
+                                                                    onChange={() => setFilterMachine("all")}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor="pru-machine-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                            </div>
+                                                            {uniqueMachines.map((machine) => (
+                                                                <div key={machine} className="flex items-center space-x-2">
+                                                                    <input 
+                                                                        type="radio" 
+                                                                        id={`pru-machine-${machine}`} 
+                                                                        name="pruMachineFilter"
+                                                                        checked={filterMachine === machine}
+                                                                        onChange={() => setFilterMachine(machine)}
+                                                                        className="h-4 w-4"
+                                                                    />
+                                                                    <Label htmlFor={`pru-machine-${machine}`} className="text-sm font-normal cursor-pointer">{machine}</Label>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div className="flex items-end">
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm" 
+                                                        onClick={() => {
+                                                            setFilterProduct("all");
+                                                            setFilterMachine("all");
+                                                        }}
+                                                    >
+                                                        Clear Filters
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
                                     <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10">
                                         <Download className="w-4 h-4" />
                                     </Button>

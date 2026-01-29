@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, X, Calendar, Download, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface MaterialMovementRecord {
     id: string;
@@ -27,6 +29,8 @@ export default function MaterialMovementPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<MaterialMovementRecord | null>(null);
+    const [filterMaterial, setFilterMaterial] = useState<string>("all");
+    const [filterMovementType, setFilterMovementType] = useState<string>("all");
     const [formData, setFormData] = useState({
         materialId: "",
         movementType: "ISSUE" as "ISSUE" | "RETURN" | "TRANSFER",
@@ -84,10 +88,17 @@ export default function MaterialMovementPage() {
         },
     ];
 
-    const filteredRecords = records.filter((record) =>
-        record.materialId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        record.materialName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredRecords = records.filter((record) => {
+        const matchesSearch = record.materialId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            record.materialName.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesMaterial = filterMaterial === "all" || record.materialId === filterMaterial;
+        const matchesMovementType = filterMovementType === "all" || record.movementType === filterMovementType;
+        
+        return matchesSearch && matchesMaterial && matchesMovementType;
+    });
+
+    const uniqueMaterials = Array.from(new Set(records.map(r => r.materialId)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -213,9 +224,109 @@ export default function MaterialMovementPage() {
                                     RESULTS: {filteredRecords.length} RECORDS
                                 </span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10">
-                                        <Filter className="w-4 h-4" />
-                                    </Button>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 hover:text-foreground">
+                                                <Filter className="w-4 h-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                            <div className="flex flex-wrap gap-6 items-start">
+                                                {uniqueMaterials.length > 0 && (
+                                                    <div className="flex flex-col gap-2 min-w-[120px]">
+                                                        <Label className="text-sm font-semibold">Material</Label>
+                                                        <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                            <div className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id="mm-material-all" 
+                                                                    name="mmMaterialFilter"
+                                                                    checked={filterMaterial === "all"}
+                                                                    onChange={() => setFilterMaterial("all")}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor="mm-material-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                            </div>
+                                                            {uniqueMaterials.map((mat) => (
+                                                                <div key={mat} className="flex items-center space-x-2">
+                                                                    <input 
+                                                                        type="radio" 
+                                                                        id={`mm-material-${mat}`} 
+                                                                        name="mmMaterialFilter"
+                                                                        checked={filterMaterial === mat}
+                                                                        onChange={() => setFilterMaterial(mat)}
+                                                                        className="h-4 w-4"
+                                                                    />
+                                                                    <Label htmlFor={`mm-material-${mat}`} className="text-sm font-normal cursor-pointer">{mat}</Label>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Movement Type</Label>
+                                                    <div className="flex flex-wrap gap-3">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="mm-type-all" 
+                                                                name="mmTypeFilter"
+                                                                checked={filterMovementType === "all"}
+                                                                onChange={() => setFilterMovementType("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="mm-type-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="mm-type-issue" 
+                                                                name="mmTypeFilter"
+                                                                checked={filterMovementType === "ISSUE"}
+                                                                onChange={() => setFilterMovementType("ISSUE")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="mm-type-issue" className="text-sm font-normal cursor-pointer">Issue</Label>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="mm-type-return" 
+                                                                name="mmTypeFilter"
+                                                                checked={filterMovementType === "RETURN"}
+                                                                onChange={() => setFilterMovementType("RETURN")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="mm-type-return" className="text-sm font-normal cursor-pointer">Return</Label>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="mm-type-transfer" 
+                                                                name="mmTypeFilter"
+                                                                checked={filterMovementType === "TRANSFER"}
+                                                                onChange={() => setFilterMovementType("TRANSFER")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="mm-type-transfer" className="text-sm font-normal cursor-pointer">Transfer</Label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-end">
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm" 
+                                                        onClick={() => {
+                                                            setFilterMaterial("all");
+                                                            setFilterMovementType("all");
+                                                        }}
+                                                    >
+                                                        Clear Filters
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
                                     <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10">
                                         <Download className="w-4 h-4" />
                                     </Button>

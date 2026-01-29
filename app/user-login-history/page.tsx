@@ -10,6 +10,8 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { userLoginHistoryAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface LoginHistory {
     _id?: string;
@@ -29,6 +31,7 @@ export default function UserLoginHistoryPage() {
     const [selectedHistory, setSelectedHistory] = useState<LoginHistory | null>(null);
     const [loginHistories, setLoginHistories] = useState<LoginHistory[]>([]);
     const [loading, setLoading] = useState(true);
+    const [filterUser, setFilterUser] = useState<string>("all");
     const [formData, setFormData] = useState({
         user_id: "",
         login_date: "",
@@ -64,10 +67,16 @@ export default function UserLoginHistoryPage() {
         }
     };
 
-    const filteredHistories = loginHistories.filter((history) =>
-        history.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        history.login_date.includes(searchQuery)
-    );
+    const filteredHistories = loginHistories.filter((history) => {
+        const matchesSearch = history.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            history.login_date.includes(searchQuery);
+        
+        const matchesUser = filterUser === "all" || history.user_id === filterUser;
+        
+        return matchesSearch && matchesUser;
+    });
+
+    const uniqueUsers = Array.from(new Set(loginHistories.map(h => h.user_id)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -213,9 +222,55 @@ export default function UserLoginHistoryPage() {
                                 <span className="text-sm text-muted-foreground">
                                     SHOWING 1-{filteredHistories.length} OF {loginHistories.length}
                                 </span>
-                                <Button variant="outline" size="icon">
-                                    <Filter className="w-4 h-4" />
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                        <div className="flex flex-wrap gap-6 items-start">
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">User ID</Label>
+                                                <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ulh-user-all" 
+                                                            name="ulhUserFilter"
+                                                            checked={filterUser === "all"}
+                                                            onChange={() => setFilterUser("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ulh-user-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    {uniqueUsers.map((user) => (
+                                                        <div key={user} className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id={`ulh-user-${user}`} 
+                                                                name="ulhUserFilter"
+                                                                checked={filterUser === user}
+                                                                onChange={() => setFilterUser(user)}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor={`ulh-user-${user}`} className="text-sm font-normal cursor-pointer">{user}</Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-end">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    onClick={() => setFilterUser("all")}
+                                                >
+                                                    Clear Filter
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

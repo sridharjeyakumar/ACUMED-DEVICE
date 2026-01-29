@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, X, Settings2, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface ProductionUpdateRecord {
     id: string;
@@ -31,6 +33,9 @@ export default function ProductionUpdatePage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<ProductionUpdateRecord | null>(null);
+    const [filterStatus, setFilterStatus] = useState<string>("all");
+    const [filterProduct, setFilterProduct] = useState<string>("all");
+    const [filterMachine, setFilterMachine] = useState<string>("all");
     const [formData, setFormData] = useState({
         batchNo: "",
         date: "",
@@ -92,11 +97,20 @@ export default function ProductionUpdatePage() {
         },
     ];
 
-    const filteredRecords = records.filter((record) =>
-        record.batchNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        record.machineId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        record.productId.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredRecords = records.filter((record) => {
+        const matchesSearch = record.batchNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            record.machineId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            record.productId.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesStatus = filterStatus === "all" || record.status === filterStatus;
+        const matchesProduct = filterProduct === "all" || record.productId === filterProduct;
+        const matchesMachine = filterMachine === "all" || record.machineId === filterMachine;
+        
+        return matchesSearch && matchesStatus && matchesProduct && matchesMachine;
+    });
+
+    const uniqueProducts = Array.from(new Set(records.map(r => r.productId)));
+    const uniqueMachines = Array.from(new Set(records.map(r => r.machineId)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -223,9 +237,130 @@ export default function ProductionUpdatePage() {
                                 <span className="text-xs md:text-sm text-muted-foreground whitespace-nowrap">
                                     SHOWING 1-{filteredRecords.length} OF {records.length}
                                 </span>
-                                <Button variant="outline" size="icon" className="h-9 w-9 md:h-10 md:w-10">
-                                    <Filter className="w-4 h-4" />
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="h-9 w-9 md:h-10 md:w-10 hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                        <div className="flex flex-wrap gap-6 items-start">
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Status</Label>
+                                                <div className="flex flex-wrap gap-3">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="pu-status-all" 
+                                                            name="puStatusFilter"
+                                                            checked={filterStatus === "all"}
+                                                            onChange={() => setFilterStatus("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="pu-status-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="pu-status-completed" 
+                                                            name="puStatusFilter"
+                                                            checked={filterStatus === "COMPLETED"}
+                                                            onChange={() => setFilterStatus("COMPLETED")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="pu-status-completed" className="text-sm font-normal cursor-pointer">Completed</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="pu-status-inprogress" 
+                                                            name="puStatusFilter"
+                                                            checked={filterStatus === "IN PROGRESS"}
+                                                            onChange={() => setFilterStatus("IN PROGRESS")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="pu-status-inprogress" className="text-sm font-normal cursor-pointer">In Progress</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {uniqueProducts.length > 0 && (
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Product</Label>
+                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="pu-product-all" 
+                                                                name="puProductFilter"
+                                                                checked={filterProduct === "all"}
+                                                                onChange={() => setFilterProduct("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="pu-product-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueProducts.map((prod) => (
+                                                            <div key={prod} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`pu-product-${prod}`} 
+                                                                    name="puProductFilter"
+                                                                    checked={filterProduct === prod}
+                                                                    onChange={() => setFilterProduct(prod)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`pu-product-${prod}`} className="text-sm font-normal cursor-pointer">{prod}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {uniqueMachines.length > 0 && (
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Machine</Label>
+                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="pu-machine-all" 
+                                                                name="puMachineFilter"
+                                                                checked={filterMachine === "all"}
+                                                                onChange={() => setFilterMachine("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="pu-machine-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueMachines.map((machine) => (
+                                                            <div key={machine} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`pu-machine-${machine}`} 
+                                                                    name="puMachineFilter"
+                                                                    checked={filterMachine === machine}
+                                                                    onChange={() => setFilterMachine(machine)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`pu-machine-${machine}`} className="text-sm font-normal cursor-pointer">{machine}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="flex items-end">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    onClick={() => {
+                                                        setFilterStatus("all");
+                                                        setFilterProduct("all");
+                                                        setFilterMachine("all");
+                                                    }}
+                                                >
+                                                    Clear Filters
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

@@ -9,6 +9,8 @@ import { Search, Plus, Filter, Pencil, Box, ChevronDown, Trash2 } from "lucide-r
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface PackSizeRecord {
     id: string;
@@ -25,6 +27,7 @@ export default function PackSizeMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedPackSize, setSelectedPackSize] = useState<PackSizeRecord | null>(null);
+    const [filterDivision, setFilterDivision] = useState<string>("all");
     const [formData, setFormData] = useState({
         packSizeId: "",
         packSizeName: "",
@@ -60,10 +63,14 @@ export default function PackSizeMasterPage() {
         },
     ];
 
-    const filteredPackSizes = packSizes.filter((item) =>
-        item.packSizeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.packSizeId.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredPackSizes = packSizes.filter((item) => {
+        const matchesSearch = item.packSizeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.packSizeId.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesDivision = filterDivision === "all" || item.division === filterDivision;
+        
+        return matchesSearch && matchesDivision;
+    });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -167,17 +174,49 @@ export default function PackSizeMasterPage() {
                                     />
                                 </div>
 
-                                <div className="relative">
-                                    <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors w-40 justify-between">
-                                        <span className="text-sm font-medium">All Categories</span>
-                                        <Filter className="w-4 h-4 text-muted-foreground" />
-                                    </button>
-                                </div>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors w-40 justify-between cursor-pointer">
+                                            <span className="text-sm font-medium">
+                                                {filterDivision === "all" ? "All Categories" : filterDivision || "All Categories"}
+                                            </span>
+                                            <Filter className="w-4 h-4 text-muted-foreground" />
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56" align="start">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-sm font-semibold">Division</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="division-all" 
+                                                            name="divisionFilter"
+                                                            checked={filterDivision === "all"}
+                                                            onChange={() => setFilterDivision("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="division-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => setFilterDivision("all")}
+                                            >
+                                                Clear Filter
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
 
                                 <div className="h-6 w-px bg-border mx-2"></div>
 
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-5 OF 18 PACK SIZES
+                                    SHOWING 1-{filteredPackSizes.length} OF {packSizes.length} PACK SIZES
                                 </span>
 
                                 <div className="flex items-center gap-2 ml-auto">

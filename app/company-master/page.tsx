@@ -9,6 +9,8 @@ import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, Upl
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface Company {
     comp_id: string; // Char(4) - PK
@@ -38,6 +40,8 @@ export default function CompanyMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+    const [filterState, setFilterState] = useState<string>("all");
+    const [filterCity, setFilterCity] = useState<string>("all");
     const [companies, setCompanies] = useState<Company[]>([
         {
             comp_id: "CORP",
@@ -101,11 +105,19 @@ export default function CompanyMasterPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const isSubmittingRef = useRef(false);
 
-    const filteredCompanies = companies.filter((company) =>
-        company.comp_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        company.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        company.company_short_name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredCompanies = companies.filter((company) => {
+        const matchesSearch = company.comp_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            company.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            company.company_short_name.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesState = filterState === "all" || company.state === filterState;
+        const matchesCity = filterCity === "all" || company.city === filterCity;
+        
+        return matchesSearch && matchesState && matchesCity;
+    });
+
+    const uniqueStates = Array.from(new Set(companies.map(c => c.state).filter(s => s)));
+    const uniqueCities = Array.from(new Set(companies.map(c => c.city).filter(c => c)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -355,9 +367,91 @@ export default function CompanyMasterPage() {
                                 <span className="text-sm text-muted-foreground">
                                     SHOWING 1-{filteredCompanies.length} OF {companies.length}
                                 </span>
-                                <Button variant="outline" size="icon">
-                                    <Filter className="w-4 h-4" />
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                        <div className="flex flex-wrap gap-6 items-start">
+                                            {uniqueStates.length > 0 && (
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">State</Label>
+                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="comp-state-all" 
+                                                                name="compStateFilter"
+                                                                checked={filterState === "all"}
+                                                                onChange={() => setFilterState("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="comp-state-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueStates.map((state) => (
+                                                            <div key={state} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`comp-state-${state}`} 
+                                                                    name="compStateFilter"
+                                                                    checked={filterState === state}
+                                                                    onChange={() => setFilterState(state)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`comp-state-${state}`} className="text-sm font-normal cursor-pointer">{state}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {uniqueCities.length > 0 && (
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">City</Label>
+                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="comp-city-all" 
+                                                                name="compCityFilter"
+                                                                checked={filterCity === "all"}
+                                                                onChange={() => setFilterCity("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="comp-city-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueCities.map((city) => (
+                                                            <div key={city} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`comp-city-${city}`} 
+                                                                    name="compCityFilter"
+                                                                    checked={filterCity === city}
+                                                                    onChange={() => setFilterCity(city)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`comp-city-${city}`} className="text-sm font-normal cursor-pointer">{city}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="flex items-end">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    onClick={() => {
+                                                        setFilterState("all");
+                                                        setFilterCity("all");
+                                                    }}
+                                                >
+                                                    Clear Filters
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

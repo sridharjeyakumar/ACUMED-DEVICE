@@ -9,6 +9,8 @@ import { Search, Plus, Filter, Pencil, Archive, ChevronDown, Trash2 } from "luci
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface CartonCapacityRecord {
     id: string;
@@ -27,6 +29,8 @@ export default function CartonCapacityMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedCapacity, setSelectedCapacity] = useState<CartonCapacityRecord | null>(null);
+    const [filterPackSize, setFilterPackSize] = useState<string>("all");
+    const [filterMaterial, setFilterMaterial] = useState<string>("all");
     const [formData, setFormData] = useState({
         capacityId: "",
         capacityName: "",
@@ -100,10 +104,18 @@ export default function CartonCapacityMasterPage() {
         },
     ];
 
-    const filteredRecords = records.filter((item) =>
-        item.capacityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.capacityId.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredRecords = records.filter((item) => {
+        const matchesSearch = item.capacityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.capacityId.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesPackSize = filterPackSize === "all" || item.packSizeId === filterPackSize;
+        const matchesMaterial = filterMaterial === "all" || item.materialId === filterMaterial;
+        
+        return matchesSearch && matchesPackSize && matchesMaterial;
+    });
+
+    const uniquePackSizes = Array.from(new Set(records.map(r => r.packSizeId)));
+    const uniqueMaterials = Array.from(new Set(records.map(r => r.materialId)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -214,20 +226,98 @@ export default function CartonCapacityMasterPage() {
                                 </div>
 
                                 <div className="flex gap-3">
-                                    <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors pointer-events-none">
-                                        <span className="text-xs font-medium">All Pack Sizes</span>
-                                        <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                                    </button>
-                                    <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors pointer-events-none">
-                                        <span className="text-xs font-medium">All Materials</span>
-                                        <Filter className="w-3 h-3 text-muted-foreground" />
-                                    </button>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
+                                                <span className="text-xs font-medium">
+                                                    {filterPackSize === "all" ? "All Pack Sizes" : filterPackSize}
+                                                </span>
+                                                <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto max-w-4xl p-4" align="start">
+                                            <div className="flex flex-wrap gap-6 items-start">
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Pack Size</Label>
+                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="packsize-all" 
+                                                                name="packSizeFilter"
+                                                                checked={filterPackSize === "all"}
+                                                                onChange={() => setFilterPackSize("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="packsize-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniquePackSizes.map((ps) => (
+                                                            <div key={ps} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`packsize-${ps}`} 
+                                                                    name="packSizeFilter"
+                                                                    checked={filterPackSize === ps}
+                                                                    onChange={() => setFilterPackSize(ps)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`packsize-${ps}`} className="text-sm font-normal cursor-pointer">{ps}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
+                                                <span className="text-xs font-medium">
+                                                    {filterMaterial === "all" ? "All Materials" : filterMaterial}
+                                                </span>
+                                                <Filter className="w-3 h-3 text-muted-foreground" />
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto max-w-4xl p-4" align="start">
+                                            <div className="flex flex-wrap gap-6 items-start">
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Material</Label>
+                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="material-all" 
+                                                                name="materialFilter"
+                                                                checked={filterMaterial === "all"}
+                                                                onChange={() => setFilterMaterial("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="material-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueMaterials.map((mat) => (
+                                                            <div key={mat} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`material-${mat}`} 
+                                                                    name="materialFilter"
+                                                                    checked={filterMaterial === mat}
+                                                                    onChange={() => setFilterMaterial(mat)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`material-${mat}`} className="text-sm font-normal cursor-pointer">{mat}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
 
                                 <div className="h-6 w-px bg-border mx-2"></div>
 
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-5 OF 24 CONFIGURATIONS
+                                    SHOWING 1-{filteredRecords.length} OF {records.length} CONFIGURATIONS
                                 </span>
 
                                 <div className="flex items-center gap-2 ml-auto">

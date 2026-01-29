@@ -10,6 +10,8 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { menuAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface Menu {
     menu_id: string;
@@ -43,6 +45,7 @@ export default function MenuMasterPage() {
     const [menus, setMenus] = useState<Menu[]>([]);
     const [loading, setLoading] = useState(true);
     const isSubmittingRef = useRef(false);
+    const [filterActive, setFilterActive] = useState<string>("all");
     const [formData, setFormData] = useState({
         menu_id: "",
         menu_desc: "",
@@ -87,10 +90,16 @@ export default function MenuMasterPage() {
         }
     };
 
-    const filteredMenus = menus.filter((menu) =>
-        menu.menu_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        menu.menu_desc.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredMenus = menus.filter((menu) => {
+        const matchesSearch = menu.menu_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            menu.menu_desc.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "active" && menu.active === true) ||
+            (filterActive === "inactive" && menu.active === false);
+        
+        return matchesSearch && matchesActive;
+    });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
@@ -277,9 +286,63 @@ export default function MenuMasterPage() {
                                 <span className="text-sm text-muted-foreground">
                                     SHOWING 1-{filteredMenus.length} OF {menus.length}
                                 </span>
-                                <Button variant="outline" size="icon">
-                                    <Filter className="w-4 h-4" />
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                        <div className="flex flex-wrap gap-6 items-start">
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Status</Label>
+                                                <div className="flex flex-wrap gap-3">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="menu-active-all" 
+                                                            name="menuActiveStatus"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="menu-active-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="menu-active-true" 
+                                                            name="menuActiveStatus"
+                                                            checked={filterActive === "active"}
+                                                            onChange={() => setFilterActive("active")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="menu-active-true" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="menu-active-false" 
+                                                            name="menuActiveStatus"
+                                                            checked={filterActive === "inactive"}
+                                                            onChange={() => setFilterActive("inactive")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="menu-active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => setFilterActive("all")}
+                                            >
+                                                Clear Filter
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

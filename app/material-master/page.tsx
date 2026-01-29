@@ -9,6 +9,8 @@ import { Search, Plus, Filter, Pencil, ChevronDown, LayoutGrid, ToggleLeft, Tras
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface MaterialRecord {
     id: string;
@@ -33,6 +35,8 @@ export default function MaterialMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedMaterial, setSelectedMaterial] = useState<MaterialRecord | null>(null);
+    const [filterType, setFilterType] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("all");
     const [formData, setFormData] = useState({
         materialId: "",
         materialName: "",
@@ -67,10 +71,17 @@ export default function MaterialMasterPage() {
         { id: "17", materialId: "PM-011", materialName: "Shipper Carton - Duvet Ultra", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
     ];
 
-    const filteredMaterials = materials.filter((material) =>
-        material.materialName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        material.materialId.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredMaterials = materials.filter((material) => {
+        const matchesSearch = material.materialName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            material.materialId.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesType = filterType === "all" || material.type === filterType;
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "active" && material.active === "TRUE") ||
+            (filterActive === "inactive" && material.active !== "TRUE");
+        
+        return matchesSearch && matchesType && matchesActive;
+    });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -209,13 +220,108 @@ export default function MaterialMasterPage() {
                                 <div className="h-6 w-px bg-border mx-2"></div>
 
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-12 OF 84
+                                    SHOWING 1-{filteredMaterials.length} OF {materials.length} MATERIALS
                                 </span>
 
                                 <div className="flex items-center gap-2 ml-auto">
-                                    <Button variant="ghost" size="icon" className="text-muted-foreground">
-                                        <Filter className="w-4 h-4" />
-                                    </Button>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                                                <Filter className="w-4 h-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                            <div className="flex flex-wrap gap-6 items-start">
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Material Type</Label>
+                                                    <div className="flex flex-wrap gap-3">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="type-all" 
+                                                                name="materialType"
+                                                                checked={filterType === "all"}
+                                                                onChange={() => setFilterType("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="type-all" className="text-sm font-normal cursor-pointer">All Types</Label>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="type-rm" 
+                                                                name="materialType"
+                                                                checked={filterType === "RM"}
+                                                                onChange={() => setFilterType("RM")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="type-rm" className="text-sm font-normal cursor-pointer">Raw Material (RM)</Label>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="type-pm" 
+                                                                name="materialType"
+                                                                checked={filterType === "PM"}
+                                                                onChange={() => setFilterType("PM")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="type-pm" className="text-sm font-normal cursor-pointer">Packaging (PM)</Label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Status</Label>
+                                                    <div className="flex flex-wrap gap-3">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="active-all" 
+                                                                name="activeStatus"
+                                                                checked={filterActive === "all"}
+                                                                onChange={() => setFilterActive("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="active-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="active-true" 
+                                                                name="activeStatus"
+                                                                checked={filterActive === "active"}
+                                                                onChange={() => setFilterActive("active")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="active-true" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="active-false" 
+                                                                name="activeStatus"
+                                                                checked={filterActive === "inactive"}
+                                                                onChange={() => setFilterActive("inactive")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    className="w-full"
+                                                    onClick={() => {
+                                                        setFilterType("all");
+                                                        setFilterActive("all");
+                                                    }}
+                                                >
+                                                    Clear Filters
+                                                </Button>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
                             </div>
                         </Card>
@@ -340,7 +446,7 @@ export default function MaterialMasterPage() {
                             </div>
 
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-white">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">SHOWING 4 OF 84 MATERIALS</span>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">SHOWING 1-{filteredMaterials.length} OF {materials.length} MATERIALS</span>
                                 <div className="flex items-center gap-2">
                                     <Button variant="outline" size="sm" className="h-8 text-xs">Previous</Button>
                                     <Button variant="outline" size="sm" className="h-8 text-xs text-blue-600 border-blue-200 bg-blue-50">Next</Button>

@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, X, Calendar, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface ProductionTarget {
     id: string;
@@ -28,6 +30,9 @@ export default function MonthlyProductionTargetPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedTarget, setSelectedTarget] = useState<ProductionTarget | null>(null);
+    const [filterProduct, setFilterProduct] = useState<string>("all");
+    const [filterPackSize, setFilterPackSize] = useState<string>("all");
+    const [filterMonthYear, setFilterMonthYear] = useState<string>("all");
     const [formData, setFormData] = useState({
         monthYear: "",
         batchNo: "",
@@ -112,10 +117,20 @@ export default function MonthlyProductionTargetPage() {
         },
     ];
 
-    const filteredTargets = targets.filter((target) =>
-        target.batchNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        target.productId.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredTargets = targets.filter((target) => {
+        const matchesSearch = target.batchNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            target.productId.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesProduct = filterProduct === "all" || target.productId === filterProduct;
+        const matchesPackSize = filterPackSize === "all" || target.packSizeId === filterPackSize;
+        const matchesMonthYear = filterMonthYear === "all" || target.monthYear === filterMonthYear;
+        
+        return matchesSearch && matchesProduct && matchesPackSize && matchesMonthYear;
+    });
+
+    const uniqueProducts = Array.from(new Set(targets.map(t => t.productId).filter(p => p)));
+    const uniquePackSizes = Array.from(new Set(targets.map(t => t.packSizeId).filter(p => p)));
+    const uniqueMonthYears = Array.from(new Set(targets.map(t => t.monthYear)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -224,9 +239,123 @@ export default function MonthlyProductionTargetPage() {
                                 <span className="text-xs md:text-sm text-muted-foreground whitespace-nowrap">
                                     SHOWING 1-{filteredTargets.length} OF {targets.length}
                                 </span>
-                                <Button variant="outline" size="icon" className="h-9 w-9 md:h-10 md:w-10">
-                                    <Filter className="w-4 h-4" />
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="h-9 w-9 md:h-10 md:w-10 hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                        <div className="flex flex-wrap gap-6 items-start">
+                                            {uniqueProducts.length > 0 && (
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Product</Label>
+                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="mpt-product-all" 
+                                                                name="mptProductFilter"
+                                                                checked={filterProduct === "all"}
+                                                                onChange={() => setFilterProduct("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="mpt-product-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueProducts.map((prod) => (
+                                                            <div key={prod} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`mpt-product-${prod}`} 
+                                                                    name="mptProductFilter"
+                                                                    checked={filterProduct === prod}
+                                                                    onChange={() => setFilterProduct(prod)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`mpt-product-${prod}`} className="text-sm font-normal cursor-pointer">{prod}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {uniquePackSizes.length > 0 && (
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Pack Size</Label>
+                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="mpt-packsize-all" 
+                                                                name="mptPackSizeFilter"
+                                                                checked={filterPackSize === "all"}
+                                                                onChange={() => setFilterPackSize("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="mpt-packsize-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniquePackSizes.map((ps) => (
+                                                            <div key={ps} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`mpt-packsize-${ps}`} 
+                                                                    name="mptPackSizeFilter"
+                                                                    checked={filterPackSize === ps}
+                                                                    onChange={() => setFilterPackSize(ps)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`mpt-packsize-${ps}`} className="text-sm font-normal cursor-pointer">{ps}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {uniqueMonthYears.length > 0 && (
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Month/Year</Label>
+                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="mpt-month-all" 
+                                                                name="mptMonthFilter"
+                                                                checked={filterMonthYear === "all"}
+                                                                onChange={() => setFilterMonthYear("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="mpt-month-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueMonthYears.map((my) => (
+                                                            <div key={my} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`mpt-month-${my}`} 
+                                                                    name="mptMonthFilter"
+                                                                    checked={filterMonthYear === my}
+                                                                    onChange={() => setFilterMonthYear(my)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`mpt-month-${my}`} className="text-sm font-normal cursor-pointer">{my}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="flex items-end">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    onClick={() => {
+                                                        setFilterProduct("all");
+                                                        setFilterPackSize("all");
+                                                        setFilterMonthYear("all");
+                                                    }}
+                                                >
+                                                    Clear Filters
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

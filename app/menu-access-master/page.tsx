@@ -10,6 +10,8 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { menuAccessAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface MenuAccess {
     rold_id: string;
@@ -46,6 +48,9 @@ export default function MenuAccessMasterPage() {
     const [selectedAccess, setSelectedAccess] = useState<MenuAccess | null>(null);
     const [menuAccesses, setMenuAccesses] = useState<MenuAccess[]>([]);
     const [loading, setLoading] = useState(true);
+    const [filterRole, setFilterRole] = useState<string>("all");
+    const [filterMenu, setFilterMenu] = useState<string>("all");
+    const [filterAccess, setFilterAccess] = useState<string>("all");
     const [formData, setFormData] = useState({
         rold_id: "",
         menu_id: "",
@@ -76,10 +81,21 @@ export default function MenuAccessMasterPage() {
         }
     };
 
-    const filteredAccesses = menuAccesses.filter((access) =>
-        access.rold_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        access.menu_id.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredAccesses = menuAccesses.filter((access) => {
+        const matchesSearch = access.rold_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            access.menu_id.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesRole = filterRole === "all" || access.rold_id === filterRole;
+        const matchesMenu = filterMenu === "all" || access.menu_id === filterMenu;
+        const matchesAccess = filterAccess === "all" || 
+            (filterAccess === "active" && access.access === true) ||
+            (filterAccess === "inactive" && access.access === false);
+        
+        return matchesSearch && matchesRole && matchesMenu && matchesAccess;
+    });
+
+    const uniqueRoles = Array.from(new Set(menuAccesses.map(a => a.rold_id)));
+    const uniqueMenus = Array.from(new Set(menuAccesses.map(a => a.menu_id)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
@@ -223,9 +239,126 @@ export default function MenuAccessMasterPage() {
                                 <span className="text-sm text-muted-foreground">
                                     SHOWING 1-{filteredAccesses.length} OF {menuAccesses.length}
                                 </span>
-                                <Button variant="outline" size="icon">
-                                    <Filter className="w-4 h-4" />
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                        <div className="flex flex-wrap gap-6 items-start">
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Role ID</Label>
+                                                <div className="flex flex-wrap gap-3">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ma-role-all" 
+                                                            name="maRoleFilter"
+                                                            checked={filterRole === "all"}
+                                                            onChange={() => setFilterRole("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ma-role-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    {uniqueRoles.map((role) => (
+                                                        <div key={role} className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id={`ma-role-${role}`} 
+                                                                name="maRoleFilter"
+                                                                checked={filterRole === role}
+                                                                onChange={() => setFilterRole(role)}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor={`ma-role-${role}`} className="text-sm font-normal cursor-pointer">{role}</Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Menu ID</Label>
+                                                <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ma-menu-all" 
+                                                            name="maMenuFilter"
+                                                            checked={filterMenu === "all"}
+                                                            onChange={() => setFilterMenu("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ma-menu-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    {uniqueMenus.map((menu) => (
+                                                        <div key={menu} className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id={`ma-menu-${menu}`} 
+                                                                name="maMenuFilter"
+                                                                checked={filterMenu === menu}
+                                                                onChange={() => setFilterMenu(menu)}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor={`ma-menu-${menu}`} className="text-sm font-normal cursor-pointer">{menu}</Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Access Status</Label>
+                                                <div className="flex flex-wrap gap-3">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ma-access-all" 
+                                                            name="maAccessFilter"
+                                                            checked={filterAccess === "all"}
+                                                            onChange={() => setFilterAccess("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ma-access-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ma-access-active" 
+                                                            name="maAccessFilter"
+                                                            checked={filterAccess === "active"}
+                                                            onChange={() => setFilterAccess("active")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ma-access-active" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="ma-access-inactive" 
+                                                            name="maAccessFilter"
+                                                            checked={filterAccess === "inactive"}
+                                                            onChange={() => setFilterAccess("inactive")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="ma-access-inactive" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-end">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    onClick={() => {
+                                                        setFilterRole("all");
+                                                        setFilterMenu("all");
+                                                        setFilterAccess("all");
+                                                    }}
+                                                >
+                                                    Clear Filters
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

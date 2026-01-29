@@ -9,6 +9,8 @@ import { Search, Plus, Filter, Pencil, Trash2, ChevronDown } from "lucide-react"
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface BinRecord {
     id: string;
@@ -29,6 +31,7 @@ export default function CollectionBinMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedBin, setSelectedBin] = useState<BinRecord | null>(null);
+    const [filterBinType, setFilterBinType] = useState<string>("all");
     const [formData, setFormData] = useState({
         binId: "",
         binName: "",
@@ -80,10 +83,14 @@ export default function CollectionBinMasterPage() {
         },
     ];
 
-    const filteredRecords = records.filter((item) =>
-        item.binName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.binId.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredRecords = records.filter((item) => {
+        const matchesSearch = item.binName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.binId.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesBinType = filterBinType === "all" || item.binType === filterBinType;
+        
+        return matchesSearch && matchesBinType;
+    });
 
     const getBadgeStyle = (type: string) => {
         switch (type) {
@@ -210,17 +217,71 @@ export default function CollectionBinMasterPage() {
                                     />
                                 </div>
 
-                                <div className="relative">
-                                    <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors pointer-events-none w-40 justify-between">
-                                        <span className="text-sm font-medium">All Bin Types</span>
-                                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                                    </button>
-                                </div>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer w-40 justify-between">
+                                            <span className="text-sm font-medium">
+                                                {filterBinType === "all" ? "All Bin Types" : filterBinType}
+                                            </span>
+                                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56" align="start">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-sm font-semibold">Bin Type</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="bintype-all" 
+                                                            name="binTypeFilter"
+                                                            checked={filterBinType === "all"}
+                                                            onChange={() => setFilterBinType("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="bintype-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="bintype-collection" 
+                                                            name="binTypeFilter"
+                                                            checked={filterBinType === "collection"}
+                                                            onChange={() => setFilterBinType("collection")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="bintype-collection" className="text-sm font-normal cursor-pointer">Collection</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="bintype-rejected" 
+                                                            name="binTypeFilter"
+                                                            checked={filterBinType === "Rejected"}
+                                                            onChange={() => setFilterBinType("Rejected")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="bintype-rejected" className="text-sm font-normal cursor-pointer">Rejected</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => setFilterBinType("all")}
+                                            >
+                                                Clear Filter
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
 
                                 <div className="h-6 w-px bg-border mx-2"></div>
 
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-5 OF 12 RECORDS
+                                    SHOWING 1-{filteredRecords.length} OF {records.length} RECORDS
                                 </span>
 
                                 <div className="flex items-center gap-2 ml-auto">

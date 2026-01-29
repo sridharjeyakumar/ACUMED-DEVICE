@@ -10,6 +10,8 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface EmployeeRecord {
     id: string;
@@ -33,6 +35,8 @@ export default function EmployeeMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRecord | null>(null);
+    const [filterStatus, setFilterStatus] = useState<string>("all");
+    const [filterDepartment, setFilterDepartment] = useState<string>("all");
     const [formData, setFormData] = useState({
         empId: "",
         firstName: "",
@@ -124,10 +128,17 @@ export default function EmployeeMasterPage() {
         },
     ];
 
-    const filteredRecords = records.filter((item) =>
-        item.empName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.empId.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredRecords = records.filter((item) => {
+        const matchesSearch = item.empName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.empId.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesStatus = filterStatus === "all" || item.status === filterStatus;
+        const matchesDepartment = filterDepartment === "all" || item.department === filterDepartment;
+        
+        return matchesSearch && matchesStatus && matchesDepartment;
+    });
+
+    const uniqueDepartments = Array.from(new Set(records.map(r => r.department)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -239,16 +250,104 @@ export default function EmployeeMasterPage() {
                                         <span className="text-sm font-medium">All Departments</span>
                                         <ChevronDown className="w-4 h-4 text-muted-foreground" />
                                     </button>
-                                    <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors pointer-events-none w-32 justify-between">
-                                        <span className="text-sm font-medium">All Status</span>
-                                        <Filter className="w-4 h-4 text-muted-foreground" />
-                                    </button>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer w-32 justify-between">
+                                                <span className="text-sm font-medium">
+                                                    {filterStatus === "all" ? "All Status" : filterStatus}
+                                                </span>
+                                                <Filter className="w-4 h-4 text-muted-foreground" />
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto max-w-4xl p-4" align="start">
+                                            <div className="flex flex-wrap gap-6 items-start">
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Status</Label>
+                                                    <div className="flex flex-wrap gap-3">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="emp-status-all" 
+                                                                name="empStatus"
+                                                                checked={filterStatus === "all"}
+                                                                onChange={() => setFilterStatus("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="emp-status-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="emp-status-active" 
+                                                                name="empStatus"
+                                                                checked={filterStatus === "Active"}
+                                                                onChange={() => setFilterStatus("Active")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="emp-status-active" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="emp-status-resigned" 
+                                                                name="empStatus"
+                                                                checked={filterStatus === "Resigned"}
+                                                                onChange={() => setFilterStatus("Resigned")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="emp-status-resigned" className="text-sm font-normal cursor-pointer">Resigned</Label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Department</Label>
+                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="dept-all" 
+                                                                name="departmentFilter"
+                                                                checked={filterDepartment === "all"}
+                                                                onChange={() => setFilterDepartment("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="dept-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueDepartments.map((dept) => (
+                                                            <div key={dept} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`dept-${dept}`} 
+                                                                    name="departmentFilter"
+                                                                    checked={filterDepartment === dept}
+                                                                    onChange={() => setFilterDepartment(dept)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`dept-${dept}`} className="text-sm font-normal cursor-pointer">{dept}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    className="w-full"
+                                                    onClick={() => {
+                                                        setFilterStatus("all");
+                                                        setFilterDepartment("all");
+                                                    }}
+                                                >
+                                                    Clear Filters
+                                                </Button>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
 
                                 <div className="h-6 w-px bg-border mx-2"></div>
 
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-5 OF 124 RECORDS
+                                    SHOWING 1-{filteredRecords.length} OF {records.length} RECORDS
                                 </span>
 
                                 <div className="flex items-center gap-2 ml-auto">

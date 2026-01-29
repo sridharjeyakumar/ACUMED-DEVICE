@@ -9,6 +9,8 @@ import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, Awa
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface EmployeeGrade {
     grade_id: string; // Char(3) - PK
@@ -247,9 +249,33 @@ export default function EmployeeGradeMasterPage() {
                                 <span className="text-sm text-muted-foreground">
                                     SHOWING 1-{filteredGrades.length} OF {grades.length}
                                 </span>
-                                <Button variant="outline" size="icon">
-                                    <Filter className="w-4 h-4" />
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56" align="end">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-sm font-semibold">Grade</Label>
+                                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="grade-all" 
+                                                            name="gradeFilter"
+                                                            checked={true}
+                                                            onChange={() => {}}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="grade-all" className="text-sm font-normal cursor-pointer">All Grades</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

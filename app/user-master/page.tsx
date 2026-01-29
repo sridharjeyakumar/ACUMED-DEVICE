@@ -10,6 +10,8 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { userAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface User {
     user_id: string; // Char(10) - PK
@@ -49,6 +51,8 @@ export default function UserMasterPage() {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterRole, setFilterRole] = useState<string>("all");
     const [formData, setFormData] = useState({
         user_id: "",
         employee_id: "",
@@ -88,11 +92,21 @@ export default function UserMasterPage() {
         }
     };
 
-    const filteredUsers = users.filter((user) =>
-        user.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.employee_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (user.role_id && user.role_id.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    const filteredUsers = users.filter((user) => {
+        const matchesSearch = user.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            user.employee_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (user.role_id && user.role_id.toLowerCase().includes(searchQuery.toLowerCase()));
+        
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "active" && user.active === true) ||
+            (filterActive === "inactive" && user.active === false);
+        
+        const matchesRole = filterRole === "all" || user.role_id === filterRole;
+        
+        return matchesSearch && matchesActive && matchesRole;
+    });
+
+    const uniqueRoles = Array.from(new Set(users.map(u => u.role_id).filter(r => r)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
@@ -247,9 +261,97 @@ export default function UserMasterPage() {
                                 <span className="text-sm text-muted-foreground">
                                     SHOWING 1-{filteredUsers.length} OF {users.length}
                                 </span>
-                                <Button variant="outline" size="icon">
-                                    <Filter className="w-4 h-4" />
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56" align="end">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-sm font-semibold">Status</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="user-active-all" 
+                                                            name="userActiveStatus"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="user-active-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="user-active-true" 
+                                                            name="userActiveStatus"
+                                                            checked={filterActive === "active"}
+                                                            onChange={() => setFilterActive("active")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="user-active-true" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="user-active-false" 
+                                                            name="userActiveStatus"
+                                                            checked={filterActive === "inactive"}
+                                                            onChange={() => setFilterActive("inactive")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="user-active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {uniqueRoles.length > 0 && (
+                                                <div className="space-y-2">
+                                                    <Label className="text-sm font-semibold">Role</Label>
+                                                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="user-role-all" 
+                                                                name="userRoleFilter"
+                                                                checked={filterRole === "all"}
+                                                                onChange={() => setFilterRole("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="user-role-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueRoles.map((role) => (
+                                                            <div key={role} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`user-role-${role}`} 
+                                                                    name="userRoleFilter"
+                                                                    checked={filterRole === role}
+                                                                    onChange={() => setFilterRole(role)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`user-role-${role}`} className="text-sm font-normal cursor-pointer">{role}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => {
+                                                    setFilterActive("all");
+                                                    setFilterRole("all");
+                                                }}
+                                            >
+                                                Clear Filters
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

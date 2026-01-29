@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface MenuAccess {
     id: string;
@@ -23,6 +25,7 @@ export default function RoleWiseMenuAccessPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedAccess, setSelectedAccess] = useState<MenuAccess | null>(null);
+    const [filterRole, setFilterRole] = useState<string>("all");
     const [formData, setFormData] = useState({
         role: "",
         user: "",
@@ -67,10 +70,16 @@ export default function RoleWiseMenuAccessPage() {
         },
     ];
 
-    const filteredAccess = accessData.filter((item) =>
-        item.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.userName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredAccess = accessData.filter((item) => {
+        const matchesSearch = item.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.userName.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesRole = filterRole === "all" || item.role === filterRole;
+        
+        return matchesSearch && matchesRole;
+    });
+
+    const uniqueRoles = Array.from(new Set(accessData.map(a => a.role)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -181,10 +190,56 @@ export default function RoleWiseMenuAccessPage() {
                                 <span className="text-sm text-muted-foreground">
                                     SHOWING 1-{filteredAccess.length} OF {accessData.length}
                                 </span>
-                                <Button variant="outline" className="flex items-center gap-2">
-                                    <Filter className="w-4 h-4" />
-                                    FILTER
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="flex items-center gap-2 hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                            FILTER
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                        <div className="flex flex-wrap gap-6 items-start">
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Role</Label>
+                                                <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="rwma-role-all" 
+                                                            name="rwmaRoleFilter"
+                                                            checked={filterRole === "all"}
+                                                            onChange={() => setFilterRole("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="rwma-role-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    {uniqueRoles.map((role) => (
+                                                        <div key={role} className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id={`rwma-role-${role}`} 
+                                                                name="rwmaRoleFilter"
+                                                                checked={filterRole === role}
+                                                                onChange={() => setFilterRole(role)}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor={`rwma-role-${role}`} className="text-sm font-normal cursor-pointer">{role}</Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-end">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    onClick={() => setFilterRole("all")}
+                                                >
+                                                    Clear Filter
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>

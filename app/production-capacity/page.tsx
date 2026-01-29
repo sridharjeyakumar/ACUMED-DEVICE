@@ -9,6 +9,8 @@ import { Search, Plus, Filter, Pencil, Factory, ChevronDown, Scale, Trash2 } fro
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface MachineRecord {
     id: string;
@@ -27,6 +29,8 @@ export default function ProductionCapacityPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedMachine, setSelectedMachine] = useState<MachineRecord | null>(null);
+    const [filterUom, setFilterUom] = useState<string>("all");
+    const [filterSection, setFilterSection] = useState<string>("all");
     const [formData, setFormData] = useState({
         machineId: "",
         machineName: "",
@@ -60,10 +64,18 @@ export default function ProductionCapacityPage() {
         },
     ];
 
-    const filteredMachines = machines.filter((machine) =>
-        machine.machineName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        machine.machineId.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredMachines = machines.filter((machine) => {
+        const matchesSearch = machine.machineName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            machine.machineId.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesUom = filterUom === "all" || machine.uom === filterUom;
+        const matchesSection = filterSection === "all" || machine.section === filterSection;
+        
+        return matchesSearch && matchesUom && matchesSection;
+    });
+
+    const uniqueUoms = Array.from(new Set(machines.map(m => m.uom)));
+    const uniqueSections = Array.from(new Set(machines.map(m => m.section).filter(s => s)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -186,17 +198,96 @@ export default function ProductionCapacityPage() {
                                     />
                                 </div>
 
-                                <div className="relative">
-                                    <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                                        <span className="text-sm font-medium">All UOM</span>
-                                        <Scale className="w-4 h-4 text-muted-foreground" />
-                                    </button>
-                                </div>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
+                                            <span className="text-sm font-medium">
+                                                {filterUom === "all" ? "All UOM" : filterUom}
+                                            </span>
+                                            <Scale className="w-4 h-4 text-muted-foreground" />
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56" align="start">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-sm font-semibold">Unit of Measure</Label>
+                                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="uom-all" 
+                                                            name="uomFilter"
+                                                            checked={filterUom === "all"}
+                                                            onChange={() => setFilterUom("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="uom-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    {uniqueUoms.map((uom) => (
+                                                        <div key={uom} className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id={`uom-${uom}`} 
+                                                                name="uomFilter"
+                                                                checked={filterUom === uom}
+                                                                onChange={() => setFilterUom(uom)}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor={`uom-${uom}`} className="text-sm font-normal cursor-pointer">{uom}</Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {uniqueSections.length > 0 && (
+                                                <div className="space-y-2">
+                                                    <Label className="text-sm font-semibold">Section</Label>
+                                                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="section-all" 
+                                                                name="sectionFilter"
+                                                                checked={filterSection === "all"}
+                                                                onChange={() => setFilterSection("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="section-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueSections.map((section) => (
+                                                            <div key={section} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`section-${section}`} 
+                                                                    name="sectionFilter"
+                                                                    checked={filterSection === section}
+                                                                    onChange={() => setFilterSection(section)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`section-${section}`} className="text-sm font-normal cursor-pointer">{section}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => {
+                                                    setFilterUom("all");
+                                                    setFilterSection("all");
+                                                }}
+                                            >
+                                                Clear Filters
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
 
                                 <div className="h-6 w-px bg-border mx-2"></div>
 
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-5 OF 12 MACHINES
+                                    SHOWING 1-{filteredMachines.length} OF {machines.length} MACHINES
                                 </span>
 
                                 <div className="flex items-center gap-2 ml-auto">

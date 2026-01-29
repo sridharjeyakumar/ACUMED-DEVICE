@@ -9,6 +9,8 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { Search, Plus, Filter, Pencil, Truck, ChevronDown, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface CartonTypeRecord {
     id: string;
@@ -26,6 +28,7 @@ export default function CartonTypeMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedCartonType, setSelectedCartonType] = useState<CartonTypeRecord | null>(null);
+    const [filterMaterial, setFilterMaterial] = useState<string>("all");
     const [formData, setFormData] = useState({
         cartonTypeId: "",
         cartonTypeName: "",
@@ -56,10 +59,14 @@ export default function CartonTypeMasterPage() {
         },
     ];
 
-    const filteredCartonTypes = cartonTypes.filter((item) =>
-        item.cartonTypeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.cartonTypeId.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredCartonTypes = cartonTypes.filter((item) => {
+        const matchesSearch = item.cartonTypeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.cartonTypeId.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesMaterial = filterMaterial === "all" || item.material === filterMaterial;
+        
+        return matchesSearch && matchesMaterial;
+    });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -166,17 +173,49 @@ export default function CartonTypeMasterPage() {
                                     />
                                 </div>
 
-                                <div className="relative">
-                                    <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors w-40 justify-between">
-                                        <span className="text-sm font-medium">All Materials</span>
-                                        <Filter className="w-4 h-4 text-muted-foreground" />
-                                    </button>
-                                </div>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors w-40 justify-between cursor-pointer">
+                                            <span className="text-sm font-medium">
+                                                {filterMaterial === "all" ? "All Materials" : filterMaterial || "All Materials"}
+                                            </span>
+                                            <Filter className="w-4 h-4 text-muted-foreground" />
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56" align="start">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-sm font-semibold">Material</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="carton-material-all" 
+                                                            name="cartonMaterialFilter"
+                                                            checked={filterMaterial === "all"}
+                                                            onChange={() => setFilterMaterial("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="carton-material-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => setFilterMaterial("all")}
+                                            >
+                                                Clear Filter
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
 
                                 <div className="h-6 w-px bg-border mx-2"></div>
 
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-5 OF 12 CARTON TYPES
+                                    SHOWING 1-{filteredCartonTypes.length} OF {cartonTypes.length} CARTON TYPES
                                 </span>
 
                                 <div className="flex items-center gap-2 ml-auto">
