@@ -14,16 +14,18 @@ async function ensureDbConnection() {
 // GET /api/user-login-history/user/[userId] - Get login history by user ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const { userId } = await params;
     await ensureDbConnection();
-    const histories = await UserLoginHistory.find({ user_id: params.userId })
+    const histories = await UserLoginHistory.find({ user_id: userId })
       .sort({ Date_login_Date: -1, Time_login_Time: -1 });
     return NextResponse.json(histories);
   } catch (error: any) {
+    console.error('Error fetching login histories:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch login histories' },
+      { error: error.message || 'Failed to fetch login histories' },
       { status: 500 }
     );
   }

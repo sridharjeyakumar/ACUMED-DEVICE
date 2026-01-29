@@ -14,21 +14,23 @@ async function ensureDbConnection() {
 // GET /api/menu-access/[roldId]/[menuId] - Get menu access by role and menu
 export async function GET(
   request: NextRequest,
-  { params }: { params: { roldId: string; menuId: string } }
+  { params }: { params: Promise<{ roldId: string; menuId: string }> }
 ) {
   try {
+    const { roldId, menuId } = await params;
     await ensureDbConnection();
     const access = await MenuAccessMaster.findOne({
-      rold_id: params.roldId,
-      menu_id: params.menuId,
+      rold_id: roldId,
+      menu_id: menuId,
     });
     if (!access) {
       return NextResponse.json({ error: 'Menu access not found' }, { status: 404 });
     }
     return NextResponse.json(access);
   } catch (error: any) {
+    console.error('Error fetching menu access:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch menu access' },
+      { error: error.message || 'Failed to fetch menu access' },
       { status: 500 }
     );
   }
@@ -37,14 +39,15 @@ export async function GET(
 // PUT /api/menu-access/[roldId]/[menuId] - Update menu access
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { roldId: string; menuId: string } }
+  { params }: { params: Promise<{ roldId: string; menuId: string }> }
 ) {
   try {
+    const { roldId, menuId } = await params;
     await ensureDbConnection();
     const body = await request.json();
     const { access, can_add, can_edit, can_view, can_cancel } = body;
     const menuAccess = await MenuAccessMaster.findOneAndUpdate(
-      { rold_id: params.roldId, menu_id: params.menuId },
+      { rold_id: roldId, menu_id: menuId },
       {
         access: access !== false,
         can_add: can_add !== false,
@@ -59,8 +62,9 @@ export async function PUT(
     }
     return NextResponse.json(menuAccess);
   } catch (error: any) {
+    console.error('Error updating menu access:', error);
     return NextResponse.json(
-      { error: 'Failed to update menu access' },
+      { error: error.message || 'Failed to update menu access' },
       { status: 500 }
     );
   }
@@ -69,21 +73,23 @@ export async function PUT(
 // DELETE /api/menu-access/[roldId]/[menuId] - Delete menu access
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { roldId: string; menuId: string } }
+  { params }: { params: Promise<{ roldId: string; menuId: string }> }
 ) {
   try {
+    const { roldId, menuId } = await params;
     await ensureDbConnection();
     const menuAccess = await MenuAccessMaster.findOneAndDelete({
-      rold_id: params.roldId,
-      menu_id: params.menuId,
+      rold_id: roldId,
+      menu_id: menuId,
     });
     if (!menuAccess) {
       return NextResponse.json({ error: 'Menu access not found' }, { status: 404 });
     }
     return NextResponse.json({ message: 'Menu access deleted successfully' });
   } catch (error: any) {
+    console.error('Error deleting menu access:', error);
     return NextResponse.json(
-      { error: 'Failed to delete menu access' },
+      { error: error.message || 'Failed to delete menu access' },
       { status: 500 }
     );
   }

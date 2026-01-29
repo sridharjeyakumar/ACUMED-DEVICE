@@ -14,18 +14,20 @@ async function ensureDbConnection() {
 // GET /api/user-login-history/[id] - Get login history by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await ensureDbConnection();
-    const history = await UserLoginHistory.findById(params.id);
+    const history = await UserLoginHistory.findById(id);
     if (!history) {
       return NextResponse.json({ error: 'Login history not found' }, { status: 404 });
     }
     return NextResponse.json(history);
   } catch (error: any) {
+    console.error('Error fetching login history:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch login history' },
+      { error: error.message || 'Failed to fetch login history' },
       { status: 500 }
     );
   }
@@ -34,9 +36,10 @@ export async function GET(
 // PUT /api/user-login-history/[id] - Update login history
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await ensureDbConnection();
     const body = await request.json();
     const { Date_login_Date, Time_login_Time, Date_Logout_Date, Time_Logout_Time } = body;
@@ -48,7 +51,7 @@ export async function PUT(
     if (Time_Logout_Time) updateData.Time_Logout_Time = Time_Logout_Time;
 
     const history = await UserLoginHistory.findByIdAndUpdate(
-      params.id,
+      id,
       updateData,
       { new: true, runValidators: true }
     );
@@ -58,8 +61,9 @@ export async function PUT(
     }
     return NextResponse.json(history);
   } catch (error: any) {
+    console.error('Error updating login history:', error);
     return NextResponse.json(
-      { error: 'Failed to update login history' },
+      { error: error.message || 'Failed to update login history' },
       { status: 500 }
     );
   }
@@ -68,18 +72,20 @@ export async function PUT(
 // DELETE /api/user-login-history/[id] - Delete login history
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await ensureDbConnection();
-    const history = await UserLoginHistory.findByIdAndDelete(params.id);
+    const history = await UserLoginHistory.findByIdAndDelete(id);
     if (!history) {
       return NextResponse.json({ error: 'Login history not found' }, { status: 404 });
     }
     return NextResponse.json({ message: 'Login history deleted successfully' });
   } catch (error: any) {
+    console.error('Error deleting login history:', error);
     return NextResponse.json(
-      { error: 'Failed to delete login history' },
+      { error: error.message || 'Failed to delete login history' },
       { status: 500 }
     );
   }

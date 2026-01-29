@@ -35,18 +35,23 @@ async function ensureDbConnection() {
 // GET /api/menus/[id] - Get menu by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await ensureDbConnection();
-    const menu = await MenuMaster.findOne({ menu_id: params.id });
+    const menu = await MenuMaster.findOne({ menu_id: id });
     if (!menu) {
       return NextResponse.json({ error: 'Menu not found' }, { status: 404 });
     }
     return NextResponse.json(menu);
   } catch (error: any) {
+    console.error('Error fetching menu:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch menu' },
+      { 
+        error: error.message || 'Failed to fetch menu',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
@@ -55,9 +60,10 @@ export async function GET(
 // PUT /api/menus/[id] - Update menu
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await ensureDbConnection();
     const body = await request.json();
     const { menu_desc, active } = body;
@@ -76,7 +82,7 @@ export async function PUT(
     }
     
     const menu = await MenuMaster.findOneAndUpdate(
-      { menu_id: params.id },
+      { menu_id: id },
       updateData,
       { new: true, runValidators: true }
     );
@@ -102,18 +108,20 @@ export async function PUT(
 // DELETE /api/menus/[id] - Delete menu
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await ensureDbConnection();
-    const menu = await MenuMaster.findOneAndDelete({ menu_id: params.id });
+    const menu = await MenuMaster.findOneAndDelete({ menu_id: id });
     if (!menu) {
       return NextResponse.json({ error: 'Menu not found' }, { status: 404 });
     }
     return NextResponse.json({ message: 'Menu deleted successfully' });
   } catch (error: any) {
+    console.error('Error deleting menu:', error);
     return NextResponse.json(
-      { error: 'Failed to delete menu' },
+      { error: error.message || 'Failed to delete menu' },
       { status: 500 }
     );
   }

@@ -35,18 +35,20 @@ async function ensureDbConnection() {
 // GET /api/roles/[id] - Get role by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await ensureDbConnection();
-    const role = await RoleMaster.findOne({ roll_id: params.id });
+    const role = await RoleMaster.findOne({ roll_id: id });
     if (!role) {
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
     return NextResponse.json(role);
   } catch (error: any) {
+    console.error('Error fetching role:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch role' },
+      { error: error.message || 'Failed to fetch role' },
       { status: 500 }
     );
   }
@@ -55,9 +57,10 @@ export async function GET(
 // PUT /api/roles/[id] - Update role
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await ensureDbConnection();
     const body = await request.json();
     const { roll_description, remarks, active } = body;
@@ -70,7 +73,7 @@ export async function PUT(
     updateData.last_modified_date_time = new Date();
     
     const role = await RoleMaster.findOneAndUpdate(
-      { roll_id: params.id },
+      { roll_id: id },
       updateData,
       { new: true, runValidators: true }
     );
@@ -96,18 +99,20 @@ export async function PUT(
 // DELETE /api/roles/[id] - Delete role
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await ensureDbConnection();
-    const role = await RoleMaster.findOneAndDelete({ roll_id: params.id });
+    const role = await RoleMaster.findOneAndDelete({ roll_id: id });
     if (!role) {
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
     return NextResponse.json({ message: 'Role deleted successfully' });
   } catch (error: any) {
+    console.error('Error deleting role:', error);
     return NextResponse.json(
-      { error: 'Failed to delete role' },
+      { error: error.message || 'Failed to delete role' },
       { status: 500 }
     );
   }

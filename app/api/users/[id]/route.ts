@@ -15,18 +15,20 @@ async function ensureDbConnection() {
 // GET /api/users/[id] - Get user by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await ensureDbConnection();
-    const user = await UserMaster.findOne({ user_id: params.id }).select('-hash_password');
+    const user = await UserMaster.findOne({ user_id: id }).select('-hash_password');
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     return NextResponse.json(user);
   } catch (error: any) {
+    console.error('Error fetching user:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch user' },
+      { error: error.message || 'Failed to fetch user' },
       { status: 500 }
     );
   }
@@ -35,9 +37,10 @@ export async function GET(
 // PUT /api/users/[id] - Update user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await ensureDbConnection();
     const body = await request.json();
     const { employee_id, password, N_password_expiry_days, active } = body;
@@ -64,7 +67,7 @@ export async function PUT(
     }
 
     const user = await UserMaster.findOneAndUpdate(
-      { user_id: params.id },
+      { user_id: id },
       updateData,
       { new: true, runValidators: true }
     ).select('-hash_password');
@@ -74,8 +77,9 @@ export async function PUT(
     }
     return NextResponse.json(user);
   } catch (error: any) {
+    console.error('Error updating user:', error);
     return NextResponse.json(
-      { error: 'Failed to update user' },
+      { error: error.message || 'Failed to update user' },
       { status: 500 }
     );
   }
@@ -84,18 +88,20 @@ export async function PUT(
 // DELETE /api/users/[id] - Delete user
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await ensureDbConnection();
-    const user = await UserMaster.findOneAndDelete({ user_id: params.id });
+    const user = await UserMaster.findOneAndDelete({ user_id: id });
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     return NextResponse.json({ message: 'User deleted successfully' });
   } catch (error: any) {
+    console.error('Error deleting user:', error);
     return NextResponse.json(
-      { error: 'Failed to delete user' },
+      { error: error.message || 'Failed to delete user' },
       { status: 500 }
     );
   }
