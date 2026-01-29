@@ -41,7 +41,7 @@ UserLoginHistorySchema.index({ user_id: 1 });
 UserLoginHistorySchema.index({ Date_login_Date: 1 });
 
 // Check if model already exists to prevent overwrite error in Next.js hot reloading
-const UserLoginHistory = mongoose.models.UserLoginHistory || mongoose.model<IUserLoginHistory>('UserLoginHistory', UserLoginHistorySchema);
+const UserLoginHistory = (mongoose.models.UserLoginHistory as mongoose.Model<IUserLoginHistory>) || mongoose.model<IUserLoginHistory>('UserLoginHistory', UserLoginHistorySchema);
 
 export default UserLoginHistory;
 

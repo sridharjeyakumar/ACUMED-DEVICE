@@ -6,7 +6,8 @@ import MenuAccessMaster from '@/server/models/MenuAccessMaster';
 let dbConnected = false;
 async function ensureDbConnection() {
   const mongoose = await import('mongoose');
-  if (mongoose.default.connection.readyState === 1) {
+  const readyState = mongoose.default.connection.readyState as number;
+  if (readyState === 1) {
     return;
   }
   

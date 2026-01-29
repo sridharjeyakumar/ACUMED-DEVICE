@@ -41,11 +41,10 @@ const MenuMasterSchema: Schema = new Schema({
   timestamps: true,
 });
 
-// Create index on menu_id for faster queries
-MenuMasterSchema.index({ menu_id: 1 });
+// menu_id already has unique index, no need for additional index
 
 // Check if model already exists to prevent overwrite error in Next.js hot reloading
-const MenuMaster = mongoose.models.MenuMaster || mongoose.model<IMenuMaster>('MenuMaster', MenuMasterSchema);
+const MenuMaster = (mongoose.models.MenuMaster as mongoose.Model<IMenuMaster>) || mongoose.model<IMenuMaster>('MenuMaster', MenuMasterSchema);
 
 export default MenuMaster;
 

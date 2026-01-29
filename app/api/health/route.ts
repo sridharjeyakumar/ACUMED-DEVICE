@@ -21,7 +21,7 @@ export async function GET() {
   return NextResponse.json({
     status: 'ok',
     message: 'Server is running',
-    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    db: (mongoose.connection.readyState as number) === 1 ? 'connected' : 'disconnected',
   });
 }
 

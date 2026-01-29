@@ -70,7 +70,7 @@ const MenuAccessMasterSchema: Schema = new Schema({
 MenuAccessMasterSchema.index({ rold_id: 1, menu_id: 1 }, { unique: true });
 
 // Check if model already exists to prevent overwrite error in Next.js hot reloading
-const MenuAccessMaster = mongoose.models.MenuAccessMaster || mongoose.model<IMenuAccessMaster>('MenuAccessMaster', MenuAccessMasterSchema);
+const MenuAccessMaster = (mongoose.models.MenuAccessMaster as mongoose.Model<IMenuAccessMaster>) || mongoose.model<IMenuAccessMaster>('MenuAccessMaster', MenuAccessMasterSchema);
 
 export default MenuAccessMaster;
 

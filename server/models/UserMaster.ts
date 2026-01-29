@@ -81,12 +81,11 @@ const UserMasterSchema: Schema = new Schema({
   timestamps: true,
 });
 
-// Create index on user_id for faster queries
-UserMasterSchema.index({ user_id: 1 });
+// Create index on employee_id for faster queries (user_id already has unique index)
 UserMasterSchema.index({ employee_id: 1 });
 
 // Check if model already exists to prevent overwrite error in Next.js hot reloading
-const UserMaster = mongoose.models.UserMaster || mongoose.model<IUserMaster>('UserMaster', UserMasterSchema);
+const UserMaster = (mongoose.models.UserMaster as mongoose.Model<IUserMaster>) || mongoose.model<IUserMaster>('UserMaster', UserMasterSchema);
 
 export default UserMaster;
 

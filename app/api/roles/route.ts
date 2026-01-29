@@ -7,8 +7,9 @@ let dbConnected = false;
 
 async function ensureDbConnection() {
   const mongoose = await import('mongoose');
-  // Check if already connected
-  if (mongoose.default.connection.readyState === 1) {
+  // Check if already connected (1 = connected)
+  const readyState = mongoose.default.connection.readyState as number;
+  if (readyState === 1) {
     dbConnected = true;
     return; // Already connected
   }
@@ -24,7 +25,7 @@ async function ensureDbConnection() {
     }
   } else {
     // Verify connection is still alive
-    if (mongoose.default.connection.readyState !== 1) {
+    if (readyState !== 1) {
       dbConnected = false;
       await ensureDbConnection();
     }
