@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/server/db/connection';
 import MenuMaster from '@/server/models/MenuMaster';
 
+// Force Node.js runtime (required for Mongoose)
+export const runtime = 'nodejs';
+
 // Ensure DB connection
 let dbConnected = false;
 

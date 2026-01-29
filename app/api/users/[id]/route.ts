@@ -3,6 +3,13 @@ import connectDB from '@/server/db/connection';
 import UserMaster from '@/server/models/UserMaster';
 import bcrypt from 'bcryptjs';
 
+// Force Node.js runtime (required for Mongoose)
+export const runtime = 'nodejs';
+
+// Route segment config
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+
 // Ensure DB connection
 let dbConnected = false;
 async function ensureDbConnection() {

@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/server/db/connection';
 import MenuMaster from '@/server/models/MenuMaster';
 
+// Force Node.js runtime (required for Mongoose)
+export const runtime = 'nodejs';
+
+// Route segment config
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+
 // Ensure DB connection
 let dbConnected = false;
 
