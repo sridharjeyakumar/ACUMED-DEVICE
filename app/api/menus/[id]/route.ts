@@ -45,7 +45,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
+    const id = resolvedParams?.id;
+    
+    if (!id) {
+      return NextResponse.json({ error: 'Menu ID is required' }, { status: 400 });
+    }
+    
     await ensureDbConnection();
     const menu = await MenuMaster.findOne({ menu_id: id });
     if (!menu) {
@@ -70,7 +76,12 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
+    const id = resolvedParams?.id;
+    
+    if (!id) {
+      return NextResponse.json({ error: 'Menu ID is required' }, { status: 400 });
+    }
     await ensureDbConnection();
     const body = await request.json();
     const { menu_desc, active } = body;
@@ -118,7 +129,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
+    const id = resolvedParams?.id;
+    
+    if (!id) {
+      return NextResponse.json({ error: 'Menu ID is required' }, { status: 400 });
+    }
     await ensureDbConnection();
     const menu = await MenuMaster.findOneAndDelete({ menu_id: id });
     if (!menu) {
