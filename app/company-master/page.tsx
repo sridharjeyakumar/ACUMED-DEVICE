@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,26 +11,28 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
+import { companyAPI } from "@/services/api";
 
 interface Company {
     comp_id: string; // Char(4) - PK
     company_name: string; // Char(100)
-    company_short_name: string; // Char(50)
-    address_1: string; // Char(100)
-    address_2: string; // Char(100)
-    city: string; // Char(50)
-    state: string; // Char(50)
-    pincode: number; // N(6)
-    gst_no: string; // Char(15)
-    cin_no: string; // Char(15)
-    pan_no: string; // Char(15)
-    email_id: string; // Char(50)
-    website: string; // Char(50)
-    contact_person: string; // Char(50)
-    contact_no: number; // N(10)
-    logo: string; // image (URL or base64)
-    last_modified_by: string; // Char(5) - user ID
-    last_modified_date: Date; // Date
+    company_short_name?: string; // Char(50)
+    address_1?: string; // Char(100)
+    address_2?: string; // Char(100)
+    city?: string; // Char(50)
+    state?: string; // Char(50)
+    pincode?: number; // N(6)
+    gst_no?: string; // Char(15)
+    cin_no?: string; // Char(21)
+    pan_no?: string; // Char(15)
+    email_id?: string; // Char(50)
+    website?: string; // Char(50)
+    contact_person?: string; // Char(50)
+    contact_no?: number; // N(10)
+    logo?: string; // image (URL or base64)
+    last_modified_user_id?: string; // Char(5) - user ID
+    last_modified_date_time?: Date; // Date
 }
 
 export default function CompanyMasterPage() {
@@ -42,48 +44,8 @@ export default function CompanyMasterPage() {
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
     const [filterState, setFilterState] = useState<string>("all");
     const [filterCity, setFilterCity] = useState<string>("all");
-    const [companies, setCompanies] = useState<Company[]>([
-        {
-            comp_id: "CORP",
-            company_name: "ACUMED DEVICES DISTRIBUTION LTD.",
-            company_short_name: "ACUMED DEVICES",
-            address_1: "",
-            address_2: "",
-            city: "",
-            state: "",
-            pincode: 0,
-            gst_no: "33AAICA9166",
-            cin_no: "U51397TN2010PTC077640",
-            pan_no: "",
-            email_id: "",
-            website: "",
-            contact_person: "",
-            contact_no: 0,
-            logo: "",
-            last_modified_by: "",
-            last_modified_date: new Date(),
-        },
-        {
-            comp_id: "FACT",
-            company_name: "ACUMED DEVICES DISTRIBUTION LTD.",
-            company_short_name: "",
-            address_1: "",
-            address_2: "",
-            city: "",
-            state: "",
-            pincode: 0,
-            gst_no: "",
-            cin_no: "",
-            pan_no: "",
-            email_id: "",
-            website: "",
-            contact_person: "",
-            contact_no: 0,
-            logo: "",
-            last_modified_by: "",
-            last_modified_date: new Date(),
-        },
-    ]);
+    const [companies, setCompanies] = useState<Company[]>([]);
+    const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState({
         comp_id: "",
         company_name: "",
@@ -104,6 +66,27 @@ export default function CompanyMasterPage() {
     });
     const fileInputRef = useRef<HTMLInputElement>(null);
     const isSubmittingRef = useRef(false);
+    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: Company } | null>(null);
+
+    useEffect(() => {
+        loadCompanies();
+    }, []);
+
+    const loadCompanies = async () => {
+        try {
+            setLoading(true);
+            const data = await companyAPI.getAll();
+            setCompanies(data);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load companies",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const filteredCompanies = companies.filter((company) => {
         const matchesSearch = company.comp_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -141,28 +124,25 @@ export default function CompanyMasterPage() {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
-            // TODO: Replace with actual API call
-            const newCompany: Company = {
+            await companyAPI.create({
                 comp_id: formData.comp_id,
                 company_name: formData.company_name,
-                company_short_name: formData.company_short_name,
-                address_1: formData.address_1,
-                address_2: formData.address_2,
-                city: formData.city,
-                state: formData.state,
-                pincode: parseInt(formData.pincode) || 0,
-                gst_no: formData.gst_no,
-                cin_no: formData.cin_no,
-                pan_no: formData.pan_no,
-                email_id: formData.email_id,
-                website: formData.website,
-                contact_person: formData.contact_person,
-                contact_no: parseInt(formData.contact_no) || 0,
-                logo: formData.logo,
-                last_modified_by: "ADMIN", // TODO: Get from auth context
-                last_modified_date: new Date(),
-            };
-            setCompanies([...companies, newCompany]);
+                company_short_name: formData.company_short_name || undefined,
+                address_1: formData.address_1 || undefined,
+                address_2: formData.address_2 || undefined,
+                city: formData.city || undefined,
+                state: formData.state || undefined,
+                pincode: formData.pincode ? parseInt(formData.pincode) : undefined,
+                gst_no: formData.gst_no || undefined,
+                cin_no: formData.cin_no || undefined,
+                pan_no: formData.pan_no || undefined,
+                email_id: formData.email_id || undefined,
+                website: formData.website || undefined,
+                contact_person: formData.contact_person || undefined,
+                contact_no: formData.contact_no ? parseInt(formData.contact_no) : undefined,
+                logo: formData.logo || undefined,
+                last_modified_user_id: "ADMIN",
+            });
             toast({
                 title: "Success",
                 description: "Company created successfully",
@@ -186,6 +166,7 @@ export default function CompanyMasterPage() {
                 contact_no: "",
                 logo: "",
             });
+            loadCompanies();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -202,20 +183,20 @@ export default function CompanyMasterPage() {
         setFormData({
             comp_id: company.comp_id,
             company_name: company.company_name,
-            company_short_name: company.company_short_name,
-            address_1: company.address_1,
-            address_2: company.address_2,
-            city: company.city,
-            state: company.state,
-            pincode: company.pincode.toString(),
-            gst_no: company.gst_no,
-            cin_no: company.cin_no,
-            pan_no: company.pan_no,
-            email_id: company.email_id,
-            website: company.website,
-            contact_person: company.contact_person,
-            contact_no: company.contact_no.toString(),
-            logo: company.logo,
+            company_short_name: company.company_short_name || "",
+            address_1: company.address_1 || "",
+            address_2: company.address_2 || "",
+            city: company.city || "",
+            state: company.state || "",
+            pincode: company.pincode?.toString() || "",
+            gst_no: company.gst_no || "",
+            cin_no: company.cin_no || "",
+            pan_no: company.pan_no || "",
+            email_id: company.email_id || "",
+            website: company.website || "",
+            contact_person: company.contact_person || "",
+            contact_no: company.contact_no?.toString() || "",
+            logo: company.logo || "",
         });
         setIsEditModalOpen(true);
     };
@@ -226,36 +207,41 @@ export default function CompanyMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedCompany) return;
         isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedCompany };
+        
         try {
-            // TODO: Replace with actual API call
-            const updatedCompanies = companies.map((c) =>
-                c.comp_id === selectedCompany.comp_id
-                    ? {
-                        ...c,
-                        company_name: formData.company_name,
-                        company_short_name: formData.company_short_name,
-                        address_1: formData.address_1,
-                        address_2: formData.address_2,
-                        city: formData.city,
-                        state: formData.state,
-                        pincode: parseInt(formData.pincode) || 0,
-                        gst_no: formData.gst_no,
-                        cin_no: formData.cin_no,
-                        pan_no: formData.pan_no,
-                        email_id: formData.email_id,
-                        website: formData.website,
-                        contact_person: formData.contact_person,
-                        contact_no: parseInt(formData.contact_no) || 0,
-                        logo: formData.logo,
-                        last_modified_by: "ADMIN",
-                        last_modified_date: new Date(),
-                    }
-                    : c
-            );
-            setCompanies(updatedCompanies);
+            await companyAPI.update(selectedCompany.comp_id, {
+                company_name: formData.company_name,
+                company_short_name: formData.company_short_name || undefined,
+                address_1: formData.address_1 || undefined,
+                address_2: formData.address_2 || undefined,
+                city: formData.city || undefined,
+                state: formData.state || undefined,
+                pincode: formData.pincode ? parseInt(formData.pincode) : undefined,
+                gst_no: formData.gst_no || undefined,
+                cin_no: formData.cin_no || undefined,
+                pan_no: formData.pan_no || undefined,
+                email_id: formData.email_id || undefined,
+                website: formData.website || undefined,
+                contact_person: formData.contact_person || undefined,
+                contact_no: formData.contact_no ? parseInt(formData.contact_no) : undefined,
+                logo: formData.logo || undefined,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            // Store last action for undo
+            setLastAction({ type: 'edit', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Company updated successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsEditModalOpen(false);
             setSelectedCompany(null);
@@ -277,6 +263,7 @@ export default function CompanyMasterPage() {
                 contact_no: "",
                 logo: "",
             });
+            loadCompanies();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -285,6 +272,71 @@ export default function CompanyMasterPage() {
             });
         } finally {
             isSubmittingRef.current = false;
+        }
+    };
+    
+    const handleUndo = async () => {
+        if (!lastAction) return;
+        
+        try {
+            if (lastAction.type === 'edit') {
+                // Restore previous data
+                await companyAPI.update(lastAction.data.comp_id, {
+                    company_name: lastAction.data.company_name,
+                    company_short_name: lastAction.data.company_short_name || undefined,
+                    address_1: lastAction.data.address_1 || undefined,
+                    address_2: lastAction.data.address_2 || undefined,
+                    city: lastAction.data.city || undefined,
+                    state: lastAction.data.state || undefined,
+                    pincode: lastAction.data.pincode || undefined,
+                    gst_no: lastAction.data.gst_no || undefined,
+                    cin_no: lastAction.data.cin_no || undefined,
+                    pan_no: lastAction.data.pan_no || undefined,
+                    email_id: lastAction.data.email_id || undefined,
+                    website: lastAction.data.website || undefined,
+                    contact_person: lastAction.data.contact_person || undefined,
+                    contact_no: lastAction.data.contact_no || undefined,
+                    logo: lastAction.data.logo || undefined,
+                    last_modified_user_id: "ADMIN",
+                });
+                toast({
+                    title: "Undone",
+                    description: "Changes have been reverted",
+                });
+            } else if (lastAction.type === 'delete') {
+                // Restore deleted company
+                await companyAPI.create({
+                    comp_id: lastAction.data.comp_id,
+                    company_name: lastAction.data.company_name,
+                    company_short_name: lastAction.data.company_short_name || undefined,
+                    address_1: lastAction.data.address_1 || undefined,
+                    address_2: lastAction.data.address_2 || undefined,
+                    city: lastAction.data.city || undefined,
+                    state: lastAction.data.state || undefined,
+                    pincode: lastAction.data.pincode || undefined,
+                    gst_no: lastAction.data.gst_no || undefined,
+                    cin_no: lastAction.data.cin_no || undefined,
+                    pan_no: lastAction.data.pan_no || undefined,
+                    email_id: lastAction.data.email_id || undefined,
+                    website: lastAction.data.website || undefined,
+                    contact_person: lastAction.data.contact_person || undefined,
+                    contact_no: lastAction.data.contact_no || undefined,
+                    logo: lastAction.data.logo || undefined,
+                    last_modified_user_id: "ADMIN",
+                });
+                toast({
+                    title: "Undone",
+                    description: "Company has been restored",
+                });
+            }
+            setLastAction(null);
+            loadCompanies();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to undo action",
+                variant: "destructive",
+            });
         }
     };
 
@@ -297,15 +349,28 @@ export default function CompanyMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedCompany) return;
         isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedCompany };
+        
         try {
-            // TODO: Replace with actual API call
-            setCompanies(companies.filter((c) => c.comp_id !== selectedCompany.comp_id));
+            await companyAPI.delete(selectedCompany.comp_id);
+            
+            // Store last action for undo
+            setLastAction({ type: 'delete', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Company deleted successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsDeleteDialogOpen(false);
             setSelectedCompany(null);
+            loadCompanies();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -486,7 +551,13 @@ export default function CompanyMasterPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredCompanies.length === 0 ? (
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={17} className="px-6 py-4 text-center text-muted-foreground">
+                                                    Loading companies...
+                                                </td>
+                                            </tr>
+                                        ) : filteredCompanies.length === 0 ? (
                                             <tr>
                                                 <td colSpan={17} className="px-6 py-4 text-center text-muted-foreground">
                                                     No companies found

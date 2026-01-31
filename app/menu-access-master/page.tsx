@@ -12,6 +12,7 @@ import { menuAccessAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
 
 interface MenuAccess {
     rold_id: string;
@@ -36,7 +37,7 @@ function formatDateTime(date: Date | string | undefined): string {
     const hours = String(d.getHours()).padStart(2, '0');
     const minutes = String(d.getMinutes()).padStart(2, '0');
     const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
 export default function MenuAccessMasterPage() {
@@ -51,6 +52,7 @@ export default function MenuAccessMasterPage() {
     const [filterRole, setFilterRole] = useState<string>("all");
     const [filterMenu, setFilterMenu] = useState<string>("all");
     const [filterAccess, setFilterAccess] = useState<string>("all");
+    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: MenuAccess } | null>(null);
     const [formData, setFormData] = useState({
         rold_id: "",
         menu_id: "",
@@ -139,6 +141,10 @@ export default function MenuAccessMasterPage() {
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedAccess) return;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedAccess };
+        
         try {
             await menuAccessAPI.update(selectedAccess.rold_id, selectedAccess.menu_id, {
                 access: formData.access,
@@ -147,9 +153,18 @@ export default function MenuAccessMasterPage() {
                 can_view: formData.can_view,
                 can_cancel: formData.can_cancel,
             });
+            
+            // Store last action for undo
+            setLastAction({ type: 'edit', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Menu access updated successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsEditModalOpen(false);
             setSelectedAccess(null);
@@ -163,6 +178,50 @@ export default function MenuAccessMasterPage() {
             });
         }
     };
+    
+    const handleUndo = async () => {
+        if (!lastAction) return;
+        
+        try {
+            if (lastAction.type === 'edit') {
+                // Restore previous data
+                await menuAccessAPI.update(lastAction.data.rold_id, lastAction.data.menu_id, {
+                    access: lastAction.data.access,
+                    can_add: lastAction.data.can_add,
+                    can_edit: lastAction.data.can_edit,
+                    can_view: lastAction.data.can_view,
+                    can_cancel: lastAction.data.can_cancel,
+                });
+                toast({
+                    title: "Undone",
+                    description: "Changes have been reverted",
+                });
+            } else if (lastAction.type === 'delete') {
+                // Restore deleted access
+                await menuAccessAPI.create({
+                    rold_id: lastAction.data.rold_id,
+                    menu_id: lastAction.data.menu_id,
+                    access: lastAction.data.access,
+                    can_add: lastAction.data.can_add,
+                    can_edit: lastAction.data.can_edit,
+                    can_view: lastAction.data.can_view,
+                    can_cancel: lastAction.data.can_cancel,
+                });
+                toast({
+                    title: "Undone",
+                    description: "Menu access has been restored",
+                });
+            }
+            setLastAction(null);
+            loadMenuAccesses();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to undo action",
+                variant: "destructive",
+            });
+        }
+    };
 
     const handleDelete = (access: MenuAccess) => {
         setSelectedAccess(access);
@@ -171,11 +230,24 @@ export default function MenuAccessMasterPage() {
 
     const confirmDelete = async () => {
         if (!selectedAccess) return;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedAccess };
+        
         try {
             await menuAccessAPI.delete(selectedAccess.rold_id, selectedAccess.menu_id);
+            
+            // Store last action for undo
+            setLastAction({ type: 'delete', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Menu access deleted successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsDeleteDialogOpen(false);
             setSelectedAccess(null);

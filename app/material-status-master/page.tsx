@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,16 +11,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
+import { materialStatusAPI } from "@/services/api";
 
 interface MaterialStatus {
-    id: string;
-    name: string;
-    description: string;
-    effectType: "ADD" | "SUBTRACT";
-    seqNo: number;
+    matl_status_id: string; // Char(3) - PK
+    material_status: string; // Char(30)
+    stock_movement?: string; // Char(3) - dropdown (IN / OUT) - can be empty
+    effect_in_stock?: string; // Char(1) - dropdown (+ / -) - can be empty
+    seq_no: number; // N(2)
     active: boolean;
-    last_modified_user_id: string; // Char(5)
-    last_modified_date_time: Date; // Date
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date; // Date
 }
 
 // Helper function to format dates consistently (prevents hydration errors)
@@ -33,7 +35,7 @@ function formatDateTime(date: Date | string): string {
     const hours = String(d.getHours()).padStart(2, '0');
     const minutes = String(d.getMinutes()).padStart(2, '0');
     const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
 export default function MaterialStatusMasterPage() {
@@ -45,93 +47,63 @@ export default function MaterialStatusMasterPage() {
     const [selectedStatus, setSelectedStatus] = useState<MaterialStatus | null>(null);
     const isSubmittingRef = useRef(false);
     const [filterActive, setFilterActive] = useState<string>("all");
-    const [filterEffectType, setFilterEffectType] = useState<string>("all");
+    const [filterStockMovement, setFilterStockMovement] = useState<string>("all");
+    const [statuses, setStatuses] = useState<MaterialStatus[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: MaterialStatus } | null>(null);
     const [formData, setFormData] = useState({
-        name: "",
-        description: "",
-        effectType: "ADD" as "ADD" | "SUBTRACT",
+        matl_status_id: "",
+        material_status: "",
+        stock_movement: "",
+        effect_in_stock: "",
+        seq_no: "",
         active: true,
     });
 
-    const [materialStatuses, setMaterialStatuses] = useState<MaterialStatus[]>([
-        {
-            id: "RS",
-            name: "Receipt from Supplier",
-            description: "",
-            effectType: "ADD",
-            seqNo: 1,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            id: "IP",
-            name: "Issued to production",
-            description: "",
-            effectType: "SUBTRACT",
-            seqNo: 2,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            id: "RT",
-            name: "Returned to Supplier",
-            description: "",
-            effectType: "SUBTRACT",
-            seqNo: 4,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            id: "RR",
-            name: "Return Receipt",
-            description: "",
-            effectType: "ADD",
-            seqNo: 5,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            id: "A1",
-            name: "Adjustment (Add)",
-            description: "",
-            effectType: "ADD",
-            seqNo: 6,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            id: "A2",
-            name: "Adjustment (Reduce)",
-            description: "",
-            effectType: "SUBTRACT",
-            seqNo: 7,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-    ]);
+    useEffect(() => {
+        loadStatuses();
+    }, []);
 
-    const filteredStatuses = materialStatuses.filter((status) => {
-        const matchesSearch = status.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            status.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const loadStatuses = async () => {
+        try {
+            setLoading(true);
+            const data = await materialStatusAPI.getAll();
+            setStatuses(data);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load material statuses",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filteredStatuses = statuses.filter((status) => {
+        const matchesSearch = status.matl_status_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            status.material_status.toLowerCase().includes(searchQuery.toLowerCase());
         
         const matchesActive = filterActive === "all" || 
             (filterActive === "active" && status.active === true) ||
             (filterActive === "inactive" && status.active === false);
         
-        const matchesEffectType = filterEffectType === "all" || status.effectType === filterEffectType;
+        const matchesStockMovement = filterStockMovement === "all" || 
+            status.stock_movement === filterStockMovement ||
+            (filterStockMovement === "empty" && !status.stock_movement);
         
-        return matchesSearch && matchesActive && matchesEffectType;
+        return matchesSearch && matchesActive && matchesStockMovement;
     });
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const value = e.target.type === "checkbox" ? (e.target as HTMLInputElement).checked : e.target.value;
-        setFormData({ ...formData, [e.target.name]: value });
+    const uniqueStockMovements = Array.from(new Set(statuses.map(s => s.stock_movement).filter(s => s)));
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value, type } = e.target;
+        if (type === "checkbox") {
+            setFormData({ ...formData, [name]: (e.target as HTMLInputElement).checked });
+        } else {
+            setFormData({ ...formData, [name]: value });
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -140,29 +112,29 @@ export default function MaterialStatusMasterPage() {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
-            // TODO: Replace with actual API call
-            const newStatus: MaterialStatus = {
-                id: `MS-${Date.now().toString().slice(-3)}`, // Generate temporary ID
-                name: formData.name,
-                description: formData.description,
-                effectType: formData.effectType,
-                seqNo: materialStatuses.length + 1,
+            await materialStatusAPI.create({
+                matl_status_id: formData.matl_status_id,
+                material_status: formData.material_status,
+                stock_movement: formData.stock_movement || '',
+                effect_in_stock: formData.effect_in_stock || '',
+                seq_no: parseInt(formData.seq_no) || 0,
                 active: formData.active,
-                last_modified_user_id: "ADMIN", // TODO: Get from auth context
-                last_modified_date_time: new Date(),
-            };
-            setMaterialStatuses([...materialStatuses, newStatus]);
+                last_modified_user_id: "ADMIN",
+            });
             toast({
                 title: "Success",
                 description: "Material status created successfully",
             });
             setIsAddModalOpen(false);
             setFormData({
-                name: "",
-                description: "",
-                effectType: "ADD",
+                matl_status_id: "",
+                material_status: "",
+                stock_movement: "",
+                effect_in_stock: "",
+                seq_no: "",
                 active: true,
             });
+            loadStatuses();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -177,9 +149,11 @@ export default function MaterialStatusMasterPage() {
     const handleEdit = (status: MaterialStatus) => {
         setSelectedStatus(status);
         setFormData({
-            name: status.name,
-            description: status.description,
-            effectType: status.effectType,
+            matl_status_id: status.matl_status_id,
+            material_status: status.material_status,
+            stock_movement: status.stock_movement || "",
+            effect_in_stock: status.effect_in_stock || "",
+            seq_no: status.seq_no.toString(),
             active: status.active,
         });
         setIsEditModalOpen(true);
@@ -191,34 +165,43 @@ export default function MaterialStatusMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedStatus) return;
         isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedStatus };
+        
         try {
-            // TODO: Replace with actual API call
-            const updatedStatuses = materialStatuses.map((s) =>
-                s.id === selectedStatus.id
-                    ? {
-                        ...s,
-                        name: formData.name,
-                        description: formData.description,
-                        effectType: formData.effectType,
-                        active: formData.active,
-                        last_modified_user_id: "ADMIN", // TODO: Get from auth context
-                        last_modified_date_time: new Date(),
-                    }
-                    : s
-            );
-            setMaterialStatuses(updatedStatuses);
+            await materialStatusAPI.update(selectedStatus.matl_status_id, {
+                material_status: formData.material_status,
+                stock_movement: formData.stock_movement || '',
+                effect_in_stock: formData.effect_in_stock || '',
+                seq_no: parseInt(formData.seq_no) || 0,
+                active: formData.active,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            // Store last action for undo
+            setLastAction({ type: 'edit', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Material status updated successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsEditModalOpen(false);
             setSelectedStatus(null);
             setFormData({
-                name: "",
-                description: "",
-                effectType: "ADD",
+                matl_status_id: "",
+                material_status: "",
+                stock_movement: "",
+                effect_in_stock: "",
+                seq_no: "",
                 active: true,
             });
+            loadStatuses();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -227,6 +210,51 @@ export default function MaterialStatusMasterPage() {
             });
         } finally {
             isSubmittingRef.current = false;
+        }
+    };
+    
+    const handleUndo = async () => {
+        if (!lastAction) return;
+        
+        try {
+            if (lastAction.type === 'edit') {
+                // Restore previous data
+                await materialStatusAPI.update(lastAction.data.matl_status_id, {
+                    material_status: lastAction.data.material_status,
+                    stock_movement: lastAction.data.stock_movement || '',
+                    effect_in_stock: lastAction.data.effect_in_stock || '',
+                    seq_no: lastAction.data.seq_no,
+                    active: lastAction.data.active,
+                    last_modified_user_id: "ADMIN",
+                });
+                toast({
+                    title: "Undone",
+                    description: "Changes have been reverted",
+                });
+            } else if (lastAction.type === 'delete') {
+                // Restore deleted status
+                await materialStatusAPI.create({
+                    matl_status_id: lastAction.data.matl_status_id,
+                    material_status: lastAction.data.material_status,
+                    stock_movement: lastAction.data.stock_movement || '',
+                    effect_in_stock: lastAction.data.effect_in_stock || '',
+                    seq_no: lastAction.data.seq_no,
+                    active: lastAction.data.active,
+                    last_modified_user_id: "ADMIN",
+                });
+                toast({
+                    title: "Undone",
+                    description: "Material status has been restored",
+                });
+            }
+            setLastAction(null);
+            loadStatuses();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to undo action",
+                variant: "destructive",
+            });
         }
     };
 
@@ -239,15 +267,28 @@ export default function MaterialStatusMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedStatus) return;
         isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedStatus };
+        
         try {
-            // TODO: Replace with actual API call
-            setMaterialStatuses(materialStatuses.filter((s) => s.id !== selectedStatus.id));
+            await materialStatusAPI.delete(selectedStatus.matl_status_id);
+            
+            // Store last action for undo
+            setLastAction({ type: 'delete', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Material status deleted successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsDeleteDialogOpen(false);
             setSelectedStatus(null);
+            loadStatuses();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -263,25 +304,25 @@ export default function MaterialStatusMasterPage() {
         <div className="flex min-h-screen bg-background">
             <Sidebar />
 
-            <main className="flex-1 overflow-auto lg:ml-64">
-                <div className="p-4 md:p-6 lg:p-8">
+            <main className="flex-1 overflow-auto ml-64">
+                <div className="p-8">
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="mb-6 md:mb-8"
+                        className="mb-8"
                     >
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div className="flex items-center justify-between">
                             <div>
-                                <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Material Status Master</h1>
-                                <p className="text-sm md:text-base text-muted-foreground">Manage and define availability statuses for warehouse inventory</p>
+                                <h1 className="text-3xl font-bold text-foreground mb-2">Material Status Master</h1>
+                                <p className="text-muted-foreground">Define and manage various statuses for materials</p>
                             </div>
                             <Button
                                 onClick={() => setIsAddModalOpen(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all w-full md:w-auto"
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                             >
                                 <Plus className="w-5 h-5" />
-                                <span className="whitespace-nowrap">Add New Material Status</span>
+                                Add New Material Status
                             </Button>
                         </div>
                     </motion.div>
@@ -292,26 +333,26 @@ export default function MaterialStatusMasterPage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
-                        className="mb-4 md:mb-6"
+                        className="mb-6"
                     >
-                        <Card className="p-3 md:p-4">
-                            <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4">
-                                <div className="flex-1 relative w-full">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 md:w-5 md:h-5" />
+                        <Card className="p-4">
+                            <div className="flex items-center gap-4">
+                                <div className="flex-1 relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search material status or ID..."
+                                        placeholder="Search by Status ID or Material Status..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-9 md:pl-10 pr-3 md:pr-4 py-2 w-full text-sm md:text-base"
+                                        className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
-                                <span className="text-xs md:text-sm text-muted-foreground whitespace-nowrap">
-                                    SHOWING 1-{filteredStatuses.length} OF {materialStatuses.length}
+                                <span className="text-sm text-muted-foreground">
+                                    SHOWING 1-{filteredStatuses.length} OF {statuses.length}
                                 </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" size="icon" className="h-9 w-9 md:h-10 md:w-10 hover:text-foreground">
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
                                             <Filter className="w-4 h-4" />
                                         </Button>
                                     </PopoverTrigger>
@@ -355,51 +396,55 @@ export default function MaterialStatusMasterPage() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex flex-col gap-2 min-w-[120px]">
-                                                <Label className="text-sm font-semibold">Effect Type</Label>
-                                                <div className="flex flex-wrap gap-3">
-                                                    <div className="flex items-center space-x-2">
-                                                        <input 
-                                                            type="radio" 
-                                                            id="ms-effect-all" 
-                                                            name="msEffectFilter"
-                                                            checked={filterEffectType === "all"}
-                                                            onChange={() => setFilterEffectType("all")}
-                                                            className="h-4 w-4"
-                                                        />
-                                                        <Label htmlFor="ms-effect-all" className="text-sm font-normal cursor-pointer">All</Label>
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <input 
-                                                            type="radio" 
-                                                            id="ms-effect-add" 
-                                                            name="msEffectFilter"
-                                                            checked={filterEffectType === "ADD"}
-                                                            onChange={() => setFilterEffectType("ADD")}
-                                                            className="h-4 w-4"
-                                                        />
-                                                        <Label htmlFor="ms-effect-add" className="text-sm font-normal cursor-pointer">Add</Label>
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <input 
-                                                            type="radio" 
-                                                            id="ms-effect-subtract" 
-                                                            name="msEffectFilter"
-                                                            checked={filterEffectType === "SUBTRACT"}
-                                                            onChange={() => setFilterEffectType("SUBTRACT")}
-                                                            className="h-4 w-4"
-                                                        />
-                                                        <Label htmlFor="ms-effect-subtract" className="text-sm font-normal cursor-pointer">Subtract</Label>
+                                            {uniqueStockMovements.length > 0 && (
+                                                <div className="flex flex-col gap-2 min-w-[120px]">
+                                                    <Label className="text-sm font-semibold">Stock Movement</Label>
+                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="ms-movement-all" 
+                                                                name="msMovementFilter"
+                                                                checked={filterStockMovement === "all"}
+                                                                onChange={() => setFilterStockMovement("all")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="ms-movement-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        </div>
+                                                        {uniqueStockMovements.map((movement) => (
+                                                            <div key={movement} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`ms-movement-${movement}`} 
+                                                                    name="msMovementFilter"
+                                                                    checked={filterStockMovement === movement}
+                                                                    onChange={() => setFilterStockMovement(movement)}
+                                                                    className="h-4 w-4"
+                                                                />
+                                                                <Label htmlFor={`ms-movement-${movement}`} className="text-sm font-normal cursor-pointer">{movement}</Label>
+                                                            </div>
+                                                        ))}
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="ms-movement-empty" 
+                                                                name="msMovementFilter"
+                                                                checked={filterStockMovement === "empty"}
+                                                                onChange={() => setFilterStockMovement("empty")}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor="ms-movement-empty" className="text-sm font-normal cursor-pointer">Empty</Label>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
+                                            )}
                                             <div className="flex items-end">
                                                 <Button 
                                                     variant="outline" 
                                                     size="sm" 
                                                     onClick={() => {
                                                         setFilterActive("all");
-                                                        setFilterEffectType("all");
+                                                        setFilterStockMovement("all");
                                                     }}
                                                 >
                                                     Clear Filters
@@ -422,114 +467,102 @@ export default function MaterialStatusMasterPage() {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">prod status id</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">product status</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">effect in stock</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">seq no.</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">active</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-32">LAST MODIFIED USER ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-40">LAST MODIFIED DATE & TIME</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">actions</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">MATL STATUS ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">MATERIAL STATUS</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">STOCK MOVEMENT</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">EFFECT IN STOCK</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">SEQ NO.</th>
+                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">ACTIVE</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
+                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredStatuses.length === 0 ? (
+                                        {loading ? (
                                             <tr>
-                                                <td colSpan={8} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={9} className="px-6 py-4 text-center text-muted-foreground">
+                                                    Loading material statuses...
+                                                </td>
+                                            </tr>
+                                        ) : filteredStatuses.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={9} className="px-6 py-4 text-center text-muted-foreground">
                                                     No material statuses found
                                                 </td>
                                             </tr>
                                         ) : (
                                             filteredStatuses.map((status, index) => (
-                                            <motion.tr
-                                                key={status.id}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors cursor-pointer"
-                                            >
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {status.id}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm font-semibold text-foreground">{status.name}</span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {status.effectType === "ADD" ? (
-                                                        <span className="text-sm font-semibold text-foreground">+</span>
-                                                    ) : (
-                                                        <span className="text-sm font-semibold text-foreground">-</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {status.seqNo}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                        status.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                    }`}>
-                                                        {status.active ? "TRUE" : "FALSE"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm text-foreground font-mono">{status.last_modified_user_id || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm text-foreground">
-                                                        {status.last_modified_date_time 
-                                                            ? formatDateTime(status.last_modified_date_time)
-                                                            : "-"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEdit(status);
-                                                            }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDelete(status);
-                                                            }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </motion.tr>
+                                                <motion.tr
+                                                    key={status.matl_status_id}
+                                                    initial={{ opacity: 0, x: -20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                                                    className="hover:bg-muted/30 transition-colors"
+                                                >
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-muted-foreground font-mono">{status.matl_status_id}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.material_status}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.stock_movement || "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground font-semibold">{status.effect_in_stock || "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.seq_no}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                            status.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                        }`}>
+                                                            {status.active ? "TRUE" : "FALSE"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground font-mono">{status.last_modified_user_id || "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">
+                                                            {status.last_modified_date_time 
+                                                                ? formatDateTime(status.last_modified_date_time)
+                                                                : "-"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleEdit(status);
+                                                                }}
+                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            >
+                                                                <Pencil className="w-4 h-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDelete(status);
+                                                                }}
+                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </motion.tr>
                                             ))
                                         )}
                                     </tbody>
                                 </table>
-                            </div>
-
-                            <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
-                                <span className="text-sm text-muted-foreground">PAGE 1 OF 1</span>
-                                <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" disabled>
-                                        <ChevronLeft className="w-4 h-4 mr-1" />
-                                        Previous
-                                    </Button>
-                                    <Button variant="outline" size="sm" disabled>
-                                        Next
-                                        <ChevronRight className="w-4 h-4 ml-1" />
-                                    </Button>
-                                </div>
                             </div>
                         </Card>
                     </motion.div>
@@ -563,49 +596,102 @@ export default function MaterialStatusMasterPage() {
                                     </button>
                                 </div>
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Status Name <span className="text-red-500">*</span></label>
-                                        <Input name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g. Raw Material Available" required />
-                                    </div>
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Description</label>
-                                        <Input name="description" value={formData.description} onChange={handleInputChange} placeholder="e.g. READY FOR PRODUCTION USAGE" />
-                                    </div>
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Effect in Stock</label>
-                                        <select
-                                            name="effectType"
-                                            value={formData.effectType}
-                                            onChange={handleInputChange}
-                                            className="w-full px-3 py-2 border border-border rounded-lg bg-background"
-                                        >
-                                            <option value="ADD">ADD STOCK (Green)</option>
-                                            <option value="SUBTRACT">SUBTRACT (Red)</option>
-                                        </select>
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Active Status</label>
-                                        <div className="flex items-center gap-4">
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input
-                                                    type="radio"
-                                                    name="active"
-                                                    checked={formData.active === true}
-                                                    onChange={() => setFormData({ ...formData, active: true })}
-                                                    className="text-blue-600"
-                                                />
-                                                <span className="text-sm">Yes</span>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Matl Status ID <span className="text-red-500">*</span>
                                             </label>
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input
-                                                    type="radio"
-                                                    name="active"
-                                                    checked={formData.active === false}
-                                                    onChange={() => setFormData({ ...formData, active: false })}
-                                                    className="text-blue-600"
-                                                />
-                                                <span className="text-sm">No</span>
+                                            <Input
+                                                name="matl_status_id"
+                                                value={formData.matl_status_id}
+                                                onChange={handleInputChange}
+                                                required
+                                                maxLength={3}
+                                                placeholder="e.g. REC"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Material Status <span className="text-red-500">*</span>
                                             </label>
+                                            <Input
+                                                name="material_status"
+                                                value={formData.material_status}
+                                                onChange={handleInputChange}
+                                                required
+                                                maxLength={30}
+                                                placeholder="e.g. Receipt from Supplier"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Stock Movement
+                                            </label>
+                                            <select
+                                                name="stock_movement"
+                                                value={formData.stock_movement}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                                            >
+                                                <option value="">-- Select --</option>
+                                                <option value="IN">IN</option>
+                                                <option value="OUT">OUT</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Effect in Stock
+                                            </label>
+                                            <select
+                                                name="effect_in_stock"
+                                                value={formData.effect_in_stock}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                                            >
+                                                <option value="">-- Select --</option>
+                                                <option value="+">+</option>
+                                                <option value="-">-</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Seq No. <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="seq_no"
+                                                type="number"
+                                                value={formData.seq_no}
+                                                onChange={handleInputChange}
+                                                required
+                                                min={1}
+                                                max={99}
+                                                placeholder="e.g. 1"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Active Status</label>
+                                            <div className="flex items-center gap-4">
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="active"
+                                                        checked={formData.active === true}
+                                                        onChange={() => setFormData({ ...formData, active: true })}
+                                                        className="text-blue-600"
+                                                    />
+                                                    <span className="text-sm">Yes</span>
+                                                </label>
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="active"
+                                                        checked={formData.active === false}
+                                                        onChange={() => setFormData({ ...formData, active: false })}
+                                                        className="text-blue-600"
+                                                    />
+                                                    <span className="text-sm">No</span>
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
@@ -646,49 +732,99 @@ export default function MaterialStatusMasterPage() {
                                     </button>
                                 </div>
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Status Name <span className="text-red-500">*</span></label>
-                                        <Input name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g. Raw Material Available" required />
-                                    </div>
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Description</label>
-                                        <Input name="description" value={formData.description} onChange={handleInputChange} placeholder="e.g. READY FOR PRODUCTION USAGE" />
-                                    </div>
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Effect in Stock</label>
-                                        <select
-                                            name="effectType"
-                                            value={formData.effectType}
-                                            onChange={handleInputChange}
-                                            className="w-full px-3 py-2 border border-border rounded-lg bg-background"
-                                        >
-                                            <option value="ADD">ADD STOCK (Green)</option>
-                                            <option value="SUBTRACT">SUBTRACT (Red)</option>
-                                        </select>
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Active Status</label>
-                                        <div className="flex items-center gap-4">
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input
-                                                    type="radio"
-                                                    name="active"
-                                                    checked={formData.active === true}
-                                                    onChange={() => setFormData({ ...formData, active: true })}
-                                                    className="text-blue-600"
-                                                />
-                                                <span className="text-sm">Yes</span>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Matl Status ID <span className="text-red-500">*</span>
                                             </label>
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input
-                                                    type="radio"
-                                                    name="active"
-                                                    checked={formData.active === false}
-                                                    onChange={() => setFormData({ ...formData, active: false })}
-                                                    className="text-blue-600"
-                                                />
-                                                <span className="text-sm">No</span>
+                                            <Input
+                                                name="matl_status_id"
+                                                value={formData.matl_status_id}
+                                                onChange={handleInputChange}
+                                                required
+                                                disabled
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Material Status <span className="text-red-500">*</span>
                                             </label>
+                                            <Input
+                                                name="material_status"
+                                                value={formData.material_status}
+                                                onChange={handleInputChange}
+                                                required
+                                                maxLength={30}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Stock Movement
+                                            </label>
+                                            <select
+                                                name="stock_movement"
+                                                value={formData.stock_movement}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                                            >
+                                                <option value="">-- Select --</option>
+                                                <option value="IN">IN</option>
+                                                <option value="OUT">OUT</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Effect in Stock
+                                            </label>
+                                            <select
+                                                name="effect_in_stock"
+                                                value={formData.effect_in_stock}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                                            >
+                                                <option value="">-- Select --</option>
+                                                <option value="+">+</option>
+                                                <option value="-">-</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Seq No. <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="seq_no"
+                                                type="number"
+                                                value={formData.seq_no}
+                                                onChange={handleInputChange}
+                                                required
+                                                min={1}
+                                                max={99}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Active Status</label>
+                                            <div className="flex items-center gap-4">
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="active"
+                                                        checked={formData.active === true}
+                                                        onChange={() => setFormData({ ...formData, active: true })}
+                                                        className="text-blue-600"
+                                                    />
+                                                    <span className="text-sm">Yes</span>
+                                                </label>
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="active"
+                                                        checked={formData.active === false}
+                                                        onChange={() => setFormData({ ...formData, active: false })}
+                                                        className="text-blue-600"
+                                                    />
+                                                    <span className="text-sm">No</span>
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
@@ -730,7 +866,7 @@ export default function MaterialStatusMasterPage() {
                                 </div>
                                 <div className="p-6">
                                     <p className="text-foreground mb-4">
-                                        Are you sure you want to delete <strong>{selectedStatus?.name}</strong>?
+                                        Are you sure you want to delete <strong>{selectedStatus?.material_status}</strong>?
                                     </p>
                                     <p className="text-sm text-muted-foreground mb-6">
                                         This action cannot be undone.
@@ -745,6 +881,7 @@ export default function MaterialStatusMasterPage() {
                                         <Button
                                             onClick={confirmDelete}
                                             className="bg-red-600 hover:bg-red-700 text-white"
+                                            disabled={isSubmittingRef.current}
                                         >
                                             Delete
                                         </Button>
@@ -758,5 +895,3 @@ export default function MaterialStatusMasterPage() {
         </div>
     );
 }
-
-

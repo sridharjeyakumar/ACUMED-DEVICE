@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
+import { departmentAPI } from "@/services/api";
 
 interface Department {
     dept_id: string; // Char(3) - PK
     department_name: string; // Char(25)
-    last_modified_user_id: string; // Char(5)
-    last_modified_date_time: Date; // Date
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date; // Date
 }
 
 // Helper function to format dates consistently (prevents hydration errors)
@@ -29,7 +31,7 @@ function formatDateTime(date: Date | string): string {
     const hours = String(d.getHours()).padStart(2, '0');
     const minutes = String(d.getMinutes()).padStart(2, '0');
     const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
 export default function DepartmentMasterPage() {
@@ -40,38 +42,29 @@ export default function DepartmentMasterPage() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
     const isSubmittingRef = useRef(false);
-    const [departments, setDepartments] = useState<Department[]>([
-        {
-            dept_id: "MGT",
-            department_name: "Management",
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            dept_id: "ADM",
-            department_name: "Administration",
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            dept_id: "PRD",
-            department_name: "Production",
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            dept_id: "PAC",
-            department_name: "Packing",
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            dept_id: "STR",
-            department_name: "Stores",
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-    ]);
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: Department } | null>(null);
+
+    useEffect(() => {
+        loadDepartments();
+    }, []);
+
+    const loadDepartments = async () => {
+        try {
+            setLoading(true);
+            const data = await departmentAPI.getAll();
+            setDepartments(data);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load departments",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
     const [formData, setFormData] = useState({
         dept_id: "",
         department_name: "",
@@ -93,14 +86,11 @@ export default function DepartmentMasterPage() {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
-            // TODO: Replace with actual API call
-            const newDepartment: Department = {
+            await departmentAPI.create({
                 dept_id: formData.dept_id,
                 department_name: formData.department_name,
-                last_modified_user_id: "ADMIN", // TODO: Get from auth context
-                last_modified_date_time: new Date(),
-            };
-            setDepartments([...departments, newDepartment]);
+                last_modified_user_id: "ADMIN",
+            });
             toast({
                 title: "Success",
                 description: "Department created successfully",
@@ -110,6 +100,7 @@ export default function DepartmentMasterPage() {
                 dept_id: "",
                 department_name: "",
             });
+            loadDepartments();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -136,22 +127,27 @@ export default function DepartmentMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedDepartment) return;
         isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedDepartment };
+        
         try {
-            // TODO: Replace with actual API call
-            const updatedDepartments = departments.map((d) =>
-                d.dept_id === selectedDepartment.dept_id
-                    ? {
-                        ...d,
-                        department_name: formData.department_name,
-                        last_modified_user_id: "ADMIN",
-                        last_modified_date_time: new Date(),
-                    }
-                    : d
-            );
-            setDepartments(updatedDepartments);
+            await departmentAPI.update(selectedDepartment.dept_id, {
+                department_name: formData.department_name,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            // Store last action for undo
+            setLastAction({ type: 'edit', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Department updated successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsEditModalOpen(false);
             setSelectedDepartment(null);
@@ -159,6 +155,7 @@ export default function DepartmentMasterPage() {
                 dept_id: "",
                 department_name: "",
             });
+            loadDepartments();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -167,6 +164,43 @@ export default function DepartmentMasterPage() {
             });
         } finally {
             isSubmittingRef.current = false;
+        }
+    };
+    
+    const handleUndo = async () => {
+        if (!lastAction) return;
+        
+        try {
+            if (lastAction.type === 'edit') {
+                // Restore previous data
+                await departmentAPI.update(lastAction.data.dept_id, {
+                    department_name: lastAction.data.department_name,
+                    last_modified_user_id: "ADMIN",
+                });
+                toast({
+                    title: "Undone",
+                    description: "Changes have been reverted",
+                });
+            } else if (lastAction.type === 'delete') {
+                // Restore deleted department
+                await departmentAPI.create({
+                    dept_id: lastAction.data.dept_id,
+                    department_name: lastAction.data.department_name,
+                    last_modified_user_id: "ADMIN",
+                });
+                toast({
+                    title: "Undone",
+                    description: "Department has been restored",
+                });
+            }
+            setLastAction(null);
+            loadDepartments();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to undo action",
+                variant: "destructive",
+            });
         }
     };
 
@@ -179,15 +213,28 @@ export default function DepartmentMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedDepartment) return;
         isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedDepartment };
+        
         try {
-            // TODO: Replace with actual API call
-            setDepartments(departments.filter((d) => d.dept_id !== selectedDepartment.dept_id));
+            await departmentAPI.delete(selectedDepartment.dept_id);
+            
+            // Store last action for undo
+            setLastAction({ type: 'delete', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Department deleted successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsDeleteDialogOpen(false);
             setSelectedDepartment(null);
+            loadDepartments();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -298,7 +345,13 @@ export default function DepartmentMasterPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredDepartments.length === 0 ? (
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={5} className="px-4 py-3 text-center text-muted-foreground">
+                                                    Loading departments...
+                                                </td>
+                                            </tr>
+                                        ) : filteredDepartments.length === 0 ? (
                                             <tr>
                                                 <td colSpan={5} className="px-4 py-3 text-center text-muted-foreground">
                                                     No departments found

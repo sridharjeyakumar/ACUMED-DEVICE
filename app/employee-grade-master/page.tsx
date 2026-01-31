@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
+import { employeeGradeAPI } from "@/services/api";
 
 interface EmployeeGrade {
     grade_id: string; // Char(3) - PK
     grade_name: string; // Char(25)
-    last_modified_user_id: string; // Char(5)
-    last_modified_date_time: Date; // Date
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date; // Date
 }
 
 // Helper function to format dates consistently (prevents hydration errors)
@@ -29,7 +31,7 @@ function formatDateTime(date: Date | string): string {
     const hours = String(d.getHours()).padStart(2, '0');
     const minutes = String(d.getMinutes()).padStart(2, '0');
     const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
 export default function EmployeeGradeMasterPage() {
@@ -40,38 +42,29 @@ export default function EmployeeGradeMasterPage() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedGrade, setSelectedGrade] = useState<EmployeeGrade | null>(null);
     const isSubmittingRef = useRef(false);
-    const [grades, setGrades] = useState<EmployeeGrade[]>([
-        {
-            grade_id: "DIR",
-            grade_name: "Director",
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            grade_id: "MGR",
-            grade_name: "Manager",
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            grade_id: "SUP",
-            grade_name: "Supervisor",
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            grade_id: "OPR",
-            grade_name: "Operator",
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            grade_id: "SUB",
-            grade_name: "Sub Staff",
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-    ]);
+    const [grades, setGrades] = useState<EmployeeGrade[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: EmployeeGrade } | null>(null);
+
+    useEffect(() => {
+        loadGrades();
+    }, []);
+
+    const loadGrades = async () => {
+        try {
+            setLoading(true);
+            const data = await employeeGradeAPI.getAll();
+            setGrades(data);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load employee grades",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
     const [formData, setFormData] = useState({
         grade_id: "",
         grade_name: "",
@@ -93,14 +86,11 @@ export default function EmployeeGradeMasterPage() {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
-            // TODO: Replace with actual API call
-            const newGrade: EmployeeGrade = {
+            await employeeGradeAPI.create({
                 grade_id: formData.grade_id,
                 grade_name: formData.grade_name,
-                last_modified_user_id: "ADMIN", // TODO: Get from auth context
-                last_modified_date_time: new Date(),
-            };
-            setGrades([...grades, newGrade]);
+                last_modified_user_id: "ADMIN",
+            });
             toast({
                 title: "Success",
                 description: "Employee grade created successfully",
@@ -110,6 +100,7 @@ export default function EmployeeGradeMasterPage() {
                 grade_id: "",
                 grade_name: "",
             });
+            loadGrades();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -136,22 +127,27 @@ export default function EmployeeGradeMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedGrade) return;
         isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedGrade };
+        
         try {
-            // TODO: Replace with actual API call
-            const updatedGrades = grades.map((g) =>
-                g.grade_id === selectedGrade.grade_id
-                    ? {
-                        ...g,
-                        grade_name: formData.grade_name,
-                        last_modified_user_id: "ADMIN",
-                        last_modified_date_time: new Date(),
-                    }
-                    : g
-            );
-            setGrades(updatedGrades);
+            await employeeGradeAPI.update(selectedGrade.grade_id, {
+                grade_name: formData.grade_name,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            // Store last action for undo
+            setLastAction({ type: 'edit', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Employee grade updated successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsEditModalOpen(false);
             setSelectedGrade(null);
@@ -159,6 +155,7 @@ export default function EmployeeGradeMasterPage() {
                 grade_id: "",
                 grade_name: "",
             });
+            loadGrades();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -167,6 +164,43 @@ export default function EmployeeGradeMasterPage() {
             });
         } finally {
             isSubmittingRef.current = false;
+        }
+    };
+    
+    const handleUndo = async () => {
+        if (!lastAction) return;
+        
+        try {
+            if (lastAction.type === 'edit') {
+                // Restore previous data
+                await employeeGradeAPI.update(lastAction.data.grade_id, {
+                    grade_name: lastAction.data.grade_name,
+                    last_modified_user_id: "ADMIN",
+                });
+                toast({
+                    title: "Undone",
+                    description: "Changes have been reverted",
+                });
+            } else if (lastAction.type === 'delete') {
+                // Restore deleted grade
+                await employeeGradeAPI.create({
+                    grade_id: lastAction.data.grade_id,
+                    grade_name: lastAction.data.grade_name,
+                    last_modified_user_id: "ADMIN",
+                });
+                toast({
+                    title: "Undone",
+                    description: "Employee grade has been restored",
+                });
+            }
+            setLastAction(null);
+            loadGrades();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to undo action",
+                variant: "destructive",
+            });
         }
     };
 
@@ -179,15 +213,28 @@ export default function EmployeeGradeMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedGrade) return;
         isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedGrade };
+        
         try {
-            // TODO: Replace with actual API call
-            setGrades(grades.filter((g) => g.grade_id !== selectedGrade.grade_id));
+            await employeeGradeAPI.delete(selectedGrade.grade_id);
+            
+            // Store last action for undo
+            setLastAction({ type: 'delete', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Employee grade deleted successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsDeleteDialogOpen(false);
             setSelectedGrade(null);
+            loadGrades();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -298,7 +345,13 @@ export default function EmployeeGradeMasterPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredGrades.length === 0 ? (
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                    Loading employee grades...
+                                                </td>
+                                            </tr>
+                                        ) : filteredGrades.length === 0 ? (
                                             <tr>
                                                 <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
                                                     No grades found

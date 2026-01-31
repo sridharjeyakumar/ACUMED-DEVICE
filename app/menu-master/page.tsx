@@ -12,6 +12,7 @@ import { menuAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
 
 interface Menu {
     menu_id: string;
@@ -32,7 +33,7 @@ function formatDateTime(date: Date | string | undefined): string {
     const hours = String(d.getHours()).padStart(2, '0');
     const minutes = String(d.getMinutes()).padStart(2, '0');
     const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
 export default function MenuMasterPage() {
@@ -45,6 +46,7 @@ export default function MenuMasterPage() {
     const [menus, setMenus] = useState<Menu[]>([]);
     const [loading, setLoading] = useState(true);
     const isSubmittingRef = useRef(false);
+    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: Menu } | null>(null);
     const [filterActive, setFilterActive] = useState<string>("all");
     const [formData, setFormData] = useState({
         menu_id: "",
@@ -162,6 +164,10 @@ export default function MenuMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedMenu) return;
         isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedMenu };
+        
         try {
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:124',message:'Before menuAPI.update',data:{id:selectedMenu.menu_id,updateData:{menu_desc:formData.menu_desc,active:formData.active}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
@@ -173,9 +179,18 @@ export default function MenuMasterPage() {
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:130',message:'After menuAPI.update success',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
             // #endregion
+            
+            // Store last action for undo
+            setLastAction({ type: 'edit', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Menu updated successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsEditModalOpen(false);
             setSelectedMenu(null);
@@ -207,6 +222,10 @@ export default function MenuMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedMenu) return;
         isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedMenu };
+        
         try {
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:196',message:'Before menuAPI.delete',data:{id:selectedMenu.menu_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
@@ -215,9 +234,18 @@ export default function MenuMasterPage() {
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:198',message:'After menuAPI.delete success',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
             // #endregion
+            
+            // Store last action for undo
+            setLastAction({ type: 'delete', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Menu deleted successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsDeleteDialogOpen(false);
             setSelectedMenu(null);
@@ -233,6 +261,43 @@ export default function MenuMasterPage() {
             });
         } finally {
             isSubmittingRef.current = false;
+        }
+    };
+    
+    const handleUndo = async () => {
+        if (!lastAction) return;
+        
+        try {
+            if (lastAction.type === 'edit') {
+                // Restore previous data
+                await menuAPI.update(lastAction.data.menu_id, {
+                    menu_desc: lastAction.data.menu_desc,
+                    active: lastAction.data.active,
+                });
+                toast({
+                    title: "Undone",
+                    description: "Changes have been reverted",
+                });
+            } else if (lastAction.type === 'delete') {
+                // Restore deleted menu
+                await menuAPI.create({
+                    menu_id: lastAction.data.menu_id,
+                    menu_desc: lastAction.data.menu_desc,
+                    active: lastAction.data.active,
+                });
+                toast({
+                    title: "Undone",
+                    description: "Menu has been restored",
+                });
+            }
+            setLastAction(null);
+            loadMenus();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to undo action",
+                variant: "destructive",
+            });
         }
     };
 

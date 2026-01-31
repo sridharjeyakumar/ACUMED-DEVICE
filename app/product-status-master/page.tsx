@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,16 +11,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
+import { productStatusAPI } from "@/services/api";
 
 interface ProductStatus {
     prod_status_id: string; // Char(3) - PK
     product_status: string; // Char(30)
-    stock_movement: string; // Char(3) - dropdown (IN / OUT) - can be empty
-    effect_in_stock: string; // Char(1) - dropdown (+ / -) - can be empty
+    stock_movement?: string; // Char(3) - dropdown (IN / OUT) - can be empty
+    effect_in_stock?: string; // Char(1) - dropdown (+ / -) - can be empty
     seq_no: number; // N(2)
     active: boolean;
-    last_modified_user_id: string; // Char(5)
-    last_modified_date_time: Date; // Date
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date; // Date
 }
 
 // Helper function to format dates consistently (prevents hydration errors)
@@ -33,7 +35,7 @@ function formatDateTime(date: Date | string): string {
     const hours = String(d.getHours()).padStart(2, '0');
     const minutes = String(d.getMinutes()).padStart(2, '0');
     const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
 export default function ProductStatusMasterPage() {
@@ -46,108 +48,29 @@ export default function ProductStatusMasterPage() {
     const [filterActive, setFilterActive] = useState<string>("all");
     const [filterStockMovement, setFilterStockMovement] = useState<string>("all");
     const isSubmittingRef = useRef(false);
-    const [statuses, setStatuses] = useState<ProductStatus[]>([
-        {
-            prod_status_id: "MFD",
-            product_status: "Manufactured",
-            stock_movement: "IN",
-            effect_in_stock: "+",
-            seq_no: 1,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            prod_status_id: "IQC",
-            product_status: "in QC",
-            stock_movement: "",
-            effect_in_stock: "",
-            seq_no: 2,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            prod_status_id: "PST",
-            product_status: "Packed for Sterilization",
-            stock_movement: "",
-            effect_in_stock: "",
-            seq_no: 3,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            prod_status_id: "SST",
-            product_status: "Sent for Sterilization",
-            stock_movement: "OUT",
-            effect_in_stock: "-",
-            seq_no: 4,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            prod_status_id: "RST",
-            product_status: "Received from Sterilization",
-            stock_movement: "IN",
-            effect_in_stock: "+",
-            seq_no: 5,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            prod_status_id: "PDS",
-            product_status: "Packed for Dispatch",
-            stock_movement: "",
-            effect_in_stock: "",
-            seq_no: 6,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            prod_status_id: "DSP",
-            product_status: "Dispatched",
-            stock_movement: "OUT",
-            effect_in_stock: "-",
-            seq_no: 7,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            prod_status_id: "ST+",
-            product_status: "Stock Adjustment (Add)",
-            stock_movement: "IN",
-            effect_in_stock: "+",
-            seq_no: 8,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            prod_status_id: "ST-",
-            product_status: "Stock Adjustment (Reduce)",
-            stock_movement: "OUT",
-            effect_in_stock: "-",
-            seq_no: 9,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-        {
-            prod_status_id: "DMG",
-            product_status: "Damaged",
-            stock_movement: "",
-            effect_in_stock: "",
-            seq_no: 10,
-            active: true,
-            last_modified_user_id: "",
-            last_modified_date_time: new Date(),
-        },
-    ]);
+    const [statuses, setStatuses] = useState<ProductStatus[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: ProductStatus } | null>(null);
+
+    useEffect(() => {
+        loadStatuses();
+    }, []);
+
+    const loadStatuses = async () => {
+        try {
+            setLoading(true);
+            const data = await productStatusAPI.getAll();
+            setStatuses(data);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load product statuses",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
     const [formData, setFormData] = useState({
         prod_status_id: "",
         product_status: "",
@@ -189,18 +112,15 @@ export default function ProductStatusMasterPage() {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
-            // TODO: Replace with actual API call
-            const newStatus: ProductStatus = {
+            await productStatusAPI.create({
                 prod_status_id: formData.prod_status_id,
                 product_status: formData.product_status,
-                stock_movement: formData.stock_movement,
-                effect_in_stock: formData.effect_in_stock,
+                stock_movement: formData.stock_movement || '',
+                effect_in_stock: formData.effect_in_stock || '',
                 seq_no: parseInt(formData.seq_no) || 0,
                 active: formData.active,
-                last_modified_user_id: "ADMIN", // TODO: Get from auth context
-                last_modified_date_time: new Date(),
-            };
-            setStatuses([...statuses, newStatus]);
+                last_modified_user_id: "ADMIN",
+            });
             toast({
                 title: "Success",
                 description: "Product status created successfully",
@@ -214,6 +134,7 @@ export default function ProductStatusMasterPage() {
                 seq_no: "",
                 active: true,
             });
+            loadStatuses();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -230,8 +151,8 @@ export default function ProductStatusMasterPage() {
         setFormData({
             prod_status_id: status.prod_status_id,
             product_status: status.product_status,
-            stock_movement: status.stock_movement,
-            effect_in_stock: status.effect_in_stock,
+            stock_movement: status.stock_movement || "",
+            effect_in_stock: status.effect_in_stock || "",
             seq_no: status.seq_no.toString(),
             active: status.active,
         });
@@ -244,26 +165,31 @@ export default function ProductStatusMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedStatus) return;
         isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedStatus };
+        
         try {
-            // TODO: Replace with actual API call
-            const updatedStatuses = statuses.map((s) =>
-                s.prod_status_id === selectedStatus.prod_status_id
-                    ? {
-                        ...s,
-                        product_status: formData.product_status,
-                        stock_movement: formData.stock_movement,
-                        effect_in_stock: formData.effect_in_stock,
-                        seq_no: parseInt(formData.seq_no) || 0,
-                        active: formData.active,
-                        last_modified_user_id: "ADMIN",
-                        last_modified_date_time: new Date(),
-                    }
-                    : s
-            );
-            setStatuses(updatedStatuses);
+            await productStatusAPI.update(selectedStatus.prod_status_id, {
+                product_status: formData.product_status,
+                stock_movement: formData.stock_movement || '',
+                effect_in_stock: formData.effect_in_stock || '',
+                seq_no: parseInt(formData.seq_no) || 0,
+                active: formData.active,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            // Store last action for undo
+            setLastAction({ type: 'edit', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Product status updated successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsEditModalOpen(false);
             setSelectedStatus(null);
@@ -275,6 +201,7 @@ export default function ProductStatusMasterPage() {
                 seq_no: "",
                 active: true,
             });
+            loadStatuses();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -283,6 +210,51 @@ export default function ProductStatusMasterPage() {
             });
         } finally {
             isSubmittingRef.current = false;
+        }
+    };
+    
+    const handleUndo = async () => {
+        if (!lastAction) return;
+        
+        try {
+            if (lastAction.type === 'edit') {
+                // Restore previous data
+                await productStatusAPI.update(lastAction.data.prod_status_id, {
+                    product_status: lastAction.data.product_status,
+                    stock_movement: lastAction.data.stock_movement || '',
+                    effect_in_stock: lastAction.data.effect_in_stock || '',
+                    seq_no: lastAction.data.seq_no,
+                    active: lastAction.data.active,
+                    last_modified_user_id: "ADMIN",
+                });
+                toast({
+                    title: "Undone",
+                    description: "Changes have been reverted",
+                });
+            } else if (lastAction.type === 'delete') {
+                // Restore deleted status
+                await productStatusAPI.create({
+                    prod_status_id: lastAction.data.prod_status_id,
+                    product_status: lastAction.data.product_status,
+                    stock_movement: lastAction.data.stock_movement || '',
+                    effect_in_stock: lastAction.data.effect_in_stock || '',
+                    seq_no: lastAction.data.seq_no,
+                    active: lastAction.data.active,
+                    last_modified_user_id: "ADMIN",
+                });
+                toast({
+                    title: "Undone",
+                    description: "Product status has been restored",
+                });
+            }
+            setLastAction(null);
+            loadStatuses();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to undo action",
+                variant: "destructive",
+            });
         }
     };
 
@@ -295,15 +267,28 @@ export default function ProductStatusMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedStatus) return;
         isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedStatus };
+        
         try {
-            // TODO: Replace with actual API call
-            setStatuses(statuses.filter((s) => s.prod_status_id !== selectedStatus.prod_status_id));
+            await productStatusAPI.delete(selectedStatus.prod_status_id);
+            
+            // Store last action for undo
+            setLastAction({ type: 'delete', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Product status deleted successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsDeleteDialogOpen(false);
             setSelectedStatus(null);
+            loadStatuses();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -483,7 +468,13 @@ export default function ProductStatusMasterPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredStatuses.length === 0 ? (
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={9} className="px-6 py-4 text-center text-muted-foreground">
+                                                    Loading product statuses...
+                                                </td>
+                                            </tr>
+                                        ) : filteredStatuses.length === 0 ? (
                                             <tr>
                                                 <td colSpan={9} className="px-6 py-4 text-center text-muted-foreground">
                                                     No product statuses found

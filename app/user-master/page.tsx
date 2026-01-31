@@ -12,6 +12,7 @@ import { userAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
 
 interface User {
     user_id: string; // Char(10) - PK
@@ -33,12 +34,19 @@ function formatDate(date: Date | string | undefined): string {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    return `${month}/${day}/${year}`;
+    return `${day}-${month}-${year}`;
 }
 
 // Helper function to format time
 function formatTime(time: string | undefined): string {
     if (!time) return "-";
+    // If time is already in HH:MM:SS format, return as is
+    // If time is in HH:MM format, add :00 for seconds
+    if (time.match(/^\d{2}:\d{2}:\d{2}$/)) {
+        return time;
+    } else if (time.match(/^\d{2}:\d{2}$/)) {
+        return `${time}:00`;
+    }
     return time;
 }
 
@@ -156,6 +164,10 @@ export default function UserMasterPage() {
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedUser) return;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedUser };
+        
         try {
             const updateData: any = {
                 employee_id: formData.employee_id,
@@ -169,9 +181,18 @@ export default function UserMasterPage() {
                 updateData.N_password_expiry_days = formData.password_expiry_days;
             }
             await userAPI.update(selectedUser.user_id, updateData);
+            
+            // Store last action for undo
+            setLastAction({ type: 'edit', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "User updated successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsEditModalOpen(false);
             setSelectedUser(null);
@@ -185,6 +206,45 @@ export default function UserMasterPage() {
             });
         }
     };
+    
+    const handleUndo = async () => {
+        if (!lastAction) return;
+        
+        try {
+            if (lastAction.type === 'edit') {
+                // Restore previous data (note: password cannot be restored, so we skip it)
+                const updateData: any = {
+                    employee_id: lastAction.data.employee_id,
+                    role_id: lastAction.data.role_id,
+                    active: lastAction.data.active,
+                };
+                if (lastAction.data.password_expiry_days) {
+                    updateData.N_password_expiry_days = lastAction.data.password_expiry_days;
+                }
+                await userAPI.update(lastAction.data.user_id, updateData);
+                toast({
+                    title: "Undone",
+                    description: "Changes have been reverted",
+                });
+            } else if (lastAction.type === 'delete') {
+                // Note: User deletion undo would require password, which we don't store
+                // So we'll show an error message
+                toast({
+                    title: "Cannot Undo",
+                    description: "User deletion cannot be undone (password required)",
+                    variant: "destructive",
+                });
+            }
+            setLastAction(null);
+            loadUsers();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to undo action",
+                variant: "destructive",
+            });
+        }
+    };
 
     const handleDelete = (user: User) => {
         setSelectedUser(user);
@@ -193,11 +253,24 @@ export default function UserMasterPage() {
 
     const confirmDelete = async () => {
         if (!selectedUser) return;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedUser };
+        
         try {
             await userAPI.delete(selectedUser.user_id);
+            
+            // Store last action for undo
+            setLastAction({ type: 'delete', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "User deleted successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsDeleteDialogOpen(false);
             setSelectedUser(null);

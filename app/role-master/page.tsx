@@ -12,6 +12,7 @@ import { roleAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
 
 interface Role {
     roll_id: string;
@@ -33,7 +34,7 @@ function formatDateTime(date: Date | string | undefined): string {
     const hours = String(d.getHours()).padStart(2, '0');
     const minutes = String(d.getMinutes()).padStart(2, '0');
     const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
 export default function RoleMasterPage() {
@@ -46,6 +47,7 @@ export default function RoleMasterPage() {
     const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterActive, setFilterActive] = useState<string>("all");
+    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: Role } | null>(null);
     const [formData, setFormData] = useState({
         roll_id: "",
         roll_description: "",
@@ -124,15 +126,28 @@ export default function RoleMasterPage() {
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedRole) return;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedRole };
+        
         try {
             await roleAPI.update(selectedRole.roll_id, {
                 roll_description: formData.roll_description,
                 remarks: formData.remarks,
                 active: formData.active,
             });
+            
+            // Store last action for undo
+            setLastAction({ type: 'edit', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Role updated successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsEditModalOpen(false);
             setSelectedRole(null);
@@ -146,6 +161,45 @@ export default function RoleMasterPage() {
             });
         }
     };
+    
+    const handleUndo = async () => {
+        if (!lastAction) return;
+        
+        try {
+            if (lastAction.type === 'edit') {
+                // Restore previous data
+                await roleAPI.update(lastAction.data.roll_id, {
+                    roll_description: lastAction.data.roll_description,
+                    remarks: lastAction.data.remarks,
+                    active: lastAction.data.active,
+                });
+                toast({
+                    title: "Undone",
+                    description: "Changes have been reverted",
+                });
+            } else if (lastAction.type === 'delete') {
+                // Restore deleted role
+                await roleAPI.create({
+                    roll_id: lastAction.data.roll_id,
+                    roll_description: lastAction.data.roll_description,
+                    remarks: lastAction.data.remarks,
+                    active: lastAction.data.active,
+                });
+                toast({
+                    title: "Undone",
+                    description: "Role has been restored",
+                });
+            }
+            setLastAction(null);
+            loadRoles();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to undo action",
+                variant: "destructive",
+            });
+        }
+    };
 
     const handleDelete = (role: Role) => {
         setSelectedRole(role);
@@ -154,11 +208,24 @@ export default function RoleMasterPage() {
 
     const confirmDelete = async () => {
         if (!selectedRole) return;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedRole };
+        
         try {
             await roleAPI.delete(selectedRole.roll_id);
+            
+            // Store last action for undo
+            setLastAction({ type: 'delete', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Role deleted successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsDeleteDialogOpen(false);
             setSelectedRole(null);

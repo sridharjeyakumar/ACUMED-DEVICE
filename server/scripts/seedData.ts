@@ -9,6 +9,11 @@ import RoleMaster from '../models/RoleMaster';
 import MenuAccessMaster from '../models/MenuAccessMaster';
 import UserMaster from '../models/UserMaster';
 import UserLoginHistory from '../models/UserLoginHistory';
+import CompanyMaster from '../models/CompanyMaster';
+import ProductStatusMaster from '../models/ProductStatusMaster';
+import MaterialStatusMaster from '../models/MaterialStatusMaster';
+import DepartmentMaster from '../models/DepartmentMaster';
+import EmployeeGradeMaster from '../models/EmployeeGradeMaster';
 import bcrypt from 'bcryptjs';
 
 async function seedData() {
@@ -23,6 +28,11 @@ async function seedData() {
     await MenuAccessMaster.deleteMany({});
     await UserMaster.deleteMany({});
     await UserLoginHistory.deleteMany({});
+    await CompanyMaster.deleteMany({});
+    await ProductStatusMaster.deleteMany({});
+    await MaterialStatusMaster.deleteMany({});
+    await DepartmentMaster.deleteMany({});
+    await EmployeeGradeMaster.deleteMany({});
     console.log('Cleared existing data');
 
     const currentDate = new Date();
@@ -265,12 +275,322 @@ async function seedData() {
     await UserMaster.insertMany(userData);
     console.log(`Inserted ${userData.length} user records`);
 
+    // Seed Company Master - Based on image data
+    const companyData = [
+      {
+        comp_id: 'CORP',
+        company_name: 'ACUMED DEVICES DISTRIBUTION LTD.',
+        company_short_name: 'ACUMED DEVICES',
+        address_1: '',
+        address_2: '',
+        city: '',
+        state: '',
+        pincode: 0,
+        gst_no: '33AAICA9166G1',
+        cin_no: 'U51397TN2010PTC077640',
+        pan_no: '',
+        email_id: '',
+        website: '',
+        contact_person: '',
+        contact_no: 0,
+        logo: '',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        comp_id: 'FACT',
+        company_name: 'ACUMED DEVICES DISTRIBUTION LTD.',
+        company_short_name: '',
+        address_1: '',
+        address_2: '',
+        city: '',
+        state: '',
+        pincode: 0,
+        gst_no: '',
+        cin_no: '',
+        pan_no: '',
+        email_id: '',
+        website: '',
+        contact_person: '',
+        contact_no: 0,
+        logo: '',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+    ];
+
+    await CompanyMaster.insertMany(companyData);
+    console.log(`Inserted ${companyData.length} company records`);
+
+    // Seed Product Status Master - Based on image data
+    const productStatusData = [
+      {
+        prod_status_id: 'MFD',
+        product_status: 'Manufactured',
+        stock_movement: 'IN',
+        effect_in_stock: '+',
+        seq_no: 1,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        prod_status_id: 'IQC',
+        product_status: 'in QC',
+        stock_movement: '',
+        effect_in_stock: '',
+        seq_no: 2,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        prod_status_id: 'PST',
+        product_status: 'Packed for Sterilization',
+        stock_movement: '',
+        effect_in_stock: '',
+        seq_no: 3,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        prod_status_id: 'SST',
+        product_status: 'Sent for Sterilization',
+        stock_movement: 'OUT',
+        effect_in_stock: '-',
+        seq_no: 4,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        prod_status_id: 'RST',
+        product_status: 'Received from Sterilization',
+        stock_movement: 'IN',
+        effect_in_stock: '+',
+        seq_no: 5,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        prod_status_id: 'PDS',
+        product_status: 'Packed for Dispatch',
+        stock_movement: '',
+        effect_in_stock: '',
+        seq_no: 6,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        prod_status_id: 'DSP',
+        product_status: 'Dispatched',
+        stock_movement: 'OUT',
+        effect_in_stock: '-',
+        seq_no: 7,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        prod_status_id: 'ST+',
+        product_status: 'Stock Adjustment (Add)',
+        stock_movement: 'IN',
+        effect_in_stock: '+',
+        seq_no: 8,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        prod_status_id: 'ST-',
+        product_status: 'Stock Adjustment (Reduce)',
+        stock_movement: 'OUT',
+        effect_in_stock: '-',
+        seq_no: 9,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        prod_status_id: 'DMG',
+        product_status: 'Damaged',
+        stock_movement: '',
+        effect_in_stock: '',
+        seq_no: 10,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+    ];
+
+    await ProductStatusMaster.insertMany(productStatusData);
+    console.log(`Inserted ${productStatusData.length} product status records`);
+
+    // Seed Material Status Master - Based on image data
+    const materialStatusData = [
+      {
+        matl_status_id: 'REC',
+        material_status: 'Receipt from Supplier',
+        stock_movement: 'IN',
+        effect_in_stock: '+',
+        seq_no: 1,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        matl_status_id: 'ISS',
+        material_status: 'Issued for Production',
+        stock_movement: 'OUT',
+        effect_in_stock: '-',
+        seq_no: 2,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        matl_status_id: 'RTS',
+        material_status: 'Returned to Supplier',
+        stock_movement: 'OUT',
+        effect_in_stock: '-',
+        seq_no: 4,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        matl_status_id: 'RRS',
+        material_status: 'Return Receipt from Supplier',
+        stock_movement: 'IN',
+        effect_in_stock: '+',
+        seq_no: 5,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        matl_status_id: 'ST+',
+        material_status: 'Stock Adjustment (Add)',
+        stock_movement: 'IN',
+        effect_in_stock: '+',
+        seq_no: 6,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        matl_status_id: 'ST-',
+        material_status: 'Stock Adjustment (Reduce)',
+        stock_movement: 'OUT',
+        effect_in_stock: '-',
+        seq_no: 7,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        matl_status_id: 'DMG',
+        material_status: 'Damaged',
+        stock_movement: '',
+        effect_in_stock: '',
+        seq_no: 8,
+        active: true,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+    ];
+
+    await MaterialStatusMaster.insertMany(materialStatusData);
+    console.log(`Inserted ${materialStatusData.length} material status records`);
+
+    // Seed Department Master - Based on image data
+    const departmentData = [
+      {
+        dept_id: 'MGT',
+        department_name: 'Management',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        dept_id: 'ADM',
+        department_name: 'Administration',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        dept_id: 'PRD',
+        department_name: 'Production',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        dept_id: 'PAC',
+        department_name: 'Packing',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        dept_id: 'STR',
+        department_name: 'Stores',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+    ];
+
+    await DepartmentMaster.insertMany(departmentData);
+    console.log(`Inserted ${departmentData.length} department records`);
+
+    // Seed Employee Grade Master - Based on image data
+    const employeeGradeData = [
+      {
+        grade_id: 'DIR',
+        grade_name: 'Director',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        grade_id: 'MGR',
+        grade_name: 'Manager',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        grade_id: 'SUP',
+        grade_name: 'Supervisor',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        grade_id: 'OPR',
+        grade_name: 'Operator',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        grade_id: 'SUB',
+        grade_name: 'Sub Staff',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+    ];
+
+    await EmployeeGradeMaster.insertMany(employeeGradeData);
+    console.log(`Inserted ${employeeGradeData.length} employee grade records`);
+
     console.log('✅ Database seeded successfully!');
     console.log('\n📊 Summary:');
     console.log(`   - ${menuData.length} Menu Master records`);
     console.log(`   - ${roleData.length} Role Master records`);
     console.log(`   - ${menuAccessData.length} Menu Access Master records`);
     console.log(`   - ${userData.length} User Master records`);
+    console.log(`   - ${companyData.length} Company Master records`);
+    console.log(`   - ${productStatusData.length} Product Status Master records`);
+    console.log(`   - ${materialStatusData.length} Material Status Master records`);
+    console.log(`   - ${departmentData.length} Department Master records`);
+    console.log(`   - ${employeeGradeData.length} Employee Grade Master records`);
     console.log('\n🔑 Default password for all users: password123');
     process.exit(0);
   } catch (error: any) {

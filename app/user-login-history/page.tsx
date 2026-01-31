@@ -12,6 +12,7 @@ import { userLoginHistoryAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
 
 interface LoginHistory {
     _id?: string;
@@ -20,6 +21,39 @@ interface LoginHistory {
     login_time: string;
     logout_date?: string;
     logout_time?: string;
+}
+
+// Helper function to format dates to DD-MM-YYYY
+function formatDate(dateString: string | undefined): string {
+    if (!dateString) return "-";
+    try {
+        // Handle YYYY-MM-DD format from API
+        const parts = dateString.split('T')[0].split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        // If already in DD-MM-YYYY format, return as is
+        if (dateString.match(/^\d{2}-\d{2}-\d{4}$/)) {
+            return dateString;
+        }
+        return dateString;
+    } catch {
+        return dateString;
+    }
+}
+
+// Helper function to format time to HH:MM:SS
+function formatTime(timeString: string | undefined): string {
+    if (!timeString) return "-";
+    // If already in HH:MM:SS format, return as is
+    if (timeString.match(/^\d{2}:\d{2}:\d{2}$/)) {
+        return timeString;
+    }
+    // If in HH:MM format, add :00 for seconds
+    if (timeString.match(/^\d{2}:\d{2}$/)) {
+        return `${timeString}:00`;
+    }
+    return timeString;
 }
 
 export default function UserLoginHistoryPage() {
@@ -32,6 +66,7 @@ export default function UserLoginHistoryPage() {
     const [loginHistories, setLoginHistories] = useState<LoginHistory[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterUser, setFilterUser] = useState<string>("all");
+    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: LoginHistory } | null>(null);
     const [formData, setFormData] = useState({
         user_id: "",
         login_date: "",
@@ -123,6 +158,10 @@ export default function UserLoginHistoryPage() {
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedHistory || !selectedHistory._id) return;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedHistory };
+        
         try {
             await userLoginHistoryAPI.update(selectedHistory._id, {
                 Date_login_Date: formData.login_date,
@@ -130,9 +169,18 @@ export default function UserLoginHistoryPage() {
                 Date_Logout_Date: formData.logout_date || undefined,
                 Time_Logout_Time: formData.logout_time || undefined,
             });
+            
+            // Store last action for undo
+            setLastAction({ type: 'edit', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Login history updated successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsEditModalOpen(false);
             setSelectedHistory(null);
@@ -146,6 +194,47 @@ export default function UserLoginHistoryPage() {
             });
         }
     };
+    
+    const handleUndo = async () => {
+        if (!lastAction || !lastAction.data._id) return;
+        
+        try {
+            if (lastAction.type === 'edit') {
+                // Restore previous data
+                await userLoginHistoryAPI.update(lastAction.data._id, {
+                    Date_login_Date: lastAction.data.login_date,
+                    Time_login_Time: lastAction.data.login_time,
+                    Date_Logout_Date: lastAction.data.logout_date || undefined,
+                    Time_Logout_Time: lastAction.data.logout_time || undefined,
+                });
+                toast({
+                    title: "Undone",
+                    description: "Changes have been reverted",
+                });
+            } else if (lastAction.type === 'delete') {
+                // Restore deleted history
+                await userLoginHistoryAPI.create({
+                    user_id: lastAction.data.user_id,
+                    Date_login_Date: lastAction.data.login_date,
+                    Time_login_Time: lastAction.data.login_time,
+                    Date_Logout_Date: lastAction.data.logout_date || undefined,
+                    Time_Logout_Time: lastAction.data.logout_time || undefined,
+                });
+                toast({
+                    title: "Undone",
+                    description: "Login history has been restored",
+                });
+            }
+            setLastAction(null);
+            loadLoginHistories();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to undo action",
+                variant: "destructive",
+            });
+        }
+    };
 
     const handleDelete = (history: LoginHistory) => {
         setSelectedHistory(history);
@@ -154,11 +243,24 @@ export default function UserLoginHistoryPage() {
 
     const confirmDelete = async () => {
         if (!selectedHistory || !selectedHistory._id) return;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedHistory };
+        
         try {
             await userLoginHistoryAPI.delete(selectedHistory._id);
+            
+            // Store last action for undo
+            setLastAction({ type: 'delete', data: previousData });
+            
             toast({
                 title: "Success",
                 description: "Login history deleted successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
             });
             setIsDeleteDialogOpen(false);
             setSelectedHistory(null);
@@ -319,16 +421,16 @@ export default function UserLoginHistoryPage() {
                                                     <span className="text-sm font-mono text-foreground">{history.user_id}</span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm text-foreground">{history.login_date}</span>
+                                                    <span className="text-sm text-foreground">{formatDate(history.login_date)}</span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm text-foreground">{history.login_time}</span>
+                                                    <span className="text-sm text-foreground">{formatTime(history.login_time)}</span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm text-foreground">{history.logout_date || "-"}</span>
+                                                    <span className="text-sm text-foreground">{formatDate(history.logout_date)}</span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm text-foreground">{history.logout_time || "-"}</span>
+                                                    <span className="text-sm text-foreground">{formatTime(history.logout_time)}</span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center justify-center gap-2">
