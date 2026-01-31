@@ -61,6 +61,7 @@ export default function UserMasterPage() {
     const [loading, setLoading] = useState(true);
     const [filterActive, setFilterActive] = useState<string>("all");
     const [filterRole, setFilterRole] = useState<string>("all");
+    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: User } | null>(null);
     const [formData, setFormData] = useState({
         user_id: "",
         employee_id: "",
