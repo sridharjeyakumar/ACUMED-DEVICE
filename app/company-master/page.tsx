@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, Upload } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Upload } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -40,12 +40,12 @@ export default function CompanyMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
     const [filterState, setFilterState] = useState<string>("all");
     const [filterCity, setFilterCity] = useState<string>("all");
     const [companies, setCompanies] = useState<Company[]>([]);
     const [loading, setLoading] = useState(true);
+    const [cancelledCompanies, setCancelledCompanies] = useState<Set<string>>(new Set());
     const [formData, setFormData] = useState({
         comp_id: "",
         company_name: "",
@@ -66,7 +66,7 @@ export default function CompanyMasterPage() {
     });
     const fileInputRef = useRef<HTMLInputElement>(null);
     const isSubmittingRef = useRef(false);
-    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: Company } | null>(null);
+    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Company } | null>(null);
 
     useEffect(() => {
         loadCompanies();
@@ -279,56 +279,29 @@ export default function CompanyMasterPage() {
         if (!lastAction) return;
         
         try {
-            if (lastAction.type === 'edit') {
-                // Restore previous data
-                await companyAPI.update(lastAction.data.comp_id, {
-                    company_name: lastAction.data.company_name,
-                    company_short_name: lastAction.data.company_short_name || undefined,
-                    address_1: lastAction.data.address_1 || undefined,
-                    address_2: lastAction.data.address_2 || undefined,
-                    city: lastAction.data.city || undefined,
-                    state: lastAction.data.state || undefined,
-                    pincode: lastAction.data.pincode || undefined,
-                    gst_no: lastAction.data.gst_no || undefined,
-                    cin_no: lastAction.data.cin_no || undefined,
-                    pan_no: lastAction.data.pan_no || undefined,
-                    email_id: lastAction.data.email_id || undefined,
-                    website: lastAction.data.website || undefined,
-                    contact_person: lastAction.data.contact_person || undefined,
-                    contact_no: lastAction.data.contact_no || undefined,
-                    logo: lastAction.data.logo || undefined,
-                    last_modified_user_id: "ADMIN",
-                });
-                toast({
-                    title: "Undone",
-                    description: "Changes have been reverted",
-                });
-            } else if (lastAction.type === 'delete') {
-                // Restore deleted company
-                await companyAPI.create({
-                    comp_id: lastAction.data.comp_id,
-                    company_name: lastAction.data.company_name,
-                    company_short_name: lastAction.data.company_short_name || undefined,
-                    address_1: lastAction.data.address_1 || undefined,
-                    address_2: lastAction.data.address_2 || undefined,
-                    city: lastAction.data.city || undefined,
-                    state: lastAction.data.state || undefined,
-                    pincode: lastAction.data.pincode || undefined,
-                    gst_no: lastAction.data.gst_no || undefined,
-                    cin_no: lastAction.data.cin_no || undefined,
-                    pan_no: lastAction.data.pan_no || undefined,
-                    email_id: lastAction.data.email_id || undefined,
-                    website: lastAction.data.website || undefined,
-                    contact_person: lastAction.data.contact_person || undefined,
-                    contact_no: lastAction.data.contact_no || undefined,
-                    logo: lastAction.data.logo || undefined,
-                    last_modified_user_id: "ADMIN",
-                });
-                toast({
-                    title: "Undone",
-                    description: "Company has been restored",
-                });
-            }
+            // Restore previous data
+            await companyAPI.update(lastAction.data.comp_id, {
+                company_name: lastAction.data.company_name,
+                company_short_name: lastAction.data.company_short_name || undefined,
+                address_1: lastAction.data.address_1 || undefined,
+                address_2: lastAction.data.address_2 || undefined,
+                city: lastAction.data.city || undefined,
+                state: lastAction.data.state || undefined,
+                pincode: lastAction.data.pincode || undefined,
+                gst_no: lastAction.data.gst_no || undefined,
+                cin_no: lastAction.data.cin_no || undefined,
+                pan_no: lastAction.data.pan_no || undefined,
+                email_id: lastAction.data.email_id || undefined,
+                website: lastAction.data.website || undefined,
+                contact_person: lastAction.data.contact_person || undefined,
+                contact_no: lastAction.data.contact_no || undefined,
+                logo: lastAction.data.logo || undefined,
+                last_modified_user_id: "ADMIN",
+            });
+            toast({
+                title: "Undone",
+                description: "Changes have been reverted",
+            });
             setLastAction(null);
             loadCompanies();
         } catch (error: any) {
@@ -340,46 +313,24 @@ export default function CompanyMasterPage() {
         }
     };
 
-    const handleDelete = (company: Company) => {
-        setSelectedCompany(company);
-        setIsDeleteDialogOpen(true);
-    };
-
-    const confirmDelete = async () => {
-        if (isSubmittingRef.current) return;
-        if (!selectedCompany) return;
-        isSubmittingRef.current = true;
-        
-        // Store previous state for undo
-        const previousData = { ...selectedCompany };
-        
-        try {
-            await companyAPI.delete(selectedCompany.comp_id);
-            
-            // Store last action for undo
-            setLastAction({ type: 'delete', data: previousData });
-            
-            toast({
-                title: "Success",
-                description: "Company deleted successfully",
-                action: (
-                    <ToastAction altText="Undo" onClick={handleUndo}>
-                        Undo
-                    </ToastAction>
-                ),
-            });
-            setIsDeleteDialogOpen(false);
-            setSelectedCompany(null);
-            loadCompanies();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to delete company",
-                variant: "destructive",
-            });
-        } finally {
-            isSubmittingRef.current = false;
-        }
+    const handleCancel = (company: Company) => {
+        setCancelledCompanies(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(company.comp_id)) {
+                newSet.delete(company.comp_id);
+                toast({
+                    title: "Restored",
+                    description: `Company ${company.company_name} has been restored`,
+                });
+            } else {
+                newSet.add(company.comp_id);
+                toast({
+                    title: "Cancelled",
+                    description: `Company ${company.company_name} has been cancelled`,
+                });
+            }
+            return newSet;
+        });
     };
 
     return (
@@ -564,13 +515,15 @@ export default function CompanyMasterPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredCompanies.map((company, index) => (
+                                            filteredCompanies.map((company, index) => {
+                                                const isCancelled = cancelledCompanies.has(company.comp_id);
+                                                return (
                                                 <motion.tr
                                                     key={company.comp_id}
                                                     initial={{ opacity: 0, x: -20 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className="hover:bg-muted/30 transition-colors"
+                                                    className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
                                                 >
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-muted-foreground font-mono">{company.comp_id}</span>
@@ -634,6 +587,7 @@ export default function CompanyMasterPage() {
                                                                     handleEdit(company);
                                                                 }}
                                                                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                                disabled={isCancelled}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -642,16 +596,18 @@ export default function CompanyMasterPage() {
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleDelete(company);
+                                                                    handleCancel(company);
                                                                 }}
-                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                                title={isCancelled ? "Restore company" : "Cancel company"}
                                                             >
-                                                                <Trash2 className="w-4 h-4" />
+                                                                Cancel
                                                             </Button>
                                                         </div>
                                                     </td>
                                                 </motion.tr>
-                                            ))
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>
@@ -703,217 +659,228 @@ export default function CompanyMasterPage() {
                                     </button>
                                 </div>
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Company ID <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input
-                                                name="comp_id"
-                                                value={formData.comp_id}
-                                                onChange={handleInputChange}
-                                                placeholder="e.g., CORP, FACT"
-                                                required
-                                                maxLength={4}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Company Name <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input
-                                                name="company_name"
-                                                value={formData.company_name}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter company name"
-                                                required
-                                                maxLength={100}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Company Short Name
-                                            </label>
-                                            <Input
-                                                name="company_short_name"
-                                                value={formData.company_short_name}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter short name"
-                                                maxLength={50}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Address 1
-                                            </label>
-                                            <Input
-                                                name="address_1"
-                                                value={formData.address_1}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter address line 1"
-                                                maxLength={100}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Address 2
-                                            </label>
-                                            <Input
-                                                name="address_2"
-                                                value={formData.address_2}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter address line 2"
-                                                maxLength={100}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                City
-                                            </label>
-                                            <Input
-                                                name="city"
-                                                value={formData.city}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter city"
-                                                maxLength={50}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                State
-                                            </label>
-                                            <Input
-                                                name="state"
-                                                value={formData.state}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter state"
-                                                maxLength={50}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Pincode
-                                            </label>
-                                            <Input
-                                                name="pincode"
-                                                type="number"
-                                                value={formData.pincode}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter pincode"
-                                                maxLength={6}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                GST No.
-                                            </label>
-                                            <Input
-                                                name="gst_no"
-                                                value={formData.gst_no}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter GST number"
-                                                maxLength={15}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                CIN No.
-                                            </label>
-                                            <Input
-                                                name="cin_no"
-                                                value={formData.cin_no}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter CIN number"
-                                                maxLength={15}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                PAN No.
-                                            </label>
-                                            <Input
-                                                name="pan_no"
-                                                value={formData.pan_no}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter PAN number"
-                                                maxLength={15}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Email ID
-                                            </label>
-                                            <Input
-                                                name="email_id"
-                                                type="email"
-                                                value={formData.email_id}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter email address"
-                                                maxLength={50}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Website
-                                            </label>
-                                            <Input
-                                                name="website"
-                                                value={formData.website}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter website URL"
-                                                maxLength={50}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Contact Person
-                                            </label>
-                                            <Input
-                                                name="contact_person"
-                                                value={formData.contact_person}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter contact person name"
-                                                maxLength={50}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Contact No.
-                                            </label>
-                                            <Input
-                                                name="contact_no"
-                                                type="number"
-                                                value={formData.contact_no}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter contact number"
-                                                maxLength={10}
-                                            />
+                                    {/* Company Details Section */}
+                                    <div className="mb-6">
+                                        <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">Company Details</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Company ID <span className="text-red-500">*</span>
+                                                </label>
+                                                <Input
+                                                    name="comp_id"
+                                                    value={formData.comp_id}
+                                                    onChange={handleInputChange}
+                                                    placeholder="e.g., CORP, FACT"
+                                                    required
+                                                    maxLength={4}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Company Name <span className="text-red-500">*</span>
+                                                </label>
+                                                <Input
+                                                    name="company_name"
+                                                    value={formData.company_name}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter company name"
+                                                    required
+                                                    maxLength={100}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Company Short Name
+                                                </label>
+                                                <Input
+                                                    name="company_short_name"
+                                                    value={formData.company_short_name}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter short name"
+                                                    maxLength={50}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    GST No.
+                                                </label>
+                                                <Input
+                                                    name="gst_no"
+                                                    value={formData.gst_no}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter GST number"
+                                                    maxLength={15}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    CIN No.
+                                                </label>
+                                                <Input
+                                                    name="cin_no"
+                                                    value={formData.cin_no}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter CIN number"
+                                                    maxLength={15}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    PAN No.
+                                                </label>
+                                                <Input
+                                                    name="pan_no"
+                                                    value={formData.pan_no}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter PAN number"
+                                                    maxLength={15}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Email ID
+                                                </label>
+                                                <Input
+                                                    name="email_id"
+                                                    type="email"
+                                                    value={formData.email_id}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter email address"
+                                                    maxLength={50}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Website
+                                                </label>
+                                                <Input
+                                                    name="website"
+                                                    value={formData.website}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter website URL"
+                                                    maxLength={50}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Contact Person
+                                                </label>
+                                                <Input
+                                                    name="contact_person"
+                                                    value={formData.contact_person}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter contact person name"
+                                                    maxLength={50}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Contact No.
+                                                </label>
+                                                <Input
+                                                    name="contact_no"
+                                                    type="number"
+                                                    value={formData.contact_no}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter contact number"
+                                                    maxLength={10}
+                                                />
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Logo
+                                                </label>
+                                                <div className="flex items-center gap-4">
+                                                    <input
+                                                        ref={fileInputRef}
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={handleFileChange}
+                                                        className="hidden"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="flex items-center gap-2"
+                                                    >
+                                                        <Upload className="w-4 h-4" />
+                                                        Upload Logo
+                                                    </Button>
+                                                    {formData.logo && (
+                                                        <img src={formData.logo} alt="Logo preview" className="w-16 h-16 object-contain border border-border rounded" />
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
+
+                                    {/* Address Section */}
                                     <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Logo
-                                        </label>
-                                        <div className="flex items-center gap-4">
-                                            <input
-                                                ref={fileInputRef}
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleFileChange}
-                                                className="hidden"
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => fileInputRef.current?.click()}
-                                                className="flex items-center gap-2"
-                                            >
-                                                <Upload className="w-4 h-4" />
-                                                Upload Logo
-                                            </Button>
-                                            {formData.logo && (
-                                                <img src={formData.logo} alt="Logo preview" className="w-16 h-16 object-contain border border-border rounded" />
-                                            )}
+                                        <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">Address</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="md:col-span-2">
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Address 1
+                                                </label>
+                                                <Input
+                                                    name="address_1"
+                                                    value={formData.address_1}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter address line 1"
+                                                    maxLength={100}
+                                                />
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Address 2
+                                                </label>
+                                                <Input
+                                                    name="address_2"
+                                                    value={formData.address_2}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter address line 2"
+                                                    maxLength={100}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    City
+                                                </label>
+                                                <Input
+                                                    name="city"
+                                                    value={formData.city}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter city"
+                                                    maxLength={50}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    State
+                                                </label>
+                                                <Input
+                                                    name="state"
+                                                    value={formData.state}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter state"
+                                                    maxLength={50}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Pincode
+                                                </label>
+                                                <Input
+                                                    name="pincode"
+                                                    type="number"
+                                                    value={formData.pincode}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter pincode"
+                                                    maxLength={6}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
@@ -968,202 +935,213 @@ export default function CompanyMasterPage() {
                                     </button>
                                 </div>
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Company ID <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input
-                                                name="comp_id"
-                                                value={formData.comp_id}
-                                                onChange={handleInputChange}
-                                                required
-                                                disabled
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Company Name <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input
-                                                name="company_name"
-                                                value={formData.company_name}
-                                                onChange={handleInputChange}
-                                                required
-                                                maxLength={100}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Company Short Name
-                                            </label>
-                                            <Input
-                                                name="company_short_name"
-                                                value={formData.company_short_name}
-                                                onChange={handleInputChange}
-                                                maxLength={50}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Address 1
-                                            </label>
-                                            <Input
-                                                name="address_1"
-                                                value={formData.address_1}
-                                                onChange={handleInputChange}
-                                                maxLength={100}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Address 2
-                                            </label>
-                                            <Input
-                                                name="address_2"
-                                                value={formData.address_2}
-                                                onChange={handleInputChange}
-                                                maxLength={100}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                City
-                                            </label>
-                                            <Input
-                                                name="city"
-                                                value={formData.city}
-                                                onChange={handleInputChange}
-                                                maxLength={50}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                State
-                                            </label>
-                                            <Input
-                                                name="state"
-                                                value={formData.state}
-                                                onChange={handleInputChange}
-                                                maxLength={50}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Pincode
-                                            </label>
-                                            <Input
-                                                name="pincode"
-                                                type="number"
-                                                value={formData.pincode}
-                                                onChange={handleInputChange}
-                                                maxLength={6}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                GST No.
-                                            </label>
-                                            <Input
-                                                name="gst_no"
-                                                value={formData.gst_no}
-                                                onChange={handleInputChange}
-                                                maxLength={15}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                CIN No.
-                                            </label>
-                                            <Input
-                                                name="cin_no"
-                                                value={formData.cin_no}
-                                                onChange={handleInputChange}
-                                                maxLength={15}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                PAN No.
-                                            </label>
-                                            <Input
-                                                name="pan_no"
-                                                value={formData.pan_no}
-                                                onChange={handleInputChange}
-                                                maxLength={15}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Email ID
-                                            </label>
-                                            <Input
-                                                name="email_id"
-                                                type="email"
-                                                value={formData.email_id}
-                                                onChange={handleInputChange}
-                                                maxLength={50}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Website
-                                            </label>
-                                            <Input
-                                                name="website"
-                                                value={formData.website}
-                                                onChange={handleInputChange}
-                                                maxLength={50}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Contact Person
-                                            </label>
-                                            <Input
-                                                name="contact_person"
-                                                value={formData.contact_person}
-                                                onChange={handleInputChange}
-                                                maxLength={50}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Contact No.
-                                            </label>
-                                            <Input
-                                                name="contact_no"
-                                                type="number"
-                                                value={formData.contact_no}
-                                                onChange={handleInputChange}
-                                                maxLength={10}
-                                            />
+                                    {/* Company Details Section */}
+                                    <div className="mb-6">
+                                        <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">Company Details</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Company ID <span className="text-red-500">*</span>
+                                                </label>
+                                                <Input
+                                                    name="comp_id"
+                                                    value={formData.comp_id}
+                                                    onChange={handleInputChange}
+                                                    required
+                                                    disabled
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Company Name <span className="text-red-500">*</span>
+                                                </label>
+                                                <Input
+                                                    name="company_name"
+                                                    value={formData.company_name}
+                                                    onChange={handleInputChange}
+                                                    required
+                                                    maxLength={100}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Company Short Name
+                                                </label>
+                                                <Input
+                                                    name="company_short_name"
+                                                    value={formData.company_short_name}
+                                                    onChange={handleInputChange}
+                                                    maxLength={50}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    GST No.
+                                                </label>
+                                                <Input
+                                                    name="gst_no"
+                                                    value={formData.gst_no}
+                                                    onChange={handleInputChange}
+                                                    maxLength={15}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    CIN No.
+                                                </label>
+                                                <Input
+                                                    name="cin_no"
+                                                    value={formData.cin_no}
+                                                    onChange={handleInputChange}
+                                                    maxLength={15}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    PAN No.
+                                                </label>
+                                                <Input
+                                                    name="pan_no"
+                                                    value={formData.pan_no}
+                                                    onChange={handleInputChange}
+                                                    maxLength={15}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Email ID
+                                                </label>
+                                                <Input
+                                                    name="email_id"
+                                                    type="email"
+                                                    value={formData.email_id}
+                                                    onChange={handleInputChange}
+                                                    maxLength={50}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Website
+                                                </label>
+                                                <Input
+                                                    name="website"
+                                                    value={formData.website}
+                                                    onChange={handleInputChange}
+                                                    maxLength={50}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Contact Person
+                                                </label>
+                                                <Input
+                                                    name="contact_person"
+                                                    value={formData.contact_person}
+                                                    onChange={handleInputChange}
+                                                    maxLength={50}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Contact No.
+                                                </label>
+                                                <Input
+                                                    name="contact_no"
+                                                    type="number"
+                                                    value={formData.contact_no}
+                                                    onChange={handleInputChange}
+                                                    maxLength={10}
+                                                />
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Logo
+                                                </label>
+                                                <div className="flex items-center gap-4">
+                                                    <input
+                                                        ref={fileInputRef}
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={handleFileChange}
+                                                        className="hidden"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="flex items-center gap-2"
+                                                    >
+                                                        <Upload className="w-4 h-4" />
+                                                        Upload Logo
+                                                    </Button>
+                                                    {formData.logo && (
+                                                        <img src={formData.logo} alt="Logo preview" className="w-16 h-16 object-contain border border-border rounded" />
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
+
+                                    {/* Address Section */}
                                     <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Logo
-                                        </label>
-                                        <div className="flex items-center gap-4">
-                                            <input
-                                                ref={fileInputRef}
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleFileChange}
-                                                className="hidden"
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => fileInputRef.current?.click()}
-                                                className="flex items-center gap-2"
-                                            >
-                                                <Upload className="w-4 h-4" />
-                                                Upload Logo
-                                            </Button>
-                                            {formData.logo && (
-                                                <img src={formData.logo} alt="Logo preview" className="w-16 h-16 object-contain border border-border rounded" />
-                                            )}
+                                        <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">Address</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="md:col-span-2">
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Address 1
+                                                </label>
+                                                <Input
+                                                    name="address_1"
+                                                    value={formData.address_1}
+                                                    onChange={handleInputChange}
+                                                    maxLength={100}
+                                                />
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Address 2
+                                                </label>
+                                                <Input
+                                                    name="address_2"
+                                                    value={formData.address_2}
+                                                    onChange={handleInputChange}
+                                                    maxLength={100}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    City
+                                                </label>
+                                                <Input
+                                                    name="city"
+                                                    value={formData.city}
+                                                    onChange={handleInputChange}
+                                                    maxLength={50}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    State
+                                                </label>
+                                                <Input
+                                                    name="state"
+                                                    value={formData.state}
+                                                    onChange={handleInputChange}
+                                                    maxLength={50}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Pincode
+                                                </label>
+                                                <Input
+                                                    name="pincode"
+                                                    type="number"
+                                                    value={formData.pincode}
+                                                    onChange={handleInputChange}
+                                                    maxLength={6}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
@@ -1190,61 +1168,6 @@ export default function CompanyMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Delete Dialog */}
-            <AnimatePresence>
-                {isDeleteDialogOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsDeleteDialogOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
-                                    <button
-                                        onClick={() => setIsDeleteDialogOpen(false)}
-                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                </div>
-                                <div className="p-6">
-                                    <p className="text-foreground mb-4">
-                                        Are you sure you want to delete company <strong>{selectedCompany?.company_name}</strong> ({selectedCompany?.comp_id})?
-                                    </p>
-                                    <p className="text-sm text-muted-foreground mb-6">
-                                        This action cannot be undone.
-                                    </p>
-                                    <div className="flex items-center justify-end gap-4">
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => setIsDeleteDialogOpen(false)}
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
-                                            onClick={confirmDelete}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
-                                            disabled={isSubmittingRef.current}
-                                        >
-                                            Delete
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
         </div>
     );
 }

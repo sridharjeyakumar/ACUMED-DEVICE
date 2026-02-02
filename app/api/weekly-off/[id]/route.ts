@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/server/db/connection';
-import EmployeeGradeMaster from '@/server/models/EmployeeGradeMaster';
+import WeeklyOffMaster from '@/server/models/WeeklyOffMaster';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,7 +33,7 @@ async function ensureDbConnection() {
   }
 }
 
-// GET /api/employee-grades/[id] - Get employee grade by ID
+// GET /api/weekly-off/[id] - Get weekly off record by ID
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -41,21 +41,21 @@ export async function GET(
   try {
     const { id } = await params;
     await ensureDbConnection();
-    const grade = await EmployeeGradeMaster.findOne({ grade_id: id });
-    if (!grade) {
-      return NextResponse.json({ error: 'Employee grade not found' }, { status: 404 });
+    const weeklyOff = await WeeklyOffMaster.findById(id);
+    if (!weeklyOff) {
+      return NextResponse.json({ error: 'Weekly off record not found' }, { status: 404 });
     }
-    return NextResponse.json(grade);
+    return NextResponse.json(weeklyOff);
   } catch (error: any) {
-    console.error('Error fetching employee grade:', error);
+    console.error('Error fetching weekly off record:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch employee grade' },
+      { error: error.message || 'Failed to fetch weekly off record' },
       { status: 500 }
     );
   }
 }
 
-// PUT /api/employee-grades/[id] - Update employee grade
+// PUT /api/weekly-off/[id] - Update weekly off record
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -66,21 +66,22 @@ export async function PUT(
     const body = await request.json();
     
     const updateData: any = {};
-    if (body.grade_name !== undefined) updateData.grade_name = body.grade_name;
+    if (body.day_of_week !== undefined) updateData.day_of_week = parseInt(body.day_of_week);
+    if (body.week_of_month !== undefined) updateData.week_of_month = body.week_of_month ? parseInt(body.week_of_month) : undefined;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
     
-    const grade = await EmployeeGradeMaster.findOneAndUpdate(
-      { grade_id: id },
+    const weeklyOff = await WeeklyOffMaster.findByIdAndUpdate(
+      id,
       updateData,
       { new: true, runValidators: true }
     );
-    if (!grade) {
-      return NextResponse.json({ error: 'Employee grade not found' }, { status: 404 });
+    if (!weeklyOff) {
+      return NextResponse.json({ error: 'Weekly off record not found' }, { status: 404 });
     }
-    return NextResponse.json(grade);
+    return NextResponse.json(weeklyOff);
   } catch (error: any) {
-    console.error('Error updating employee grade:', error);
+    console.error('Error updating weekly off record:', error);
     if (error.name === 'ValidationError') {
       return NextResponse.json(
         { error: 'Validation failed', details: error.message },
@@ -88,13 +89,13 @@ export async function PUT(
       );
     }
     return NextResponse.json(
-      { error: error.message || 'Failed to update employee grade' },
+      { error: error.message || 'Failed to update weekly off record' },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/employee-grades/[id] - Delete employee grade
+// DELETE /api/weekly-off/[id] - Delete weekly off record
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -102,18 +103,17 @@ export async function DELETE(
   try {
     const { id } = await params;
     await ensureDbConnection();
-    const grade = await EmployeeGradeMaster.findOneAndDelete({ grade_id: id });
-    if (!grade) {
-      return NextResponse.json({ error: 'Employee grade not found' }, { status: 404 });
+    const weeklyOff = await WeeklyOffMaster.findByIdAndDelete(id);
+    if (!weeklyOff) {
+      return NextResponse.json({ error: 'Weekly off record not found' }, { status: 404 });
     }
-    return NextResponse.json({ message: 'Employee grade deleted successfully' });
+    return NextResponse.json({ message: 'Weekly off record deleted successfully' });
   } catch (error: any) {
-    console.error('Error deleting employee grade:', error);
+    console.error('Error deleting weekly off record:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to delete employee grade' },
+      { error: error.message || 'Failed to delete weekly off record' },
       { status: 500 }
     );
   }
 }
-
 

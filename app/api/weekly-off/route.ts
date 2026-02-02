@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/server/db/connection';
-import DepartmentMaster from '@/server/models/DepartmentMaster';
+import WeeklyOffMaster from '@/server/models/WeeklyOffMaster';
 
 let dbConnected = false;
 
@@ -29,39 +29,40 @@ async function ensureDbConnection() {
   }
 }
 
-// GET /api/departments - Get all departments
+// GET /api/weekly-off - Get all weekly off records
 export async function GET() {
   try {
     await ensureDbConnection();
-    const departments = await DepartmentMaster.find().sort({ dept_id: 1 });
-    return NextResponse.json(departments);
+    const weeklyOffs = await WeeklyOffMaster.find().sort({ week_off_id: 1 });
+    return NextResponse.json(weeklyOffs);
   } catch (error: any) {
-    console.error('Error fetching departments:', error);
+    console.error('Error fetching weekly off records:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch departments' },
+      { error: error.message || 'Failed to fetch weekly off records' },
       { status: 500 }
     );
   }
 }
 
-// POST /api/departments - Create new department
+// POST /api/weekly-off - Create new weekly off record
 export async function POST(request: NextRequest) {
   try {
     await ensureDbConnection();
     const body = await request.json();
-    const department = new DepartmentMaster({ 
-      dept_id: body.dept_id,
-      department_name: body.department_name,
+    const weeklyOff = new WeeklyOffMaster({ 
+      week_off_id: parseInt(body.week_off_id),
+      day_of_week: parseInt(body.day_of_week),
+      week_of_month: body.week_of_month ? parseInt(body.week_of_month) : undefined,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
     });
-    await department.save();
-    return NextResponse.json(department, { status: 201 });
+    await weeklyOff.save();
+    return NextResponse.json(weeklyOff, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating department:', error);
+    console.error('Error creating weekly off record:', error);
     if (error.code === 11000) {
       return NextResponse.json(
-        { error: 'Department ID already exists' },
+        { error: 'Weekly Off ID already exists' },
         { status: 400 }
       );
     }
@@ -72,10 +73,9 @@ export async function POST(request: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: error.message || 'Failed to create department' },
+      { error: error.message || 'Failed to create weekly off record' },
       { status: 500 }
     );
   }
 }
-
 

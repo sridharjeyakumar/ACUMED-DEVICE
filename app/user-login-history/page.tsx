@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, Clock } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Clock } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { userLoginHistoryAPI } from "@/services/api";
@@ -61,12 +61,12 @@ export default function UserLoginHistoryPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedHistory, setSelectedHistory] = useState<LoginHistory | null>(null);
     const [loginHistories, setLoginHistories] = useState<LoginHistory[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterUser, setFilterUser] = useState<string>("all");
-    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: LoginHistory } | null>(null);
+    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: LoginHistory } | null>(null);
+    const [cancelledHistories, setCancelledHistories] = useState<Set<string>>(new Set());
     const [formData, setFormData] = useState({
         user_id: "",
         login_date: "",
@@ -211,19 +211,6 @@ export default function UserLoginHistoryPage() {
                     title: "Undone",
                     description: "Changes have been reverted",
                 });
-            } else if (lastAction.type === 'delete') {
-                // Restore deleted history
-                await userLoginHistoryAPI.create({
-                    user_id: lastAction.data.user_id,
-                    Date_login_Date: lastAction.data.login_date,
-                    Time_login_Time: lastAction.data.login_time,
-                    Date_Logout_Date: lastAction.data.logout_date || undefined,
-                    Time_Logout_Time: lastAction.data.logout_time || undefined,
-                });
-                toast({
-                    title: "Undone",
-                    description: "Login history has been restored",
-                });
             }
             setLastAction(null);
             loadLoginHistories();
@@ -236,42 +223,26 @@ export default function UserLoginHistoryPage() {
         }
     };
 
-    const handleDelete = (history: LoginHistory) => {
-        setSelectedHistory(history);
-        setIsDeleteDialogOpen(true);
-    };
 
-    const confirmDelete = async () => {
-        if (!selectedHistory || !selectedHistory._id) return;
-        
-        // Store previous state for undo
-        const previousData = { ...selectedHistory };
-        
-        try {
-            await userLoginHistoryAPI.delete(selectedHistory._id);
-            
-            // Store last action for undo
-            setLastAction({ type: 'delete', data: previousData });
-            
-            toast({
-                title: "Success",
-                description: "Login history deleted successfully",
-                action: (
-                    <ToastAction altText="Undo" onClick={handleUndo}>
-                        Undo
-                    </ToastAction>
-                ),
-            });
-            setIsDeleteDialogOpen(false);
-            setSelectedHistory(null);
-            loadLoginHistories();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to delete login history",
-                variant: "destructive",
-            });
-        }
+    const handleCancel = (history: LoginHistory) => {
+        const historyKey = history._id || `${history.user_id}-${history.login_date}-${history.login_time}`;
+        setCancelledHistories(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(historyKey)) {
+                newSet.delete(historyKey);
+                toast({
+                    title: "Restored",
+                    description: `Login history for user ${history.user_id} has been restored`,
+                });
+            } else {
+                newSet.add(historyKey);
+                toast({
+                    title: "Cancelled",
+                    description: `Login history for user ${history.user_id} has been cancelled`,
+                });
+            }
+            return newSet;
+        });
     };
 
     return (
@@ -409,13 +380,16 @@ export default function UserLoginHistoryPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredHistories.map((history, index) => (
+                                            filteredHistories.map((history, index) => {
+                                                const historyKey = history._id || `${history.user_id}-${history.login_date}-${history.login_time}`;
+                                                const isCancelled = cancelledHistories.has(historyKey);
+                                                return (
                                             <motion.tr
-                                                key={history._id || `${history.user_id}-${history.login_date}-${history.login_time}`}
+                                                key={historyKey}
                                                 initial={{ opacity: 0, x: -20 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors"
+                                                className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
                                             >
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm font-mono text-foreground">{history.user_id}</span>
@@ -442,6 +416,7 @@ export default function UserLoginHistoryPage() {
                                                                 handleEdit(history);
                                                             }}
                                                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            disabled={isCancelled}
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -450,16 +425,19 @@ export default function UserLoginHistoryPage() {
                                                             size="sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDelete(history);
+                                                                handleCancel(history);
                                                             }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={isCancelled ? "Restore history" : "Cancel history"}
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            Cancel
                                                         </Button>
                                                     </div>
                                                 </td>
                                             </motion.tr>
-                                        )))}
+                                                );
+                                            })
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -579,30 +557,6 @@ export default function UserLoginHistoryPage() {
                 )}
             </AnimatePresence>
 
-            {/* Delete Dialog */}
-            <AnimatePresence>
-                {isDeleteDialogOpen && (
-                    <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => setIsDeleteDialogOpen(false)} />
-                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
-                                    <button onClick={() => setIsDeleteDialogOpen(false)} className="text-white hover:bg-red-700 rounded-lg p-2"><X className="w-5 h-5" /></button>
-                                </div>
-                                <div className="p-6">
-                                    <p className="text-foreground mb-4">Are you sure you want to delete login record for user <strong>{selectedHistory?.user_id}</strong>?</p>
-                                    <p className="text-sm text-muted-foreground mb-6">This action cannot be undone.</p>
-                                    <div className="flex items-center justify-end gap-4">
-                                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-                                        <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
         </div>
     );
 }

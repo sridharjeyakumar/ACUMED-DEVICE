@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, Key } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Key } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { menuAccessAPI } from "@/services/api";
@@ -45,14 +45,14 @@ export default function MenuAccessMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedAccess, setSelectedAccess] = useState<MenuAccess | null>(null);
     const [menuAccesses, setMenuAccesses] = useState<MenuAccess[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterRole, setFilterRole] = useState<string>("all");
     const [filterMenu, setFilterMenu] = useState<string>("all");
     const [filterAccess, setFilterAccess] = useState<string>("all");
-    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: MenuAccess } | null>(null);
+    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: MenuAccess } | null>(null);
+    const [cancelledAccesses, setCancelledAccesses] = useState<Set<string>>(new Set());
     const [formData, setFormData] = useState({
         rold_id: "",
         menu_id: "",
@@ -196,21 +196,6 @@ export default function MenuAccessMasterPage() {
                     title: "Undone",
                     description: "Changes have been reverted",
                 });
-            } else if (lastAction.type === 'delete') {
-                // Restore deleted access
-                await menuAccessAPI.create({
-                    rold_id: lastAction.data.rold_id,
-                    menu_id: lastAction.data.menu_id,
-                    access: lastAction.data.access,
-                    can_add: lastAction.data.can_add,
-                    can_edit: lastAction.data.can_edit,
-                    can_view: lastAction.data.can_view,
-                    can_cancel: lastAction.data.can_cancel,
-                });
-                toast({
-                    title: "Undone",
-                    description: "Menu access has been restored",
-                });
             }
             setLastAction(null);
             loadMenuAccesses();
@@ -223,42 +208,26 @@ export default function MenuAccessMasterPage() {
         }
     };
 
-    const handleDelete = (access: MenuAccess) => {
-        setSelectedAccess(access);
-        setIsDeleteDialogOpen(true);
-    };
 
-    const confirmDelete = async () => {
-        if (!selectedAccess) return;
-        
-        // Store previous state for undo
-        const previousData = { ...selectedAccess };
-        
-        try {
-            await menuAccessAPI.delete(selectedAccess.rold_id, selectedAccess.menu_id);
-            
-            // Store last action for undo
-            setLastAction({ type: 'delete', data: previousData });
-            
-            toast({
-                title: "Success",
-                description: "Menu access deleted successfully",
-                action: (
-                    <ToastAction altText="Undo" onClick={handleUndo}>
-                        Undo
-                    </ToastAction>
-                ),
-            });
-            setIsDeleteDialogOpen(false);
-            setSelectedAccess(null);
-            loadMenuAccesses();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to delete menu access",
-                variant: "destructive",
-            });
-        }
+    const handleCancel = (access: MenuAccess) => {
+        const accessKey = `${access.rold_id}-${access.menu_id}`;
+        setCancelledAccesses(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(accessKey)) {
+                newSet.delete(accessKey);
+                toast({
+                    title: "Restored",
+                    description: `Menu access for Role ${access.rold_id} - Menu ${access.menu_id} has been restored`,
+                });
+            } else {
+                newSet.add(accessKey);
+                toast({
+                    title: "Cancelled",
+                    description: `Menu access for Role ${access.rold_id} - Menu ${access.menu_id} has been cancelled`,
+                });
+            }
+            return newSet;
+        });
     };
 
     return (
@@ -471,13 +440,16 @@ export default function MenuAccessMasterPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredAccesses.map((access, index) => (
+                                            filteredAccesses.map((access, index) => {
+                                                const accessKey = `${access.rold_id}-${access.menu_id}`;
+                                                const isCancelled = cancelledAccesses.has(accessKey);
+                                                return (
                                             <motion.tr
-                                                key={`${access.rold_id}-${access.menu_id}`}
+                                                key={accessKey}
                                                 initial={{ opacity: 0, x: -20 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors"
+                                                className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
                                             >
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm font-mono text-foreground">{access.rold_id}</span>
@@ -522,6 +494,7 @@ export default function MenuAccessMasterPage() {
                                                                 handleEdit(access);
                                                             }}
                                                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            disabled={isCancelled}
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -530,16 +503,19 @@ export default function MenuAccessMasterPage() {
                                                             size="sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDelete(access);
+                                                                handleCancel(access);
                                                             }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={isCancelled ? "Restore access" : "Cancel access"}
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            Cancel
                                                         </Button>
                                                     </div>
                                                 </td>
                                             </motion.tr>
-                                        )))}
+                                                );
+                                            })
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -677,30 +653,6 @@ export default function MenuAccessMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Delete Dialog */}
-            <AnimatePresence>
-                {isDeleteDialogOpen && (
-                    <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => setIsDeleteDialogOpen(false)} />
-                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
-                                    <button onClick={() => setIsDeleteDialogOpen(false)} className="text-white hover:bg-red-700 rounded-lg p-2"><X className="w-5 h-5" /></button>
-                                </div>
-                                <div className="p-6">
-                                    <p className="text-foreground mb-4">Are you sure you want to delete access for Role <strong>{selectedAccess?.rold_id}</strong> - Menu <strong>{selectedAccess?.menu_id}</strong>?</p>
-                                    <p className="text-sm text-muted-foreground mb-6">This action cannot be undone.</p>
-                                    <div className="flex items-center justify-end gap-4">
-                                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-                                        <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
         </div>
     );
 }

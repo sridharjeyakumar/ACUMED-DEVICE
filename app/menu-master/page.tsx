@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, Menu as MenuIcon } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Menu as MenuIcon } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { menuAPI } from "@/services/api";
@@ -41,13 +41,13 @@ export default function MenuMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
     const [menus, setMenus] = useState<Menu[]>([]);
     const [loading, setLoading] = useState(true);
     const isSubmittingRef = useRef(false);
-    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: Menu } | null>(null);
+    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Menu } | null>(null);
     const [filterActive, setFilterActive] = useState<string>("all");
+    const [cancelledMenus, setCancelledMenus] = useState<Set<string>>(new Set());
     const [formData, setFormData] = useState({
         menu_id: "",
         menu_desc: "",
@@ -210,59 +210,6 @@ export default function MenuMasterPage() {
         }
     };
 
-    const handleDelete = (menu: Menu) => {
-        setSelectedMenu(menu);
-        setIsDeleteDialogOpen(true);
-    };
-
-    const confirmDelete = async () => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:191',message:'confirmDelete called',data:{selectedMenuId:selectedMenu?.menu_id,isSubmitting:isSubmittingRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3,H4'})}).catch(()=>{});
-        // #endregion
-        if (isSubmittingRef.current) return;
-        if (!selectedMenu) return;
-        isSubmittingRef.current = true;
-        
-        // Store previous state for undo
-        const previousData = { ...selectedMenu };
-        
-        try {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:196',message:'Before menuAPI.delete',data:{id:selectedMenu.menu_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
-            // #endregion
-            await menuAPI.delete(selectedMenu.menu_id);
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:198',message:'After menuAPI.delete success',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
-            // #endregion
-            
-            // Store last action for undo
-            setLastAction({ type: 'delete', data: previousData });
-            
-            toast({
-                title: "Success",
-                description: "Menu deleted successfully",
-                action: (
-                    <ToastAction altText="Undo" onClick={handleUndo}>
-                        Undo
-                    </ToastAction>
-                ),
-            });
-            setIsDeleteDialogOpen(false);
-            setSelectedMenu(null);
-            loadMenus();
-        } catch (error: any) {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:208',message:'confirmDelete error',data:{error:error.message,errorName:error.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
-            // #endregion
-            toast({
-                title: "Error",
-                description: error.message || "Failed to delete menu",
-                variant: "destructive",
-            });
-        } finally {
-            isSubmittingRef.current = false;
-        }
-    };
     
     const handleUndo = async () => {
         if (!lastAction) return;
@@ -278,17 +225,6 @@ export default function MenuMasterPage() {
                     title: "Undone",
                     description: "Changes have been reverted",
                 });
-            } else if (lastAction.type === 'delete') {
-                // Restore deleted menu
-                await menuAPI.create({
-                    menu_id: lastAction.data.menu_id,
-                    menu_desc: lastAction.data.menu_desc,
-                    active: lastAction.data.active,
-                });
-                toast({
-                    title: "Undone",
-                    description: "Menu has been restored",
-                });
             }
             setLastAction(null);
             loadMenus();
@@ -299,6 +235,26 @@ export default function MenuMasterPage() {
                 variant: "destructive",
             });
         }
+    };
+
+    const handleCancel = (menu: Menu) => {
+        setCancelledMenus(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(menu.menu_id)) {
+                newSet.delete(menu.menu_id);
+                toast({
+                    title: "Restored",
+                    description: `Menu ${menu.menu_desc} has been restored`,
+                });
+            } else {
+                newSet.add(menu.menu_id);
+                toast({
+                    title: "Cancelled",
+                    description: `Menu ${menu.menu_desc} has been cancelled`,
+                });
+            }
+            return newSet;
+        });
     };
 
     return (
@@ -456,13 +412,15 @@ export default function MenuMasterPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredMenus.map((menu, index) => (
+                                            filteredMenus.map((menu, index) => {
+                                                const isCancelled = cancelledMenus.has(menu.menu_id);
+                                                return (
                                             <motion.tr
                                                 key={menu.menu_id}
                                                 initial={{ opacity: 0, x: -20 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors"
+                                                className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
                                             >
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-muted-foreground font-mono">
@@ -503,6 +461,7 @@ export default function MenuMasterPage() {
                                                                 handleEdit(menu);
                                                             }}
                                                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            disabled={isCancelled}
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -511,16 +470,19 @@ export default function MenuMasterPage() {
                                                             size="sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDelete(menu);
+                                                                handleCancel(menu);
                                                             }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={isCancelled ? "Restore menu" : "Cancel menu"}
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            Cancel
                                                         </Button>
                                                     </div>
                                                 </td>
                                             </motion.tr>
-                                        )))}
+                                                );
+                                            })
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -736,61 +698,6 @@ export default function MenuMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Delete Dialog */}
-            <AnimatePresence>
-                {isDeleteDialogOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsDeleteDialogOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
-                                    <button
-                                        onClick={() => setIsDeleteDialogOpen(false)}
-                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                </div>
-                                <div className="p-6">
-                                    <p className="text-foreground mb-4">
-                                        Are you sure you want to delete menu <strong>{selectedMenu?.menu_desc}</strong> ({selectedMenu?.menu_id})?
-                                    </p>
-                                    <p className="text-sm text-muted-foreground mb-6">
-                                        This action cannot be undone.
-                                    </p>
-                                    <div className="flex items-center justify-end gap-4">
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => setIsDeleteDialogOpen(false)}
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
-                                            onClick={confirmDelete}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
-                                            disabled={isSubmittingRef.current}
-                                        >
-                                            Delete
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
         </div>
     );
 }

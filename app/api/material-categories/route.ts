@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/server/db/connection';
-import DepartmentMaster from '@/server/models/DepartmentMaster';
+import MaterialCategoryMaster from '@/server/models/MaterialCategoryMaster';
 
 let dbConnected = false;
 
@@ -29,39 +29,39 @@ async function ensureDbConnection() {
   }
 }
 
-// GET /api/departments - Get all departments
+// GET /api/material-categories - Get all material categories
 export async function GET() {
   try {
     await ensureDbConnection();
-    const departments = await DepartmentMaster.find().sort({ dept_id: 1 });
-    return NextResponse.json(departments);
+    const categories = await MaterialCategoryMaster.find().sort({ material_category_id: 1 });
+    return NextResponse.json(categories);
   } catch (error: any) {
-    console.error('Error fetching departments:', error);
+    console.error('Error fetching material categories:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch departments' },
+      { error: error.message || 'Failed to fetch material categories' },
       { status: 500 }
     );
   }
 }
 
-// POST /api/departments - Create new department
+// POST /api/material-categories - Create new material category
 export async function POST(request: NextRequest) {
   try {
     await ensureDbConnection();
     const body = await request.json();
-    const department = new DepartmentMaster({ 
-      dept_id: body.dept_id,
-      department_name: body.department_name,
+    const category = new MaterialCategoryMaster({ 
+      material_category_id: body.material_category_id,
+      material_category_name: body.material_category_name,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
     });
-    await department.save();
-    return NextResponse.json(department, { status: 201 });
+    await category.save();
+    return NextResponse.json(category, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating department:', error);
+    console.error('Error creating material category:', error);
     if (error.code === 11000) {
       return NextResponse.json(
-        { error: 'Department ID already exists' },
+        { error: 'Material Category ID already exists' },
         { status: 400 }
       );
     }
@@ -72,10 +72,9 @@ export async function POST(request: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: error.message || 'Failed to create department' },
+      { error: error.message || 'Failed to create material category' },
       { status: 500 }
     );
   }
 }
-
 

@@ -29,3 +29,15 @@ export type { IDepartmentMaster } from './DepartmentMaster';
 export { default as EmployeeGradeMaster } from './EmployeeGradeMaster';
 export type { IEmployeeGradeMaster } from './EmployeeGradeMaster';
 
+export { default as ProductCategoryMaster } from './ProductCategoryMaster';
+export type { IProductCategoryMaster } from './ProductCategoryMaster';
+
+export { default as MaterialCategoryMaster } from './MaterialCategoryMaster';
+export type { IMaterialCategoryMaster } from './MaterialCategoryMaster';
+
+export { default as HolidaysMaster } from './HolidaysMaster';
+export type { IHolidaysMaster } from './HolidaysMaster';
+
+export { default as WeeklyOffMaster } from './WeeklyOffMaster';
+export type { IWeeklyOffMaster } from './WeeklyOffMaster';
+

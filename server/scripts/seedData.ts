@@ -14,6 +14,10 @@ import ProductStatusMaster from '../models/ProductStatusMaster';
 import MaterialStatusMaster from '../models/MaterialStatusMaster';
 import DepartmentMaster from '../models/DepartmentMaster';
 import EmployeeGradeMaster from '../models/EmployeeGradeMaster';
+import ProductCategoryMaster from '../models/ProductCategoryMaster';
+import MaterialCategoryMaster from '../models/MaterialCategoryMaster';
+import HolidaysMaster from '../models/HolidaysMaster';
+import WeeklyOffMaster from '../models/WeeklyOffMaster';
 import bcrypt from 'bcryptjs';
 
 async function seedData() {
@@ -33,6 +37,10 @@ async function seedData() {
     await MaterialStatusMaster.deleteMany({});
     await DepartmentMaster.deleteMany({});
     await EmployeeGradeMaster.deleteMany({});
+    await ProductCategoryMaster.deleteMany({});
+    await MaterialCategoryMaster.deleteMany({});
+    await HolidaysMaster.deleteMany({});
+    await WeeklyOffMaster.deleteMany({});
     console.log('Cleared existing data');
 
     const currentDate = new Date();
@@ -580,6 +588,134 @@ async function seedData() {
     await EmployeeGradeMaster.insertMany(employeeGradeData);
     console.log(`Inserted ${employeeGradeData.length} employee grade records`);
 
+    // Seed Product Category Master - Based on image data
+    const productCategoryData = [
+      {
+        product_category_id: 'P01',
+        product_category_name: 'Sterile Cleansing Wipes',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        product_category_id: 'P02',
+        product_category_name: 'Wet Wipes',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+    ];
+
+    await ProductCategoryMaster.insertMany(productCategoryData);
+    console.log(`Inserted ${productCategoryData.length} product category records`);
+
+    // Seed Material Category Master - Based on image data
+    const materialCategoryData = [
+      {
+        material_category_id: 'M01',
+        material_category_name: 'Fabric',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        material_category_id: 'M02',
+        material_category_name: 'Laminate',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        material_category_id: 'M03',
+        material_category_name: 'Packing',
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+    ];
+
+    await MaterialCategoryMaster.insertMany(materialCategoryData);
+    console.log(`Inserted ${materialCategoryData.length} material category records`);
+
+    // Seed Holidays Master - Based on image data
+    const holidaysData = [
+      {
+        date: new Date('2026-01-01'),
+        remarks: 'New Year',
+        year: 2026,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        date: new Date('2026-01-15'),
+        remarks: 'Pongal',
+        year: 2026,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        date: new Date('2026-01-26'),
+        remarks: 'Republic Day',
+        year: 2026,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        date: new Date('2026-04-14'),
+        remarks: 'Tamil New Year',
+        year: 2026,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        date: new Date('2026-05-01'),
+        remarks: 'May Day',
+        year: 2026,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        date: new Date('2026-09-05'),
+        remarks: 'Ganesh Chathurthi',
+        year: 2026,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        date: new Date('2026-11-05'),
+        remarks: 'Diwali',
+        year: 2026,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        date: new Date('2026-12-25'),
+        remarks: 'Christmas',
+        year: 2026,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+    ];
+
+    await HolidaysMaster.insertMany(holidaysData);
+    console.log(`Inserted ${holidaysData.length} holiday records`);
+
+    // Seed Weekly Off Master - Based on image data
+    const weeklyOffData = [
+      {
+        week_off_id: 1,
+        day_of_week: 6, // Saturday
+        week_of_month: undefined,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+      {
+        week_off_id: 2,
+        day_of_week: 7, // Sunday
+        week_of_month: undefined,
+        last_modified_user_id: 'ADMIN',
+        last_modified_date_time: currentDate,
+      },
+    ];
+
+    await WeeklyOffMaster.insertMany(weeklyOffData);
+    console.log(`Inserted ${weeklyOffData.length} weekly off records`);
+
     console.log('✅ Database seeded successfully!');
     console.log('\n📊 Summary:');
     console.log(`   - ${menuData.length} Menu Master records`);
@@ -591,6 +727,10 @@ async function seedData() {
     console.log(`   - ${materialStatusData.length} Material Status Master records`);
     console.log(`   - ${departmentData.length} Department Master records`);
     console.log(`   - ${employeeGradeData.length} Employee Grade Master records`);
+    console.log(`   - ${productCategoryData.length} Product Category Master records`);
+    console.log(`   - ${materialCategoryData.length} Material Category Master records`);
+    console.log(`   - ${holidaysData.length} Holidays Master records`);
+    console.log(`   - ${weeklyOffData.length} Weekly Off Master records`);
     console.log('\n🔑 Default password for all users: password123');
     process.exit(0);
   } catch (error: any) {

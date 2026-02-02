@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, User } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, User } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { userAPI } from "@/services/api";
@@ -55,13 +55,13 @@ export default function UserMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterActive, setFilterActive] = useState<string>("all");
     const [filterRole, setFilterRole] = useState<string>("all");
-    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: User } | null>(null);
+    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: User } | null>(null);
+    const [cancelledUsers, setCancelledUsers] = useState<Set<string>>(new Set());
     const [formData, setFormData] = useState({
         user_id: "",
         employee_id: "",
@@ -212,30 +212,20 @@ export default function UserMasterPage() {
         if (!lastAction) return;
         
         try {
-            if (lastAction.type === 'edit') {
-                // Restore previous data (note: password cannot be restored, so we skip it)
-                const updateData: any = {
-                    employee_id: lastAction.data.employee_id,
-                    role_id: lastAction.data.role_id,
-                    active: lastAction.data.active,
-                };
-                if (lastAction.data.password_expiry_days) {
-                    updateData.N_password_expiry_days = lastAction.data.password_expiry_days;
-                }
-                await userAPI.update(lastAction.data.user_id, updateData);
-                toast({
-                    title: "Undone",
-                    description: "Changes have been reverted",
-                });
-            } else if (lastAction.type === 'delete') {
-                // Note: User deletion undo would require password, which we don't store
-                // So we'll show an error message
-                toast({
-                    title: "Cannot Undo",
-                    description: "User deletion cannot be undone (password required)",
-                    variant: "destructive",
-                });
+            // Restore previous data (note: password cannot be restored, so we skip it)
+            const updateData: any = {
+                employee_id: lastAction.data.employee_id,
+                role_id: lastAction.data.role_id,
+                active: lastAction.data.active,
+            };
+            if (lastAction.data.password_expiry_days) {
+                updateData.N_password_expiry_days = lastAction.data.password_expiry_days;
             }
+            await userAPI.update(lastAction.data.user_id, updateData);
+            toast({
+                title: "Undone",
+                description: "Changes have been reverted",
+            });
             setLastAction(null);
             loadUsers();
         } catch (error: any) {
@@ -247,42 +237,24 @@ export default function UserMasterPage() {
         }
     };
 
-    const handleDelete = (user: User) => {
-        setSelectedUser(user);
-        setIsDeleteDialogOpen(true);
-    };
-
-    const confirmDelete = async () => {
-        if (!selectedUser) return;
-        
-        // Store previous state for undo
-        const previousData = { ...selectedUser };
-        
-        try {
-            await userAPI.delete(selectedUser.user_id);
-            
-            // Store last action for undo
-            setLastAction({ type: 'delete', data: previousData });
-            
-            toast({
-                title: "Success",
-                description: "User deleted successfully",
-                action: (
-                    <ToastAction altText="Undo" onClick={handleUndo}>
-                        Undo
-                    </ToastAction>
-                ),
-            });
-            setIsDeleteDialogOpen(false);
-            setSelectedUser(null);
-            loadUsers();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to delete user",
-                variant: "destructive",
-            });
-        }
+    const handleCancel = (user: User) => {
+        setCancelledUsers(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(user.user_id)) {
+                newSet.delete(user.user_id);
+                toast({
+                    title: "Restored",
+                    description: `User ${user.user_id} has been restored`,
+                });
+            } else {
+                newSet.add(user.user_id);
+                toast({
+                    title: "Cancelled",
+                    description: `User ${user.user_id} has been cancelled`,
+                });
+            }
+            return newSet;
+        });
     };
 
     return (
@@ -466,13 +438,15 @@ export default function UserMasterPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredUsers.map((user, index) => (
+                                            filteredUsers.map((user, index) => {
+                                                const isCancelled = cancelledUsers.has(user.user_id);
+                                                return (
                                             <motion.tr
                                                 key={user.user_id}
                                                 initial={{ opacity: 0, x: -20 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors"
+                                                className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
                                             >
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm font-mono text-foreground">{user.user_id}</span>
@@ -515,6 +489,7 @@ export default function UserMasterPage() {
                                                                 handleEdit(user);
                                                             }}
                                                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            disabled={isCancelled}
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -523,16 +498,19 @@ export default function UserMasterPage() {
                                                             size="sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDelete(user);
+                                                                handleCancel(user);
                                                             }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={isCancelled ? "Restore user" : "Cancel user"}
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            Cancel
                                                         </Button>
                                                     </div>
                                                 </td>
                                             </motion.tr>
-                                        )))}
+                                                );
+                                            })
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -664,30 +642,6 @@ export default function UserMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Delete Dialog */}
-            <AnimatePresence>
-                {isDeleteDialogOpen && (
-                    <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => setIsDeleteDialogOpen(false)} />
-                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
-                                    <button onClick={() => setIsDeleteDialogOpen(false)} className="text-white hover:bg-red-700 rounded-lg p-2"><X className="w-5 h-5" /></button>
-                                </div>
-                                <div className="p-6">
-                                    <p className="text-foreground mb-4">Are you sure you want to delete user <strong>{selectedUser?.user_id}</strong>?</p>
-                                    <p className="text-sm text-muted-foreground mb-6">This action cannot be undone.</p>
-                                    <div className="flex items-center justify-end gap-4">
-                                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-                                        <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
         </div>
     );
 }

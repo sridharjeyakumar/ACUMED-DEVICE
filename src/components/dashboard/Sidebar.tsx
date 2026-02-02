@@ -30,6 +30,8 @@ import {
   Menu as MenuIcon,
   Clock,
   Award,
+  CalendarDays,
+  CalendarOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -65,6 +67,10 @@ const navSections: NavSection[] = [
       { icon: Key, label: "Role wise Menu Access", href: "/role-wise-menu-access" },
       { icon: CheckCircle2, label: "Product Status Master", href: "/product-status-master" },
       { icon: Package, label: "Material Status Master", href: "/material-status-master" },
+      { icon: PackageOpen, label: "Product Category Master", href: "/product-category-master" },
+      { icon: Layers, label: "Material Category Master", href: "/material-category-master" },
+      { icon: CalendarDays, label: "Holidays Master", href: "/holidays-master" },
+      { icon: CalendarOff, label: "Weekly Off Master", href: "/weekly-off-master" },
     ],
   },
   {

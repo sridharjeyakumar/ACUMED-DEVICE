@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/server/db/connection';
-import EmployeeGradeMaster from '@/server/models/EmployeeGradeMaster';
+import MaterialCategoryMaster from '@/server/models/MaterialCategoryMaster';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,7 +33,7 @@ async function ensureDbConnection() {
   }
 }
 
-// GET /api/employee-grades/[id] - Get employee grade by ID
+// GET /api/material-categories/[id] - Get material category by ID
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -41,21 +41,21 @@ export async function GET(
   try {
     const { id } = await params;
     await ensureDbConnection();
-    const grade = await EmployeeGradeMaster.findOne({ grade_id: id });
-    if (!grade) {
-      return NextResponse.json({ error: 'Employee grade not found' }, { status: 404 });
+    const category = await MaterialCategoryMaster.findOne({ material_category_id: id });
+    if (!category) {
+      return NextResponse.json({ error: 'Material category not found' }, { status: 404 });
     }
-    return NextResponse.json(grade);
+    return NextResponse.json(category);
   } catch (error: any) {
-    console.error('Error fetching employee grade:', error);
+    console.error('Error fetching material category:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch employee grade' },
+      { error: error.message || 'Failed to fetch material category' },
       { status: 500 }
     );
   }
 }
 
-// PUT /api/employee-grades/[id] - Update employee grade
+// PUT /api/material-categories/[id] - Update material category
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -66,21 +66,21 @@ export async function PUT(
     const body = await request.json();
     
     const updateData: any = {};
-    if (body.grade_name !== undefined) updateData.grade_name = body.grade_name;
+    if (body.material_category_name !== undefined) updateData.material_category_name = body.material_category_name;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
     
-    const grade = await EmployeeGradeMaster.findOneAndUpdate(
-      { grade_id: id },
+    const category = await MaterialCategoryMaster.findOneAndUpdate(
+      { material_category_id: id },
       updateData,
       { new: true, runValidators: true }
     );
-    if (!grade) {
-      return NextResponse.json({ error: 'Employee grade not found' }, { status: 404 });
+    if (!category) {
+      return NextResponse.json({ error: 'Material category not found' }, { status: 404 });
     }
-    return NextResponse.json(grade);
+    return NextResponse.json(category);
   } catch (error: any) {
-    console.error('Error updating employee grade:', error);
+    console.error('Error updating material category:', error);
     if (error.name === 'ValidationError') {
       return NextResponse.json(
         { error: 'Validation failed', details: error.message },
@@ -88,13 +88,13 @@ export async function PUT(
       );
     }
     return NextResponse.json(
-      { error: error.message || 'Failed to update employee grade' },
+      { error: error.message || 'Failed to update material category' },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/employee-grades/[id] - Delete employee grade
+// DELETE /api/material-categories/[id] - Delete material category
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -102,18 +102,17 @@ export async function DELETE(
   try {
     const { id } = await params;
     await ensureDbConnection();
-    const grade = await EmployeeGradeMaster.findOneAndDelete({ grade_id: id });
-    if (!grade) {
-      return NextResponse.json({ error: 'Employee grade not found' }, { status: 404 });
+    const category = await MaterialCategoryMaster.findOneAndDelete({ material_category_id: id });
+    if (!category) {
+      return NextResponse.json({ error: 'Material category not found' }, { status: 404 });
     }
-    return NextResponse.json({ message: 'Employee grade deleted successfully' });
+    return NextResponse.json({ message: 'Material category deleted successfully' });
   } catch (error: any) {
-    console.error('Error deleting employee grade:', error);
+    console.error('Error deleting material category:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to delete employee grade' },
+      { error: error.message || 'Failed to delete material category' },
       { status: 500 }
     );
   }
 }
-
 

@@ -122,3 +122,39 @@ export const employeeGradeAPI = {
   delete: (id: string) => fetchAPI(`/employee-grades/${id}`, { method: 'DELETE' }),
 };
 
+// Product Category Master API
+export const productCategoryAPI = {
+  getAll: () => fetchAPI('/product-categories'),
+  getById: (id: string) => fetchAPI(`/product-categories/${id}`),
+  create: (data: any) => fetchAPI('/product-categories', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/product-categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/product-categories/${id}`, { method: 'DELETE' }),
+};
+
+// Material Category Master API
+export const materialCategoryAPI = {
+  getAll: () => fetchAPI('/material-categories'),
+  getById: (id: string) => fetchAPI(`/material-categories/${id}`),
+  create: (data: any) => fetchAPI('/material-categories', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/material-categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/material-categories/${id}`, { method: 'DELETE' }),
+};
+
+// Holidays Master API
+export const holidaysAPI = {
+  getAll: () => fetchAPI('/holidays'),
+  getById: (id: string) => fetchAPI(`/holidays/${id}`),
+  create: (data: any) => fetchAPI('/holidays', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/holidays/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/holidays/${id}`, { method: 'DELETE' }),
+};
+
+// Weekly Off Master API
+export const weeklyOffAPI = {
+  getAll: () => fetchAPI('/weekly-off'),
+  getById: (id: string) => fetchAPI(`/weekly-off/${id}`),
+  create: (data: any) => fetchAPI('/weekly-off', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/weekly-off/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/weekly-off/${id}`, { method: 'DELETE' }),
+};
+

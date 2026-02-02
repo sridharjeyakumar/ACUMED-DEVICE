@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, Award } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Award } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -39,12 +39,12 @@ export default function EmployeeGradeMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedGrade, setSelectedGrade] = useState<EmployeeGrade | null>(null);
     const isSubmittingRef = useRef(false);
     const [grades, setGrades] = useState<EmployeeGrade[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: EmployeeGrade } | null>(null);
+    const [cancelledGrades, setCancelledGrades] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         loadGrades();
@@ -204,46 +204,24 @@ export default function EmployeeGradeMasterPage() {
         }
     };
 
-    const handleDelete = (grade: EmployeeGrade) => {
-        setSelectedGrade(grade);
-        setIsDeleteDialogOpen(true);
-    };
-
-    const confirmDelete = async () => {
-        if (isSubmittingRef.current) return;
-        if (!selectedGrade) return;
-        isSubmittingRef.current = true;
-        
-        // Store previous state for undo
-        const previousData = { ...selectedGrade };
-        
-        try {
-            await employeeGradeAPI.delete(selectedGrade.grade_id);
-            
-            // Store last action for undo
-            setLastAction({ type: 'delete', data: previousData });
-            
-            toast({
-                title: "Success",
-                description: "Employee grade deleted successfully",
-                action: (
-                    <ToastAction altText="Undo" onClick={handleUndo}>
-                        Undo
-                    </ToastAction>
-                ),
-            });
-            setIsDeleteDialogOpen(false);
-            setSelectedGrade(null);
-            loadGrades();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to delete employee grade",
-                variant: "destructive",
-            });
-        } finally {
-            isSubmittingRef.current = false;
-        }
+    const handleCancel = (grade: EmployeeGrade) => {
+        setCancelledGrades(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(grade.grade_id)) {
+                newSet.delete(grade.grade_id);
+                toast({
+                    title: "Restored",
+                    description: `Employee grade ${grade.grade_name} has been restored`,
+                });
+            } else {
+                newSet.add(grade.grade_id);
+                toast({
+                    title: "Cancelled",
+                    description: `Employee grade ${grade.grade_name} has been cancelled`,
+                });
+            }
+            return newSet;
+        });
     };
 
     return (
@@ -287,7 +265,7 @@ export default function EmployeeGradeMasterPage() {
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search grades or departments..."
+                                        placeholder="Search grades..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-10 pr-4 py-2 w-full"
@@ -338,7 +316,7 @@ export default function EmployeeGradeMasterPage() {
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">GRADE ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">DEPARTMENT NAME</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">GRADE NAME</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
@@ -358,13 +336,15 @@ export default function EmployeeGradeMasterPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredGrades.map((grade, index) => (
+                                            filteredGrades.map((grade, index) => {
+                                                const isCancelled = cancelledGrades.has(grade.grade_id);
+                                                return (
                                                 <motion.tr
                                                     key={grade.grade_id}
                                                     initial={{ opacity: 0, x: -20 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className="hover:bg-muted/30 transition-colors"
+                                                    className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
                                                 >
                                                     <td className="px-6 py-4">
                                                         <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
@@ -394,6 +374,7 @@ export default function EmployeeGradeMasterPage() {
                                                                     handleEdit(grade);
                                                                 }}
                                                                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                                disabled={isCancelled}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -402,16 +383,18 @@ export default function EmployeeGradeMasterPage() {
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleDelete(grade);
+                                                                    handleCancel(grade);
                                                                 }}
-                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                                title={isCancelled ? "Restore grade" : "Cancel grade"}
                                                             >
-                                                                <Trash2 className="w-4 h-4" />
+                                                                Cancel
                                                             </Button>
                                                         </div>
                                                     </td>
                                                 </motion.tr>
-                                            ))
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>
@@ -478,7 +461,7 @@ export default function EmployeeGradeMasterPage() {
                                     </div>
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Department Name <span className="text-red-500">*</span>
+                                            Grade Name <span className="text-red-500">*</span>
                                         </label>
                                         <Input
                                             name="grade_name"
@@ -555,7 +538,7 @@ export default function EmployeeGradeMasterPage() {
                                     </div>
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Department Name <span className="text-red-500">*</span>
+                                            Grade Name <span className="text-red-500">*</span>
                                         </label>
                                         <Input
                                             name="grade_name"
@@ -590,61 +573,6 @@ export default function EmployeeGradeMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Delete Dialog */}
-            <AnimatePresence>
-                {isDeleteDialogOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsDeleteDialogOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
-                                    <button
-                                        onClick={() => setIsDeleteDialogOpen(false)}
-                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                </div>
-                                <div className="p-6">
-                                    <p className="text-foreground mb-4">
-                                        Are you sure you want to delete grade <strong>{selectedGrade?.grade_name}</strong> ({selectedGrade?.grade_id})?
-                                    </p>
-                                    <p className="text-sm text-muted-foreground mb-6">
-                                        This action cannot be undone.
-                                    </p>
-                                    <div className="flex items-center justify-end gap-4">
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => setIsDeleteDialogOpen(false)}
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
-                                            onClick={confirmDelete}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
-                                            disabled={isSubmittingRef.current}
-                                        >
-                                            Delete
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
         </div>
     );
 }

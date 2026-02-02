@@ -5,18 +5,18 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Building2 } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Package } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { departmentAPI } from "@/services/api";
+import { productCategoryAPI } from "@/services/api";
 
-interface Department {
-    dept_id: string; // Char(3) - PK
-    department_name: string; // Char(25)
+interface ProductCategory {
+    product_category_id: string; // Char(3) - PK
+    product_category_name: string; // Char(100)
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
 }
@@ -34,31 +34,33 @@ function formatDateTime(date: Date | string): string {
     return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
-export default function DepartmentMasterPage() {
+export default function ProductCategoryMasterPage() {
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<ProductCategory | null>(null);
     const isSubmittingRef = useRef(false);
-    const [departments, setDepartments] = useState<Department[]>([]);
+    const [categories, setCategories] = useState<ProductCategory[]>([]);
     const [loading, setLoading] = useState(true);
-    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: Department } | null>(null);
-    const [cancelledDepartments, setCancelledDepartments] = useState<Set<string>>(new Set());
+    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: ProductCategory } | null>(null);
+    const [cancelledCategories, setCancelledCategories] = useState<Set<string>>(new Set());
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+    const [currentPage, setCurrentPage] = useState<number>(1);
 
     useEffect(() => {
-        loadDepartments();
+        loadCategories();
     }, []);
 
-    const loadDepartments = async () => {
+    const loadCategories = async () => {
         try {
             setLoading(true);
-            const data = await departmentAPI.getAll();
-            setDepartments(data);
+            const data = await productCategoryAPI.getAll();
+            setCategories(data);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to load departments",
+                description: error.message || "Failed to load product categories",
                 variant: "destructive",
             });
         } finally {
@@ -66,14 +68,25 @@ export default function DepartmentMasterPage() {
         }
     };
     const [formData, setFormData] = useState({
-        dept_id: "",
-        department_name: "",
+        product_category_id: "",
+        product_category_name: "",
     });
 
-    const filteredDepartments = departments.filter((dept) =>
-        dept.dept_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        dept.department_name.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredCategories = categories.filter((category) =>
+        category.product_category_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        category.product_category_name.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredCategories.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedCategories = filteredCategories.slice(startIndex, endIndex);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, rowsPerPage]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -86,25 +99,25 @@ export default function DepartmentMasterPage() {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
-            await departmentAPI.create({
-                dept_id: formData.dept_id,
-                department_name: formData.department_name,
+            await productCategoryAPI.create({
+                product_category_id: formData.product_category_id,
+                product_category_name: formData.product_category_name,
                 last_modified_user_id: "ADMIN",
             });
             toast({
                 title: "Success",
-                description: "Department created successfully",
+                description: "Product category created successfully",
             });
             setIsAddModalOpen(false);
             setFormData({
-                dept_id: "",
-                department_name: "",
+                product_category_id: "",
+                product_category_name: "",
             });
-            loadDepartments();
+            loadCategories();
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to create department",
+                description: error.message || "Failed to create product category",
                 variant: "destructive",
             });
         } finally {
@@ -112,11 +125,11 @@ export default function DepartmentMasterPage() {
         }
     };
 
-    const handleEdit = (department: Department) => {
-        setSelectedDepartment(department);
+    const handleEdit = (category: ProductCategory) => {
+        setSelectedCategory(category);
         setFormData({
-            dept_id: department.dept_id,
-            department_name: department.department_name,
+            product_category_id: category.product_category_id,
+            product_category_name: category.product_category_name,
         });
         setIsEditModalOpen(true);
     };
@@ -125,15 +138,15 @@ export default function DepartmentMasterPage() {
         e.preventDefault();
         e.stopPropagation();
         if (isSubmittingRef.current) return;
-        if (!selectedDepartment) return;
+        if (!selectedCategory) return;
         isSubmittingRef.current = true;
         
         // Store previous state for undo
-        const previousData = { ...selectedDepartment };
+        const previousData = { ...selectedCategory };
         
         try {
-            await departmentAPI.update(selectedDepartment.dept_id, {
-                department_name: formData.department_name,
+            await productCategoryAPI.update(selectedCategory.product_category_id, {
+                product_category_name: formData.product_category_name,
                 last_modified_user_id: "ADMIN",
             });
             
@@ -142,7 +155,7 @@ export default function DepartmentMasterPage() {
             
             toast({
                 title: "Success",
-                description: "Department updated successfully",
+                description: "Product category updated successfully",
                 action: (
                     <ToastAction altText="Undo" onClick={handleUndo}>
                         Undo
@@ -150,16 +163,16 @@ export default function DepartmentMasterPage() {
                 ),
             });
             setIsEditModalOpen(false);
-            setSelectedDepartment(null);
+            setSelectedCategory(null);
             setFormData({
-                dept_id: "",
-                department_name: "",
+                product_category_id: "",
+                product_category_name: "",
             });
-            loadDepartments();
+            loadCategories();
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to update department",
+                description: error.message || "Failed to update product category",
                 variant: "destructive",
             });
         } finally {
@@ -173,28 +186,17 @@ export default function DepartmentMasterPage() {
         try {
             if (lastAction.type === 'edit') {
                 // Restore previous data
-                await departmentAPI.update(lastAction.data.dept_id, {
-                    department_name: lastAction.data.department_name,
+                await productCategoryAPI.update(lastAction.data.product_category_id, {
+                    product_category_name: lastAction.data.product_category_name,
                     last_modified_user_id: "ADMIN",
                 });
                 toast({
                     title: "Undone",
                     description: "Changes have been reverted",
                 });
-            } else if (lastAction.type === 'delete') {
-                // Restore deleted department
-                await departmentAPI.create({
-                    dept_id: lastAction.data.dept_id,
-                    department_name: lastAction.data.department_name,
-                    last_modified_user_id: "ADMIN",
-                });
-                toast({
-                    title: "Undone",
-                    description: "Department has been restored",
-                });
             }
             setLastAction(null);
-            loadDepartments();
+            loadCategories();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -204,20 +206,20 @@ export default function DepartmentMasterPage() {
         }
     };
 
-    const handleCancel = (department: Department) => {
-        setCancelledDepartments(prev => {
+    const handleCancel = (category: ProductCategory) => {
+        setCancelledCategories(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(department.dept_id)) {
-                newSet.delete(department.dept_id);
+            if (newSet.has(category.product_category_id)) {
+                newSet.delete(category.product_category_id);
                 toast({
                     title: "Restored",
-                    description: `Department ${department.department_name} has been restored`,
+                    description: `Product category ${category.product_category_name} has been restored`,
                 });
             } else {
-                newSet.add(department.dept_id);
+                newSet.add(category.product_category_id);
                 toast({
                     title: "Cancelled",
-                    description: `Department ${department.department_name} has been cancelled`,
+                    description: `Product category ${category.product_category_name} has been cancelled`,
                 });
             }
             return newSet;
@@ -238,15 +240,15 @@ export default function DepartmentMasterPage() {
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <h1 className="text-3xl font-bold text-foreground mb-2">Department Master</h1>
-                                <p className="text-muted-foreground">Manage department information and details</p>
+                                <h1 className="text-3xl font-bold text-foreground mb-2">Product Category Master</h1>
+                                <p className="text-muted-foreground">Manage product category information and details</p>
                             </div>
                             <Button
                                 onClick={() => setIsAddModalOpen(true)}
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                             >
                                 <Plus className="w-5 h-5" />
-                                Add New Department
+                                Add New Category
                             </Button>
                         </div>
                     </motion.div>
@@ -265,14 +267,14 @@ export default function DepartmentMasterPage() {
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search by Department ID or Name..."
+                                        placeholder="Search categories..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
                                 <span className="text-sm text-muted-foreground">
-                                    SHOWING 1-{filteredDepartments.length} OF {departments.length}
+                                    SHOWING {filteredCategories.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredCategories.length)} OF {filteredCategories.length}
                                 </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -283,20 +285,34 @@ export default function DepartmentMasterPage() {
                                     <PopoverContent className="w-56" align="end">
                                         <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <Label className="text-sm font-semibold">Department</Label>
+                                                <Label className="text-sm font-semibold">Category</Label>
                                                 <div className="space-y-2 max-h-48 overflow-y-auto">
                                                     <div className="flex items-center space-x-2">
                                                         <input 
                                                             type="radio" 
-                                                            id="dept-all" 
-                                                            name="deptFilter"
+                                                            id="category-all" 
+                                                            name="categoryFilter"
                                                             checked={true}
                                                             onChange={() => {}}
                                                             className="h-4 w-4"
                                                         />
-                                                        <Label htmlFor="dept-all" className="text-sm font-normal cursor-pointer">All Departments</Label>
+                                                        <Label htmlFor="category-all" className="text-sm font-normal cursor-pointer">All Categories</Label>
                                                     </div>
                                                 </div>
+                                            </div>
+                                            <div className="space-y-2 border-t border-border pt-4">
+                                                <Label className="text-sm font-semibold">No. of rows per screen</Label>
+                                                <select
+                                                    value={rowsPerPage}
+                                                    onChange={(e) => setRowsPerPage(parseInt(e.target.value))}
+                                                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                                                >
+                                                    <option value={5}>5</option>
+                                                    <option value={10}>10</option>
+                                                    <option value={25}>25</option>
+                                                    <option value={50}>50</option>
+                                                    <option value={100}>100</option>
+                                                </select>
                                             </div>
                                         </div>
                                     </PopoverContent>
@@ -315,61 +331,63 @@ export default function DepartmentMasterPage() {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase w-32">DEPT ID</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">DEPARTMENT NAME</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
-                                            <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">PRODUCT CATEGORY ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">PRODUCT CATEGORY NAME</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
+                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={5} className="px-4 py-3 text-center text-muted-foreground">
-                                                    Loading departments...
+                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                    Loading product categories...
                                                 </td>
                                             </tr>
-                                        ) : filteredDepartments.length === 0 ? (
+                                        ) : filteredCategories.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-4 py-3 text-center text-muted-foreground">
-                                                    No departments found
+                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                    No categories found
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredDepartments.map((department, index) => {
-                                                const isCancelled = cancelledDepartments.has(department.dept_id);
+                                            paginatedCategories.map((category, index) => {
+                                                const isCancelled = cancelledCategories.has(category.product_category_id);
                                                 return (
                                                 <motion.tr
-                                                    key={department.dept_id}
+                                                    key={category.product_category_id}
                                                     initial={{ opacity: 0, x: -20 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ duration: 0.3, delay: index * 0.05 }}
                                                     className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
                                                 >
-                                                    <td className="px-4 py-3">
-                                                        <span className="text-sm text-muted-foreground font-mono">{department.dept_id}</span>
+                                                    <td className="px-6 py-4">
+                                                        <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                                                            {category.product_category_id}
+                                                        </span>
                                                     </td>
-                                                    <td className="px-4 py-3">
-                                                        <span className="text-sm text-foreground">{department.department_name}</span>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{category.product_category_name}</span>
                                                     </td>
-                                                    <td className="px-4 py-3">
-                                                        <span className="text-sm text-foreground font-mono">{department.last_modified_user_id || "-"}</span>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground font-mono">{category.last_modified_user_id || "-"}</span>
                                                     </td>
-                                                    <td className="px-4 py-3">
+                                                    <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">
-                                                            {department.last_modified_date_time 
-                                                                ? formatDateTime(department.last_modified_date_time)
+                                                            {category.last_modified_date_time 
+                                                                ? formatDateTime(category.last_modified_date_time)
                                                                 : "-"}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3">
+                                                    <td className="px-6 py-4">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleEdit(department);
+                                                                    handleEdit(category);
                                                                 }}
                                                                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                                                 disabled={isCancelled}
@@ -381,10 +399,10 @@ export default function DepartmentMasterPage() {
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleCancel(department);
+                                                                    handleCancel(category);
                                                                 }}
                                                                 className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={isCancelled ? "Restore department" : "Cancel department"}
+                                                                title={isCancelled ? "Restore category" : "Cancel category"}
                                                             >
                                                                 Cancel
                                                             </Button>
@@ -398,14 +416,24 @@ export default function DepartmentMasterPage() {
                                 </table>
                             </div>
 
-                            <div className="border-t border-border px-4 py-3 flex items-center justify-between bg-muted/20">
-                                <span className="text-sm text-muted-foreground">PAGE 1 OF 1</span>
+                            <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
+                                <span className="text-sm text-muted-foreground">PAGE {currentPage} OF {totalPages || 1}</span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    >
                                         <ChevronLeft className="w-4 h-4 mr-1" />
                                         Previous
                                     </Button>
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage >= totalPages}
+                                    >
                                         Next
                                         <ChevronRight className="w-4 h-4 ml-1" />
                                     </Button>
@@ -416,7 +444,7 @@ export default function DepartmentMasterPage() {
                 </div>
             </main>
 
-            {/* Add Department Modal */}
+            {/* Add Category Modal */}
             <AnimatePresence>
                 {isAddModalOpen && (
                     <>
@@ -435,7 +463,7 @@ export default function DepartmentMasterPage() {
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Add New Department</h2>
+                                    <h2 className="text-2xl font-bold">Add New Product Category</h2>
                                     <button
                                         onClick={() => setIsAddModalOpen(false)}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
@@ -446,26 +474,26 @@ export default function DepartmentMasterPage() {
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Department ID <span className="text-red-500">*</span>
+                                            Product Category ID <span className="text-red-500">*</span>
                                         </label>
                                         <Input
-                                            name="dept_id"
-                                            value={formData.dept_id}
+                                            name="product_category_id"
+                                            value={formData.product_category_id}
                                             onChange={handleInputChange}
-                                            placeholder="e.g., MGT, ADM, PRD"
+                                            placeholder="e.g., P01, P02"
                                             required
                                             maxLength={3}
                                         />
                                     </div>
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Department Name <span className="text-red-500">*</span>
+                                            Product Category Name <span className="text-red-500">*</span>
                                         </label>
                                         <Input
-                                            name="department_name"
-                                            value={formData.department_name}
+                                            name="product_category_name"
+                                            value={formData.product_category_name}
                                             onChange={handleInputChange}
-                                            placeholder="Enter department name"
+                                            placeholder="Enter product category name"
                                             required
                                             maxLength={25}
                                         />
@@ -484,7 +512,7 @@ export default function DepartmentMasterPage() {
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                             disabled={isSubmittingRef.current}
                                         >
-                                            Save Department
+                                            Save Category
                                         </Button>
                                     </div>
                                 </form>
@@ -494,7 +522,7 @@ export default function DepartmentMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Edit Department Modal */}
+            {/* Edit Category Modal */}
             <AnimatePresence>
                 {isEditModalOpen && (
                     <>
@@ -513,7 +541,7 @@ export default function DepartmentMasterPage() {
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Edit Department</h2>
+                                    <h2 className="text-2xl font-bold">Edit Product Category</h2>
                                     <button
                                         onClick={() => setIsEditModalOpen(false)}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
@@ -524,11 +552,11 @@ export default function DepartmentMasterPage() {
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Department ID <span className="text-red-500">*</span>
+                                            Product Category ID <span className="text-red-500">*</span>
                                         </label>
                                         <Input
-                                            name="dept_id"
-                                            value={formData.dept_id}
+                                            name="product_category_id"
+                                            value={formData.product_category_id}
                                             onChange={handleInputChange}
                                             required
                                             disabled
@@ -536,13 +564,13 @@ export default function DepartmentMasterPage() {
                                     </div>
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Department Name <span className="text-red-500">*</span>
+                                            Product Category Name <span className="text-red-500">*</span>
                                         </label>
                                         <Input
-                                            name="department_name"
-                                            value={formData.department_name}
+                                            name="product_category_name"
+                                            value={formData.product_category_name}
                                             onChange={handleInputChange}
-                                            placeholder="Enter department name"
+                                            placeholder="Enter product category name"
                                             required
                                             maxLength={25}
                                         />
@@ -561,7 +589,7 @@ export default function DepartmentMasterPage() {
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                             disabled={isSubmittingRef.current}
                                         >
-                                            Update Department
+                                            Update Category
                                         </Button>
                                     </div>
                                 </form>
