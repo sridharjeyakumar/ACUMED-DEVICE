@@ -307,11 +307,14 @@ export default function WeeklyOffMasterPage() {
                                             <Filter className="w-4 h-4" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-56" align="end">
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-semibold">Day of Week</Label>
-                                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    <PopoverContent className="w-80 p-0" align="end">
+                                        <div className="p-4 border-b border-border">
+                                            <h3 className="font-semibold text-sm text-foreground">Filters</h3>
+                                        </div>
+                                        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">Day of Week</Label>
+                                                <div className="space-y-2 max-h-32 overflow-y-auto">
                                                     <div className="flex items-center space-x-2">
                                                         <input 
                                                             type="radio" 
@@ -319,9 +322,9 @@ export default function WeeklyOffMasterPage() {
                                                             name="dayFilter"
                                                             checked={filterDay === "all"}
                                                             onChange={() => setFilterDay("all")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="day-all" className="text-sm font-normal cursor-pointer">All Days</Label>
+                                                        <Label htmlFor="day-all" className="text-sm font-normal cursor-pointer text-foreground">All Days</Label>
                                                     </div>
                                                     {uniqueDays.map((day) => (
                                                         <div key={day} className="flex items-center space-x-2">
@@ -331,21 +334,21 @@ export default function WeeklyOffMasterPage() {
                                                                 name="dayFilter"
                                                                 checked={filterDay === day}
                                                                 onChange={() => setFilterDay(day)}
-                                                                className="h-4 w-4"
+                                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                             />
-                                                            <Label htmlFor={`day-${day}`} className="text-sm font-normal cursor-pointer">
+                                                            <Label htmlFor={`day-${day}`} className="text-sm font-normal cursor-pointer text-foreground">
                                                                 {getDayName(parseInt(day))} ({day})
                                                             </Label>
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
-                                            <div className="space-y-2 border-t border-border pt-4">
-                                                <Label className="text-sm font-semibold">No. of rows per screen</Label>
+                                            <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
                                                 <select
                                                     value={rowsPerPage}
                                                     onChange={(e) => setRowsPerPage(parseInt(e.target.value))}
-                                                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 >
                                                     <option value={5}>5</option>
                                                     <option value={10}>10</option>
@@ -354,6 +357,16 @@ export default function WeeklyOffMasterPage() {
                                                     <option value={100}>100</option>
                                                 </select>
                                             </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => setFilterDay("all")}
+                                            >
+                                                Clear Filter
+                                            </Button>
                                         </div>
                                     </PopoverContent>
                                 </Popover>
@@ -374,7 +387,7 @@ export default function WeeklyOffMasterPage() {
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">WEEK OFF ID</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[150px]">DAY OF WEEK</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">WEEK OF MONTH</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID / NAME</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
                                         </tr>
@@ -416,7 +429,14 @@ export default function WeeklyOffMasterPage() {
                                                         <span className="text-sm text-foreground">{weeklyOff.week_of_month || "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground font-mono">{weeklyOff.last_modified_user_id || "-"}</span>
+                                                        {weeklyOff.last_modified_user_id ? (
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-mono text-foreground">{weeklyOff.last_modified_user_id}</span>
+                                                                <span className="text-xs text-muted-foreground">{weeklyOff.last_modified_user_id}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-sm text-foreground">-</span>
+                                                        )}
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">

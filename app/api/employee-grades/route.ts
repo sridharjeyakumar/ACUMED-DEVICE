@@ -1,40 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/server/db/connection';
+import { ensureConnection } from '@/server/db/connection';
 import EmployeeGradeMaster from '@/server/models/EmployeeGradeMaster';
 
-let dbConnected = false;
-
-async function ensureDbConnection() {
-  const mongoose = await import('mongoose');
-  const readyState = mongoose.default.connection.readyState as number;
-  if (readyState === 1) {
-    dbConnected = true;
-    return;
-  }
-  
-  if (!dbConnected) {
-    try {
-      await connectDB();
-      dbConnected = true;
-    } catch (error: any) {
-      dbConnected = false;
-      console.error('Database connection error:', error);
-      throw error;
-    }
-  } else {
-    if (readyState !== 1) {
-      dbConnected = false;
-      await ensureDbConnection();
-    }
-  }
-}
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // GET /api/employee-grades - Get all employee grades
 export async function GET() {
   try {
-    await ensureDbConnection();
-    const grades = await EmployeeGradeMaster.find().sort({ grade_id: 1 });
-    return NextResponse.json(grades);
+    await ensureConnection();
+    // Use lean() for faster queries
+    const grades = await EmployeeGradeMaster.find().lean().sort({ grade_id: 1 });
+    return NextResponse.json(grades, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching employee grades:', error);
     return NextResponse.json(
@@ -47,7 +28,7 @@ export async function GET() {
 // POST /api/employee-grades - Create new employee grade
 export async function POST(request: NextRequest) {
   try {
-    await ensureDbConnection();
+    await ensureConnection();
     const body = await request.json();
     const grade = new EmployeeGradeMaster({ 
       grade_id: body.grade_id,
@@ -77,5 +58,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

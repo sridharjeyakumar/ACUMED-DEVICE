@@ -45,6 +45,8 @@ export default function EmployeeGradeMasterPage() {
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: EmployeeGrade } | null>(null);
     const [cancelledGrades, setCancelledGrades] = useState<Set<string>>(new Set());
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+    const [currentPage, setCurrentPage] = useState<number>(1);
 
     useEffect(() => {
         loadGrades();
@@ -74,6 +76,17 @@ export default function EmployeeGradeMasterPage() {
         grade.grade_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         grade.grade_name.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredGrades.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedGrades = filteredGrades.slice(startIndex, endIndex);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, rowsPerPage]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -272,7 +285,7 @@ export default function EmployeeGradeMasterPage() {
                                     />
                                 </div>
                                 <span className="text-sm text-muted-foreground">
-                                    SHOWING 1-{filteredGrades.length} OF {grades.length}
+                                    SHOWING {filteredGrades.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredGrades.length)} OF {filteredGrades.length}
                                 </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -280,23 +293,24 @@ export default function EmployeeGradeMasterPage() {
                                             <Filter className="w-4 h-4" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-56" align="end">
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-semibold">Grade</Label>
-                                                <div className="space-y-2 max-h-48 overflow-y-auto">
-                                                    <div className="flex items-center space-x-2">
-                                                        <input 
-                                                            type="radio" 
-                                                            id="grade-all" 
-                                                            name="gradeFilter"
-                                                            checked={true}
-                                                            onChange={() => {}}
-                                                            className="h-4 w-4"
-                                                        />
-                                                        <Label htmlFor="grade-all" className="text-sm font-normal cursor-pointer">All Grades</Label>
-                                                    </div>
-                                                </div>
+                                    <PopoverContent className="w-80 p-0" align="end">
+                                        <div className="p-4 border-b border-border">
+                                            <h3 className="font-semibold text-sm text-foreground">Filters</h3>
+                                        </div>
+                                        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
+                                                <select
+                                                    value={rowsPerPage}
+                                                    onChange={(e) => setRowsPerPage(parseInt(e.target.value))}
+                                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    <option value={5}>5</option>
+                                                    <option value={10}>10</option>
+                                                    <option value={25}>25</option>
+                                                    <option value={50}>50</option>
+                                                    <option value={100}>100</option>
+                                                </select>
                                             </div>
                                         </div>
                                     </PopoverContent>
@@ -317,7 +331,7 @@ export default function EmployeeGradeMasterPage() {
                                         <tr>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">GRADE ID</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">GRADE NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID / NAME</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
                                         </tr>
@@ -336,7 +350,7 @@ export default function EmployeeGradeMasterPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredGrades.map((grade, index) => {
+                                            paginatedGrades.map((grade, index) => {
                                                 const isCancelled = cancelledGrades.has(grade.grade_id);
                                                 return (
                                                 <motion.tr
@@ -355,7 +369,14 @@ export default function EmployeeGradeMasterPage() {
                                                         <span className="text-sm text-foreground">{grade.grade_name}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground font-mono">{grade.last_modified_user_id || "-"}</span>
+                                                        {grade.last_modified_user_id ? (
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-mono text-foreground">{grade.last_modified_user_id}</span>
+                                                                <span className="text-xs text-muted-foreground">{grade.last_modified_user_id}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-sm text-foreground">-</span>
+                                                        )}
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">
@@ -401,13 +422,23 @@ export default function EmployeeGradeMasterPage() {
                             </div>
 
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
-                                <span className="text-sm text-muted-foreground">PAGE 1 OF 1</span>
+                                <span className="text-sm text-muted-foreground">PAGE {currentPage} OF {totalPages || 1}</span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    >
                                         <ChevronLeft className="w-4 h-4 mr-1" />
                                         Previous
                                     </Button>
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage >= totalPages}
+                                    >
                                         Next
                                         <ChevronRight className="w-4 h-4 ml-1" />
                                     </Button>

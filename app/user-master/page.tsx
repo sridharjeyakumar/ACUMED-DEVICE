@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, User } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
-import { userAPI } from "@/services/api";
+import { userAPI, roleAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -57,11 +57,14 @@ export default function UserMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [users, setUsers] = useState<User[]>([]);
+    const [roles, setRoles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterActive, setFilterActive] = useState<string>("all");
     const [filterRole, setFilterRole] = useState<string>("all");
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: User } | null>(null);
     const [cancelledUsers, setCancelledUsers] = useState<Set<string>>(new Set());
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+    const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
         user_id: "",
         employee_id: "",
@@ -72,14 +75,17 @@ export default function UserMasterPage() {
     });
 
     useEffect(() => {
-        loadUsers();
+        loadAllData();
     }, []);
 
-    const loadUsers = async () => {
+    const loadAllData = async () => {
         try {
             setLoading(true);
-            const data = await userAPI.getAll();
-            setUsers(data.map((u: any) => ({
+            const [usersData, rolesData] = await Promise.all([
+                userAPI.getAll(),
+                roleAPI.getAll(),
+            ]);
+            setUsers(usersData.map((u: any) => ({
                 user_id: u.user_id,
                 employee_id: u.employee_id,
                 role_id: u.role_id || u.roll_id,
@@ -90,16 +96,20 @@ export default function UserMasterPage() {
                 last_login_time: u.last_login_time || u.Time_last_login_time,
                 active: u.active !== false,
             })));
+            setRoles(rolesData);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to load users",
+                description: error.message || "Failed to load data",
                 variant: "destructive",
             });
         } finally {
             setLoading(false);
         }
     };
+
+    // Create lookup map for roles
+    const roleMap = new Map(roles.map(r => [r.roll_id, r.roll_description]));
 
     const filteredUsers = users.filter((user) => {
         const matchesSearch = user.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -114,6 +124,17 @@ export default function UserMasterPage() {
         
         return matchesSearch && matchesActive && matchesRole;
     });
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterActive, filterRole, rowsPerPage]);
 
     const uniqueRoles = Array.from(new Set(users.map(u => u.role_id).filter(r => r)));
 
@@ -305,7 +326,7 @@ export default function UserMasterPage() {
                                     />
                                 </div>
                                 <span className="text-sm text-muted-foreground">
-                                    SHOWING 1-{filteredUsers.length} OF {users.length}
+                                    SHOWING {filteredUsers.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredUsers.length)} OF {filteredUsers.length}
                                 </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -313,10 +334,13 @@ export default function UserMasterPage() {
                                             <Filter className="w-4 h-4" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-56" align="end">
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-semibold">Status</Label>
+                                    <PopoverContent className="w-80 p-0" align="end">
+                                        <div className="p-4 border-b border-border">
+                                            <h3 className="font-semibold text-sm text-foreground">Filters</h3>
+                                        </div>
+                                        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">Status</Label>
                                                 <div className="space-y-2">
                                                     <div className="flex items-center space-x-2">
                                                         <input 
@@ -325,9 +349,9 @@ export default function UserMasterPage() {
                                                             name="userActiveStatus"
                                                             checked={filterActive === "all"}
                                                             onChange={() => setFilterActive("all")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="user-active-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        <Label htmlFor="user-active-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
                                                         <input 
@@ -336,9 +360,9 @@ export default function UserMasterPage() {
                                                             name="userActiveStatus"
                                                             checked={filterActive === "active"}
                                                             onChange={() => setFilterActive("active")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="user-active-true" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                        <Label htmlFor="user-active-true" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
                                                         <input 
@@ -347,16 +371,16 @@ export default function UserMasterPage() {
                                                             name="userActiveStatus"
                                                             checked={filterActive === "inactive"}
                                                             onChange={() => setFilterActive("inactive")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="user-active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                        <Label htmlFor="user-active-false" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
                                                     </div>
                                                 </div>
                                             </div>
                                             {uniqueRoles.length > 0 && (
-                                                <div className="space-y-2">
-                                                    <Label className="text-sm font-semibold">Role</Label>
-                                                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                <div className="space-y-3 pt-3 border-t border-border">
+                                                    <Label className="text-sm font-semibold text-foreground">Role</Label>
+                                                    <div className="space-y-2 max-h-32 overflow-y-auto">
                                                         <div className="flex items-center space-x-2">
                                                             <input 
                                                                 type="radio" 
@@ -364,9 +388,9 @@ export default function UserMasterPage() {
                                                                 name="userRoleFilter"
                                                                 checked={filterRole === "all"}
                                                                 onChange={() => setFilterRole("all")}
-                                                                className="h-4 w-4"
+                                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                             />
-                                                            <Label htmlFor="user-role-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                            <Label htmlFor="user-role-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
                                                         </div>
                                                         {uniqueRoles.map((role) => (
                                                             <div key={role} className="flex items-center space-x-2">
@@ -376,14 +400,30 @@ export default function UserMasterPage() {
                                                                     name="userRoleFilter"
                                                                     checked={filterRole === role}
                                                                     onChange={() => setFilterRole(role)}
-                                                                    className="h-4 w-4"
+                                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                                 />
-                                                                <Label htmlFor={`user-role-${role}`} className="text-sm font-normal cursor-pointer">{role}</Label>
+                                                                <Label htmlFor={`user-role-${role}`} className="text-sm font-normal cursor-pointer text-foreground">{role}</Label>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 </div>
                                             )}
+                                            <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
+                                                <select
+                                                    value={rowsPerPage}
+                                                    onChange={(e) => setRowsPerPage(parseInt(e.target.value))}
+                                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    <option value={5}>5</option>
+                                                    <option value={10}>10</option>
+                                                    <option value={25}>25</option>
+                                                    <option value={50}>50</option>
+                                                    <option value={100}>100</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
                                             <Button 
                                                 variant="outline" 
                                                 size="sm" 
@@ -414,7 +454,7 @@ export default function UserMasterPage() {
                                         <tr>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">USER ID</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">EMPLOYEE ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">ROLE ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">ROLE ID / NAME</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">PASSWORD CHANGED DATE</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">PASSWORD EXPIRY DATE</th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">PASSWORD EXPIRY DAYS</th>
@@ -438,7 +478,7 @@ export default function UserMasterPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredUsers.map((user, index) => {
+                                            paginatedUsers.map((user, index) => {
                                                 const isCancelled = cancelledUsers.has(user.user_id);
                                                 return (
                                             <motion.tr
@@ -455,7 +495,14 @@ export default function UserMasterPage() {
                                                     <span className="text-sm text-foreground">{user.employee_id}</span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm text-foreground font-mono">{user.role_id || "-"}</span>
+                                                    {user.role_id ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-mono text-foreground">{user.role_id}</span>
+                                                            <span className="text-xs text-muted-foreground">{roleMap.get(user.role_id) || "-"}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-sm text-foreground">-</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-foreground">{formatDate(user.password_changed_date)}</span>
@@ -515,13 +562,23 @@ export default function UserMasterPage() {
                                 </table>
                             </div>
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
-                                <span className="text-sm text-muted-foreground">PAGE 1 OF 1</span>
+                                <span className="text-sm text-muted-foreground">PAGE {currentPage} OF {totalPages || 1}</span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    >
                                         <ChevronLeft className="w-4 h-4 mr-1" />
                                         Previous
                                     </Button>
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage >= totalPages}
+                                    >
                                         Next
                                         <ChevronRight className="w-4 h-4 ml-1" />
                                     </Button>

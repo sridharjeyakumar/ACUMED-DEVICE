@@ -67,6 +67,8 @@ export default function UserLoginHistoryPage() {
     const [filterUser, setFilterUser] = useState<string>("all");
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: LoginHistory } | null>(null);
     const [cancelledHistories, setCancelledHistories] = useState<Set<string>>(new Set());
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+    const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
         user_id: "",
         login_date: "",
@@ -110,6 +112,17 @@ export default function UserLoginHistoryPage() {
         
         return matchesSearch && matchesUser;
     });
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredHistories.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedHistories = filteredHistories.slice(startIndex, endIndex);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterUser, rowsPerPage]);
 
     const uniqueUsers = Array.from(new Set(loginHistories.map(h => h.user_id)));
 
@@ -293,7 +306,7 @@ export default function UserLoginHistoryPage() {
                                     />
                                 </div>
                                 <span className="text-sm text-muted-foreground">
-                                    SHOWING 1-{filteredHistories.length} OF {loginHistories.length}
+                                    SHOWING {filteredHistories.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredHistories.length)} OF {filteredHistories.length}
                                 </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -301,11 +314,14 @@ export default function UserLoginHistoryPage() {
                                             <Filter className="w-4 h-4" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
-                                        <div className="flex flex-wrap gap-6 items-start">
-                                            <div className="flex flex-col gap-2 min-w-[120px]">
-                                                <Label className="text-sm font-semibold">User ID</Label>
-                                                <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                    <PopoverContent className="w-80 p-0" align="end">
+                                        <div className="p-4 border-b border-border">
+                                            <h3 className="font-semibold text-sm text-foreground">Filters</h3>
+                                        </div>
+                                        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">User ID</Label>
+                                                <div className="space-y-2 max-h-32 overflow-y-auto">
                                                     <div className="flex items-center space-x-2">
                                                         <input 
                                                             type="radio" 
@@ -313,9 +329,9 @@ export default function UserLoginHistoryPage() {
                                                             name="ulhUserFilter"
                                                             checked={filterUser === "all"}
                                                             onChange={() => setFilterUser("all")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="ulh-user-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        <Label htmlFor="ulh-user-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
                                                     </div>
                                                     {uniqueUsers.map((user) => (
                                                         <div key={user} className="flex items-center space-x-2">
@@ -325,22 +341,37 @@ export default function UserLoginHistoryPage() {
                                                                 name="ulhUserFilter"
                                                                 checked={filterUser === user}
                                                                 onChange={() => setFilterUser(user)}
-                                                                className="h-4 w-4"
+                                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                             />
-                                                            <Label htmlFor={`ulh-user-${user}`} className="text-sm font-normal cursor-pointer">{user}</Label>
+                                                            <Label htmlFor={`ulh-user-${user}`} className="text-sm font-normal cursor-pointer text-foreground">{user}</Label>
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
-                                            <div className="flex items-end">
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm" 
-                                                    onClick={() => setFilterUser("all")}
+                                            <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
+                                                <select
+                                                    value={rowsPerPage}
+                                                    onChange={(e) => setRowsPerPage(parseInt(e.target.value))}
+                                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 >
-                                                    Clear Filter
-                                                </Button>
+                                                    <option value={5}>5</option>
+                                                    <option value={10}>10</option>
+                                                    <option value={25}>25</option>
+                                                    <option value={50}>50</option>
+                                                    <option value={100}>100</option>
+                                                </select>
                                             </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => setFilterUser("all")}
+                                            >
+                                                Clear Filter
+                                            </Button>
                                         </div>
                                     </PopoverContent>
                                 </Popover>
@@ -358,7 +389,7 @@ export default function UserLoginHistoryPage() {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">USER ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">USER ID / NAME</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">LOGIN DATE</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">LOGIN TIME</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">LOGOUT DATE</th>
@@ -380,7 +411,7 @@ export default function UserLoginHistoryPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredHistories.map((history, index) => {
+                                            paginatedHistories.map((history, index) => {
                                                 const historyKey = history._id || `${history.user_id}-${history.login_date}-${history.login_time}`;
                                                 const isCancelled = cancelledHistories.has(historyKey);
                                                 return (
@@ -392,7 +423,10 @@ export default function UserLoginHistoryPage() {
                                                 className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
                                             >
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm font-mono text-foreground">{history.user_id}</span>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-mono text-foreground">{history.user_id}</span>
+                                                        <span className="text-xs text-muted-foreground">{history.user_id}</span>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-foreground">{formatDate(history.login_date)}</span>
@@ -442,13 +476,23 @@ export default function UserLoginHistoryPage() {
                                 </table>
                             </div>
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
-                                <span className="text-sm text-muted-foreground">PAGE 1 OF 1</span>
+                                <span className="text-sm text-muted-foreground">PAGE {currentPage} OF {totalPages || 1}</span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    >
                                         <ChevronLeft className="w-4 h-4 mr-1" />
                                         Previous
                                     </Button>
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage >= totalPages}
+                                    >
                                         Next
                                         <ChevronRight className="w-4 h-4 ml-1" />
                                     </Button>

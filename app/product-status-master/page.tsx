@@ -51,6 +51,8 @@ export default function ProductStatusMasterPage() {
     const [statuses, setStatuses] = useState<ProductStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: ProductStatus } | null>(null);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+    const [currentPage, setCurrentPage] = useState<number>(1);
 
     useEffect(() => {
         loadStatuses();
@@ -94,6 +96,17 @@ export default function ProductStatusMasterPage() {
         
         return matchesSearch && matchesActive && matchesStockMovement;
     });
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredStatuses.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedStatuses = filteredStatuses.slice(startIndex, endIndex);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterActive, filterStockMovement, rowsPerPage]);
 
     const uniqueStockMovements = Array.from(new Set(statuses.map(s => s.stock_movement).filter(s => s)));
 
@@ -326,7 +339,7 @@ export default function ProductStatusMasterPage() {
                                     />
                                 </div>
                                 <span className="text-sm text-muted-foreground">
-                                    SHOWING 1-{filteredStatuses.length} OF {statuses.length}
+                                    SHOWING {filteredStatuses.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredStatuses.length)} OF {filteredStatuses.length}
                                 </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -334,11 +347,14 @@ export default function ProductStatusMasterPage() {
                                             <Filter className="w-4 h-4" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
-                                        <div className="flex flex-wrap gap-6 items-start">
-                                            <div className="flex flex-col gap-2 min-w-[120px]">
-                                                <Label className="text-sm font-semibold">Status</Label>
-                                                <div className="flex flex-wrap gap-3">
+                                    <PopoverContent className="w-80 p-0" align="end">
+                                        <div className="p-4 border-b border-border">
+                                            <h3 className="font-semibold text-sm text-foreground">Filters</h3>
+                                        </div>
+                                        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">Status</Label>
+                                                <div className="space-y-2">
                                                     <div className="flex items-center space-x-2">
                                                         <input 
                                                             type="radio" 
@@ -346,9 +362,9 @@ export default function ProductStatusMasterPage() {
                                                             name="psActiveStatus"
                                                             checked={filterActive === "all"}
                                                             onChange={() => setFilterActive("all")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="ps-active-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        <Label htmlFor="ps-active-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
                                                         <input 
@@ -357,9 +373,9 @@ export default function ProductStatusMasterPage() {
                                                             name="psActiveStatus"
                                                             checked={filterActive === "active"}
                                                             onChange={() => setFilterActive("active")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="ps-active-true" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                        <Label htmlFor="ps-active-true" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
                                                         <input 
@@ -368,16 +384,16 @@ export default function ProductStatusMasterPage() {
                                                             name="psActiveStatus"
                                                             checked={filterActive === "inactive"}
                                                             onChange={() => setFilterActive("inactive")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="ps-active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                        <Label htmlFor="ps-active-false" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
                                                     </div>
                                                 </div>
                                             </div>
                                             {uniqueStockMovements.length > 0 && (
-                                                <div className="flex flex-col gap-2 min-w-[120px]">
-                                                    <Label className="text-sm font-semibold">Stock Movement</Label>
-                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                <div className="space-y-3 pt-3 border-t border-border">
+                                                    <Label className="text-sm font-semibold text-foreground">Stock Movement</Label>
+                                                    <div className="space-y-2 max-h-32 overflow-y-auto">
                                                         <div className="flex items-center space-x-2">
                                                             <input 
                                                                 type="radio" 
@@ -385,9 +401,9 @@ export default function ProductStatusMasterPage() {
                                                                 name="psMovementFilter"
                                                                 checked={filterStockMovement === "all"}
                                                                 onChange={() => setFilterStockMovement("all")}
-                                                                className="h-4 w-4"
+                                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                             />
-                                                            <Label htmlFor="ps-movement-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                            <Label htmlFor="ps-movement-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
                                                         </div>
                                                         {uniqueStockMovements.map((movement) => (
                                                             <div key={movement} className="flex items-center space-x-2">
@@ -397,26 +413,41 @@ export default function ProductStatusMasterPage() {
                                                                     name="psMovementFilter"
                                                                     checked={filterStockMovement === movement}
                                                                     onChange={() => setFilterStockMovement(movement)}
-                                                                    className="h-4 w-4"
+                                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                                 />
-                                                                <Label htmlFor={`ps-movement-${movement}`} className="text-sm font-normal cursor-pointer">{movement}</Label>
+                                                                <Label htmlFor={`ps-movement-${movement}`} className="text-sm font-normal cursor-pointer text-foreground">{movement}</Label>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 </div>
                                             )}
-                                            <div className="flex items-end">
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm" 
-                                                    onClick={() => {
-                                                        setFilterActive("all");
-                                                        setFilterStockMovement("all");
-                                                    }}
+                                            <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
+                                                <select
+                                                    value={rowsPerPage}
+                                                    onChange={(e) => setRowsPerPage(parseInt(e.target.value))}
+                                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 >
-                                                    Clear Filters
-                                                </Button>
+                                                    <option value={5}>5</option>
+                                                    <option value={10}>10</option>
+                                                    <option value={25}>25</option>
+                                                    <option value={50}>50</option>
+                                                    <option value={100}>100</option>
+                                                </select>
                                             </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => {
+                                                    setFilterActive("all");
+                                                    setFilterStockMovement("all");
+                                                }}
+                                            >
+                                                Clear Filters
+                                            </Button>
                                         </div>
                                     </PopoverContent>
                                 </Popover>
@@ -440,7 +471,7 @@ export default function ProductStatusMasterPage() {
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">EFFECT IN STOCK</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">SEQ NO.</th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">ACTIVE</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID / NAME</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
                                         </tr>
@@ -459,7 +490,7 @@ export default function ProductStatusMasterPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredStatuses.map((status, index) => {
+                                            paginatedStatuses.map((status, index) => {
                                                 const isCancelled = cancelledStatuses.has(status.prod_status_id);
                                                 return (
                                                 <motion.tr
@@ -492,7 +523,14 @@ export default function ProductStatusMasterPage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground font-mono">{status.last_modified_user_id || "-"}</span>
+                                                        {status.last_modified_user_id ? (
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-mono text-foreground">{status.last_modified_user_id}</span>
+                                                                <span className="text-xs text-muted-foreground">{status.last_modified_user_id}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-sm text-foreground">-</span>
+                                                        )}
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">
@@ -538,13 +576,23 @@ export default function ProductStatusMasterPage() {
                             </div>
 
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
-                                <span className="text-sm text-muted-foreground">PAGE 1 OF 1</span>
+                                <span className="text-sm text-muted-foreground">PAGE {currentPage} OF {totalPages || 1}</span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    >
                                         <ChevronLeft className="w-4 h-4 mr-1" />
                                         Previous
                                     </Button>
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage >= totalPages}
+                                    >
                                         Next
                                         <ChevronRight className="w-4 h-4 ml-1" />
                                     </Button>

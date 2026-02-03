@@ -1,40 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/server/db/connection';
+import { ensureConnection } from '@/server/db/connection';
 import CompanyMaster from '@/server/models/CompanyMaster';
 
-let dbConnected = false;
-
-async function ensureDbConnection() {
-  const mongoose = await import('mongoose');
-  const readyState = mongoose.default.connection.readyState as number;
-  if (readyState === 1) {
-    dbConnected = true;
-    return;
-  }
-  
-  if (!dbConnected) {
-    try {
-      await connectDB();
-      dbConnected = true;
-    } catch (error: any) {
-      dbConnected = false;
-      console.error('Database connection error:', error);
-      throw error;
-    }
-  } else {
-    if (readyState !== 1) {
-      dbConnected = false;
-      await ensureDbConnection();
-    }
-  }
-}
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // GET /api/companies - Get all companies
 export async function GET() {
   try {
-    await ensureDbConnection();
-    const companies = await CompanyMaster.find().sort({ comp_id: 1 });
-    return NextResponse.json(companies);
+    await ensureConnection();
+    // Use lean() for faster queries
+    const companies = await CompanyMaster.find().lean().sort({ comp_id: 1 });
+    return NextResponse.json(companies, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching companies:', error);
     return NextResponse.json(
@@ -47,7 +28,7 @@ export async function GET() {
 // POST /api/companies - Create new company
 export async function POST(request: NextRequest) {
   try {
-    await ensureDbConnection();
+    await ensureConnection();
     const body = await request.json();
     const company = new CompanyMaster({ 
       ...body,

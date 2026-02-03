@@ -42,8 +42,12 @@ const HolidaysMasterSchema: Schema = new Schema({
 
 // Create compound index on date and year for uniqueness
 HolidaysMasterSchema.index({ date: 1, year: 1 }, { unique: true });
+// Add additional indexes for better query performance
+HolidaysMasterSchema.index({ year: 1 }); // For filtering by year
+HolidaysMasterSchema.index({ date: 1 }); // For sorting by date
 
 const HolidaysMaster = (mongoose.models.HolidaysMaster as mongoose.Model<IHolidaysMaster>) || mongoose.model<IHolidaysMaster>('HolidaysMaster', HolidaysMasterSchema);
 
 export default HolidaysMaster;
+
 

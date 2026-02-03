@@ -1,34 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/server/db/connection';
+import { ensureConnection } from '@/server/db/connection';
 import UserMaster from '@/server/models/UserMaster';
 import bcrypt from 'bcryptjs';
 
-// Ensure DB connection
-let dbConnected = false;
-async function ensureDbConnection() {
-  const mongoose = await import('mongoose');
-  const readyState = mongoose.default.connection.readyState as number;
-  if (readyState === 1) {
-    return;
-  }
-  
-  if (!dbConnected) {
-    try {
-      await connectDB();
-      dbConnected = true;
-    } catch (error: any) {
-      dbConnected = false;
-      throw error;
-    }
-  }
-}
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // GET /api/users - Get all users
 export async function GET() {
   try {
-    await ensureDbConnection();
-    const users = await UserMaster.find().select('-hash_password').sort({ user_id: 1 });
-    return NextResponse.json(users);
+    await ensureConnection();
+    // Use lean() for faster queries and exclude password field
+    const users = await UserMaster.find().select('-hash_password').lean().sort({ user_id: 1 });
+    return NextResponse.json(users, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching users:', error);
     const errorMessage = error.message || 'Failed to fetch users';
@@ -46,7 +34,7 @@ export async function GET() {
 // POST /api/users - Create new user
 export async function POST(request: NextRequest) {
   try {
-    await ensureDbConnection();
+    await ensureConnection();
     const body = await request.json();
     const { user_id, employee_id, password, N_password_expiry_days, active } = body;
     

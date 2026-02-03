@@ -41,7 +41,9 @@ const MenuMasterSchema: Schema = new Schema({
   timestamps: true,
 });
 
-// menu_id already has unique index, no need for additional index
+// Add indexes for better query performance
+MenuMasterSchema.index({ active: 1 }); // For filtering by active status
+MenuMasterSchema.index({ menu_id: 1 }); // Already unique, but explicit for sorting
 
 // Check if model already exists to prevent overwrite error in Next.js hot reloading
 const MenuMaster = (mongoose.models.MenuMaster as mongoose.Model<IMenuMaster>) || mongoose.model<IMenuMaster>('MenuMaster', MenuMasterSchema);

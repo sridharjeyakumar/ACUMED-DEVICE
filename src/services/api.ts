@@ -158,3 +158,39 @@ export const weeklyOffAPI = {
   delete: (id: string) => fetchAPI(`/weekly-off/${id}`, { method: 'DELETE' }),
 };
 
+// Material Master API
+export const materialAPI = {
+  getAll: () => fetchAPI('/materials'),
+  getById: (id: string) => fetchAPI(`/materials/${id}`),
+  create: (data: any) => fetchAPI('/materials', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/materials/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/materials/${id}`, { method: 'DELETE' }),
+};
+
+// Product Master API
+export const productAPI = {
+  getAll: () => fetchAPI('/products'),
+  getById: (id: string) => fetchAPI(`/products/${id}`),
+  create: (data: any) => fetchAPI('/products', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/products/${id}`, { method: 'DELETE' }),
+};
+
+// Pack Size Master API
+export const packSizeAPI = {
+  getAll: () => fetchAPI('/pack-sizes'),
+  getById: (id: string) => fetchAPI(`/pack-sizes/${id}`),
+  create: (data: any) => fetchAPI('/pack-sizes', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/pack-sizes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/pack-sizes/${id}`, { method: 'DELETE' }),
+};
+
+// Carton Type Master API
+export const cartonTypeAPI = {
+  getAll: () => fetchAPI('/carton-types'),
+  getById: (id: string) => fetchAPI(`/carton-types/${id}`),
+  create: (data: any) => fetchAPI('/carton-types', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/carton-types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/carton-types/${id}`, { method: 'DELETE' }),
+};
+

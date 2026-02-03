@@ -1,128 +1,299 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatsCards } from "@/components/dashboard/StatsCards";
-import { Search, Plus, Filter, Pencil, Truck, ChevronDown, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
+import { cartonTypeAPI } from "@/services/api";
 
-interface CartonTypeRecord {
-    id: string;
-    cartonTypeId: string;
-    cartonTypeName: string;
-    material: string;
-    shortName: string;
-    colorName: string;
-    colorHex: string;
+interface CartonType {
+    carton_type_id: string; // Char(2) - PK
+    carton_type_name: string; // Char(100)
+    carton_type_shortname: string; // Char(50)
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date; // Date
+    active: boolean; // Boolean
+}
+
+// Helper function to format dates consistently
+function formatDateTime(date: Date | string): string {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "-";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
 export default function CartonTypeMasterPage() {
+    const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [selectedCartonType, setSelectedCartonType] = useState<CartonTypeRecord | null>(null);
-    const [filterMaterial, setFilterMaterial] = useState<string>("all");
+    const [selectedCartonType, setSelectedCartonType] = useState<CartonType | null>(null);
+    const [cartonTypes, setCartonTypes] = useState<CartonType[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [filterActive, setFilterActive] = useState<string>("all");
     const [formData, setFormData] = useState({
-        cartonTypeId: "",
-        cartonTypeName: "",
-        material: "",
-        shortName: "",
-        colorName: "",
-        colorHex: "#000000",
+        carton_type_id: "",
+        carton_type_name: "",
+        carton_type_shortname: "",
+        active: true,
     });
+    const isSubmittingRef = useRef(false);
+    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: CartonType } | null>(null);
 
-    const cartonTypes: CartonTypeRecord[] = [
-        {
-            id: "1",
-            cartonTypeId: "STER",
-            cartonTypeName: "Sterilization",
-            material: "",
-            shortName: "Sterilization",
-            colorName: "Brown",
-            colorHex: "#8B4513",
-        },
-        {
-            id: "2",
-            cartonTypeId: "SHIP",
-            cartonTypeName: "Shipper",
-            material: "",
-            shortName: "Shipper",
-            colorName: "White",
-            colorHex: "#FFFFFF",
-        },
-    ];
+    useEffect(() => {
+        loadCartonTypes();
+    }, []);
 
-    const filteredCartonTypes = cartonTypes.filter((item) => {
-        const matchesSearch = item.cartonTypeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.cartonTypeId.toLowerCase().includes(searchQuery.toLowerCase());
-        
-        const matchesMaterial = filterMaterial === "all" || item.material === filterMaterial;
-        
-        return matchesSearch && matchesMaterial;
-    });
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    const loadCartonTypes = async () => {
+        try {
+            setLoading(true);
+            const data = await cartonTypeAPI.getAll();
+            setCartonTypes(data);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load carton types",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        console.log("Form submitted:", formData);
-        setIsAddModalOpen(false);
-        setFormData({
-            cartonTypeId: "",
-            cartonTypeName: "",
-            material: "",
-            shortName: "",
-            colorName: "",
-            colorHex: "#000000",
+    const filteredCartonTypes = cartonTypes.filter((item) => {
+        const matchesSearch = item.carton_type_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.carton_type_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.carton_type_shortname.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "active" && item.active) ||
+            (filterActive === "inactive" && !item.active);
+        
+        return matchesSearch && matchesActive;
+    });
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredCartonTypes.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedCartonTypes = filteredCartonTypes.slice(startIndex, endIndex);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterActive, rowsPerPage]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value, type, checked } = e.target;
+        setFormData({ 
+            ...formData, 
+            [name]: type === 'checkbox' ? checked : value 
         });
     };
 
-    const handleEdit = (cartonType: CartonTypeRecord) => {
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
+        try {
+            await cartonTypeAPI.create({
+                carton_type_id: formData.carton_type_id.toUpperCase(),
+                carton_type_name: formData.carton_type_name,
+                carton_type_shortname: formData.carton_type_shortname,
+                active: formData.active,
+                last_modified_user_id: "ADMIN",
+            });
+            toast({
+                title: "Success",
+                description: "Carton type created successfully",
+            });
+            setIsAddModalOpen(false);
+            setFormData({
+                carton_type_id: "",
+                carton_type_name: "",
+                carton_type_shortname: "",
+                active: true,
+            });
+            loadCartonTypes();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to create carton type",
+                variant: "destructive",
+            });
+        } finally {
+            isSubmittingRef.current = false;
+        }
+    };
+
+    const handleEdit = (cartonType: CartonType) => {
         setSelectedCartonType(cartonType);
         setFormData({
-            cartonTypeId: cartonType.cartonTypeId,
-            cartonTypeName: cartonType.cartonTypeName,
-            material: cartonType.material,
-            shortName: cartonType.shortName,
-            colorName: cartonType.colorName,
-            colorHex: cartonType.colorHex,
+            carton_type_id: cartonType.carton_type_id,
+            carton_type_name: cartonType.carton_type_name,
+            carton_type_shortname: cartonType.carton_type_shortname,
+            active: cartonType.active,
         });
         setIsEditModalOpen(true);
     };
 
-    const handleEditSubmit = (e: React.FormEvent) => {
+    const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Edit submitted:", { ...selectedCartonType, ...formData });
-        setIsEditModalOpen(false);
-        setSelectedCartonType(null);
-        setFormData({
-            cartonTypeId: "",
-            cartonTypeName: "",
-            material: "",
-            shortName: "",
-            colorName: "",
-            colorHex: "#000000",
-        });
+        e.stopPropagation();
+        if (isSubmittingRef.current) return;
+        if (!selectedCartonType) return;
+        isSubmittingRef.current = true;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedCartonType };
+        
+        try {
+            await cartonTypeAPI.update(selectedCartonType.carton_type_id, {
+                carton_type_name: formData.carton_type_name,
+                carton_type_shortname: formData.carton_type_shortname,
+                active: formData.active,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            // Store last action for undo
+            setLastAction({ type: 'edit', data: previousData });
+            
+            toast({
+                title: "Success",
+                description: "Carton type updated successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndo}>
+                        Undo
+                    </ToastAction>
+                ),
+            });
+            setIsEditModalOpen(false);
+            setSelectedCartonType(null);
+            setFormData({
+                carton_type_id: "",
+                carton_type_name: "",
+                carton_type_shortname: "",
+                active: true,
+            });
+            loadCartonTypes();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to update carton type",
+                variant: "destructive",
+            });
+        } finally {
+            isSubmittingRef.current = false;
+        }
+    };
+    
+    const handleUndo = async () => {
+        if (!lastAction) return;
+        
+        try {
+            // Restore previous data
+            await cartonTypeAPI.update(lastAction.data.carton_type_id, {
+                carton_type_name: lastAction.data.carton_type_name,
+                carton_type_shortname: lastAction.data.carton_type_shortname,
+                active: lastAction.data.active,
+                last_modified_user_id: "ADMIN",
+            });
+            toast({
+                title: "Undone",
+                description: "Changes have been reverted",
+            });
+            setLastAction(null);
+            loadCartonTypes();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to undo action",
+                variant: "destructive",
+            });
+        }
     };
 
-    const handleDelete = (cartonType: CartonTypeRecord) => {
+    const handleDelete = (cartonType: CartonType) => {
         setSelectedCartonType(cartonType);
         setIsDeleteDialogOpen(true);
     };
 
-    const confirmDelete = () => {
-        console.log("Deleting carton type:", selectedCartonType);
-        setIsDeleteDialogOpen(false);
-        setSelectedCartonType(null);
+    const confirmDelete = async () => {
+        if (!selectedCartonType) return;
+        
+        // Store previous state for undo
+        const previousData = { ...selectedCartonType };
+        
+        try {
+            await cartonTypeAPI.delete(selectedCartonType.carton_type_id);
+            
+            // Store last action for undo
+            setLastAction({ type: 'delete', data: previousData });
+            
+            toast({
+                title: "Success",
+                description: "Carton type deleted successfully",
+                action: (
+                    <ToastAction altText="Undo" onClick={handleUndoDelete}>
+                        Undo
+                    </ToastAction>
+                ),
+            });
+            setIsDeleteDialogOpen(false);
+            setSelectedCartonType(null);
+            loadCartonTypes();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to delete carton type",
+                variant: "destructive",
+            });
+        }
+    };
+    
+    const handleUndoDelete = async () => {
+        if (!lastAction || lastAction.type !== 'delete') return;
+        
+        try {
+            // Restore deleted data
+            await cartonTypeAPI.create({
+                carton_type_id: lastAction.data.carton_type_id,
+                carton_type_name: lastAction.data.carton_type_name,
+                carton_type_shortname: lastAction.data.carton_type_shortname,
+                active: lastAction.data.active,
+                last_modified_user_id: lastAction.data.last_modified_user_id || "ADMIN",
+            });
+            toast({
+                title: "Restored",
+                description: "Carton type has been restored",
+            });
+            setLastAction(null);
+            loadCartonTypes();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to restore carton type",
+                variant: "destructive",
+            });
+        }
     };
 
     return (
@@ -140,7 +311,7 @@ export default function CartonTypeMasterPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <h1 className="text-3xl font-bold text-foreground mb-2">Carton Type Master</h1>
-                                <p className="text-muted-foreground">Configure and manage primary, secondary, and tertiary carton types</p>
+                                <p className="text-muted-foreground">Manage carton types and configurations</p>
                             </div>
                             <Button
                                 onClick={() => setIsAddModalOpen(true)}
@@ -166,7 +337,7 @@ export default function CartonTypeMasterPage() {
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search Carton Type ID or Name..."
+                                        placeholder="Search Carton Type ID, Name, or Shortname..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-10 pr-4 py-2 w-full bg-background border-border"
@@ -175,58 +346,86 @@ export default function CartonTypeMasterPage() {
 
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors w-40 justify-between cursor-pointer">
-                                            <span className="text-sm font-medium">
-                                                {filterMaterial === "all" ? "All Materials" : filterMaterial || "All Materials"}
-                                            </span>
-                                            <Filter className="w-4 h-4 text-muted-foreground" />
-                                        </button>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-56" align="start">
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-semibold">Material</Label>
+                                    <PopoverContent className="w-80 p-0" align="end">
+                                        <div className="p-4 border-b border-border">
+                                            <h3 className="font-semibold text-sm text-foreground">Filters</h3>
+                                        </div>
+                                        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">Active Status</Label>
                                                 <div className="space-y-2">
                                                     <div className="flex items-center space-x-2">
                                                         <input 
                                                             type="radio" 
-                                                            id="carton-material-all" 
-                                                            name="cartonMaterialFilter"
-                                                            checked={filterMaterial === "all"}
-                                                            onChange={() => setFilterMaterial("all")}
-                                                            className="h-4 w-4"
+                                                            id="active-all" 
+                                                            name="activeFilter"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="carton-material-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        <Label htmlFor="active-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="active-true" 
+                                                            name="activeFilter"
+                                                            checked={filterActive === "active"}
+                                                            onChange={() => setFilterActive("active")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="active-true" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="active-false" 
+                                                            name="activeFilter"
+                                                            checked={filterActive === "inactive"}
+                                                            onChange={() => setFilterActive("inactive")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="active-false" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
                                                     </div>
                                                 </div>
                                             </div>
+                                            <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
+                                                <select
+                                                    value={rowsPerPage}
+                                                    onChange={(e) => setRowsPerPage(parseInt(e.target.value))}
+                                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    <option value={5}>5</option>
+                                                    <option value={10}>10</option>
+                                                    <option value={25}>25</option>
+                                                    <option value={50}>50</option>
+                                                    <option value={100}>100</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
                                             <Button 
                                                 variant="outline" 
                                                 size="sm" 
                                                 className="w-full"
-                                                onClick={() => setFilterMaterial("all")}
+                                                onClick={() => {
+                                                    setFilterActive("all");
+                                                }}
                                             >
-                                                Clear Filter
+                                                Clear Filters
                                             </Button>
                                         </div>
                                     </PopoverContent>
                                 </Popover>
 
-                                <div className="h-6 w-px bg-border mx-2"></div>
-
-                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-{filteredCartonTypes.length} OF {cartonTypes.length} CARTON TYPES
+                                <span className="text-sm text-muted-foreground">
+                                    SHOWING {filteredCartonTypes.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredCartonTypes.length)} OF {filteredCartonTypes.length}
                                 </span>
-
-                                <div className="flex items-center gap-2 ml-auto">
-                                    <Button variant="ghost" size="icon" className="text-muted-foreground">
-                                        <div className="space-y-1">
-                                            <div className="w-4 h-0.5 bg-current"></div>
-                                            <div className="w-3 h-0.5 bg-current ml-auto"></div>
-                                            <div className="w-2 h-0.5 bg-current ml-auto"></div>
-                                        </div>
-                                    </Button>
-                                </div>
                             </div>
                         </Card>
                     </motion.div>
@@ -241,71 +440,121 @@ export default function CartonTypeMasterPage() {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">cartontype_id</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton type_id</th>
                                             <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton type name</th>
                                             <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton type shortname</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Color</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">last modified user id</th>
+                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">last modified date & time</th>
+                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Active</th>
                                             <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredCartonTypes.map((item, index) => (
-                                            <motion.tr
-                                                key={item.id}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors cursor-pointer"
-                                            >
-                                                <td className="px-6 py-6 text-sm font-semibold text-blue-600 align-middle">
-                                                    {item.cartonTypeId}
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
+                                                    Loading carton types...
                                                 </td>
-                                                <td className="px-6 py-6 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.cartonTypeName}</span>
+                                            </tr>
+                                        ) : filteredCartonTypes.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
+                                                    No carton types found
                                                 </td>
-                                                <td className="px-6 py-6 text-sm text-foreground align-middle">
-                                                    {item.shortName}
-                                                </td>
-                                                <td className="px-6 py-6 text-sm font-semibold text-foreground align-middle">
-                                                    {item.colorName}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEdit(item);
-                                                            }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDelete(item);
-                                                            }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </motion.tr>
-                                        ))}
+                                            </tr>
+                                        ) : (
+                                            paginatedCartonTypes.map((item, index) => (
+                                                <motion.tr
+                                                    key={item.carton_type_id}
+                                                    initial={{ opacity: 0, x: -20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                                                    className="hover:bg-muted/30 transition-colors cursor-pointer"
+                                                >
+                                                    <td className="px-6 py-6 text-sm font-semibold text-blue-600 align-middle">
+                                                        {item.carton_type_id}
+                                                    </td>
+                                                    <td className="px-6 py-6 align-middle">
+                                                        <span className="text-sm font-semibold text-foreground">{item.carton_type_name}</span>
+                                                    </td>
+                                                    <td className="px-6 py-6 text-sm text-foreground align-middle">
+                                                        {item.carton_type_shortname}
+                                                    </td>
+                                                    <td className="px-6 py-6 text-sm text-foreground align-middle">
+                                                        {item.last_modified_user_id ? (
+                                                            <span className="text-sm font-mono text-foreground">{item.last_modified_user_id}</span>
+                                                        ) : (
+                                                            <span className="text-sm text-muted-foreground">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-6 text-sm text-foreground align-middle">
+                                                        {item.last_modified_date_time 
+                                                            ? formatDateTime(item.last_modified_date_time)
+                                                            : "-"}
+                                                    </td>
+                                                    <td className="px-6 py-6 text-center align-middle">
+                                                        <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium ${
+                                                            item.active 
+                                                                ? 'bg-green-100 text-green-800' 
+                                                                : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                            {item.active ? 'TRUE' : 'FALSE'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-6 text-center align-middle">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleEdit(item);
+                                                                }}
+                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            >
+                                                                <Pencil className="w-4 h-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDelete(item);
+                                                                }}
+                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </motion.tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
 
-                            <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-white">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PAGE 1 OF 3</span>
+                            <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
+                                <span className="text-sm text-muted-foreground">PAGE {currentPage} OF {totalPages || 1}</span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" className="h-8 text-xs">Previous</Button>
-                                    <Button variant="outline" size="sm" className="h-8 text-xs text-blue-600 border-blue-200 bg-blue-50">Next</Button>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronLeft className="w-4 h-4 mr-1" />
+                                        Previous
+                                    </Button>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage >= totalPages}
+                                    >
+                                        Next
+                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                    </Button>
                                 </div>
                             </div>
                         </Card>
@@ -328,6 +577,7 @@ export default function CartonTypeMasterPage() {
                 </div>
             </main>
 
+            {/* Add Carton Type Modal */}
             <AnimatePresence>
                 {isAddModalOpen && (
                     <>
@@ -338,7 +588,6 @@ export default function CartonTypeMasterPage() {
                             className="fixed inset-0 bg-black/50 z-50"
                             onClick={() => setIsAddModalOpen(false)}
                         />
-
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -357,44 +606,73 @@ export default function CartonTypeMasterPage() {
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Carton Type ID <span className="text-red-500">*</span></label>
-                                            <Input name="cartonTypeId" value={formData.cartonTypeId} onChange={handleInputChange} placeholder="CT-XXX-XX" required />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
-                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-CODE" />
-                                        </div>
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Carton Type ID <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input 
+                                            name="carton_type_id" 
+                                            value={formData.carton_type_id} 
+                                            onChange={handleInputChange} 
+                                            placeholder="e.g., PK, ST, SH" 
+                                            required 
+                                            maxLength={2}
+                                            className="uppercase"
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">Maximum 2 characters</p>
                                     </div>
 
                                     <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Carton Type Name <span className="text-red-500">*</span></label>
-                                        <Input name="cartonTypeName" value={formData.cartonTypeName} onChange={handleInputChange} required />
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Carton Type Name <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input 
+                                            name="carton_type_name" 
+                                            value={formData.carton_type_name} 
+                                            onChange={handleInputChange} 
+                                            placeholder="e.g., Packing Carton" 
+                                            required 
+                                            maxLength={100}
+                                        />
                                     </div>
 
                                     <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Material</label>
-                                        <Input name="material" value={formData.material} onChange={handleInputChange} placeholder="e.g. MATERIAL: KRAFT PAPER" />
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Carton Type Shortname <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input 
+                                            name="carton_type_shortname" 
+                                            value={formData.carton_type_shortname} 
+                                            onChange={handleInputChange} 
+                                            placeholder="e.g., Packing" 
+                                            required 
+                                            maxLength={50}
+                                        />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-6 mb-6">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Color Name</label>
-                                            <Input name="colorName" value={formData.colorName} onChange={handleInputChange} placeholder="Color Name" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Color Hex</label>
-                                            <div className="flex gap-2">
-                                                <Input type="color" name="colorHex" value={formData.colorHex} onChange={handleInputChange} className="w-12 p-1" />
-                                                <Input name="colorHex" value={formData.colorHex} onChange={handleInputChange} placeholder="#000000" />
-                                            </div>
+                                    <div className="mb-6">
+                                        <div className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                id="active"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <label htmlFor="active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                Active
+                                            </label>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
+                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6" disabled={isSubmittingRef.current}>
+                                            Save
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
@@ -403,6 +681,7 @@ export default function CartonTypeMasterPage() {
                 )}
             </AnimatePresence>
 
+            {/* Edit Carton Type Modal */}
             <AnimatePresence>
                 {isEditModalOpen && (
                     <>
@@ -413,7 +692,6 @@ export default function CartonTypeMasterPage() {
                             className="fixed inset-0 bg-black/50 z-50"
                             onClick={() => setIsEditModalOpen(false)}
                         />
-
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -432,44 +710,69 @@ export default function CartonTypeMasterPage() {
                                 </div>
 
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Carton Type ID <span className="text-red-500">*</span></label>
-                                            <Input name="cartonTypeId" value={formData.cartonTypeId} onChange={handleInputChange} placeholder="CT-XXX-XX" required />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
-                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-CODE" />
-                                        </div>
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Carton Type ID <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input 
+                                            name="carton_type_id" 
+                                            value={formData.carton_type_id} 
+                                            onChange={handleInputChange} 
+                                            required 
+                                            disabled
+                                            className="uppercase"
+                                        />
                                     </div>
 
                                     <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Carton Type Name <span className="text-red-500">*</span></label>
-                                        <Input name="cartonTypeName" value={formData.cartonTypeName} onChange={handleInputChange} required />
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Carton Type Name <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input 
+                                            name="carton_type_name" 
+                                            value={formData.carton_type_name} 
+                                            onChange={handleInputChange} 
+                                            required 
+                                            maxLength={100}
+                                        />
                                     </div>
 
                                     <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Material</label>
-                                        <Input name="material" value={formData.material} onChange={handleInputChange} placeholder="e.g. MATERIAL: KRAFT PAPER" />
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Carton Type Shortname <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input 
+                                            name="carton_type_shortname" 
+                                            value={formData.carton_type_shortname} 
+                                            onChange={handleInputChange} 
+                                            required 
+                                            maxLength={50}
+                                        />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-6 mb-6">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Color Name</label>
-                                            <Input name="colorName" value={formData.colorName} onChange={handleInputChange} placeholder="Color Name" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Color Hex</label>
-                                            <div className="flex gap-2">
-                                                <Input type="color" name="colorHex" value={formData.colorHex} onChange={handleInputChange} className="w-12 p-1" />
-                                                <Input name="colorHex" value={formData.colorHex} onChange={handleInputChange} placeholder="#000000" />
-                                            </div>
+                                    <div className="mb-6">
+                                        <div className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                id="edit-active"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <label htmlFor="edit-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                Active
+                                            </label>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
+                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6" disabled={isSubmittingRef.current}>
+                                            Update
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
@@ -478,6 +781,7 @@ export default function CartonTypeMasterPage() {
                 )}
             </AnimatePresence>
 
+            {/* Delete Confirmation Dialog */}
             <AnimatePresence>
                 {isDeleteDialogOpen && (
                     <>
@@ -488,7 +792,6 @@ export default function CartonTypeMasterPage() {
                             className="fixed inset-0 bg-black/50 z-50"
                             onClick={() => setIsDeleteDialogOpen(false)}
                         />
-
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -508,7 +811,7 @@ export default function CartonTypeMasterPage() {
 
                                 <div className="p-6">
                                     <p className="text-foreground mb-4">
-                                        Are you sure you want to delete <strong>{selectedCartonType?.cartonTypeName}</strong>?
+                                        Are you sure you want to delete <strong>{selectedCartonType?.carton_type_name}</strong>?
                                     </p>
                                     <p className="text-sm text-muted-foreground mb-6">
                                         This action cannot be undone.
@@ -537,6 +840,4 @@ export default function CartonTypeMasterPage() {
         </div>
     );
 }
-
-
 

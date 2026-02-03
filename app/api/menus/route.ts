@@ -1,46 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/server/db/connection';
+import { ensureConnection } from '@/server/db/connection';
 import MenuMaster from '@/server/models/MenuMaster';
 
 // Force Node.js runtime (required for Mongoose)
 export const runtime = 'nodejs';
-
-// Ensure DB connection
-let dbConnected = false;
-
-async function ensureDbConnection() {
-  const mongoose = await import('mongoose');
-  // Check if already connected (1 = connected)
-  const readyState = mongoose.default.connection.readyState as number;
-  if (readyState === 1) {
-    dbConnected = true;
-    return; // Already connected
-  }
-  
-  if (!dbConnected) {
-    try {
-      await connectDB();
-      dbConnected = true;
-    } catch (error: any) {
-      dbConnected = false;
-      console.error('Database connection error:', error);
-      throw error;
-    }
-  } else {
-    // Verify connection is still alive
-    if (readyState !== 1) {
-      dbConnected = false;
-      await ensureDbConnection();
-    }
-  }
-}
+export const dynamic = 'force-dynamic';
 
 // GET /api/menus - Get all menus
 export async function GET() {
   try {
-    await ensureDbConnection();
-    const menus = await MenuMaster.find().sort({ menu_id: 1 });
-    return NextResponse.json(menus);
+    await ensureConnection();
+    // Use lean() for faster queries - returns plain JavaScript objects instead of Mongoose documents
+    const menus = await MenuMaster.find().lean().sort({ menu_id: 1 });
+    return NextResponse.json(menus, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching menus:', error);
     console.error('Error message:', error.message);
@@ -67,7 +43,7 @@ export async function GET() {
 // POST /api/menus - Create new menu
 export async function POST(request: NextRequest) {
   try {
-    await ensureDbConnection();
+    await ensureConnection();
     const body = await request.json();
     const { menu_id, menu_desc, active } = body;
     const menu = new MenuMaster({ 

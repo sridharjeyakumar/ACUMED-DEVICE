@@ -131,6 +131,11 @@ const CompanyMasterSchema: Schema = new Schema({
   timestamps: true,
 });
 
+// Add indexes for better query performance
+CompanyMasterSchema.index({ state: 1 }); // For filtering by state
+CompanyMasterSchema.index({ city: 1 }); // For filtering by city
+CompanyMasterSchema.index({ comp_id: 1 }); // Already unique, but explicit for sorting
+
 const CompanyMaster = (mongoose.models.CompanyMaster as mongoose.Model<ICompanyMaster>) || mongoose.model<ICompanyMaster>('CompanyMaster', CompanyMasterSchema);
 
 export default CompanyMaster;

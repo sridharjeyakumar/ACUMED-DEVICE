@@ -46,6 +46,8 @@ export default function CompanyMasterPage() {
     const [companies, setCompanies] = useState<Company[]>([]);
     const [loading, setLoading] = useState(true);
     const [cancelledCompanies, setCancelledCompanies] = useState<Set<string>>(new Set());
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+    const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
         comp_id: "",
         company_name: "",
@@ -98,6 +100,17 @@ export default function CompanyMasterPage() {
         
         return matchesSearch && matchesState && matchesCity;
     });
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredCompanies.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedCompanies = filteredCompanies.slice(startIndex, endIndex);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterState, filterCity, rowsPerPage]);
 
     const uniqueStates = Array.from(new Set(companies.map(c => c.state).filter(s => s)));
     const uniqueCities = Array.from(new Set(companies.map(c => c.city).filter(c => c)));
@@ -381,7 +394,7 @@ export default function CompanyMasterPage() {
                                     />
                                 </div>
                                 <span className="text-sm text-muted-foreground">
-                                    SHOWING 1-{filteredCompanies.length} OF {companies.length}
+                                    SHOWING {filteredCompanies.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredCompanies.length)} OF {filteredCompanies.length}
                                 </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -389,12 +402,15 @@ export default function CompanyMasterPage() {
                                             <Filter className="w-4 h-4" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
-                                        <div className="flex flex-wrap gap-6 items-start">
+                                    <PopoverContent className="w-80 p-0" align="end">
+                                        <div className="p-4 border-b border-border">
+                                            <h3 className="font-semibold text-sm text-foreground">Filters</h3>
+                                        </div>
+                                        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
                                             {uniqueStates.length > 0 && (
-                                                <div className="flex flex-col gap-2 min-w-[120px]">
-                                                    <Label className="text-sm font-semibold">State</Label>
-                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                <div className="space-y-3">
+                                                    <Label className="text-sm font-semibold text-foreground">State</Label>
+                                                    <div className="space-y-2 max-h-32 overflow-y-auto">
                                                         <div className="flex items-center space-x-2">
                                                             <input 
                                                                 type="radio" 
@@ -402,9 +418,9 @@ export default function CompanyMasterPage() {
                                                                 name="compStateFilter"
                                                                 checked={filterState === "all"}
                                                                 onChange={() => setFilterState("all")}
-                                                                className="h-4 w-4"
+                                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                             />
-                                                            <Label htmlFor="comp-state-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                            <Label htmlFor="comp-state-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
                                                         </div>
                                                         {uniqueStates.map((state) => (
                                                             <div key={state} className="flex items-center space-x-2">
@@ -414,18 +430,18 @@ export default function CompanyMasterPage() {
                                                                     name="compStateFilter"
                                                                     checked={filterState === state}
                                                                     onChange={() => setFilterState(state)}
-                                                                    className="h-4 w-4"
+                                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                                 />
-                                                                <Label htmlFor={`comp-state-${state}`} className="text-sm font-normal cursor-pointer">{state}</Label>
+                                                                <Label htmlFor={`comp-state-${state}`} className="text-sm font-normal cursor-pointer text-foreground">{state}</Label>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 </div>
                                             )}
                                             {uniqueCities.length > 0 && (
-                                                <div className="flex flex-col gap-2 min-w-[120px]">
-                                                    <Label className="text-sm font-semibold">City</Label>
-                                                    <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
+                                                <div className="space-y-3 pt-3 border-t border-border">
+                                                    <Label className="text-sm font-semibold text-foreground">City</Label>
+                                                    <div className="space-y-2 max-h-32 overflow-y-auto">
                                                         <div className="flex items-center space-x-2">
                                                             <input 
                                                                 type="radio" 
@@ -433,9 +449,9 @@ export default function CompanyMasterPage() {
                                                                 name="compCityFilter"
                                                                 checked={filterCity === "all"}
                                                                 onChange={() => setFilterCity("all")}
-                                                                className="h-4 w-4"
+                                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                             />
-                                                            <Label htmlFor="comp-city-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                            <Label htmlFor="comp-city-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
                                                         </div>
                                                         {uniqueCities.map((city) => (
                                                             <div key={city} className="flex items-center space-x-2">
@@ -445,26 +461,41 @@ export default function CompanyMasterPage() {
                                                                     name="compCityFilter"
                                                                     checked={filterCity === city}
                                                                     onChange={() => setFilterCity(city)}
-                                                                    className="h-4 w-4"
+                                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                                 />
-                                                                <Label htmlFor={`comp-city-${city}`} className="text-sm font-normal cursor-pointer">{city}</Label>
+                                                                <Label htmlFor={`comp-city-${city}`} className="text-sm font-normal cursor-pointer text-foreground">{city}</Label>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 </div>
                                             )}
-                                            <div className="flex items-end">
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm" 
-                                                    onClick={() => {
-                                                        setFilterState("all");
-                                                        setFilterCity("all");
-                                                    }}
+                                            <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
+                                                <select
+                                                    value={rowsPerPage}
+                                                    onChange={(e) => setRowsPerPage(parseInt(e.target.value))}
+                                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 >
-                                                    Clear Filters
-                                                </Button>
+                                                    <option value={5}>5</option>
+                                                    <option value={10}>10</option>
+                                                    <option value={25}>25</option>
+                                                    <option value={50}>50</option>
+                                                    <option value={100}>100</option>
+                                                </select>
                                             </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => {
+                                                    setFilterState("all");
+                                                    setFilterCity("all");
+                                                }}
+                                            >
+                                                Clear Filters
+                                            </Button>
                                         </div>
                                     </PopoverContent>
                                 </Popover>
@@ -515,7 +546,7 @@ export default function CompanyMasterPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredCompanies.map((company, index) => {
+                                            paginatedCompanies.map((company, index) => {
                                                 const isCancelled = cancelledCompanies.has(company.comp_id);
                                                 return (
                                                 <motion.tr
@@ -614,13 +645,23 @@ export default function CompanyMasterPage() {
                             </div>
 
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
-                                <span className="text-sm text-muted-foreground">PAGE 1 OF 1</span>
+                                <span className="text-sm text-muted-foreground">PAGE {currentPage} OF {totalPages || 1}</span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    >
                                         <ChevronLeft className="w-4 h-4 mr-1" />
                                         Previous
                                     </Button>
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage >= totalPages}
+                                    >
                                         Next
                                         <ChevronRight className="w-4 h-4 ml-1" />
                                     </Button>

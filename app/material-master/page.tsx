@@ -1,183 +1,321 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, ChevronDown, LayoutGrid, ToggleLeft, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
+import { materialAPI } from "@/services/api";
 
-interface MaterialRecord {
-    id: string;
-    materialId: string;
-    materialName: string;
-    shortName: string;
-    type: string;
+interface Material {
+    material_id: string;
+    material_name: string;
+    material_short_name: string;
     uom: string;
-    minStock: number | string;
-    reOrder: number | string;
-    safety: number | string;
-    minOrd: number | string;
-    ltMin: number | string;
-    ltMax: number | string;
-    active: string;
-    kgsPerRoll: string;
+    material_category_id?: string;
+    material_type: string; // "RM" or "PM"
+    material_spec?: string;
+    safety_stock_qty?: number;
+    re_order_qty?: number;
+    min_order_qty?: number;
+    lead_time_days_min?: number | string; // Can be number or "??"
+    lead_time_days_max?: number | string; // Can be number or "??"
+    shelf_life_in_months?: number;
+    qc_required?: boolean;
+    coa_checklist_id?: string;
+    material_image?: string;
+    material_image_icon?: string;
+    last_modified_user_id?: string;
+    last_modified_date_time?: Date;
+    active?: boolean;
+}
+
+// Helper function to format dates consistently
+function formatDateTime(date: Date | string | undefined): string {
+    if (!date) return "-";
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "-";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
 export default function MaterialMasterPage() {
+    const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [selectedMaterial, setSelectedMaterial] = useState<MaterialRecord | null>(null);
-    const [filterType, setFilterType] = useState<string>("all");
+    const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
     const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterType, setFilterType] = useState<string>("all");
+    const [filterCategory, setFilterCategory] = useState<string>("all");
+    const [materials, setMaterials] = useState<Material[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [materialCategoryMap, setMaterialCategoryMap] = useState<Map<string, string>>(new Map());
+    const [coaChecklistMap, setCoaChecklistMap] = useState<Map<string, string>>(new Map());
+    const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
+    const isSubmittingRef = useRef(false);
+
     const [formData, setFormData] = useState({
-        materialId: "",
-        materialName: "",
-        shortName: "",
-        type: "Raw Material" as "Raw Material" | "Packaging",
-        uom: "",
-        minStock: "",
-        reOrder: "",
-        safety: "",
-        minOrd: "",
-        ltMin: "",
-        ltMax: "",
+        material_id: "",
+        material_name: "",
+        material_short_name: "",
+        uom: "KGS",
+        material_category_id: "",
+        material_type: "RM",
+        material_spec: "",
+        safety_stock_qty: "",
+        re_order_qty: "",
+        min_order_qty: "",
+        lead_time_days_min: "",
+        lead_time_days_max: "",
+        shelf_life_in_months: "",
+        qc_required: false,
+        coa_checklist_id: "",
+        material_image: "",
+        material_image_icon: "",
+        active: true,
     });
 
-    const materials: MaterialRecord[] = [
-        { id: "1", materialId: "PM-001", materialName: "Spunlace Nonwoven Fabric (65mm)", shortName: "Fabric (65mm)", type: "RM", uom: "KG", minStock: 1000, reOrder: 25, safety: "", minOrd: 1000, ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
-        { id: "2", materialId: "HM002", materialName: "Duvet Flexible Laminate", shortName: "Laminate Duvet", type: "RM", uom: "KG", minStock: 1000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
-        { id: "3", materialId: "PM-001", materialName: "Duvet Packing Carton - 24 pack", shortName: "Duvet 24s Pack", type: "PM", uom: "NOS", minStock: 100000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
-        { id: "4", materialId: "PM-002", materialName: "Duvet Packing Carton - 12 pack", shortName: "Duvet 12s Pack", type: "PM", uom: "NOS", minStock: 100000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
-        { id: "5", materialId: "PM-003", materialName: "Duvet Packing Carton - 6 pack", shortName: "Duvet 6s Pack", type: "PM", uom: "NOS", minStock: 100000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
-        { id: "6", materialId: "PM-014", materialName: "Sterilization Carton - Duvet", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
-        { id: "7", materialId: "PM-005", materialName: "Shipper Carton - Duvet", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
-        { id: "8", materialId: "PM-003", materialName: "Spunlace Nonwoven Fabric (120mm) for XL", shortName: "Fabric (120mm) for XL", type: "RM", uom: "KG", minStock: 1000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
-        { id: "9", materialId: "HM-014", materialName: "Duvet XL Flexible Laminate", shortName: "Laminate Duvet XL", type: "RM", uom: "KG", minStock: 1000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
-        { id: "10", materialId: "PM-006", materialName: "Duvet XL Packing Carton - 24 pack", shortName: "Duvet XL 24s Pack", type: "PM", uom: "NOS", minStock: 100000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
-        { id: "11", materialId: "PM-007", materialName: "Sterilization Carton - Duvet XL", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
-        { id: "12", materialId: "PM-008", materialName: "Shipper Carton - Duvet XL", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
-        { id: "13", materialId: "PM-005", materialName: "Spunlace Nonwoven Fabric (200mm) for Ultra", shortName: "Fabric (200mm) for Ultra", type: "RM", uom: "KG", minStock: 1000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
-        { id: "14", materialId: "HM-006", materialName: "Duvet Ultra Flexible Laminate", shortName: "Laminate Duvet Ultra", type: "RM", uom: "KG", minStock: 1000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
-        { id: "15", materialId: "PM-009", materialName: "Duvet Ultra Packing Carton - 6s pack", shortName: "Duvet Ultra 6s Pack", type: "PM", uom: "NOS", minStock: 100000, reOrder: 25, safety: "", minOrd: "", ltMin: 25, ltMax: 40, active: "TRUE", kgsPerRoll: "" },
-        { id: "16", materialId: "PM-010", materialName: "Sterilization Carton - Duvet Ultra", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
-        { id: "17", materialId: "PM-011", materialName: "Shipper Carton - Duvet Ultra", shortName: "", type: "PM", uom: "NOS", minStock: 25000, reOrder: "", safety: "", minOrd: "", ltMin: 7, ltMax: 10, active: "TRUE", kgsPerRoll: "" },
-    ];
+    // Load materials from API
+    const loadMaterials = async () => {
+        try {
+            setLoading(true);
+            const data = await materialAPI.getAll();
+            setMaterials(data);
+            
+            // Initialize maps for ID lookups (in real app, fetch from APIs)
+            const categoryMap = new Map<string, string>();
+            categoryMap.set("M01", "Raw Material Category");
+            categoryMap.set("M02", "Packing Material Category");
+            categoryMap.set("M03", "Carton Category");
+            setMaterialCategoryMap(categoryMap);
+
+            const coaMap = new Map<string, string>();
+            coaMap.set("CL02", "COA Checklist 2");
+            setCoaChecklistMap(coaMap);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load materials",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadMaterials();
+    }, []);
 
     const filteredMaterials = materials.filter((material) => {
-        const matchesSearch = material.materialName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            material.materialId.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = material.material_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            material.material_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            material.material_short_name.toLowerCase().includes(searchQuery.toLowerCase());
         
-        const matchesType = filterType === "all" || material.type === filterType;
         const matchesActive = filterActive === "all" || 
-            (filterActive === "active" && material.active === "TRUE") ||
-            (filterActive === "inactive" && material.active !== "TRUE");
+            (filterActive === "true" && material.active === true) ||
+            (filterActive === "false" && material.active === false);
         
-        return matchesSearch && matchesType && matchesActive;
+        const matchesType = filterType === "all" || material.material_type === filterType;
+        
+        const matchesCategory = filterCategory === "all" || material.material_category_id === filterCategory;
+        
+        return matchesSearch && matchesActive && matchesType && matchesCategory;
     });
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    // Pagination logic
+    const totalPages = Math.ceil(filteredMaterials.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedMaterials = filteredMaterials.slice(startIndex, endIndex);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterActive, filterType, filterCategory, rowsPerPage]);
+
+    const uniqueCategories = Array.from(new Set(materials.map(m => m.material_category_id).filter(c => c)));
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value, type } = e.target;
+        if (type === 'checkbox') {
+            const checked = (e.target as HTMLInputElement).checked;
+            setFormData({ ...formData, [name]: checked });
+        } else {
+            setFormData({ ...formData, [name]: value });
+        }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
-        setIsAddModalOpen(false);
-        setFormData({
-            materialId: "",
-            materialName: "",
-            shortName: "",
-            type: "Raw Material",
-            uom: "",
-            minStock: "",
-            reOrder: "",
-            safety: "",
-            minOrd: "",
-            ltMin: "",
-            ltMax: "",
-        });
+        e.stopPropagation();
+        if (isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
+        try {
+            await materialAPI.create(formData);
+            toast({
+                title: "Success",
+                description: "Material created successfully",
+            });
+            setIsAddModalOpen(false);
+            setFormData({
+                material_id: "",
+                material_name: "",
+                material_short_name: "",
+                uom: "KGS",
+                material_category_id: "",
+                material_type: "RM",
+                material_spec: "",
+                safety_stock_qty: "",
+                re_order_qty: "",
+                min_order_qty: "",
+                lead_time_days_min: "",
+                lead_time_days_max: "",
+                shelf_life_in_months: "",
+                qc_required: false,
+                coa_checklist_id: "",
+                material_image: "",
+                material_image_icon: "",
+                active: true,
+            });
+            loadMaterials();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to create material",
+                variant: "destructive",
+            });
+        } finally {
+            isSubmittingRef.current = false;
+        }
     };
 
-    const handleEdit = (material: MaterialRecord) => {
+    const handleEdit = (material: Material) => {
         setSelectedMaterial(material);
         setFormData({
-            materialId: material.materialId,
-            materialName: material.materialName,
-            shortName: material.shortName,
-            type: material.type === "RM" ? "Raw Material" : "Packaging",
+            material_id: material.material_id,
+            material_name: material.material_name,
+            material_short_name: material.material_short_name,
             uom: material.uom,
-            minStock: material.minStock.toString(),
-            reOrder: material.reOrder.toString(),
-            safety: material.safety.toString(),
-            minOrd: material.minOrd.toString(),
-            ltMin: material.ltMin.toString(),
-            ltMax: material.ltMax.toString(),
+            material_category_id: material.material_category_id || "",
+            material_type: material.material_type,
+            material_spec: material.material_spec || "",
+            safety_stock_qty: material.safety_stock_qty?.toString() || "",
+            re_order_qty: material.re_order_qty?.toString() || "",
+            min_order_qty: material.min_order_qty?.toString() || "",
+            lead_time_days_min: material.lead_time_days_min?.toString() || "",
+            lead_time_days_max: material.lead_time_days_max?.toString() || "",
+            shelf_life_in_months: material.shelf_life_in_months?.toString() || "",
+            qc_required: material.qc_required || false,
+            coa_checklist_id: material.coa_checklist_id || "",
+            material_image: material.material_image || "",
+            material_image_icon: material.material_image_icon || "",
+            active: material.active !== undefined ? material.active : true,
         });
         setIsEditModalOpen(true);
     };
 
-    const handleEditSubmit = (e: React.FormEvent) => {
+    const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Edit submitted:", { ...selectedMaterial, ...formData });
-        setIsEditModalOpen(false);
-        setSelectedMaterial(null);
-        setFormData({
-            materialId: "",
-            materialName: "",
-            shortName: "",
-            type: "Raw Material",
-            uom: "",
-            minStock: "",
-            reOrder: "",
-            safety: "",
-            minOrd: "",
-            ltMin: "",
-            ltMax: "",
-        });
+        e.stopPropagation();
+        if (isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
+        try {
+            await materialAPI.update(selectedMaterial!.material_id, formData);
+            toast({
+                title: "Success",
+                description: "Material updated successfully",
+            });
+            setIsEditModalOpen(false);
+            setSelectedMaterial(null);
+            loadMaterials();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to update material",
+                variant: "destructive",
+            });
+        } finally {
+            isSubmittingRef.current = false;
+        }
     };
 
-    const handleDelete = (material: MaterialRecord) => {
+    const handleDelete = (material: Material) => {
         setSelectedMaterial(material);
         setIsDeleteDialogOpen(true);
     };
 
-    const confirmDelete = () => {
-        console.log("Deleting material:", selectedMaterial);
-        setIsDeleteDialogOpen(false);
-        setSelectedMaterial(null);
+    const confirmDelete = async () => {
+        try {
+            await materialAPI.delete(selectedMaterial!.material_id);
+            toast({
+                title: "Success",
+                description: "Material deleted successfully",
+            });
+            setIsDeleteDialogOpen(false);
+            setSelectedMaterial(null);
+            loadMaterials();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to delete material",
+                variant: "destructive",
+            });
+        }
     };
+
+    if (loading) {
+        return (
+            <div className="flex min-h-screen bg-background">
+                <Sidebar />
+                <main className="flex-1 overflow-auto lg:ml-64">
+                    <div className="p-8 flex items-center justify-center">
+                        <div className="text-muted-foreground">Loading...</div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-screen bg-background">
             <Sidebar />
 
-            <main className="flex-1 overflow-auto ml-64">
-                <div className="p-8">
+            <main className="flex-1 overflow-auto lg:ml-64">
+                <div className="p-4 md:p-6 lg:p-8">
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="mb-8"
+                        className="mb-6 md:mb-8"
                     >
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div>
-                                <h1 className="text-3xl font-bold text-foreground mb-2">Material Master</h1>
-                                <p className="text-muted-foreground">Manage and configure raw material specifications and inventory parameters</p>
+                                <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Material Master</h1>
+                                <p className="text-sm md:text-base text-muted-foreground">Manage and configure material specifications and inventory parameters</p>
                             </div>
                             <Button
                                 onClick={() => setIsAddModalOpen(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all w-full md:w-auto"
                             >
                                 <Plus className="w-5 h-5" />
-                                Add New Material
+                                <span className="whitespace-nowrap">Add New Material</span>
                             </Button>
                         </div>
                     </motion.div>
@@ -192,137 +330,170 @@ export default function MaterialMasterPage() {
                     >
                         <Card className="p-4">
                             <div className="flex items-center gap-4">
-                                <div className="flex-1 relative max-w-md">
+                                <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search Materials..."
+                                        placeholder="Search by Material ID, Name, or Shortname..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10 pr-4 py-2 w-full bg-background border-border"
+                                        className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
-
-                                <div className="relative">
-                                    <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                                        <span className="text-sm font-medium">Material Type</span>
-                                        <LayoutGrid className="w-4 h-4 text-muted-foreground" />
-                                    </button>
-                                </div>
-
-                                <div className="relative">
-                                    <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                                        <span className="text-sm font-medium">Status</span>
-                                        <ToggleLeft className="w-4 h-4 text-muted-foreground" />
-                                    </button>
-                                </div>
-
-                                <div className="h-6 w-px bg-border mx-2"></div>
-
-                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-{filteredMaterials.length} OF {materials.length} MATERIALS
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                    SHOWING {filteredMaterials.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredMaterials.length)} OF {filteredMaterials.length}
                                 </span>
-
-                                <div className="flex items-center gap-2 ml-auto">
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                                                <Filter className="w-4 h-4" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto max-w-4xl p-4" align="end">
-                                            <div className="flex flex-wrap gap-6 items-start">
-                                                <div className="flex flex-col gap-2 min-w-[120px]">
-                                                    <Label className="text-sm font-semibold">Material Type</Label>
-                                                    <div className="flex flex-wrap gap-3">
-                                                        <div className="flex items-center space-x-2">
-                                                            <input 
-                                                                type="radio" 
-                                                                id="type-all" 
-                                                                name="materialType"
-                                                                checked={filterType === "all"}
-                                                                onChange={() => setFilterType("all")}
-                                                                className="h-4 w-4"
-                                                            />
-                                                            <Label htmlFor="type-all" className="text-sm font-normal cursor-pointer">All Types</Label>
-                                                        </div>
-                                                        <div className="flex items-center space-x-2">
-                                                            <input 
-                                                                type="radio" 
-                                                                id="type-rm" 
-                                                                name="materialType"
-                                                                checked={filterType === "RM"}
-                                                                onChange={() => setFilterType("RM")}
-                                                                className="h-4 w-4"
-                                                            />
-                                                            <Label htmlFor="type-rm" className="text-sm font-normal cursor-pointer">Raw Material (RM)</Label>
-                                                        </div>
-                                                        <div className="flex items-center space-x-2">
-                                                            <input 
-                                                                type="radio" 
-                                                                id="type-pm" 
-                                                                name="materialType"
-                                                                checked={filterType === "PM"}
-                                                                onChange={() => setFilterType("PM")}
-                                                                className="h-4 w-4"
-                                                            />
-                                                            <Label htmlFor="type-pm" className="text-sm font-normal cursor-pointer">Packaging (PM)</Label>
-                                                        </div>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80 p-0" align="end">
+                                        <div className="p-4 border-b border-border">
+                                            <h3 className="font-semibold text-sm text-foreground">Filters</h3>
+                                        </div>
+                                        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">Active Status</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="mat-active-all" 
+                                                            name="matActiveFilter"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="mat-active-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="mat-active-true" 
+                                                            name="matActiveFilter"
+                                                            checked={filterActive === "true"}
+                                                            onChange={() => setFilterActive("true")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="mat-active-true" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="mat-active-false" 
+                                                            name="matActiveFilter"
+                                                            checked={filterActive === "false"}
+                                                            onChange={() => setFilterActive("false")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="mat-active-false" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col gap-2 min-w-[120px]">
-                                                    <Label className="text-sm font-semibold">Status</Label>
-                                                    <div className="flex flex-wrap gap-3">
-                                                        <div className="flex items-center space-x-2">
-                                                            <input 
-                                                                type="radio" 
-                                                                id="active-all" 
-                                                                name="activeStatus"
-                                                                checked={filterActive === "all"}
-                                                                onChange={() => setFilterActive("all")}
-                                                                className="h-4 w-4"
-                                                            />
-                                                            <Label htmlFor="active-all" className="text-sm font-normal cursor-pointer">All</Label>
-                                                        </div>
-                                                        <div className="flex items-center space-x-2">
-                                                            <input 
-                                                                type="radio" 
-                                                                id="active-true" 
-                                                                name="activeStatus"
-                                                                checked={filterActive === "active"}
-                                                                onChange={() => setFilterActive("active")}
-                                                                className="h-4 w-4"
-                                                            />
-                                                            <Label htmlFor="active-true" className="text-sm font-normal cursor-pointer">Active</Label>
-                                                        </div>
-                                                        <div className="flex items-center space-x-2">
-                                                            <input 
-                                                                type="radio" 
-                                                                id="active-false" 
-                                                                name="activeStatus"
-                                                                checked={filterActive === "inactive"}
-                                                                onChange={() => setFilterActive("inactive")}
-                                                                className="h-4 w-4"
-                                                            />
-                                                            <Label htmlFor="active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm" 
-                                                    className="w-full"
-                                                    onClick={() => {
-                                                        setFilterType("all");
-                                                        setFilterActive("all");
-                                                    }}
-                                                >
-                                                    Clear Filters
-                                                </Button>
                                             </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
+                                            <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">Material Type</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="mat-type-all" 
+                                                            name="matTypeFilter"
+                                                            checked={filterType === "all"}
+                                                            onChange={() => setFilterType("all")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="mat-type-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="mat-type-rm" 
+                                                            name="matTypeFilter"
+                                                            checked={filterType === "RM"}
+                                                            onChange={() => setFilterType("RM")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="mat-type-rm" className="text-sm font-normal cursor-pointer text-foreground">Raw Material (RM)</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="mat-type-pm" 
+                                                            name="matTypeFilter"
+                                                            checked={filterType === "PM"}
+                                                            onChange={() => setFilterType("PM")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="mat-type-pm" className="text-sm font-normal cursor-pointer text-foreground">Packing Material (PM)</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {uniqueCategories.length > 0 && (
+                                                <div className="space-y-3 pt-3 border-t border-border">
+                                                    <Label className="text-sm font-semibold text-foreground">Material Category</Label>
+                                                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id="mat-category-all" 
+                                                                name="matCategoryFilter"
+                                                                checked={filterCategory === "all"}
+                                                                onChange={() => setFilterCategory("all")}
+                                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <Label htmlFor="mat-category-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
+                                                        </div>
+                                                        {uniqueCategories.map((category) => (
+                                                            <div key={category} className="flex items-center space-x-2">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    id={`mat-category-${category}`} 
+                                                                    name="matCategoryFilter"
+                                                                    checked={filterCategory === category}
+                                                                    onChange={() => setFilterCategory(category)}
+                                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                                />
+                                                                <Label htmlFor={`mat-category-${category}`} className="text-sm font-normal cursor-pointer text-foreground">
+                                                                    {category} {materialCategoryMap.get(category) ? `- ${materialCategoryMap.get(category)}` : ''}
+                                                                </Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
+                                                <select
+                                                    value={rowsPerPage}
+                                                    onChange={(e) => setRowsPerPage(parseInt(e.target.value))}
+                                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    <option value={5}>5</option>
+                                                    <option value={10}>10</option>
+                                                    <option value={25}>25</option>
+                                                    <option value={50}>50</option>
+                                                    <option value={100}>100</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => {
+                                                    setFilterActive("all");
+                                                    setFilterType("all");
+                                                    setFilterCategory("all");
+                                                }}
+                                            >
+                                                Clear Filters
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>
@@ -337,83 +508,86 @@ export default function MaterialMasterPage() {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material_id</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material name</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Shortname</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material type</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">uom</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">min stock</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">re-order qty</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">safety stock</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">min order upin</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">Lead Time</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">Lead Time</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">Active</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">KGs per</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">material_id</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">material name</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase min-w-[150px]">material short name</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">uom</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">material category id</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">material type</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">material spec</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">safety stock qty</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">re-order qty</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">min order qty</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Lead Time Days Min</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Lead Time Days Max</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">shelf life in months</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">QC required</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">COA checklist_id</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">material image</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">material image icon</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">last modified user id</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">last modified date & time</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Active</th>
+                                            <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredMaterials.map((material, index) => (
+                                        {paginatedMaterials.map((material, index) => (
                                             <motion.tr
-                                                key={material.id}
+                                                key={material.material_id}
                                                 initial={{ opacity: 0, x: -20 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors cursor-pointer"
+                                                className="hover:bg-muted/30 transition-colors"
                                             >
-                                                <td className="px-6 py-4 align-top">
-                                                    <span className="text-xs font-semibold text-blue-600">
-                                                        {material.materialId}
-                                                    </span>
+                                                <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{material.material_id}</td>
+                                                <td className="px-4 py-3 text-sm font-semibold">{material.material_name}</td>
+                                                <td className="px-4 py-3 text-sm">{material.material_short_name}</td>
+                                                <td className="px-4 py-3 text-sm">{material.uom}</td>
+                                                <td className="px-4 py-3 text-sm">
+                                                    {material.material_category_id ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="font-mono text-muted-foreground">{material.material_category_id}</span>
+                                                            {materialCategoryMap.get(material.material_category_id) && (
+                                                                <span className="text-xs text-muted-foreground">{materialCategoryMap.get(material.material_category_id)}</span>
+                                                            )}
+                                                        </div>
+                                                    ) : "-"}
                                                 </td>
-                                                <td className="px-6 py-4 align-top">
-                                                    <span className="text-xs font-semibold text-foreground">
-                                                        {material.materialName}
-                                                    </span>
+                                                <td className="px-4 py-3 text-sm">{material.material_type}</td>
+                                                <td className="px-4 py-3 text-sm">{material.material_spec || "-"}</td>
+                                                <td className="px-4 py-3 text-sm">{material.safety_stock_qty || "-"}</td>
+                                                <td className="px-4 py-3 text-sm">{material.re_order_qty || "-"}</td>
+                                                <td className="px-4 py-3 text-sm">{material.min_order_qty || "-"}</td>
+                                                <td className="px-4 py-3 text-sm">{material.lead_time_days_min === null || material.lead_time_days_min === undefined ? "??" : material.lead_time_days_min}</td>
+                                                <td className="px-4 py-3 text-sm">{material.lead_time_days_max === null || material.lead_time_days_max === undefined ? "??" : material.lead_time_days_max}</td>
+                                                <td className="px-4 py-3 text-sm">{material.shelf_life_in_months || "-"}</td>
+                                                <td className="px-4 py-3 text-sm">{material.qc_required ? "TRUE" : "FALSE"}</td>
+                                                <td className="px-4 py-3 text-sm">
+                                                    {material.coa_checklist_id ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="font-mono text-muted-foreground">{material.coa_checklist_id}</span>
+                                                            {coaChecklistMap.get(material.coa_checklist_id) && (
+                                                                <span className="text-xs text-muted-foreground">{coaChecklistMap.get(material.coa_checklist_id)}</span>
+                                                            )}
+                                                        </div>
+                                                    ) : "-"}
                                                 </td>
-                                                <td className="px-6 py-4 align-top">
-                                                    <span className="text-xs font-semibold text-foreground">
-                                                        {material.shortName}
-                                                    </span>
+                                                <td className="px-4 py-3 text-sm">{material.material_image || "-"}</td>
+                                                <td className="px-4 py-3 text-sm">{material.material_image_icon || "-"}</td>
+                                                <td className="px-4 py-3 text-sm">
+                                                    {material.last_modified_user_id ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="font-mono text-muted-foreground">{material.last_modified_user_id}</span>
+                                                            {userMap.get(material.last_modified_user_id) && (
+                                                                <span className="text-xs text-muted-foreground">{userMap.get(material.last_modified_user_id)}</span>
+                                                            )}
+                                                        </div>
+                                                    ) : "-"}
                                                 </td>
-                                                <td className="px-6 py-4 align-top">
-                                                    <span className="text-xs font-semibold text-foreground">
-                                                        {material.type}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 align-top">
-                                                    <span className="text-xs font-semibold text-foreground">
-                                                        {material.uom}
-                                                    </span>
-                                                </td>
-                                                <td className={`px-6 py-4 text-center align-top ${material.minStock === 25000 ? 'bg-yellow-300' : ''}`}>
-                                                    <span className="text-xs font-semibold text-foreground">{material.minStock}</span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center align-top">
-                                                    <span className="text-xs font-semibold text-foreground">
-                                                        {material.reOrder}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center align-top">
-                                                    <span className="text-xs font-semibold text-foreground">{material.safety}</span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center align-top">
-                                                    <span className="text-xs font-semibold text-foreground">{material.minOrd}</span>
-                                                </td>
-                                                <td className={`px-6 py-4 text-center align-top ${material.ltMin === 7 ? 'bg-yellow-300' : ''}`}>
-                                                    <span className="text-xs font-semibold text-foreground">{material.ltMin}</span>
-                                                </td>
-                                                <td className={`px-6 py-4 text-center align-top ${material.ltMax === 10 ? 'bg-yellow-300' : ''}`}>
-                                                    <span className="text-xs font-semibold text-foreground">{material.ltMax}</span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center align-top">
-                                                    <span className="text-xs font-semibold text-foreground">{material.active}</span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center align-top">
-                                                    <span className="text-xs font-semibold text-foreground">{material.kgsPerRoll}</span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center align-top">
+                                                <td className="px-4 py-3 text-sm">{formatDateTime(material.last_modified_date_time)}</td>
+                                                <td className="px-4 py-3 text-sm font-semibold">{material.active ? "TRUE" : "FALSE"}</td>
+                                                <td className="px-4 py-3">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <Button
                                                             variant="ghost"
@@ -444,34 +618,37 @@ export default function MaterialMasterPage() {
                                     </tbody>
                                 </table>
                             </div>
-
-                            <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-white">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">SHOWING 1-{filteredMaterials.length} OF {materials.length} MATERIALS</span>
+                            <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
+                                <span className="text-sm text-muted-foreground">
+                                    PAGE {currentPage} OF {totalPages || 1}
+                                </span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" className="h-8 text-xs">Previous</Button>
-                                    <Button variant="outline" size="sm" className="h-8 text-xs text-blue-600 border-blue-200 bg-blue-50">Next</Button>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronLeft className="w-4 h-4 mr-1" />
+                                        Previous
+                                    </Button>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage >= totalPages}
+                                    >
+                                        Next
+                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                    </Button>
                                 </div>
                             </div>
                         </Card>
                     </motion.div>
-
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5, delay: 0.4 }}
-                        className="mt-8 text-center"
-                    >
-                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span className="font-semibold">ALL SYSTEMS OPERATIONAL</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Real-time Data Sync • ACUMED DEVICES Manufacturing Cloud v4.2
-                        </p>
-                    </motion.div>
                 </div>
             </main>
 
+            {/* Add Material Modal - Simplified for now */}
             <AnimatePresence>
                 {isAddModalOpen && (
                     <>
@@ -482,14 +659,13 @@ export default function MaterialMasterPage() {
                             className="fixed inset-0 bg-black/50 z-50"
                             onClick={() => setIsAddModalOpen(false)}
                         />
-
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Material</h2>
                                     <button
@@ -499,76 +675,90 @@ export default function MaterialMasterPage() {
                                         <X className="w-6 h-6" />
                                     </button>
                                 </div>
-
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
+                                    <div className="grid grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Material ID <span className="text-red-500">*</span></label>
-                                            <Input name="materialId" value={formData.materialId} onChange={handleInputChange} placeholder="MAT-XXX" required />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Material Name <span className="text-red-500">*</span></label>
-                                            <Input name="materialName" value={formData.materialName} onChange={handleInputChange} required />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
-                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-NAME" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Material Type</label>
-                                            <select
-                                                name="type"
-                                                value={formData.type}
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Material ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="material_id"
+                                                value={formData.material_id}
                                                 onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                                                placeholder="RM001"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Material Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="material_name"
+                                                value={formData.material_name}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter material name"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Material Short Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="material_short_name"
+                                                value={formData.material_short_name}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter short name"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                UOM <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="uom"
+                                                value={formData.uom}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                required
                                             >
-                                                <option value="Raw Material">Raw Material</option>
-                                                <option value="Packaging">Packaging</option>
+                                                <option value="KGS">KGS</option>
+                                                <option value="NOS">NOS</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Material Type <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="material_type"
+                                                value={formData.material_type}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                required
+                                            >
+                                                <option value="RM">Raw Material (RM)</option>
+                                                <option value="PM">Packing Material (PM)</option>
                                             </select>
                                         </div>
                                     </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">UOM</label>
-                                        <Input name="uom" value={formData.uom} onChange={handleInputChange} placeholder="KGs, Roll, etc." />
-                                    </div>
-
-                                    <div className="grid grid-cols-4 gap-4 mb-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">Min Stock</label>
-                                            <Input type="number" name="minStock" value={formData.minStock} onChange={handleInputChange} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">Re-Order</label>
-                                            <Input type="number" name="reOrder" value={formData.reOrder} onChange={handleInputChange} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">Safety</label>
-                                            <Input type="number" name="safety" value={formData.safety} onChange={handleInputChange} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">Min Ord</label>
-                                            <Input type="number" name="minOrd" value={formData.minOrd} onChange={handleInputChange} />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-6 mb-6">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Lead Time Min (Days)</label>
-                                            <Input type="number" name="ltMin" value={formData.ltMin} onChange={handleInputChange} placeholder="0" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Lead Time Max (Days)</label>
-                                            <Input type="number" name="ltMax" value={formData.ltMax} onChange={handleInputChange} placeholder="0" />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setIsAddModalOpen(false)}
+                                            className="px-6"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                                        >
+                                            Save Material
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
@@ -577,6 +767,7 @@ export default function MaterialMasterPage() {
                 )}
             </AnimatePresence>
 
+            {/* Edit Material Modal - Similar structure */}
             <AnimatePresence>
                 {isEditModalOpen && (
                     <>
@@ -587,14 +778,13 @@ export default function MaterialMasterPage() {
                             className="fixed inset-0 bg-black/50 z-50"
                             onClick={() => setIsEditModalOpen(false)}
                         />
-
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Material</h2>
                                     <button
@@ -604,76 +794,46 @@ export default function MaterialMasterPage() {
                                         <X className="w-6 h-6" />
                                     </button>
                                 </div>
-
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
+                                    <div className="grid grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Material ID <span className="text-red-500">*</span></label>
-                                            <Input name="materialId" value={formData.materialId} onChange={handleInputChange} placeholder="MAT-XXX" required />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Material Name <span className="text-red-500">*</span></label>
-                                            <Input name="materialName" value={formData.materialName} onChange={handleInputChange} required />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
-                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-NAME" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Material Type</label>
-                                            <select
-                                                name="type"
-                                                value={formData.type}
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Material ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="material_id"
+                                                value={formData.material_id}
                                                 onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background"
-                                            >
-                                                <option value="Raw Material">Raw Material</option>
-                                                <option value="Packaging">Packaging</option>
-                                            </select>
+                                                disabled
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Material Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="material_name"
+                                                value={formData.material_name}
+                                                onChange={handleInputChange}
+                                                required
+                                            />
                                         </div>
                                     </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">UOM</label>
-                                        <Input name="uom" value={formData.uom} onChange={handleInputChange} placeholder="KGs, Roll, etc." />
-                                    </div>
-
-                                    <div className="grid grid-cols-4 gap-4 mb-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">Min Stock</label>
-                                            <Input type="number" name="minStock" value={formData.minStock} onChange={handleInputChange} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">Re-Order</label>
-                                            <Input type="number" name="reOrder" value={formData.reOrder} onChange={handleInputChange} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">Safety</label>
-                                            <Input type="number" name="safety" value={formData.safety} onChange={handleInputChange} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">Min Ord</label>
-                                            <Input type="number" name="minOrd" value={formData.minOrd} onChange={handleInputChange} />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-6 mb-6">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Lead Time Min (Days)</label>
-                                            <Input type="number" name="ltMin" value={formData.ltMin} onChange={handleInputChange} placeholder="0" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Lead Time Max (Days)</label>
-                                            <Input type="number" name="ltMax" value={formData.ltMax} onChange={handleInputChange} placeholder="0" />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setIsEditModalOpen(false)}
+                                            className="px-6"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                                        >
+                                            Update Material
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
@@ -682,6 +842,7 @@ export default function MaterialMasterPage() {
                 )}
             </AnimatePresence>
 
+            {/* Delete Confirmation Dialog */}
             <AnimatePresence>
                 {isDeleteDialogOpen && (
                     <>
@@ -692,7 +853,6 @@ export default function MaterialMasterPage() {
                             className="fixed inset-0 bg-black/50 z-50"
                             onClick={() => setIsDeleteDialogOpen(false)}
                         />
-
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -709,15 +869,13 @@ export default function MaterialMasterPage() {
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
-
                                 <div className="p-6">
                                     <p className="text-foreground mb-4">
-                                        Are you sure you want to delete <strong>{selectedMaterial?.materialName}</strong>?
+                                        Are you sure you want to delete <strong>{selectedMaterial?.material_name}</strong>?
                                     </p>
                                     <p className="text-sm text-muted-foreground mb-6">
                                         This action cannot be undone.
                                     </p>
-
                                     <div className="flex items-center justify-end gap-4">
                                         <Button
                                             variant="outline"
@@ -741,6 +899,3 @@ export default function MaterialMasterPage() {
         </div>
     );
 }
-
-
-

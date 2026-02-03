@@ -40,3 +40,4 @@ const DepartmentMaster = (mongoose.models.DepartmentMaster as mongoose.Model<IDe
 export default DepartmentMaster;
 
 
+

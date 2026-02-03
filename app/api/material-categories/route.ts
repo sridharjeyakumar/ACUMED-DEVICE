@@ -1,40 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/server/db/connection';
+import { ensureConnection } from '@/server/db/connection';
 import MaterialCategoryMaster from '@/server/models/MaterialCategoryMaster';
 
-let dbConnected = false;
-
-async function ensureDbConnection() {
-  const mongoose = await import('mongoose');
-  const readyState = mongoose.default.connection.readyState as number;
-  if (readyState === 1) {
-    dbConnected = true;
-    return;
-  }
-  
-  if (!dbConnected) {
-    try {
-      await connectDB();
-      dbConnected = true;
-    } catch (error: any) {
-      dbConnected = false;
-      console.error('Database connection error:', error);
-      throw error;
-    }
-  } else {
-    if (readyState !== 1) {
-      dbConnected = false;
-      await ensureDbConnection();
-    }
-  }
-}
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // GET /api/material-categories - Get all material categories
 export async function GET() {
   try {
-    await ensureDbConnection();
-    const categories = await MaterialCategoryMaster.find().sort({ material_category_id: 1 });
-    return NextResponse.json(categories);
+    await ensureConnection();
+    // Use lean() for faster queries
+    const categories = await MaterialCategoryMaster.find().lean().sort({ material_category_id: 1 });
+    return NextResponse.json(categories, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching material categories:', error);
     return NextResponse.json(
@@ -47,7 +28,7 @@ export async function GET() {
 // POST /api/material-categories - Create new material category
 export async function POST(request: NextRequest) {
   try {
-    await ensureDbConnection();
+    await ensureConnection();
     const body = await request.json();
     const category = new MaterialCategoryMaster({ 
       material_category_id: body.material_category_id,
@@ -77,4 +58,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

@@ -48,6 +48,8 @@ export default function RoleMasterPage() {
     const [filterActive, setFilterActive] = useState<string>("all");
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Role } | null>(null);
     const [cancelledRoles, setCancelledRoles] = useState<Set<string>>(new Set());
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+    const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
         roll_id: "",
         roll_description: "",
@@ -86,6 +88,17 @@ export default function RoleMasterPage() {
         
         return matchesSearch && matchesActive;
     });
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredRoles.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedRoles = filteredRoles.slice(startIndex, endIndex);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterActive, rowsPerPage]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -258,7 +271,7 @@ export default function RoleMasterPage() {
                                     />
                                 </div>
                                 <span className="text-sm text-muted-foreground">
-                                    SHOWING 1-{filteredRoles.length} OF {roles.length}
+                                    SHOWING {filteredRoles.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredRoles.length)} OF {filteredRoles.length}
                                 </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -266,10 +279,13 @@ export default function RoleMasterPage() {
                                             <Filter className="w-4 h-4" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-56" align="end">
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-semibold">Status</Label>
+                                    <PopoverContent className="w-80 p-0" align="end">
+                                        <div className="p-4 border-b border-border">
+                                            <h3 className="font-semibold text-sm text-foreground">Filters</h3>
+                                        </div>
+                                        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">Status</Label>
                                                 <div className="space-y-2">
                                                     <div className="flex items-center space-x-2">
                                                         <input 
@@ -278,9 +294,9 @@ export default function RoleMasterPage() {
                                                             name="roleActiveStatus"
                                                             checked={filterActive === "all"}
                                                             onChange={() => setFilterActive("all")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="role-active-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        <Label htmlFor="role-active-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
                                                         <input 
@@ -289,9 +305,9 @@ export default function RoleMasterPage() {
                                                             name="roleActiveStatus"
                                                             checked={filterActive === "active"}
                                                             onChange={() => setFilterActive("active")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="role-active-true" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                        <Label htmlFor="role-active-true" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
                                                         <input 
@@ -300,12 +316,28 @@ export default function RoleMasterPage() {
                                                             name="roleActiveStatus"
                                                             checked={filterActive === "inactive"}
                                                             onChange={() => setFilterActive("inactive")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="role-active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                        <Label htmlFor="role-active-false" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
                                                     </div>
                                                 </div>
                                             </div>
+                                            <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
+                                                <select
+                                                    value={rowsPerPage}
+                                                    onChange={(e) => setRowsPerPage(parseInt(e.target.value))}
+                                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    <option value={5}>5</option>
+                                                    <option value={10}>10</option>
+                                                    <option value={25}>25</option>
+                                                    <option value={50}>50</option>
+                                                    <option value={100}>100</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
                                             <Button 
                                                 variant="outline" 
                                                 size="sm" 
@@ -344,7 +376,7 @@ export default function RoleMasterPage() {
                                                 STATUS
                                             </th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
-                                                LAST MODIFIED USER ID
+                                                LAST MODIFIED USER ID / NAME
                                             </th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">
                                                 LAST MODIFIED DATE & TIME
@@ -368,7 +400,7 @@ export default function RoleMasterPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredRoles.map((role, index) => {
+                                            paginatedRoles.map((role, index) => {
                                                 const isCancelled = cancelledRoles.has(role.roll_id);
                                                 return (
                                             <motion.tr
@@ -401,9 +433,14 @@ export default function RoleMasterPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm text-foreground font-mono">
-                                                        {role.last_modified_user_id || "-"}
-                                                    </span>
+                                                    {role.last_modified_user_id ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-mono text-foreground">{role.last_modified_user_id}</span>
+                                                            <span className="text-xs text-muted-foreground">{role.last_modified_user_id}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-sm text-foreground">-</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-foreground">
@@ -449,13 +486,23 @@ export default function RoleMasterPage() {
                             </div>
 
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
-                                <span className="text-sm text-muted-foreground">PAGE 1 OF 1</span>
+                                <span className="text-sm text-muted-foreground">PAGE {currentPage} OF {totalPages || 1}</span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    >
                                         <ChevronLeft className="w-4 h-4 mr-1" />
                                         Previous
                                     </Button>
-                                    <Button variant="outline" size="sm" disabled>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage >= totalPages}
+                                    >
                                         Next
                                         <ChevronRight className="w-4 h-4 ml-1" />
                                     </Button>
@@ -675,5 +722,6 @@ export default function RoleMasterPage() {
         </div>
     );
 }
+
 
 

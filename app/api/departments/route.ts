@@ -1,40 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/server/db/connection';
+import { ensureConnection } from '@/server/db/connection';
 import DepartmentMaster from '@/server/models/DepartmentMaster';
 
-let dbConnected = false;
-
-async function ensureDbConnection() {
-  const mongoose = await import('mongoose');
-  const readyState = mongoose.default.connection.readyState as number;
-  if (readyState === 1) {
-    dbConnected = true;
-    return;
-  }
-  
-  if (!dbConnected) {
-    try {
-      await connectDB();
-      dbConnected = true;
-    } catch (error: any) {
-      dbConnected = false;
-      console.error('Database connection error:', error);
-      throw error;
-    }
-  } else {
-    if (readyState !== 1) {
-      dbConnected = false;
-      await ensureDbConnection();
-    }
-  }
-}
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // GET /api/departments - Get all departments
 export async function GET() {
   try {
-    await ensureDbConnection();
-    const departments = await DepartmentMaster.find().sort({ dept_id: 1 });
-    return NextResponse.json(departments);
+    await ensureConnection();
+    // Use lean() for faster queries
+    const departments = await DepartmentMaster.find().lean().sort({ dept_id: 1 });
+    return NextResponse.json(departments, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching departments:', error);
     return NextResponse.json(
@@ -47,7 +28,7 @@ export async function GET() {
 // POST /api/departments - Create new department
 export async function POST(request: NextRequest) {
   try {
-    await ensureDbConnection();
+    await ensureConnection();
     const body = await request.json();
     const department = new DepartmentMaster({ 
       dept_id: body.dept_id,
@@ -77,5 +58,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 
 

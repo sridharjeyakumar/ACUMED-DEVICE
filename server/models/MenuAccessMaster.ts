@@ -68,6 +68,10 @@ const MenuAccessMasterSchema: Schema = new Schema({
 
 // Create compound index for unique role-menu combination
 MenuAccessMasterSchema.index({ rold_id: 1, menu_id: 1 }, { unique: true });
+// Add additional indexes for better query performance
+MenuAccessMasterSchema.index({ rold_id: 1 }); // For filtering by role
+MenuAccessMasterSchema.index({ menu_id: 1 }); // For filtering by menu
+MenuAccessMasterSchema.index({ access: 1 }); // For filtering by access status
 
 // Check if model already exists to prevent overwrite error in Next.js hot reloading
 const MenuAccessMaster = (mongoose.models.MenuAccessMaster as mongoose.Model<IMenuAccessMaster>) || mongoose.model<IMenuAccessMaster>('MenuAccessMaster', MenuAccessMasterSchema);

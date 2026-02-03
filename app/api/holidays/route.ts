@@ -1,40 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/server/db/connection';
+import { ensureConnection } from '@/server/db/connection';
 import HolidaysMaster from '@/server/models/HolidaysMaster';
 
-let dbConnected = false;
-
-async function ensureDbConnection() {
-  const mongoose = await import('mongoose');
-  const readyState = mongoose.default.connection.readyState as number;
-  if (readyState === 1) {
-    dbConnected = true;
-    return;
-  }
-  
-  if (!dbConnected) {
-    try {
-      await connectDB();
-      dbConnected = true;
-    } catch (error: any) {
-      dbConnected = false;
-      console.error('Database connection error:', error);
-      throw error;
-    }
-  } else {
-    if (readyState !== 1) {
-      dbConnected = false;
-      await ensureDbConnection();
-    }
-  }
-}
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // GET /api/holidays - Get all holidays
 export async function GET() {
   try {
-    await ensureDbConnection();
-    const holidays = await HolidaysMaster.find().sort({ date: 1, year: 1 });
-    return NextResponse.json(holidays);
+    await ensureConnection();
+    // Use lean() for faster queries
+    const holidays = await HolidaysMaster.find().lean().sort({ date: 1, year: 1 });
+    return NextResponse.json(holidays, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching holidays:', error);
     return NextResponse.json(
@@ -47,7 +28,7 @@ export async function GET() {
 // POST /api/holidays - Create new holiday
 export async function POST(request: NextRequest) {
   try {
-    await ensureDbConnection();
+    await ensureConnection();
     const body = await request.json();
     const holiday = new HolidaysMaster({ 
       date: new Date(body.date),
@@ -78,4 +59,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 

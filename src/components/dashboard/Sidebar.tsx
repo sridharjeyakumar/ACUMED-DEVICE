@@ -64,7 +64,6 @@ const navSections: NavSection[] = [
       { icon: Building2, label: "Company Master", href: "/company-master" },
       { icon: Factory, label: "Department Master", href: "/department-master" },
       { icon: Award, label: "Employee Grade Master", href: "/employee-grade-master" },
-      { icon: Key, label: "Role wise Menu Access", href: "/role-wise-menu-access" },
       { icon: CheckCircle2, label: "Product Status Master", href: "/product-status-master" },
       { icon: Package, label: "Material Status Master", href: "/material-status-master" },
       { icon: PackageOpen, label: "Product Category Master", href: "/product-category-master" },

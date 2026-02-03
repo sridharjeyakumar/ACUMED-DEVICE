@@ -1,33 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/server/db/connection';
+import { ensureConnection } from '@/server/db/connection';
 import UserLoginHistory from '@/server/models/UserLoginHistory';
 
-// Ensure DB connection
-let dbConnected = false;
-async function ensureDbConnection() {
-  const mongoose = await import('mongoose');
-  const readyState = mongoose.default.connection.readyState as number;
-  if (readyState === 1) {
-    return;
-  }
-  
-  if (!dbConnected) {
-    try {
-      await connectDB();
-      dbConnected = true;
-    } catch (error: any) {
-      dbConnected = false;
-      throw error;
-    }
-  }
-}
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // GET /api/user-login-history - Get all login histories
 export async function GET() {
   try {
-    await ensureDbConnection();
-    const histories = await UserLoginHistory.find().sort({ Date_login_Date: -1, Time_login_Time: -1 });
-    return NextResponse.json(histories);
+    await ensureConnection();
+    // Use lean() for faster queries
+    const histories = await UserLoginHistory.find().lean().sort({ Date_login_Date: -1, Time_login_Time: -1 });
+    return NextResponse.json(histories, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching login histories:', error);
     const errorMessage = error.message || 'Failed to fetch login histories';
@@ -45,7 +33,7 @@ export async function GET() {
 // POST /api/user-login-history - Create new login history
 export async function POST(request: NextRequest) {
   try {
-    await ensureDbConnection();
+    await ensureConnection();
     const body = await request.json();
     const { user_id, Date_login_Date, Time_login_Time, Date_Logout_Date, Time_Logout_Time } = body;
     
@@ -66,4 +54,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

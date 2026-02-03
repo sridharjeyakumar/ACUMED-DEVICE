@@ -1,154 +1,266 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, Box, ChevronDown, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
+import { packSizeAPI, userAPI } from "@/services/api";
 
-interface PackSizeRecord {
-    id: string;
-    packSizeId: string;
-    packSizeName: string;
-    division: string;
-    shortName: string;
-    qtyPerCarton: number;
+interface PackSize {
+    pack_size_id: string;
+    pack_size_name: string;
+    pack_size_short_name: string;
+    qty_per_carton: number;
+    uom: string;
+    last_modified_user_id?: string;
+    last_modified_date_time?: Date;
+    active?: boolean;
+}
+
+// Helper function to format dates consistently
+function formatDateTime(date: Date | string | undefined): string {
+    if (!date) return "-";
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "-";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
 export default function PackSizeMasterPage() {
+    const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [selectedPackSize, setSelectedPackSize] = useState<PackSizeRecord | null>(null);
-    const [filterDivision, setFilterDivision] = useState<string>("all");
+    const [selectedPackSize, setSelectedPackSize] = useState<PackSize | null>(null);
+    const [filterActive, setFilterActive] = useState<string>("all");
+    const [packSizes, setPackSizes] = useState<PackSize[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
+    const isSubmittingRef = useRef(false);
+
     const [formData, setFormData] = useState({
-        packSizeId: "",
-        packSizeName: "",
-        division: "",
-        shortName: "",
-        qtyPerCarton: "",
+        pack_size_id: "",
+        pack_size_name: "",
+        pack_size_short_name: "",
+        qty_per_carton: "",
+        uom: "NOS",
+        active: true,
     });
 
-    const packSizes: PackSizeRecord[] = [
-        {
-            id: "1",
-            packSizeId: "PaCK06",
-            packSizeName: "6s pack",
-            division: "",
-            shortName: "6s pack",
-            qtyPerCarton: 6,
-        },
-        {
-            id: "2",
-            packSizeId: "PaCK12",
-            packSizeName: "12s pack",
-            division: "",
-            shortName: "12s pack",
-            qtyPerCarton: 12,
-        },
-        {
-            id: "3",
-            packSizeId: "PaCK24",
-            packSizeName: "24s pack",
-            division: "",
-            shortName: "24s pack",
-            qtyPerCarton: 24,
-        },
-    ];
-
-    const filteredPackSizes = packSizes.filter((item) => {
-        const matchesSearch = item.packSizeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.packSizeId.toLowerCase().includes(searchQuery.toLowerCase());
-        
-        const matchesDivision = filterDivision === "all" || item.division === filterDivision;
-        
-        return matchesSearch && matchesDivision;
-    });
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    // Load pack sizes from API
+    const loadPackSizes = async () => {
+        try {
+            setLoading(true);
+            const data = await packSizeAPI.getAll();
+            setPackSizes(data);
+            
+            // Load users for displaying names
+            try {
+                const users = await userAPI.getAll();
+                const userMapData = new Map<string, string>();
+                users.forEach((user: any) => {
+                    if (user.user_id && user.user_name) {
+                        userMapData.set(user.user_id, user.user_name);
+                    }
+                });
+                setUserMap(userMapData);
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load pack sizes",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    useEffect(() => {
+        loadPackSizes();
+    }, []);
+
+    const filteredPackSizes = packSizes.filter((packSize) => {
+        const matchesSearch = packSize.pack_size_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            packSize.pack_size_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            packSize.pack_size_short_name.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "true" && packSize.active === true) ||
+            (filterActive === "false" && packSize.active === false);
+        
+        return matchesSearch && matchesActive;
+    });
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredPackSizes.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedPackSizes = filteredPackSizes.slice(startIndex, endIndex);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterActive, rowsPerPage]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value, type } = e.target;
+        if (type === 'checkbox') {
+            const checked = (e.target as HTMLInputElement).checked;
+            setFormData({ ...formData, [name]: checked });
+        } else {
+            setFormData({ ...formData, [name]: value });
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
-        setIsAddModalOpen(false);
-        setFormData({
-            packSizeId: "",
-            packSizeName: "",
-            division: "",
-            shortName: "",
-            qtyPerCarton: "",
-        });
+        e.stopPropagation();
+        if (isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
+        try {
+            await packSizeAPI.create(formData);
+            toast({
+                title: "Success",
+                description: "Pack Size created successfully",
+            });
+            setIsAddModalOpen(false);
+            setFormData({
+                pack_size_id: "",
+                pack_size_name: "",
+                pack_size_short_name: "",
+                qty_per_carton: "",
+                uom: "NOS",
+                active: true,
+            });
+            loadPackSizes();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to create pack size",
+                variant: "destructive",
+            });
+        } finally {
+            isSubmittingRef.current = false;
+        }
     };
 
-    const handleEdit = (packSize: PackSizeRecord) => {
+    const handleEdit = (packSize: PackSize) => {
         setSelectedPackSize(packSize);
         setFormData({
-            packSizeId: packSize.packSizeId,
-            packSizeName: packSize.packSizeName,
-            division: packSize.division,
-            shortName: packSize.shortName,
-            qtyPerCarton: packSize.qtyPerCarton.toString(),
+            pack_size_id: packSize.pack_size_id,
+            pack_size_name: packSize.pack_size_name,
+            pack_size_short_name: packSize.pack_size_short_name,
+            qty_per_carton: packSize.qty_per_carton.toString(),
+            uom: packSize.uom,
+            active: packSize.active !== undefined ? packSize.active : true,
         });
         setIsEditModalOpen(true);
     };
 
-    const handleEditSubmit = (e: React.FormEvent) => {
+    const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Edit submitted:", { ...selectedPackSize, ...formData });
-        setIsEditModalOpen(false);
-        setSelectedPackSize(null);
-        setFormData({
-            packSizeId: "",
-            packSizeName: "",
-            division: "",
-            shortName: "",
-            qtyPerCarton: "",
-        });
+        e.stopPropagation();
+        if (isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
+        try {
+            await packSizeAPI.update(selectedPackSize!.pack_size_id, formData);
+            toast({
+                title: "Success",
+                description: "Pack Size updated successfully",
+            });
+            setIsEditModalOpen(false);
+            setSelectedPackSize(null);
+            loadPackSizes();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to update pack size",
+                variant: "destructive",
+            });
+        } finally {
+            isSubmittingRef.current = false;
+        }
     };
 
-    const handleDelete = (packSize: PackSizeRecord) => {
+    const handleDelete = (packSize: PackSize) => {
         setSelectedPackSize(packSize);
         setIsDeleteDialogOpen(true);
     };
 
-    const confirmDelete = () => {
-        console.log("Deleting pack size:", selectedPackSize);
-        setIsDeleteDialogOpen(false);
-        setSelectedPackSize(null);
+    const confirmDelete = async () => {
+        try {
+            await packSizeAPI.delete(selectedPackSize!.pack_size_id);
+            toast({
+                title: "Success",
+                description: "Pack Size deleted successfully",
+            });
+            setIsDeleteDialogOpen(false);
+            setSelectedPackSize(null);
+            loadPackSizes();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to delete pack size",
+                variant: "destructive",
+            });
+        }
     };
+
+    if (loading) {
+        return (
+            <div className="flex min-h-screen bg-background">
+                <Sidebar />
+                <main className="flex-1 overflow-auto lg:ml-64">
+                    <div className="p-8 flex items-center justify-center">
+                        <div className="text-muted-foreground">Loading...</div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-screen bg-background">
             <Sidebar />
 
-            <main className="flex-1 overflow-auto ml-64">
-                <div className="p-8">
+            <main className="flex-1 overflow-auto lg:ml-64">
+                <div className="p-4 md:p-6 lg:p-8">
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="mb-8"
+                        className="mb-6 md:mb-8"
                     >
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div>
-                                <h1 className="text-3xl font-bold text-foreground mb-2">Pack Size Master</h1>
-                                <p className="text-muted-foreground">Define and manage packaging configurations and carton quantities</p>
+                                <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Pack Size Master</h1>
+                                <p className="text-sm md:text-base text-muted-foreground">Define and manage packaging configurations and carton quantities</p>
                             </div>
                             <Button
                                 onClick={() => setIsAddModalOpen(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all w-full md:w-auto"
                             >
                                 <Plus className="w-5 h-5" />
-                                Add New Pack Size
+                                <span className="whitespace-nowrap">Add New Pack Size</span>
                             </Button>
                         </div>
                     </motion.div>
@@ -163,71 +275,97 @@ export default function PackSizeMasterPage() {
                     >
                         <Card className="p-4">
                             <div className="flex items-center gap-4">
-                                <div className="flex-1 relative max-w-md">
+                                <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search Pack Size ID or Name..."
+                                        placeholder="Search by Pack Size ID, Name, or Short Name..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10 pr-4 py-2 w-full bg-background border-border"
+                                        className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
-
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                    SHOWING {filteredPackSizes.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredPackSizes.length)} OF {filteredPackSizes.length}
+                                </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors w-40 justify-between cursor-pointer">
-                                            <span className="text-sm font-medium">
-                                                {filterDivision === "all" ? "All Categories" : filterDivision || "All Categories"}
-                                            </span>
-                                            <Filter className="w-4 h-4 text-muted-foreground" />
-                                        </button>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-56" align="start">
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-semibold">Division</Label>
+                                    <PopoverContent className="w-80 p-0" align="end">
+                                        <div className="p-4 border-b border-border">
+                                            <h3 className="font-semibold text-sm text-foreground">Filters</h3>
+                                        </div>
+                                        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">Active Status</Label>
                                                 <div className="space-y-2">
                                                     <div className="flex items-center space-x-2">
                                                         <input 
                                                             type="radio" 
-                                                            id="division-all" 
-                                                            name="divisionFilter"
-                                                            checked={filterDivision === "all"}
-                                                            onChange={() => setFilterDivision("all")}
-                                                            className="h-4 w-4"
+                                                            id="pack-active-all" 
+                                                            name="packActiveFilter"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="division-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        <Label htmlFor="pack-active-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="pack-active-true" 
+                                                            name="packActiveFilter"
+                                                            checked={filterActive === "true"}
+                                                            onChange={() => setFilterActive("true")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="pack-active-true" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="pack-active-false" 
+                                                            name="packActiveFilter"
+                                                            checked={filterActive === "false"}
+                                                            onChange={() => setFilterActive("false")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="pack-active-false" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
                                                     </div>
                                                 </div>
                                             </div>
+                                            <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
+                                                <select
+                                                    value={rowsPerPage}
+                                                    onChange={(e) => setRowsPerPage(parseInt(e.target.value))}
+                                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    <option value={5}>5</option>
+                                                    <option value={10}>10</option>
+                                                    <option value={25}>25</option>
+                                                    <option value={50}>50</option>
+                                                    <option value={100}>100</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
                                             <Button 
                                                 variant="outline" 
                                                 size="sm" 
                                                 className="w-full"
-                                                onClick={() => setFilterDivision("all")}
+                                                onClick={() => {
+                                                    setFilterActive("all");
+                                                }}
                                             >
-                                                Clear Filter
+                                                Clear Filters
                                             </Button>
                                         </div>
                                     </PopoverContent>
                                 </Popover>
-
-                                <div className="h-6 w-px bg-border mx-2"></div>
-
-                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-{filteredPackSizes.length} OF {packSizes.length} PACK SIZES
-                                </span>
-
-                                <div className="flex items-center gap-2 ml-auto">
-                                    <Button variant="ghost" size="icon" className="text-muted-foreground">
-                                        <div className="space-y-1">
-                                            <div className="w-4 h-0.5 bg-current"></div>
-                                            <div className="w-3 h-0.5 bg-current ml-auto"></div>
-                                            <div className="w-2 h-0.5 bg-current ml-auto"></div>
-                                        </div>
-                                    </Button>
-                                </div>
                             </div>
                         </Card>
                     </motion.div>
@@ -242,42 +380,51 @@ export default function PackSizeMasterPage() {
                                 <table className="w-full">
                                     <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">packsize_id</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">packsize name</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">pack short name</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">qty per carton</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">pack size_id</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase min-w-[150px]">pack size name</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase min-w-[150px]">pack size short name</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">qty per carton</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">uom</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">last modified user id</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">last modified date & time</th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Active</th>
+                                            <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredPackSizes.map((item, index) => (
+                                        {paginatedPackSizes.map((packSize, index) => (
                                             <motion.tr
-                                                key={item.id}
+                                                key={packSize.pack_size_id}
                                                 initial={{ opacity: 0, x: -20 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors cursor-pointer"
+                                                className="hover:bg-muted/30 transition-colors"
                                             >
-                                                <td className="px-6 py-6 text-sm font-semibold text-blue-600 align-middle">
-                                                    {item.packSizeId}
+                                                <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{packSize.pack_size_id}</td>
+                                                <td className="px-4 py-3 text-sm font-semibold">{packSize.pack_size_name}</td>
+                                                <td className="px-4 py-3 text-sm">{packSize.pack_size_short_name}</td>
+                                                <td className="px-4 py-3 text-sm">{packSize.qty_per_carton}</td>
+                                                <td className="px-4 py-3 text-sm">{packSize.uom}</td>
+                                                <td className="px-4 py-3 text-sm">
+                                                    {packSize.last_modified_user_id ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="font-mono text-muted-foreground">{packSize.last_modified_user_id}</span>
+                                                            {userMap.get(packSize.last_modified_user_id) && (
+                                                                <span className="text-xs text-muted-foreground">{userMap.get(packSize.last_modified_user_id)}</span>
+                                                            )}
+                                                        </div>
+                                                    ) : "-"}
                                                 </td>
-                                                <td className="px-6 py-6 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.packSizeName}</span>
-                                                </td>
-                                                <td className="px-6 py-6 text-sm text-foreground align-middle">
-                                                    {item.shortName}
-                                                </td>
-                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
-                                                    {item.qtyPerCarton}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
+                                                <td className="px-4 py-3 text-sm">{formatDateTime(packSize.last_modified_date_time)}</td>
+                                                <td className="px-4 py-3 text-sm font-semibold">{packSize.active ? "TRUE" : "FALSE"}</td>
+                                                <td className="px-4 py-3">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleEdit(item);
+                                                                handleEdit(packSize);
                                                             }}
                                                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                                         >
@@ -288,7 +435,7 @@ export default function PackSizeMasterPage() {
                                                             size="sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDelete(item);
+                                                                handleDelete(packSize);
                                                             }}
                                                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                         >
@@ -301,34 +448,37 @@ export default function PackSizeMasterPage() {
                                     </tbody>
                                 </table>
                             </div>
-
-                            <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-white">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PAGE 1 OF 4</span>
+                            <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
+                                <span className="text-sm text-muted-foreground">
+                                    PAGE {currentPage} OF {totalPages || 1}
+                                </span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" className="h-8 text-xs">Previous</Button>
-                                    <Button variant="outline" size="sm" className="h-8 text-xs text-blue-600 border-blue-200 bg-blue-50">Next</Button>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronLeft className="w-4 h-4 mr-1" />
+                                        Previous
+                                    </Button>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage >= totalPages}
+                                    >
+                                        Next
+                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                    </Button>
                                 </div>
                             </div>
                         </Card>
                     </motion.div>
-
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5, delay: 0.4 }}
-                        className="mt-8 text-center"
-                    >
-                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span className="font-semibold">ALL SYSTEMS OPERATIONAL</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Real-time Data Sync • ACUMED Manufacturing Cloud v4.2
-                        </p>
-                    </motion.div>
                 </div>
             </main>
 
+            {/* Add Pack Size Modal */}
             <AnimatePresence>
                 {isAddModalOpen && (
                     <>
@@ -339,14 +489,13 @@ export default function PackSizeMasterPage() {
                             className="fixed inset-0 bg-black/50 z-50"
                             onClick={() => setIsAddModalOpen(false)}
                         />
-
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Pack Size</h2>
                                     <button
@@ -356,37 +505,89 @@ export default function PackSizeMasterPage() {
                                         <X className="w-6 h-6" />
                                     </button>
                                 </div>
-
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
+                                    <div className="grid grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Pack Size ID <span className="text-red-500">*</span></label>
-                                            <Input name="packSizeId" value={formData.packSizeId} onChange={handleInputChange} placeholder="PS-XXX" required />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Pack Size ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="pack_size_id"
+                                                value={formData.pack_size_id}
+                                                onChange={handleInputChange}
+                                                placeholder="PK06"
+                                                required
+                                            />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
-                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-CODE" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Pack Size Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="pack_size_name"
+                                                value={formData.pack_size_name}
+                                                onChange={handleInputChange}
+                                                placeholder="6s pack"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Pack Size Short Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="pack_size_short_name"
+                                                value={formData.pack_size_short_name}
+                                                onChange={handleInputChange}
+                                                placeholder="6s pack"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Qty Per Carton <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="qty_per_carton"
+                                                value={formData.qty_per_carton}
+                                                onChange={handleInputChange}
+                                                placeholder="6"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                UOM <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="uom"
+                                                value={formData.uom}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                required
+                                            >
+                                                <option value="NOS">NOS</option>
+                                                <option value="KG">KG</option>
+                                                <option value="GMS">GMS</option>
+                                            </select>
                                         </div>
                                     </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Pack Size Name <span className="text-red-500">*</span></label>
-                                        <Input name="packSizeName" value={formData.packSizeName} onChange={handleInputChange} required />
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Division</label>
-                                        <Input name="division" value={formData.division} onChange={handleInputChange} placeholder="e.g. DIVISION: CONSUMER MEDICAL" />
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Qty Per Carton <span className="text-red-500">*</span></label>
-                                        <Input type="number" name="qtyPerCarton" value={formData.qtyPerCarton} onChange={handleInputChange} required />
-                                    </div>
-
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setIsAddModalOpen(false)}
+                                            className="px-6"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                                        >
+                                            Save Pack Size
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
@@ -395,6 +596,7 @@ export default function PackSizeMasterPage() {
                 )}
             </AnimatePresence>
 
+            {/* Edit Pack Size Modal */}
             <AnimatePresence>
                 {isEditModalOpen && (
                     <>
@@ -405,14 +607,13 @@ export default function PackSizeMasterPage() {
                             className="fixed inset-0 bg-black/50 z-50"
                             onClick={() => setIsEditModalOpen(false)}
                         />
-
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Pack Size</h2>
                                     <button
@@ -422,37 +623,85 @@ export default function PackSizeMasterPage() {
                                         <X className="w-6 h-6" />
                                     </button>
                                 </div>
-
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
+                                    <div className="grid grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Pack Size ID <span className="text-red-500">*</span></label>
-                                            <Input name="packSizeId" value={formData.packSizeId} onChange={handleInputChange} placeholder="PS-XXX" required />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Pack Size ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="pack_size_id"
+                                                value={formData.pack_size_id}
+                                                onChange={handleInputChange}
+                                                disabled
+                                            />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
-                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-CODE" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Pack Size Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="pack_size_name"
+                                                value={formData.pack_size_name}
+                                                onChange={handleInputChange}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Pack Size Short Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="pack_size_short_name"
+                                                value={formData.pack_size_short_name}
+                                                onChange={handleInputChange}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Qty Per Carton <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="qty_per_carton"
+                                                value={formData.qty_per_carton}
+                                                onChange={handleInputChange}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                UOM <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="uom"
+                                                value={formData.uom}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                required
+                                            >
+                                                <option value="NOS">NOS</option>
+                                                <option value="KG">KG</option>
+                                                <option value="GMS">GMS</option>
+                                            </select>
                                         </div>
                                     </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Pack Size Name <span className="text-red-500">*</span></label>
-                                        <Input name="packSizeName" value={formData.packSizeName} onChange={handleInputChange} required />
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Division</label>
-                                        <Input name="division" value={formData.division} onChange={handleInputChange} placeholder="e.g. DIVISION: CONSUMER MEDICAL" />
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Qty Per Carton <span className="text-red-500">*</span></label>
-                                        <Input type="number" name="qtyPerCarton" value={formData.qtyPerCarton} onChange={handleInputChange} required />
-                                    </div>
-
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setIsEditModalOpen(false)}
+                                            className="px-6"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                                        >
+                                            Update Pack Size
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
@@ -461,6 +710,7 @@ export default function PackSizeMasterPage() {
                 )}
             </AnimatePresence>
 
+            {/* Delete Confirmation Dialog */}
             <AnimatePresence>
                 {isDeleteDialogOpen && (
                     <>
@@ -471,7 +721,6 @@ export default function PackSizeMasterPage() {
                             className="fixed inset-0 bg-black/50 z-50"
                             onClick={() => setIsDeleteDialogOpen(false)}
                         />
-
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -488,15 +737,13 @@ export default function PackSizeMasterPage() {
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
-
                                 <div className="p-6">
                                     <p className="text-foreground mb-4">
-                                        Are you sure you want to delete <strong>{selectedPackSize?.packSizeName}</strong>?
+                                        Are you sure you want to delete <strong>{selectedPackSize?.pack_size_name}</strong>?
                                     </p>
                                     <p className="text-sm text-muted-foreground mb-6">
                                         This action cannot be undone.
                                     </p>
-
                                     <div className="flex items-center justify-end gap-4">
                                         <Button
                                             variant="outline"
@@ -520,6 +767,4 @@ export default function PackSizeMasterPage() {
         </div>
     );
 }
-
-
 

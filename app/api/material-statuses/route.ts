@@ -1,40 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/server/db/connection';
+import { ensureConnection } from '@/server/db/connection';
 import MaterialStatusMaster from '@/server/models/MaterialStatusMaster';
 
-let dbConnected = false;
-
-async function ensureDbConnection() {
-  const mongoose = await import('mongoose');
-  const readyState = mongoose.default.connection.readyState as number;
-  if (readyState === 1) {
-    dbConnected = true;
-    return;
-  }
-  
-  if (!dbConnected) {
-    try {
-      await connectDB();
-      dbConnected = true;
-    } catch (error: any) {
-      dbConnected = false;
-      console.error('Database connection error:', error);
-      throw error;
-    }
-  } else {
-    if (readyState !== 1) {
-      dbConnected = false;
-      await ensureDbConnection();
-    }
-  }
-}
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // GET /api/material-statuses - Get all material statuses
 export async function GET() {
   try {
-    await ensureDbConnection();
-    const statuses = await MaterialStatusMaster.find().sort({ seq_no: 1 });
-    return NextResponse.json(statuses);
+    await ensureConnection();
+    // Use lean() for faster queries
+    const statuses = await MaterialStatusMaster.find().lean().sort({ seq_no: 1 });
+    return NextResponse.json(statuses, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching material statuses:', error);
     return NextResponse.json(
@@ -47,7 +28,7 @@ export async function GET() {
 // POST /api/material-statuses - Create new material status
 export async function POST(request: NextRequest) {
   try {
-    await ensureDbConnection();
+    await ensureConnection();
     const body = await request.json();
     const status = new MaterialStatusMaster({ 
       matl_status_id: body.matl_status_id,
@@ -81,5 +62,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

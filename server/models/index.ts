@@ -41,3 +41,6 @@ export type { IHolidaysMaster } from './HolidaysMaster';
 export { default as WeeklyOffMaster } from './WeeklyOffMaster';
 export type { IWeeklyOffMaster } from './WeeklyOffMaster';
 
+export { default as CartonTypeMaster } from './CartonTypeMaster';
+export type { ICartonTypeMaster } from './CartonTypeMaster';
+

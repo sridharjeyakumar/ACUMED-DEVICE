@@ -48,7 +48,9 @@ const RoleMasterSchema: Schema = new Schema({
   timestamps: true,
 });
 
-// roll_id already has unique index, no need for additional index
+// Add indexes for better query performance
+RoleMasterSchema.index({ active: 1 }); // For filtering by active status
+RoleMasterSchema.index({ roll_id: 1 }); // Already unique, but explicit for sorting
 
 // Check if model already exists to prevent overwrite error in Next.js hot reloading
 const RoleMaster = (mongoose.models.RoleMaster as mongoose.Model<IRoleMaster>) || mongoose.model<IRoleMaster>('RoleMaster', RoleMasterSchema);
