@@ -143,7 +143,7 @@ export default function MenuAccessMasterPage() {
             });
             setIsAddModalOpen(false);
             setFormData({ rold_id: "", menu_id: "", access: true, can_add: true, can_edit: true, can_view: true, can_cancel: true });
-            loadMenuAccesses();
+            loadAllData();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -198,7 +198,7 @@ export default function MenuAccessMasterPage() {
             setIsEditModalOpen(false);
             setSelectedAccess(null);
             setFormData({ rold_id: "", menu_id: "", access: true, can_add: true, can_edit: true, can_view: true, can_cancel: true });
-            loadMenuAccesses();
+            loadAllData();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -227,7 +227,7 @@ export default function MenuAccessMasterPage() {
                 });
             }
             setLastAction(null);
-            loadMenuAccesses();
+            loadAllData();
         } catch (error: any) {
             toast({
                 title: "Error",

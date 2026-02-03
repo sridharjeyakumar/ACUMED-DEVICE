@@ -160,7 +160,7 @@ export default function UserMasterPage() {
             });
             setIsAddModalOpen(false);
             setFormData({ user_id: "", employee_id: "", role_id: "", password: "", password_expiry_days: 90, active: true });
-            loadUsers();
+            loadAllData();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -219,7 +219,7 @@ export default function UserMasterPage() {
             setIsEditModalOpen(false);
             setSelectedUser(null);
             setFormData({ user_id: "", employee_id: "", role_id: "", password: "", password_expiry_days: 90, active: true });
-            loadUsers();
+            loadAllData();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -248,7 +248,7 @@ export default function UserMasterPage() {
                 description: "Changes have been reverted",
             });
             setLastAction(null);
-            loadUsers();
+            loadAllData();
         } catch (error: any) {
             toast({
                 title: "Error",

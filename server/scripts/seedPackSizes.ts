@@ -44,6 +44,11 @@ async function seedPackSizes() {
         let updatedCount = 0;
 
         for (const packSizeData of packSizesToSeed) {
+            // Check if document exists before upsert
+            const existing = await PackSizeMaster.findOne({ 
+                pack_size_id: packSizeData.pack_size_id 
+            });
+            
             const packSize = await PackSizeMaster.findOneAndUpdate(
                 { pack_size_id: packSizeData.pack_size_id },
                 {
@@ -55,7 +60,7 @@ async function seedPackSizes() {
             );
             
             if (packSize) {
-                if (packSize.createdAt && packSize.createdAt.getTime() === packSize.updatedAt.getTime()) {
+                if (!existing) {
                     addedCount++;
                     console.log(`Pack Size ${packSize.pack_size_id} - ${packSize.pack_size_name} added`);
                 } else {

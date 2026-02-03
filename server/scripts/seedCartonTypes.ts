@@ -38,6 +38,11 @@ async function seedCartonTypes() {
         let updatedCount = 0;
 
         for (const cartonTypeData of cartonTypesToSeed) {
+            // Check if document exists before upsert
+            const existing = await CartonTypeMaster.findOne({ 
+                carton_type_id: cartonTypeData.carton_type_id 
+            });
+            
             const cartonType = await CartonTypeMaster.findOneAndUpdate(
                 { carton_type_id: cartonTypeData.carton_type_id },
                 {
@@ -49,11 +54,7 @@ async function seedCartonTypes() {
             );
             
             if (cartonType) {
-                // Check if it was newly created or updated
-                const isNew = cartonType.createdAt && cartonType.updatedAt && 
-                    cartonType.createdAt.getTime() === cartonType.updatedAt.getTime();
-                
-                if (isNew) {
+                if (!existing) {
                     addedCount++;
                     console.log(`✅ Carton Type ${cartonType.carton_type_id} - ${cartonType.carton_type_name} added`);
                 } else {
