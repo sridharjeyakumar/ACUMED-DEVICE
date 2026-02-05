@@ -337,11 +337,11 @@ export default function ProductStatusMasterPage() {
     const confirmCancel = () => {
         if (cancelModalType === 'add') {
             setIsAddModalOpen(false);
-            setFormData({ prod_status_id: "", product_status: "", stock_movement: "", effect_in_stock: "", seq_no: 0, active: true });
+            setFormData({ prod_status_id: "", product_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
             setSelectedStatus(null);
-            setFormData({ prod_status_id: "", product_status: "", stock_movement: "", effect_in_stock: "", seq_no: 0, active: true });
+            setFormData({ prod_status_id: "", product_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true });
         }
         setIsCancelDialogOpen(false);
         setCancelModalType(null);

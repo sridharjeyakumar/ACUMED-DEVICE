@@ -337,11 +337,11 @@ export default function MaterialStatusMasterPage() {
     const confirmCancel = () => {
         if (cancelModalType === 'add') {
             setIsAddModalOpen(false);
-            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: 0, active: true });
+            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
             setSelectedStatus(null);
-            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: 0, active: true });
+            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true });
         }
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
