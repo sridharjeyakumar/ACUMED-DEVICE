@@ -13,6 +13,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { departmentAPI } from "@/services/api";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Department {
     dept_id: string; // Char(3) - PK
@@ -39,6 +49,10 @@ export default function DepartmentMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [cancelModalType, setCancelModalType] = useState<'add' | 'edit' | null>(null);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [departmentToCancel, setDepartmentToCancel] = useState<Department | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
     const isSubmittingRef = useRef(false);
     const [departments, setDepartments] = useState<Department[]>([]);
@@ -51,6 +65,13 @@ export default function DepartmentMasterPage() {
     useEffect(() => {
         loadDepartments();
     }, []);
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({ dept_id: "", department_name: "" });
+        }
+    }, [isAddModalOpen]);
 
     const loadDepartments = async () => {
         try {
@@ -218,23 +239,51 @@ export default function DepartmentMasterPage() {
     };
 
     const handleCancel = (department: Department) => {
+        setDepartmentToCancel(department);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = () => {
+        if (!departmentToCancel) return;
+        
+        const isCancelled = cancelledDepartments.has(departmentToCancel.dept_id);
         setCancelledDepartments(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(department.dept_id)) {
-                newSet.delete(department.dept_id);
+            if (isCancelled) {
+                newSet.delete(departmentToCancel.dept_id);
                 toast({
                     title: "Restored",
-                    description: `Department ${department.department_name} has been restored`,
+                    description: `Department ${departmentToCancel.department_name} has been restored`,
                 });
             } else {
-                newSet.add(department.dept_id);
+                newSet.add(departmentToCancel.dept_id);
                 toast({
                     title: "Cancelled",
-                    description: `Department ${department.department_name} has been cancelled`,
+                    description: `Department ${departmentToCancel.department_name} has been cancelled`,
                 });
             }
             return newSet;
         });
+        setIsCancelItemDialogOpen(false);
+        setDepartmentToCancel(null);
+    };
+
+    const handleCancelClick = (modalType: 'add' | 'edit') => {
+        setCancelModalType(modalType);
+        setIsCancelDialogOpen(true);
+    };
+
+    const confirmCancel = () => {
+        if (cancelModalType === 'add') {
+            setIsAddModalOpen(false);
+            setFormData({ dept_id: "", department_name: "" });
+        } else if (cancelModalType === 'edit') {
+            setIsEditModalOpen(false);
+            setSelectedDepartment(null);
+            setFormData({ dept_id: "", department_name: "" });
+        }
+        setIsCancelDialogOpen(false);
+        setCancelModalType(null);
     };
 
     return (
@@ -399,16 +448,16 @@ export default function DepartmentMasterPage() {
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCancel(department);
-                                                                }}
-                                                                className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={isCancelled ? "Restore department" : "Cancel department"}
-                                                            >
-                                                                Cancel
-                                                            </Button>
+                                                            size="icon"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCancel(department);
+                                                            }}
+                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={isCancelled ? "Restore department" : "Cancel department"}
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </Button>
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -456,7 +505,7 @@ export default function DepartmentMasterPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsAddModalOpen(false)}
+                            onClick={() => handleCancelClick('add')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -468,7 +517,7 @@ export default function DepartmentMasterPage() {
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Department</h2>
                                     <button
-                                        onClick={() => setIsAddModalOpen(false)}
+                                        onClick={() => handleCancelClick('add')}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-6 h-6" />
@@ -504,11 +553,12 @@ export default function DepartmentMasterPage() {
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="button"
-                                            variant="outline"
-                                            onClick={() => setIsAddModalOpen(false)}
-                                            className="px-6"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleCancelClick('add')}
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
-                                            Cancel
+                                            <X className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             type="submit"
@@ -534,7 +584,7 @@ export default function DepartmentMasterPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsEditModalOpen(false)}
+                            onClick={() => handleCancelClick('edit')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -546,7 +596,7 @@ export default function DepartmentMasterPage() {
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Department</h2>
                                     <button
-                                        onClick={() => setIsEditModalOpen(false)}
+                                        onClick={() => handleCancelClick('edit')}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-6 h-6" />
@@ -581,11 +631,12 @@ export default function DepartmentMasterPage() {
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="button"
-                                            variant="outline"
-                                            onClick={() => setIsEditModalOpen(false)}
-                                            className="px-6"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleCancelClick('edit')}
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
-                                            Cancel
+                                            <X className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             type="submit"
@@ -601,6 +652,60 @@ export default function DepartmentMasterPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Cancel Confirmation Dialog (for modals) */}
+            <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to cancel? Any unsaved changes will be lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsCancelDialogOpen(false)}>
+                            No, Continue Editing
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Cancel Item Confirmation Dialog (for table actions) */}
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {departmentToCancel && cancelledDepartments.has(departmentToCancel.dept_id) 
+                                ? "Confirm Restore" 
+                                : "Confirm Cancel"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {departmentToCancel && cancelledDepartments.has(departmentToCancel.dept_id)
+                                ? `Are you sure you want to restore department "${departmentToCancel.department_name}"?`
+                                : `Are you sure you want to cancel department "${departmentToCancel?.department_name}"? This action can be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setIsCancelItemDialogOpen(false);
+                            setDepartmentToCancel(null);
+                        }}>
+                            No, Keep Current Status
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmCancelItem} 
+                            className={departmentToCancel && cancelledDepartments.has(departmentToCancel.dept_id) 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "bg-red-600 hover:bg-red-700"}
+                        >
+                            Yes, {departmentToCancel && cancelledDepartments.has(departmentToCancel.dept_id) ? "Restore" : "Cancel"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

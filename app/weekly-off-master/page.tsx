@@ -13,6 +13,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { weeklyOffAPI } from "@/services/api";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface WeeklyOff {
     _id?: string;
@@ -54,6 +64,8 @@ export default function WeeklyOffMasterPage() {
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: WeeklyOff } | null>(null);
     const [cancelledWeeklyOffs, setCancelledWeeklyOffs] = useState<Set<string>>(new Set());
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [weeklyOffToCancel, setWeeklyOffToCancel] = useState<WeeklyOff | null>(null);
     const [filterDay, setFilterDay] = useState<string>("all");
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
@@ -61,6 +73,13 @@ export default function WeeklyOffMasterPage() {
     useEffect(() => {
         loadWeeklyOffs();
     }, []);
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({ week_off_id: "", day_of_week: "", week_of_month: "" });
+        }
+    }, [isAddModalOpen]);
 
     const loadWeeklyOffs = async () => {
         try {
@@ -231,10 +250,18 @@ export default function WeeklyOffMasterPage() {
     };
 
     const handleCancel = (weeklyOff: WeeklyOff) => {
-        const weeklyOffKey = weeklyOff._id || weeklyOff.week_off_id.toString();
+        setWeeklyOffToCancel(weeklyOff);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = () => {
+        if (!weeklyOffToCancel) return;
+        
+        const weeklyOffKey = weeklyOffToCancel._id || weeklyOffToCancel.week_off_id.toString();
+        const isCancelled = cancelledWeeklyOffs.has(weeklyOffKey);
         setCancelledWeeklyOffs(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(weeklyOffKey)) {
+            if (isCancelled) {
                 newSet.delete(weeklyOffKey);
                 toast({
                     title: "Restored",
@@ -249,6 +276,8 @@ export default function WeeklyOffMasterPage() {
             }
             return newSet;
         });
+        setIsCancelItemDialogOpen(false);
+        setWeeklyOffToCancel(null);
     };
 
     return (
@@ -461,7 +490,7 @@ export default function WeeklyOffMasterPage() {
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
-                                                                size="sm"
+                                                                size="icon"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     handleCancel(weeklyOff);
@@ -469,7 +498,7 @@ export default function WeeklyOffMasterPage() {
                                                                 className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                                 title={isCancelled ? "Restore record" : "Cancel record"}
                                                             >
-                                                                Cancel
+                                                                <X className="w-4 h-4" />
                                                             </Button>
                                                         </div>
                                                     </td>
@@ -716,6 +745,40 @@ export default function WeeklyOffMasterPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Cancel Item Confirmation Dialog (for table actions) */}
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {weeklyOffToCancel && cancelledWeeklyOffs.has(weeklyOffToCancel._id || weeklyOffToCancel.week_off_id.toString()) 
+                                ? "Confirm Restore" 
+                                : "Confirm Cancel"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {weeklyOffToCancel && cancelledWeeklyOffs.has(weeklyOffToCancel._id || weeklyOffToCancel.week_off_id.toString())
+                                ? `Are you sure you want to restore weekly off record for ${getDayName(weeklyOffToCancel.day_of_week)}?`
+                                : `Are you sure you want to cancel weekly off record for ${weeklyOffToCancel ? getDayName(weeklyOffToCancel.day_of_week) : ''}? This action can be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setIsCancelItemDialogOpen(false);
+                            setWeeklyOffToCancel(null);
+                        }}>
+                            No, Keep Current Status
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmCancelItem} 
+                            className={weeklyOffToCancel && cancelledWeeklyOffs.has(weeklyOffToCancel._id || weeklyOffToCancel.week_off_id.toString()) 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "bg-red-600 hover:bg-red-700"}
+                        >
+                            Yes, {weeklyOffToCancel && cancelledWeeklyOffs.has(weeklyOffToCancel._id || weeklyOffToCancel.week_off_id.toString()) ? "Restore" : "Cancel"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

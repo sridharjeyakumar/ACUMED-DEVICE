@@ -13,6 +13,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { productStatusAPI } from "@/services/api";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ProductStatus {
     prod_status_id: string; // Char(3) - PK
@@ -43,6 +53,10 @@ export default function ProductStatusMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [cancelModalType, setCancelModalType] = useState<'add' | 'edit' | null>(null);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [statusToCancel, setStatusToCancel] = useState<ProductStatus | null>(null);
     const [selectedStatus, setSelectedStatus] = useState<ProductStatus | null>(null);
     const [cancelledStatuses, setCancelledStatuses] = useState<Set<string>>(new Set());
     const [filterActive, setFilterActive] = useState<string>("all");
@@ -57,6 +71,20 @@ export default function ProductStatusMasterPage() {
     useEffect(() => {
         loadStatuses();
     }, []);
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({
+                prod_status_id: "",
+                product_status: "",
+                stock_movement: "",
+                effect_in_stock: "",
+                seq_no: "",
+                active: true,
+            });
+        }
+    }, [isAddModalOpen]);
 
     const loadStatuses = async () => {
         try {
@@ -272,23 +300,51 @@ export default function ProductStatusMasterPage() {
     };
 
     const handleCancel = (status: ProductStatus) => {
+        setStatusToCancel(status);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = () => {
+        if (!statusToCancel) return;
+        
+        const isCancelled = cancelledStatuses.has(statusToCancel.prod_status_id);
         setCancelledStatuses(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(status.prod_status_id)) {
-                newSet.delete(status.prod_status_id);
+            if (isCancelled) {
+                newSet.delete(statusToCancel.prod_status_id);
                 toast({
                     title: "Restored",
-                    description: `Product status ${status.product_status} has been restored`,
+                    description: `Product status ${statusToCancel.product_status} has been restored`,
                 });
             } else {
-                newSet.add(status.prod_status_id);
+                newSet.add(statusToCancel.prod_status_id);
                 toast({
                     title: "Cancelled",
-                    description: `Product status ${status.product_status} has been cancelled`,
+                    description: `Product status ${statusToCancel.product_status} has been cancelled`,
                 });
             }
             return newSet;
         });
+        setIsCancelItemDialogOpen(false);
+        setStatusToCancel(null);
+    };
+
+    const handleCancelClick = (modalType: 'add' | 'edit') => {
+        setCancelModalType(modalType);
+        setIsCancelDialogOpen(true);
+    };
+
+    const confirmCancel = () => {
+        if (cancelModalType === 'add') {
+            setIsAddModalOpen(false);
+            setFormData({ prod_status_id: "", product_status: "", stock_movement: "", effect_in_stock: "", seq_no: 0, active: true });
+        } else if (cancelModalType === 'edit') {
+            setIsEditModalOpen(false);
+            setSelectedStatus(null);
+            setFormData({ prod_status_id: "", product_status: "", stock_movement: "", effect_in_stock: "", seq_no: 0, active: true });
+        }
+        setIsCancelDialogOpen(false);
+        setCancelModalType(null);
     };
 
     return (
@@ -470,9 +526,9 @@ export default function ProductStatusMasterPage() {
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">STOCK MOVEMENT</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">EFFECT IN STOCK</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">SEQ NO.</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">ACTIVE</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID / NAME</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
+                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">ACTIVE</th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
                                         </tr>
                                     </thead>
@@ -515,13 +571,6 @@ export default function ProductStatusMasterPage() {
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{status.seq_no}</span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                            status.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                        }`}>
-                                                            {status.active ? "TRUE" : "FALSE"}
-                                                        </span>
-                                                    </td>
                                                     <td className="px-6 py-4">
                                                         {status.last_modified_user_id ? (
                                                             <div className="flex flex-col">
@@ -537,6 +586,13 @@ export default function ProductStatusMasterPage() {
                                                             {status.last_modified_date_time 
                                                                 ? formatDateTime(status.last_modified_date_time)
                                                                 : "-"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                            status.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                        }`}>
+                                                            {status.active ? "TRUE" : "FALSE"}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
@@ -555,16 +611,16 @@ export default function ProductStatusMasterPage() {
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCancel(status);
-                                                                }}
-                                                                className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={isCancelled ? "Restore status" : "Cancel status"}
-                                                            >
-                                                                Cancel
-                                                            </Button>
+                                                            size="icon"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCancel(status);
+                                                            }}
+                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={isCancelled ? "Restore status" : "Cancel status"}
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </Button>
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -612,7 +668,7 @@ export default function ProductStatusMasterPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsAddModalOpen(false)}
+                            onClick={() => handleCancelClick('add')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -624,7 +680,7 @@ export default function ProductStatusMasterPage() {
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Product Status</h2>
                                     <button
-                                        onClick={() => setIsAddModalOpen(false)}
+                                        onClick={() => handleCancelClick('add')}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-6 h-6" />
@@ -724,11 +780,12 @@ export default function ProductStatusMasterPage() {
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="button"
-                                            variant="outline"
-                                            onClick={() => setIsAddModalOpen(false)}
-                                            className="px-6"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleCancelClick('add')}
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
-                                            Cancel
+                                            <X className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             type="submit"
@@ -754,7 +811,7 @@ export default function ProductStatusMasterPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsEditModalOpen(false)}
+                            onClick={() => handleCancelClick('edit')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -766,7 +823,7 @@ export default function ProductStatusMasterPage() {
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Product Status</h2>
                                     <button
-                                        onClick={() => setIsEditModalOpen(false)}
+                                        onClick={() => handleCancelClick('edit')}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-6 h-6" />
@@ -863,11 +920,12 @@ export default function ProductStatusMasterPage() {
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="button"
-                                            variant="outline"
-                                            onClick={() => setIsEditModalOpen(false)}
-                                            className="px-6"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleCancelClick('edit')}
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
-                                            Cancel
+                                            <X className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             type="submit"
@@ -883,6 +941,60 @@ export default function ProductStatusMasterPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Cancel Confirmation Dialog (for modals) */}
+            <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to cancel? Any unsaved changes will be lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsCancelDialogOpen(false)}>
+                            No, Continue Editing
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Cancel Item Confirmation Dialog (for table actions) */}
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {statusToCancel && cancelledStatuses.has(statusToCancel.prod_status_id) 
+                                ? "Confirm Restore" 
+                                : "Confirm Cancel"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {statusToCancel && cancelledStatuses.has(statusToCancel.prod_status_id)
+                                ? `Are you sure you want to restore product status "${statusToCancel.product_status}"?`
+                                : `Are you sure you want to cancel product status "${statusToCancel?.product_status}"? This action can be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setIsCancelItemDialogOpen(false);
+                            setStatusToCancel(null);
+                        }}>
+                            No, Keep Current Status
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmCancelItem} 
+                            className={statusToCancel && cancelledStatuses.has(statusToCancel.prod_status_id) 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "bg-red-600 hover:bg-red-700"}
+                        >
+                            Yes, {statusToCancel && cancelledStatuses.has(statusToCancel.prod_status_id) ? "Restore" : "Cancel"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

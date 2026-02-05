@@ -13,6 +13,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { holidaysAPI } from "@/services/api";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Holiday {
     _id?: string;
@@ -58,6 +68,8 @@ export default function HolidaysMasterPage() {
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Holiday } | null>(null);
     const [cancelledHolidays, setCancelledHolidays] = useState<Set<string>>(new Set());
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [holidayToCancel, setHolidayToCancel] = useState<Holiday | null>(null);
     const [filterYear, setFilterYear] = useState<string>("all");
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
@@ -65,6 +77,13 @@ export default function HolidaysMasterPage() {
     useEffect(() => {
         loadHolidays();
     }, []);
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({ date: "", remarks: "", year: new Date().getFullYear().toString() });
+        }
+    }, [isAddModalOpen]);
 
     const loadHolidays = async () => {
         try {
@@ -241,24 +260,34 @@ export default function HolidaysMasterPage() {
     };
 
     const handleCancel = (holiday: Holiday) => {
-        const holidayKey = holiday._id || `${formatDate(holiday.date)}-${holiday.year}`;
+        setHolidayToCancel(holiday);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = () => {
+        if (!holidayToCancel) return;
+        
+        const holidayKey = holidayToCancel._id || `${formatDate(holidayToCancel.date)}-${holidayToCancel.year}`;
+        const isCancelled = cancelledHolidays.has(holidayKey);
         setCancelledHolidays(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(holidayKey)) {
+            if (isCancelled) {
                 newSet.delete(holidayKey);
                 toast({
                     title: "Restored",
-                    description: `Holiday ${holiday.remarks} has been restored`,
+                    description: `Holiday ${holidayToCancel.remarks} has been restored`,
                 });
             } else {
                 newSet.add(holidayKey);
                 toast({
                     title: "Cancelled",
-                    description: `Holiday ${holiday.remarks} has been cancelled`,
+                    description: `Holiday ${holidayToCancel.remarks} has been cancelled`,
                 });
             }
             return newSet;
         });
+        setIsCancelItemDialogOpen(false);
+        setHolidayToCancel(null);
     };
 
     return (
@@ -467,7 +496,7 @@ export default function HolidaysMasterPage() {
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
-                                                                size="sm"
+                                                                size="icon"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     handleCancel(holiday);
@@ -475,7 +504,7 @@ export default function HolidaysMasterPage() {
                                                                 className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                                 title={isCancelled ? "Restore holiday" : "Cancel holiday"}
                                                             >
-                                                                Cancel
+                                                                <X className="w-4 h-4" />
                                                             </Button>
                                                         </div>
                                                     </td>
@@ -698,6 +727,40 @@ export default function HolidaysMasterPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Cancel Item Confirmation Dialog (for table actions) */}
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {holidayToCancel && cancelledHolidays.has(holidayToCancel._id || `${formatDate(holidayToCancel.date)}-${holidayToCancel.year}`) 
+                                ? "Confirm Restore" 
+                                : "Confirm Cancel"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {holidayToCancel && cancelledHolidays.has(holidayToCancel._id || `${formatDate(holidayToCancel.date)}-${holidayToCancel.year}`)
+                                ? `Are you sure you want to restore holiday "${holidayToCancel.remarks}"?`
+                                : `Are you sure you want to cancel holiday "${holidayToCancel?.remarks}"? This action can be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setIsCancelItemDialogOpen(false);
+                            setHolidayToCancel(null);
+                        }}>
+                            No, Keep Current Status
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmCancelItem} 
+                            className={holidayToCancel && cancelledHolidays.has(holidayToCancel._id || `${formatDate(holidayToCancel.date)}-${holidayToCancel.year}`) 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "bg-red-600 hover:bg-red-700"}
+                        >
+                            Yes, {holidayToCancel && cancelledHolidays.has(holidayToCancel._id || `${formatDate(holidayToCancel.date)}-${holidayToCancel.year}`) ? "Restore" : "Cancel"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

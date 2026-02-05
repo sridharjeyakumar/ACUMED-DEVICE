@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useMemo, memo, useCallback, useRef, useEffect } from "react";
 import {
   LayoutDashboard,
   Building2,
@@ -84,8 +84,6 @@ const navSections: NavSection[] = [
       { icon: FileText, label: "Product BOM", href: "/product-bom" },
       { icon: List, label: "Packing BOM", href: "/packing-bom" },
       { icon: Trash2, label: "Collection Bin Master", href: "/collection-bin-master" },
-      { icon: ShieldCheck, label: "Product Status Master", href: "/product-status-master" },
-      { icon: Shield, label: "Material Status Master", href: "/material-status-master" },
       { icon: UserCircle, label: "Employee Master", href: "/employee-master" },
     ],
   },
@@ -107,15 +105,89 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
+export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const [expandedSections, setExpandedSections] = useState<string[]>(["CONFIGURATION", "MASTER", "TRANSACTION"]);
+  const navRef = useRef<HTMLElement>(null);
+  const scrollPositionRef = useRef<number>(0);
+  const activeItemRef = useRef<HTMLLIElement>(null);
+  
+  // Find which section contains the active item and ensure it's expanded
+  const getActiveSection = useCallback(() => {
+    const normalizedPath = pathname?.replace(/\/$/, '') || '/';
+    for (const section of navSections) {
+      const hasActiveItem = section.items.some(item => {
+        const normalizedHref = (item.href || '').replace(/\/$/, '');
+        return normalizedHref === normalizedPath || (item.href === '/' && normalizedPath === '/');
+      });
+      if (hasActiveItem && section.title) {
+        return section.title;
+      }
+    }
+    return null;
+  }, [pathname]);
 
-  const toggleSection = (title: string) => {
+  // Initialize expanded sections with the active section included
+  const [expandedSections, setExpandedSections] = useState<string[]>(() => {
+    const activeSection = getActiveSection();
+    const defaultSections = ["CONFIGURATION", "MASTER", "TRANSACTION"];
+    if (activeSection && !defaultSections.includes(activeSection)) {
+      return [...defaultSections, activeSection];
+    }
+    return defaultSections;
+  });
+
+  // Ensure active section is expanded when pathname changes
+  useEffect(() => {
+    const activeSection = getActiveSection();
+    if (activeSection && !expandedSections.includes(activeSection)) {
+      setExpandedSections(prev => [...prev, activeSection]);
+    }
+  }, [pathname, getActiveSection, expandedSections]);
+
+  // Scroll to active item when it becomes visible
+  useEffect(() => {
+    if (activeItemRef.current && navRef.current) {
+      const nav = navRef.current;
+      const activeItem = activeItemRef.current;
+      const navRect = nav.getBoundingClientRect();
+      const itemRect = activeItem.getBoundingClientRect();
+      
+      // Check if item is visible
+      if (itemRect.top < navRect.top || itemRect.bottom > navRect.bottom) {
+        // Scroll to center the active item
+        const scrollTop = activeItem.offsetTop - nav.offsetTop - (nav.clientHeight / 2) + (activeItem.clientHeight / 2);
+        nav.scrollTo({
+          top: Math.max(0, scrollTop),
+          behavior: 'smooth'
+        });
+        scrollPositionRef.current = nav.scrollTop;
+      }
+    }
+  }, [pathname, expandedSections]);
+
+  // Preserve scroll position on re-renders (but not when pathname changes)
+  useEffect(() => {
+    if (navRef.current && !activeItemRef.current) {
+      navRef.current.scrollTop = scrollPositionRef.current;
+    }
+  });
+
+  const handleScroll = useCallback(() => {
+    if (navRef.current) {
+      scrollPositionRef.current = navRef.current.scrollTop;
+    }
+  }, []);
+
+  const toggleSection = useCallback((title: string) => {
     setExpandedSections((prev) =>
       prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
     );
-  };
+  }, []);
+
+  // Memoize the active pathname to prevent unnecessary re-renders
+  const activePathname = useMemo(() => {
+    return pathname?.replace(/\/$/, '') || '/';
+  }, [pathname]);
 
   return (
     <>
@@ -133,7 +205,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         !isOpen && "-translate-x-full lg:translate-x-0"
       )}>
         {/* Logo */}
-        <div className="p-4 border-b border-sidebar-border animate-fade-in-up">
+        <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Acumed Devices Logo" className="w-10 h-10 object-contain" />
             <div>
@@ -144,7 +216,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4">
+        <nav ref={navRef} onScroll={handleScroll} className="flex-1 overflow-y-auto py-4">
           {navSections.map((section, sectionIndex) => (
             <div key={sectionIndex} className="mb-2">
               {section.title && (
@@ -164,26 +236,34 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               )}
               {(!section.title || expandedSections.includes(section.title)) && (
                 <ul className="space-y-1 px-2">
-                  {section.items.map((item, itemIndex) => (
-                    <li
-                      key={itemIndex}
-                      className="animate-slide-in-left"
-                      style={{ animationDelay: `${itemIndex * 50}ms` }}
-                    >
-                      <Link
-                        href={item.href || "#"}
-                        className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                          pathname === item.href || (item.href === "/" && pathname === "/")
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
-                        )}
+                  {section.items.map((item, itemIndex) => {
+                    const normalizedHref = (item.href || '').replace(/\/$/, '');
+                    const isActive = activePathname === normalizedHref || (item.href === "/" && activePathname === "/");
+                    const itemKey = `${section.title || 'root'}-${item.href || itemIndex}`;
+                    return (
+                      <li 
+                        key={itemKey}
+                        ref={isActive ? activeItemRef : null}
                       >
-                        <item.icon className="w-5 h-5" />
-                        {item.label}
-                      </Link>
-                    </li>
-                  ))}
+                        <Link
+                          href={item.href || "#"}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200",
+                            isActive
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
+                          )}
+                          prefetch={true}
+                        >
+                          <item.icon className={cn(
+                            "w-5 h-5 flex-shrink-0",
+                            isActive && "text-sidebar-accent-foreground"
+                          )} />
+                          <span className={isActive ? "font-semibold" : ""}>{item.label}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -194,12 +274,12 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         <div className="border-t border-sidebar-border p-4">
           <a
             href="#"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-foreground transition-all duration-200 animate-fade-in-up"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-foreground transition-all duration-200"
           >
             <Settings className="w-5 h-5" />
             Settings
           </a>
-          <div className="flex items-center gap-3 mt-4 px-3 animate-fade-in-up animate-delay-100">
+          <div className="flex items-center gap-3 mt-4 px-3">
             <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center text-xs font-medium text-sidebar-accent-foreground">
               RK
             </div>
@@ -212,4 +292,4 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       </aside>
     </>
   );
-}
+});

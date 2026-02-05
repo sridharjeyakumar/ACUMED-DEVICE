@@ -98,6 +98,20 @@ export default function PackSizeMasterPage() {
         loadPackSizes();
     }, []);
 
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({
+                pack_size_id: "",
+                pack_size_name: "",
+                pack_size_short_name: "",
+                qty_per_carton: "",
+                uom: "NOS",
+                active: true,
+            });
+        }
+    }, [isAddModalOpen]);
+
     const filteredPackSizes = packSizes.filter((packSize) => {
         const matchesSearch = packSize.pack_size_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             packSize.pack_size_name.toLowerCase().includes(searchQuery.toLowerCase()) ||

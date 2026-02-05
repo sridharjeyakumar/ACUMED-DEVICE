@@ -13,6 +13,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { materialCategoryAPI } from "@/services/api";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface MaterialCategory {
     material_category_id: string; // Char(3) - PK
@@ -45,12 +55,21 @@ export default function MaterialCategoryMasterPage() {
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: MaterialCategory } | null>(null);
     const [cancelledCategories, setCancelledCategories] = useState<Set<string>>(new Set());
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [categoryToCancel, setCategoryToCancel] = useState<MaterialCategory | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
     useEffect(() => {
         loadCategories();
     }, []);
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({ material_category_id: "", material_category_name: "" });
+        }
+    }, [isAddModalOpen]);
 
     const loadCategories = async () => {
         try {
@@ -207,23 +226,33 @@ export default function MaterialCategoryMasterPage() {
     };
 
     const handleCancel = (category: MaterialCategory) => {
+        setCategoryToCancel(category);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = () => {
+        if (!categoryToCancel) return;
+        
+        const isCancelled = cancelledCategories.has(categoryToCancel.material_category_id);
         setCancelledCategories(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(category.material_category_id)) {
-                newSet.delete(category.material_category_id);
+            if (isCancelled) {
+                newSet.delete(categoryToCancel.material_category_id);
                 toast({
                     title: "Restored",
-                    description: `Material category ${category.material_category_name} has been restored`,
+                    description: `Material category ${categoryToCancel.material_category_name} has been restored`,
                 });
             } else {
-                newSet.add(category.material_category_id);
+                newSet.add(categoryToCancel.material_category_id);
                 toast({
                     title: "Cancelled",
-                    description: `Material category ${category.material_category_name} has been cancelled`,
+                    description: `Material category ${categoryToCancel.material_category_name} has been cancelled`,
                 });
             }
             return newSet;
         });
+        setIsCancelItemDialogOpen(false);
+        setCategoryToCancel(null);
     };
 
     return (
@@ -390,7 +419,7 @@ export default function MaterialCategoryMasterPage() {
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
-                                                                size="sm"
+                                                                size="icon"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     handleCancel(category);
@@ -398,7 +427,7 @@ export default function MaterialCategoryMasterPage() {
                                                                 className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                                 title={isCancelled ? "Restore category" : "Cancel category"}
                                                             >
-                                                                Cancel
+                                                                <X className="w-4 h-4" />
                                                             </Button>
                                                         </div>
                                                     </td>
@@ -592,6 +621,40 @@ export default function MaterialCategoryMasterPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Cancel Item Confirmation Dialog (for table actions) */}
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {categoryToCancel && cancelledCategories.has(categoryToCancel.material_category_id) 
+                                ? "Confirm Restore" 
+                                : "Confirm Cancel"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {categoryToCancel && cancelledCategories.has(categoryToCancel.material_category_id)
+                                ? `Are you sure you want to restore material category "${categoryToCancel.material_category_name}"?`
+                                : `Are you sure you want to cancel material category "${categoryToCancel?.material_category_name}"? This action can be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setIsCancelItemDialogOpen(false);
+                            setCategoryToCancel(null);
+                        }}>
+                            No, Keep Current Status
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmCancelItem} 
+                            className={categoryToCancel && cancelledCategories.has(categoryToCancel.material_category_id) 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "bg-red-600 hover:bg-red-700"}
+                        >
+                            Yes, {categoryToCancel && cancelledCategories.has(categoryToCancel.material_category_id) ? "Restore" : "Cancel"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

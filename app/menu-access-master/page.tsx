@@ -13,6 +13,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface MenuAccess {
     rold_id: string;
@@ -45,6 +55,10 @@ export default function MenuAccessMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [cancelModalType, setCancelModalType] = useState<'add' | 'edit' | null>(null);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [accessToCancel, setAccessToCancel] = useState<MenuAccess | null>(null);
     const [selectedAccess, setSelectedAccess] = useState<MenuAccess | null>(null);
     const [menuAccesses, setMenuAccesses] = useState<MenuAccess[]>([]);
     const [roles, setRoles] = useState<any[]>([]);
@@ -71,6 +85,13 @@ export default function MenuAccessMasterPage() {
     useEffect(() => {
         loadAllData();
     }, []);
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({ rold_id: "", menu_id: "", access: true, can_add: true, can_edit: true, can_view: true, can_cancel: true });
+        }
+    }, [isAddModalOpen]);
 
     const loadAllData = async () => {
         try {
@@ -239,24 +260,68 @@ export default function MenuAccessMasterPage() {
 
 
     const handleCancel = (access: MenuAccess) => {
-        const accessKey = `${access.rold_id}-${access.menu_id}`;
+        setAccessToCancel(access);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = () => {
+        if (!accessToCancel) return;
+        
+        const accessKey = `${accessToCancel.rold_id}-${accessToCancel.menu_id}`;
+        const isCancelled = cancelledAccesses.has(accessKey);
         setCancelledAccesses(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(accessKey)) {
+            if (isCancelled) {
                 newSet.delete(accessKey);
                 toast({
                     title: "Restored",
-                    description: `Menu access for Role ${access.rold_id} - Menu ${access.menu_id} has been restored`,
+                    description: `Menu access for Role ${accessToCancel.rold_id} - Menu ${accessToCancel.menu_id} has been restored`,
                 });
             } else {
                 newSet.add(accessKey);
                 toast({
                     title: "Cancelled",
-                    description: `Menu access for Role ${access.rold_id} - Menu ${access.menu_id} has been cancelled`,
+                    description: `Menu access for Role ${accessToCancel.rold_id} - Menu ${accessToCancel.menu_id} has been cancelled`,
                 });
             }
             return newSet;
         });
+        setIsCancelItemDialogOpen(false);
+        setAccessToCancel(null);
+    };
+
+    const handleCancelClick = (modalType: 'add' | 'edit') => {
+        setCancelModalType(modalType);
+        setIsCancelDialogOpen(true);
+    };
+
+    const confirmCancel = () => {
+        if (cancelModalType === 'add') {
+            setIsAddModalOpen(false);
+            setFormData({
+                rold_id: "",
+                menu_id: "",
+                access: true,
+                can_add: true,
+                can_edit: true,
+                can_view: true,
+                can_cancel: true,
+            });
+        } else if (cancelModalType === 'edit') {
+            setIsEditModalOpen(false);
+            setSelectedAccess(null);
+            setFormData({
+                rold_id: "",
+                menu_id: "",
+                access: true,
+                can_add: true,
+                can_edit: true,
+                can_view: true,
+                can_cancel: true,
+            });
+        }
+        setIsCancelDialogOpen(false);
+        setCancelModalType(null);
     };
 
     return (
@@ -558,7 +623,7 @@ export default function MenuAccessMasterPage() {
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
-                                                            size="sm"
+                                                            size="icon"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleCancel(access);
@@ -566,7 +631,7 @@ export default function MenuAccessMasterPage() {
                                                             className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                             title={isCancelled ? "Restore access" : "Cancel access"}
                                                         >
-                                                            Cancel
+                                                            <X className="w-4 h-4" />
                                                         </Button>
                                                     </div>
                                                 </td>
@@ -626,7 +691,7 @@ export default function MenuAccessMasterPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsAddModalOpen(false)}
+                            onClick={() => handleCancelClick('add')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -637,7 +702,7 @@ export default function MenuAccessMasterPage() {
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add Menu Access</h2>
-                                    <button onClick={() => setIsAddModalOpen(false)} className="text-white hover:bg-blue-700 rounded-lg p-2">
+                                    <button onClick={() => handleCancelClick('add')} className="text-white hover:bg-blue-700 rounded-lg p-2">
                                         <X className="w-6 h-6" />
                                     </button>
                                 </div>
@@ -673,7 +738,15 @@ export default function MenuAccessMasterPage() {
                                         </label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
+                                        <Button 
+                                            type="button" 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => handleCancelClick('add')} 
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save Access</Button>
                                     </div>
                                 </form>
@@ -687,12 +760,12 @@ export default function MenuAccessMasterPage() {
             <AnimatePresence>
                 {isEditModalOpen && (
                     <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => setIsEditModalOpen(false)} />
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => handleCancelClick('edit')} />
                         <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Menu Access</h2>
-                                    <button onClick={() => setIsEditModalOpen(false)} className="text-white hover:bg-blue-700 rounded-lg p-2"><X className="w-6 h-6" /></button>
+                                    <button onClick={() => handleCancelClick('edit')} className="text-white hover:bg-blue-700 rounded-lg p-2"><X className="w-6 h-6" /></button>
                                 </div>
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="mb-6">
@@ -711,7 +784,15 @@ export default function MenuAccessMasterPage() {
                                         <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="can_cancel" checked={formData.can_cancel} onChange={handleInputChange} className="w-4 h-4 text-blue-600" /><span className="text-sm font-medium">Can Cancel</span></label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
+                                        <Button 
+                                            type="button" 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => handleCancelClick('edit')} 
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update Access</Button>
                                     </div>
                                 </form>
@@ -720,6 +801,60 @@ export default function MenuAccessMasterPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Cancel Confirmation Dialog (for modals) */}
+            <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to cancel? Any unsaved changes will be lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsCancelDialogOpen(false)}>
+                            No, Continue Editing
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Cancel Item Confirmation Dialog (for table actions) */}
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {accessToCancel && cancelledAccesses.has(`${accessToCancel.rold_id}-${accessToCancel.menu_id}`) 
+                                ? "Confirm Restore" 
+                                : "Confirm Cancel"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {accessToCancel && cancelledAccesses.has(`${accessToCancel.rold_id}-${accessToCancel.menu_id}`)
+                                ? `Are you sure you want to restore menu access for Role ${accessToCancel.rold_id} - Menu ${accessToCancel.menu_id}?`
+                                : `Are you sure you want to cancel menu access for Role ${accessToCancel?.rold_id} - Menu ${accessToCancel?.menu_id}? This action can be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setIsCancelItemDialogOpen(false);
+                            setAccessToCancel(null);
+                        }}>
+                            No, Keep Current Status
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmCancelItem} 
+                            className={accessToCancel && cancelledAccesses.has(`${accessToCancel.rold_id}-${accessToCancel.menu_id}`) 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "bg-red-600 hover:bg-red-700"}
+                        >
+                            Yes, {accessToCancel && cancelledAccesses.has(`${accessToCancel.rold_id}-${accessToCancel.menu_id}`) ? "Restore" : "Cancel"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

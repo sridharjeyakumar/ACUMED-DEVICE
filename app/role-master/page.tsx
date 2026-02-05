@@ -13,6 +13,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Role {
     roll_id: string;
@@ -42,12 +52,16 @@ export default function RoleMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [cancelModalType, setCancelModalType] = useState<'add' | 'edit' | null>(null);
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterActive, setFilterActive] = useState<string>("all");
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Role } | null>(null);
     const [cancelledRoles, setCancelledRoles] = useState<Set<string>>(new Set());
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [roleToCancel, setRoleToCancel] = useState<Role | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
@@ -60,6 +74,13 @@ export default function RoleMasterPage() {
     useEffect(() => {
         loadRoles();
     }, []);
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({ roll_id: "", roll_description: "", remarks: "", active: true });
+        }
+    }, [isAddModalOpen]);
 
     const loadRoles = async () => {
         try {
@@ -174,6 +195,24 @@ export default function RoleMasterPage() {
             });
         }
     };
+
+    const handleCancelClick = (modalType: 'add' | 'edit') => {
+        setCancelModalType(modalType);
+        setIsCancelDialogOpen(true);
+    };
+
+    const confirmCancel = () => {
+        if (cancelModalType === 'add') {
+            setIsAddModalOpen(false);
+            setFormData({ roll_id: "", roll_description: "", remarks: "", active: true });
+        } else if (cancelModalType === 'edit') {
+            setIsEditModalOpen(false);
+            setSelectedRole(null);
+            setFormData({ roll_id: "", roll_description: "", remarks: "", active: true });
+        }
+        setIsCancelDialogOpen(false);
+        setCancelModalType(null);
+    };
     
     const handleUndo = async () => {
         if (!lastAction) return;
@@ -204,23 +243,33 @@ export default function RoleMasterPage() {
 
 
     const handleCancel = (role: Role) => {
+        setRoleToCancel(role);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = () => {
+        if (!roleToCancel) return;
+        
+        const isCancelled = cancelledRoles.has(roleToCancel.roll_id);
         setCancelledRoles(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(role.roll_id)) {
-                newSet.delete(role.roll_id);
+            if (isCancelled) {
+                newSet.delete(roleToCancel.roll_id);
                 toast({
                     title: "Restored",
-                    description: `Role ${role.roll_description} has been restored`,
+                    description: `Role ${roleToCancel.roll_description} has been restored`,
                 });
             } else {
-                newSet.add(role.roll_id);
+                newSet.add(roleToCancel.roll_id);
                 toast({
                     title: "Cancelled",
-                    description: `Role ${role.roll_description} has been cancelled`,
+                    description: `Role ${roleToCancel.roll_description} has been cancelled`,
                 });
             }
             return newSet;
         });
+        setIsCancelItemDialogOpen(false);
+        setRoleToCancel(null);
     };
 
     return (
@@ -372,14 +421,14 @@ export default function RoleMasterPage() {
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">
                                                 REMARKS
                                             </th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
-                                                STATUS
-                                            </th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
                                                 LAST MODIFIED USER ID / NAME
                                             </th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">
                                                 LAST MODIFIED DATE & TIME
+                                            </th>
+                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
+                                                STATUS
                                             </th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">
                                                 ACTIONS
@@ -425,13 +474,6 @@ export default function RoleMasterPage() {
                                                         {role.remarks || "-"}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                        role.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                    }`}>
-                                                        {role.active ? "Active" : "Inactive"}
-                                                    </span>
-                                                </td>
                                                 <td className="px-6 py-4">
                                                     {role.last_modified_user_id ? (
                                                         <div className="flex flex-col">
@@ -447,6 +489,13 @@ export default function RoleMasterPage() {
                                                         {role.last_modified_date_time 
                                                             ? formatDateTime(role.last_modified_date_time)
                                                             : "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                        role.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                    }`}>
+                                                        {role.active ? "Active" : "Inactive"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -465,7 +514,7 @@ export default function RoleMasterPage() {
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
-                                                            size="sm"
+                                                            size="icon"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleCancel(role);
@@ -473,7 +522,7 @@ export default function RoleMasterPage() {
                                                             className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                             title={isCancelled ? "Restore role" : "Cancel role"}
                                                         >
-                                                            Cancel
+                                                            <X className="w-4 h-4" />
                                                         </Button>
                                                     </div>
                                                 </td>
@@ -520,7 +569,7 @@ export default function RoleMasterPage() {
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
                                     className="fixed inset-0 bg-black/50 z-50"
-                                    onClick={() => setIsAddModalOpen(false)}
+                                    onClick={() => handleCancelClick('add')}
                                 />
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -532,7 +581,7 @@ export default function RoleMasterPage() {
                                         <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                             <h2 className="text-2xl font-bold">Add New Role</h2>
                                             <button
-                                                onClick={() => setIsAddModalOpen(false)}
+                                                onClick={() => handleCancelClick('add')}
                                                 className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                             >
                                                 <X className="w-6 h-6" />
@@ -594,11 +643,12 @@ export default function RoleMasterPage() {
                                             <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                                 <Button
                                                     type="button"
-                                                    variant="outline"
-                                                    onClick={() => setIsAddModalOpen(false)}
-                                                    className="px-6"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleCancelClick('add')}
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                 >
-                                                    Cancel
+                                                    <X className="w-4 h-4" />
                                                 </Button>
                                                 <Button
                                                     type="submit"
@@ -623,7 +673,7 @@ export default function RoleMasterPage() {
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
                                     className="fixed inset-0 bg-black/50 z-50"
-                                    onClick={() => setIsEditModalOpen(false)}
+                                    onClick={() => handleCancelClick('edit')}
                                 />
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -635,7 +685,7 @@ export default function RoleMasterPage() {
                                         <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                             <h2 className="text-2xl font-bold">Edit Role</h2>
                                             <button
-                                                onClick={() => setIsEditModalOpen(false)}
+                                                onClick={() => handleCancelClick('edit')}
                                                 className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                             >
                                                 <X className="w-6 h-6" />
@@ -697,11 +747,12 @@ export default function RoleMasterPage() {
                                             <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                                 <Button
                                                     type="button"
-                                                    variant="outline"
-                                                    onClick={() => setIsEditModalOpen(false)}
-                                                    className="px-6"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleCancelClick('edit')}
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                 >
-                                                    Cancel
+                                                    <X className="w-4 h-4" />
                                                 </Button>
                                                 <Button
                                                     type="submit"
@@ -716,6 +767,60 @@ export default function RoleMasterPage() {
                             </>
                         )}
                     </AnimatePresence>
+
+            {/* Cancel Confirmation Dialog (for modals) */}
+            <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to cancel? Any unsaved changes will be lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsCancelDialogOpen(false)}>
+                            No, Continue Editing
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Cancel Item Confirmation Dialog (for table actions) */}
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {roleToCancel && cancelledRoles.has(roleToCancel.roll_id) 
+                                ? "Confirm Restore" 
+                                : "Confirm Cancel"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {roleToCancel && cancelledRoles.has(roleToCancel.roll_id)
+                                ? `Are you sure you want to restore role "${roleToCancel.roll_description}"?`
+                                : `Are you sure you want to cancel role "${roleToCancel?.roll_description}"? This action can be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setIsCancelItemDialogOpen(false);
+                            setRoleToCancel(null);
+                        }}>
+                            No, Keep Current Status
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmCancelItem} 
+                            className={roleToCancel && cancelledRoles.has(roleToCancel.roll_id) 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "bg-red-600 hover:bg-red-700"}
+                        >
+                            Yes, {roleToCancel && cancelledRoles.has(roleToCancel.roll_id) ? "Restore" : "Cancel"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
                 </div>
             </main>

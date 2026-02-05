@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,20 @@ export default function ProductionRejectedUpdatePage() {
         weight: "",
         approxTotalQty: "",
     });
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({
+                batchNo: "",
+                date: "",
+                machineId: "",
+                productId: "",
+                weight: "",
+                approxTotalQty: "",
+            });
+        }
+    }, [isAddModalOpen]);
 
     const records: RejectionRecord[] = [
         {

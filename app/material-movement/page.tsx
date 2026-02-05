@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,21 @@ export default function MaterialMovementPage() {
         rollNo: "",
         batchNo: "",
     });
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({
+                materialId: "",
+                movementType: "ISSUE" as "ISSUE" | "RETURN" | "TRANSFER",
+                date: "",
+                qty: "",
+                uom: "",
+                rollNo: "",
+                batchNo: "",
+            });
+        }
+    }, [isAddModalOpen]);
 
     const records: MaterialMovementRecord[] = [
         {

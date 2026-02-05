@@ -13,6 +13,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { materialStatusAPI } from "@/services/api";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface MaterialStatus {
     matl_status_id: string; // Char(3) - PK
@@ -43,6 +53,10 @@ export default function MaterialStatusMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [cancelModalType, setCancelModalType] = useState<'add' | 'edit' | null>(null);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [statusToCancel, setStatusToCancel] = useState<MaterialStatus | null>(null);
     const [selectedStatus, setSelectedStatus] = useState<MaterialStatus | null>(null);
     const [cancelledStatuses, setCancelledStatuses] = useState<Set<string>>(new Set());
     const isSubmittingRef = useRef(false);
@@ -65,6 +79,20 @@ export default function MaterialStatusMasterPage() {
     useEffect(() => {
         loadStatuses();
     }, []);
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({
+                matl_status_id: "",
+                material_status: "",
+                stock_movement: "",
+                effect_in_stock: "",
+                seq_no: "",
+                active: true,
+            });
+        }
+    }, [isAddModalOpen]);
 
     const loadStatuses = async () => {
         try {
@@ -272,23 +300,51 @@ export default function MaterialStatusMasterPage() {
     };
 
     const handleCancel = (status: MaterialStatus) => {
+        setStatusToCancel(status);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = () => {
+        if (!statusToCancel) return;
+        
+        const isCancelled = cancelledStatuses.has(statusToCancel.matl_status_id);
         setCancelledStatuses(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(status.matl_status_id)) {
-                newSet.delete(status.matl_status_id);
+            if (isCancelled) {
+                newSet.delete(statusToCancel.matl_status_id);
                 toast({
                     title: "Restored",
-                    description: `Material status ${status.material_status} has been restored`,
+                    description: `Material status ${statusToCancel.material_status} has been restored`,
                 });
             } else {
-                newSet.add(status.matl_status_id);
+                newSet.add(statusToCancel.matl_status_id);
                 toast({
                     title: "Cancelled",
-                    description: `Material status ${status.material_status} has been cancelled`,
+                    description: `Material status ${statusToCancel.material_status} has been cancelled`,
                 });
             }
             return newSet;
         });
+        setIsCancelItemDialogOpen(false);
+        setStatusToCancel(null);
+    };
+
+    const handleCancelClick = (modalType: 'add' | 'edit') => {
+        setCancelModalType(modalType);
+        setIsCancelDialogOpen(true);
+    };
+
+    const confirmCancel = () => {
+        if (cancelModalType === 'add') {
+            setIsAddModalOpen(false);
+            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: 0, active: true });
+        } else if (cancelModalType === 'edit') {
+            setIsEditModalOpen(false);
+            setSelectedStatus(null);
+            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: 0, active: true });
+        }
+        setIsCancelDialogOpen(false);
+        setCancelModalType(null);
     };
 
     return (
@@ -481,9 +537,9 @@ export default function MaterialStatusMasterPage() {
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">STOCK MOVEMENT</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">EFFECT IN STOCK</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">SEQ NO.</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">ACTIVE</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID / NAME</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
+                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">ACTIVE</th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
                                         </tr>
                                     </thead>
@@ -526,13 +582,6 @@ export default function MaterialStatusMasterPage() {
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{status.seq_no}</span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                            status.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                        }`}>
-                                                            {status.active ? "TRUE" : "FALSE"}
-                                                        </span>
-                                                    </td>
                                                     <td className="px-6 py-4">
                                                         {status.last_modified_user_id ? (
                                                             <div className="flex flex-col">
@@ -548,6 +597,13 @@ export default function MaterialStatusMasterPage() {
                                                             {status.last_modified_date_time 
                                                                 ? formatDateTime(status.last_modified_date_time)
                                                                 : "-"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                            status.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                        }`}>
+                                                            {status.active ? "TRUE" : "FALSE"}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
@@ -566,7 +622,7 @@ export default function MaterialStatusMasterPage() {
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
-                                                                size="sm"
+                                                                size="icon"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     handleCancel(status);
@@ -574,7 +630,7 @@ export default function MaterialStatusMasterPage() {
                                                                 className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                                 title={isCancelled ? "Restore status" : "Cancel status"}
                                                             >
-                                                                Cancel
+                                                                <X className="w-4 h-4" />
                                                             </Button>
                                                         </div>
                                                     </td>
@@ -881,6 +937,40 @@ export default function MaterialStatusMasterPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Cancel Item Confirmation Dialog (for table actions) */}
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {statusToCancel && cancelledStatuses.has(statusToCancel.matl_status_id) 
+                                ? "Confirm Restore" 
+                                : "Confirm Cancel"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {statusToCancel && cancelledStatuses.has(statusToCancel.matl_status_id)
+                                ? `Are you sure you want to restore material status "${statusToCancel.material_status}"?`
+                                : `Are you sure you want to cancel material status "${statusToCancel?.material_status}"? This action can be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setIsCancelItemDialogOpen(false);
+                            setStatusToCancel(null);
+                        }}>
+                            No, Keep Current Status
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmCancelItem} 
+                            className={statusToCancel && cancelledStatuses.has(statusToCancel.matl_status_id) 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "bg-red-600 hover:bg-red-700"}
+                        >
+                            Yes, {statusToCancel && cancelledStatuses.has(statusToCancel.matl_status_id) ? "Restore" : "Cancel"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

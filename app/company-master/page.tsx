@@ -13,6 +13,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { companyAPI } from "@/services/api";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Company {
     comp_id: string; // Char(4) - PK
@@ -40,12 +50,16 @@ export default function CompanyMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [cancelModalType, setCancelModalType] = useState<'add' | 'edit' | null>(null);
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
     const [filterState, setFilterState] = useState<string>("all");
     const [filterCity, setFilterCity] = useState<string>("all");
     const [companies, setCompanies] = useState<Company[]>([]);
     const [loading, setLoading] = useState(true);
     const [cancelledCompanies, setCancelledCompanies] = useState<Set<string>>(new Set());
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [companyToCancel, setCompanyToCancel] = useState<Company | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
@@ -70,9 +84,85 @@ export default function CompanyMasterPage() {
     const isSubmittingRef = useRef(false);
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Company } | null>(null);
 
+    const handleCancelClick = (modalType: 'add' | 'edit') => {
+        setCancelModalType(modalType);
+        setIsCancelDialogOpen(true);
+    };
+
+    const confirmCancel = () => {
+        if (cancelModalType === 'add') {
+            setIsAddModalOpen(false);
+            setFormData({
+                comp_id: "",
+                company_name: "",
+                company_short_name: "",
+                address_1: "",
+                address_2: "",
+                city: "",
+                state: "",
+                pincode: "",
+                gst_no: "",
+                cin_no: "",
+                pan_no: "",
+                email_id: "",
+                website: "",
+                contact_person: "",
+                contact_no: "",
+                logo: "",
+            });
+        } else if (cancelModalType === 'edit') {
+            setIsEditModalOpen(false);
+            setSelectedCompany(null);
+            setFormData({
+                comp_id: "",
+                company_name: "",
+                company_short_name: "",
+                address_1: "",
+                address_2: "",
+                city: "",
+                state: "",
+                pincode: "",
+                gst_no: "",
+                cin_no: "",
+                pan_no: "",
+                email_id: "",
+                website: "",
+                contact_person: "",
+                contact_no: "",
+                logo: "",
+            });
+        }
+        setIsCancelDialogOpen(false);
+        setCancelModalType(null);
+    };
+
     useEffect(() => {
         loadCompanies();
     }, []);
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({
+                comp_id: "",
+                company_name: "",
+                company_short_name: "",
+                address_1: "",
+                address_2: "",
+                city: "",
+                state: "",
+                pincode: "",
+                gst_no: "",
+                cin_no: "",
+                pan_no: "",
+                email_id: "",
+                website: "",
+                contact_person: "",
+                contact_no: "",
+                logo: "",
+            });
+        }
+    }, [isAddModalOpen]);
 
     const loadCompanies = async () => {
         try {
@@ -327,23 +417,33 @@ export default function CompanyMasterPage() {
     };
 
     const handleCancel = (company: Company) => {
+        setCompanyToCancel(company);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = () => {
+        if (!companyToCancel) return;
+        
+        const isCancelled = cancelledCompanies.has(companyToCancel.comp_id);
         setCancelledCompanies(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(company.comp_id)) {
-                newSet.delete(company.comp_id);
+            if (isCancelled) {
+                newSet.delete(companyToCancel.comp_id);
                 toast({
                     title: "Restored",
-                    description: `Company ${company.company_name} has been restored`,
+                    description: `Company ${companyToCancel.company_name} has been restored`,
                 });
             } else {
-                newSet.add(company.comp_id);
+                newSet.add(companyToCancel.comp_id);
                 toast({
                     title: "Cancelled",
-                    description: `Company ${company.company_name} has been cancelled`,
+                    description: `Company ${companyToCancel.company_name} has been cancelled`,
                 });
             }
             return newSet;
         });
+        setIsCancelItemDialogOpen(false);
+        setCompanyToCancel(null);
     };
 
     return (
@@ -624,7 +724,7 @@ export default function CompanyMasterPage() {
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
-                                                                size="sm"
+                                                                size="icon"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     handleCancel(company);
@@ -632,7 +732,7 @@ export default function CompanyMasterPage() {
                                                                 className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                                 title={isCancelled ? "Restore company" : "Cancel company"}
                                                             >
-                                                                Cancel
+                                                                <X className="w-4 h-4" />
                                                             </Button>
                                                         </div>
                                                     </td>
@@ -681,7 +781,7 @@ export default function CompanyMasterPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsAddModalOpen(false)}
+                            onClick={() => handleCancelClick('add')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -693,7 +793,7 @@ export default function CompanyMasterPage() {
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Company</h2>
                                     <button
-                                        onClick={() => setIsAddModalOpen(false)}
+                                        onClick={() => handleCancelClick('add')}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-6 h-6" />
@@ -941,11 +1041,12 @@ export default function CompanyMasterPage() {
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="button"
-                                            variant="outline"
-                                            onClick={() => setIsAddModalOpen(false)}
-                                            className="px-6"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleCancelClick('add')}
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
-                                            Cancel
+                                            <X className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             type="submit"
@@ -971,7 +1072,7 @@ export default function CompanyMasterPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsEditModalOpen(false)}
+                            onClick={() => handleCancelClick('edit')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -983,7 +1084,7 @@ export default function CompanyMasterPage() {
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Company</h2>
                                     <button
-                                        onClick={() => setIsEditModalOpen(false)}
+                                        onClick={() => handleCancelClick('edit')}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-6 h-6" />
@@ -1216,11 +1317,12 @@ export default function CompanyMasterPage() {
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="button"
-                                            variant="outline"
-                                            onClick={() => setIsEditModalOpen(false)}
-                                            className="px-6"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleCancelClick('edit')}
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
-                                            Cancel
+                                            <X className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             type="submit"
@@ -1236,6 +1338,60 @@ export default function CompanyMasterPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Cancel Confirmation Dialog (for modals) */}
+            <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to cancel? Any unsaved changes will be lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsCancelDialogOpen(false)}>
+                            No, Continue Editing
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Cancel Item Confirmation Dialog (for table actions) */}
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {companyToCancel && cancelledCompanies.has(companyToCancel.comp_id) 
+                                ? "Confirm Restore" 
+                                : "Confirm Cancel"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {companyToCancel && cancelledCompanies.has(companyToCancel.comp_id)
+                                ? `Are you sure you want to restore company "${companyToCancel.company_name}"?`
+                                : `Are you sure you want to cancel company "${companyToCancel?.company_name}"? This action can be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setIsCancelItemDialogOpen(false);
+                            setCompanyToCancel(null);
+                        }}>
+                            No, Keep Current Status
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmCancelItem} 
+                            className={companyToCancel && cancelledCompanies.has(companyToCancel.comp_id) 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "bg-red-600 hover:bg-red-700"}
+                        >
+                            Yes, {companyToCancel && cancelledCompanies.has(companyToCancel.comp_id) ? "Restore" : "Cancel"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

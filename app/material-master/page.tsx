@@ -123,6 +123,32 @@ export default function MaterialMasterPage() {
         loadMaterials();
     }, []);
 
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({
+                material_id: "",
+                material_name: "",
+                material_short_name: "",
+                uom: "KGS",
+                material_category_id: "",
+                material_type: "RM",
+                material_spec: "",
+                safety_stock_qty: "",
+                re_order_qty: "",
+                min_order_qty: "",
+                lead_time_days_min: "",
+                lead_time_days_max: "",
+                shelf_life_in_months: "",
+                qc_required: false,
+                coa_checklist_id: "",
+                material_image: "",
+                material_image_icon: "",
+                active: true,
+            });
+        }
+    }, [isAddModalOpen]);
+
     const filteredMaterials = materials.filter((material) => {
         const matchesSearch = material.material_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             material.material_name.toLowerCase().includes(searchQuery.toLowerCase()) ||

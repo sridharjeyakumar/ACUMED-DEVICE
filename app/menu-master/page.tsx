@@ -13,6 +13,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Menu {
     menu_id: string;
@@ -41,6 +51,10 @@ export default function MenuMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [cancelModalType, setCancelModalType] = useState<'add' | 'edit' | null>(null);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [menuToCancel, setMenuToCancel] = useState<Menu | null>(null);
     const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
     const [menus, setMenus] = useState<Menu[]>([]);
     const [loading, setLoading] = useState(true);
@@ -62,6 +76,13 @@ export default function MenuMasterPage() {
         // #endregion
         loadMenus();
     }, []);
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({ menu_id: "", menu_desc: "", active: true });
+        }
+    }, [isAddModalOpen]);
 
     const loadMenus = async () => {
         // #region agent log
@@ -251,23 +272,51 @@ export default function MenuMasterPage() {
     };
 
     const handleCancel = (menu: Menu) => {
+        setMenuToCancel(menu);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = () => {
+        if (!menuToCancel) return;
+        
+        const isCancelled = cancelledMenus.has(menuToCancel.menu_id);
         setCancelledMenus(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(menu.menu_id)) {
-                newSet.delete(menu.menu_id);
+            if (isCancelled) {
+                newSet.delete(menuToCancel.menu_id);
                 toast({
                     title: "Restored",
-                    description: `Menu ${menu.menu_desc} has been restored`,
+                    description: `Menu ${menuToCancel.menu_desc} has been restored`,
                 });
             } else {
-                newSet.add(menu.menu_id);
+                newSet.add(menuToCancel.menu_id);
                 toast({
                     title: "Cancelled",
-                    description: `Menu ${menu.menu_desc} has been cancelled`,
+                    description: `Menu ${menuToCancel.menu_desc} has been cancelled`,
                 });
             }
             return newSet;
         });
+        setIsCancelItemDialogOpen(false);
+        setMenuToCancel(null);
+    };
+
+    const handleCancelClick = (modalType: 'add' | 'edit') => {
+        setCancelModalType(modalType);
+        setIsCancelDialogOpen(true);
+    };
+
+    const confirmCancel = () => {
+        if (cancelModalType === 'add') {
+            setIsAddModalOpen(false);
+            setFormData({ menu_id: "", menu_desc: "", active: true });
+        } else if (cancelModalType === 'edit') {
+            setIsEditModalOpen(false);
+            setSelectedMenu(null);
+            setFormData({ menu_id: "", menu_desc: "", active: true });
+        }
+        setIsCancelDialogOpen(false);
+        setCancelModalType(null);
     };
 
     return (
@@ -416,14 +465,14 @@ export default function MenuMasterPage() {
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">
                                                 MENU DESCRIPTION
                                             </th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
-                                                STATUS
-                                            </th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
                                                 LAST MODIFIED USER ID / NAME
                                             </th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">
                                                 LAST MODIFIED DATE & TIME
+                                            </th>
+                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
+                                                STATUS
                                             </th>
                                             <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">
                                                 ACTIONS
@@ -464,13 +513,6 @@ export default function MenuMasterPage() {
                                                         {menu.menu_desc}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                        menu.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                    }`}>
-                                                        {menu.active ? "Active" : "Inactive"}
-                                                    </span>
-                                                </td>
                                                 <td className="px-6 py-4">
                                                     {menu.last_modified_user_id ? (
                                                         <div className="flex flex-col">
@@ -486,6 +528,13 @@ export default function MenuMasterPage() {
                                                         {menu.last_modified_date_time 
                                                             ? formatDateTime(menu.last_modified_date_time)
                                                             : "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                        menu.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                    }`}>
+                                                        {menu.active ? "Active" : "Inactive"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -504,7 +553,7 @@ export default function MenuMasterPage() {
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
-                                                            size="sm"
+                                                            size="icon"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleCancel(menu);
@@ -512,7 +561,7 @@ export default function MenuMasterPage() {
                                                             className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                             title={isCancelled ? "Restore menu" : "Cancel menu"}
                                                         >
-                                                            Cancel
+                                                            <X className="w-4 h-4" />
                                                         </Button>
                                                     </div>
                                                 </td>
@@ -576,7 +625,7 @@ export default function MenuMasterPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsAddModalOpen(false)}
+                            onClick={() => handleCancelClick('add')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -588,7 +637,7 @@ export default function MenuMasterPage() {
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Menu</h2>
                                     <button
-                                        onClick={() => setIsAddModalOpen(false)}
+                                        onClick={() => handleCancelClick('add')}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-6 h-6" />
@@ -636,11 +685,12 @@ export default function MenuMasterPage() {
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="button"
-                                            variant="outline"
-                                            onClick={() => setIsAddModalOpen(false)}
-                                            className="px-6"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleCancelClick('add')}
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
-                                            Cancel
+                                            <X className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             type="submit"
@@ -666,7 +716,7 @@ export default function MenuMasterPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsEditModalOpen(false)}
+                            onClick={() => handleCancelClick('edit')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -678,7 +728,7 @@ export default function MenuMasterPage() {
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Menu 1</h2>
                                     <button
-                                        onClick={() => setIsEditModalOpen(false)}
+                                        onClick={() => handleCancelClick('edit')}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-6 h-6" />
@@ -724,11 +774,12 @@ export default function MenuMasterPage() {
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="button"
-                                            variant="outline"
-                                            onClick={() => setIsEditModalOpen(false)}
-                                            className="px-6"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleCancelClick('edit')}
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
-                                            Cancel
+                                            <X className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             type="submit"
@@ -744,6 +795,60 @@ export default function MenuMasterPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Cancel Confirmation Dialog */}
+            <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to cancel? Any unsaved changes will be lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsCancelDialogOpen(false)}>
+                            No, Continue Editing
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Cancel Item Confirmation Dialog (for table actions) */}
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {menuToCancel && cancelledMenus.has(menuToCancel.menu_id) 
+                                ? "Confirm Restore" 
+                                : "Confirm Cancel"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {menuToCancel && cancelledMenus.has(menuToCancel.menu_id)
+                                ? `Are you sure you want to restore menu "${menuToCancel.menu_desc}"?`
+                                : `Are you sure you want to cancel menu "${menuToCancel?.menu_desc}"? This action can be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setIsCancelItemDialogOpen(false);
+                            setMenuToCancel(null);
+                        }}>
+                            No, Keep Current Status
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmCancelItem} 
+                            className={menuToCancel && cancelledMenus.has(menuToCancel.menu_id) 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "bg-red-600 hover:bg-red-700"}
+                        >
+                            Yes, {menuToCancel && cancelledMenus.has(menuToCancel.menu_id) ? "Restore" : "Cancel"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

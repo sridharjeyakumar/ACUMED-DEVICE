@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,24 @@ export default function ProductionUpdatePage() {
         status: "IN PROGRESS" as "COMPLETED" | "IN PROGRESS",
         remarks: "",
     });
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({
+                batchNo: "",
+                date: "",
+                machineId: "",
+                productId: "",
+                binNo: "",
+                tareWeight: "",
+                grossWeight: "",
+                countQty: "",
+                status: "IN PROGRESS" as "COMPLETED" | "IN PROGRESS",
+                remarks: "",
+            });
+        }
+    }, [isAddModalOpen]);
 
     const records: ProductionUpdateRecord[] = [
         {

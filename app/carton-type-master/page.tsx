@@ -61,6 +61,18 @@ export default function CartonTypeMasterPage() {
         loadCartonTypes();
     }, []);
 
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({
+                carton_type_id: "",
+                carton_type_name: "",
+                carton_type_shortname: "",
+                active: true,
+            });
+        }
+    }, [isAddModalOpen]);
+
     const loadCartonTypes = async () => {
         try {
             setLoading(true);

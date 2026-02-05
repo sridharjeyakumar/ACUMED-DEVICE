@@ -13,6 +13,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { employeeGradeAPI } from "@/services/api";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface EmployeeGrade {
     grade_id: string; // Char(3) - PK
@@ -39,6 +49,10 @@ export default function EmployeeGradeMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [cancelModalType, setCancelModalType] = useState<'add' | 'edit' | null>(null);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [gradeToCancel, setGradeToCancel] = useState<EmployeeGrade | null>(null);
     const [selectedGrade, setSelectedGrade] = useState<EmployeeGrade | null>(null);
     const isSubmittingRef = useRef(false);
     const [grades, setGrades] = useState<EmployeeGrade[]>([]);
@@ -51,6 +65,13 @@ export default function EmployeeGradeMasterPage() {
     useEffect(() => {
         loadGrades();
     }, []);
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({ grade_id: "", grade_name: "" });
+        }
+    }, [isAddModalOpen]);
 
     const loadGrades = async () => {
         try {
@@ -218,23 +239,51 @@ export default function EmployeeGradeMasterPage() {
     };
 
     const handleCancel = (grade: EmployeeGrade) => {
+        setGradeToCancel(grade);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = () => {
+        if (!gradeToCancel) return;
+        
+        const isCancelled = cancelledGrades.has(gradeToCancel.grade_id);
         setCancelledGrades(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(grade.grade_id)) {
-                newSet.delete(grade.grade_id);
+            if (isCancelled) {
+                newSet.delete(gradeToCancel.grade_id);
                 toast({
                     title: "Restored",
-                    description: `Employee grade ${grade.grade_name} has been restored`,
+                    description: `Employee grade ${gradeToCancel.grade_name} has been restored`,
                 });
             } else {
-                newSet.add(grade.grade_id);
+                newSet.add(gradeToCancel.grade_id);
                 toast({
                     title: "Cancelled",
-                    description: `Employee grade ${grade.grade_name} has been cancelled`,
+                    description: `Employee grade ${gradeToCancel.grade_name} has been cancelled`,
                 });
             }
             return newSet;
         });
+        setIsCancelItemDialogOpen(false);
+        setGradeToCancel(null);
+    };
+
+    const handleCancelClick = (modalType: 'add' | 'edit') => {
+        setCancelModalType(modalType);
+        setIsCancelDialogOpen(true);
+    };
+
+    const confirmCancel = () => {
+        if (cancelModalType === 'add') {
+            setIsAddModalOpen(false);
+            setFormData({ grade_id: "", grade_name: "" });
+        } else if (cancelModalType === 'edit') {
+            setIsEditModalOpen(false);
+            setSelectedGrade(null);
+            setFormData({ grade_id: "", grade_name: "" });
+        }
+        setIsCancelDialogOpen(false);
+        setCancelModalType(null);
     };
 
     return (
@@ -401,7 +450,7 @@ export default function EmployeeGradeMasterPage() {
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
-                                                                size="sm"
+                                                                size="icon"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     handleCancel(grade);
@@ -409,7 +458,7 @@ export default function EmployeeGradeMasterPage() {
                                                                 className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                                 title={isCancelled ? "Restore grade" : "Cancel grade"}
                                                             >
-                                                                Cancel
+                                                                <X className="w-4 h-4" />
                                                             </Button>
                                                         </div>
                                                     </td>
@@ -458,7 +507,7 @@ export default function EmployeeGradeMasterPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsAddModalOpen(false)}
+                            onClick={() => handleCancelClick('add')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -470,7 +519,7 @@ export default function EmployeeGradeMasterPage() {
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Employee Grade</h2>
                                     <button
-                                        onClick={() => setIsAddModalOpen(false)}
+                                        onClick={() => handleCancelClick('add')}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-6 h-6" />
@@ -506,11 +555,12 @@ export default function EmployeeGradeMasterPage() {
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="button"
-                                            variant="outline"
-                                            onClick={() => setIsAddModalOpen(false)}
-                                            className="px-6"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleCancelClick('add')}
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
-                                            Cancel
+                                            <X className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             type="submit"
@@ -536,7 +586,7 @@ export default function EmployeeGradeMasterPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsEditModalOpen(false)}
+                            onClick={() => handleCancelClick('edit')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -548,7 +598,7 @@ export default function EmployeeGradeMasterPage() {
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Employee Grade</h2>
                                     <button
-                                        onClick={() => setIsEditModalOpen(false)}
+                                        onClick={() => handleCancelClick('edit')}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-6 h-6" />
@@ -583,11 +633,12 @@ export default function EmployeeGradeMasterPage() {
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="button"
-                                            variant="outline"
-                                            onClick={() => setIsEditModalOpen(false)}
-                                            className="px-6"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleCancelClick('edit')}
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
-                                            Cancel
+                                            <X className="w-4 h-4" />
                                         </Button>
                                         <Button
                                             type="submit"
@@ -603,6 +654,60 @@ export default function EmployeeGradeMasterPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Cancel Confirmation Dialog (for modals) */}
+            <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to cancel? Any unsaved changes will be lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsCancelDialogOpen(false)}>
+                            No, Continue Editing
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Cancel Item Confirmation Dialog (for table actions) */}
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {gradeToCancel && cancelledGrades.has(gradeToCancel.grade_id) 
+                                ? "Confirm Restore" 
+                                : "Confirm Cancel"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {gradeToCancel && cancelledGrades.has(gradeToCancel.grade_id)
+                                ? `Are you sure you want to restore employee grade "${gradeToCancel.grade_name}"?`
+                                : `Are you sure you want to cancel employee grade "${gradeToCancel?.grade_name}"? This action can be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setIsCancelItemDialogOpen(false);
+                            setGradeToCancel(null);
+                        }}>
+                            No, Keep Current Status
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmCancelItem} 
+                            className={gradeToCancel && cancelledGrades.has(gradeToCancel.grade_id) 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "bg-red-600 hover:bg-red-700"}
+                        >
+                            Yes, {gradeToCancel && cancelledGrades.has(gradeToCancel.grade_id) ? "Restore" : "Cancel"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

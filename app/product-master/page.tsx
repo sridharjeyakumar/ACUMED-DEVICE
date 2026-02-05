@@ -130,6 +130,34 @@ export default function ProductMasterPage() {
         loadProducts();
     }, []);
 
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({
+                product_id: "",
+                product_name: "",
+                product_shortname: "",
+                uom: "NOS",
+                product_category_id: "",
+                product_spec: "",
+                weight_per_piece: "",
+                weight_uom: "GMS",
+                wipes_per_kg: "",
+                shelf_life_in_months: "",
+                storage_condition: "",
+                safety_stock_qty: "",
+                default_pack_size_id: "",
+                batch_no_pattern: "",
+                product_image: "",
+                product_image_icon: "",
+                qc_required: false,
+                coa_checklist_id: "",
+                sterilization_required: false,
+                active: true,
+            });
+        }
+    }, [isAddModalOpen]);
+
     const filteredProducts = products.filter((product) => {
         const matchesSearch = product.product_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||

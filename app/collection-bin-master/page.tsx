@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,23 @@ export default function CollectionBinMasterPage() {
         tareWeight: "",
         capacity: "",
     });
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({
+                binId: "",
+                binName: "",
+                location: "",
+                shortName: "",
+                binType: "GENERAL",
+                colorName: "",
+                colorHex: "#000000",
+                tareWeight: "",
+                capacity: "",
+            });
+        }
+    }, [isAddModalOpen]);
 
     const records: BinRecord[] = [
         {

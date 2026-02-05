@@ -13,6 +13,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface LoginHistory {
     _id?: string;
@@ -60,6 +70,9 @@ export default function UserLoginHistoryPage() {
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [historyToCancel, setHistoryToCancel] = useState<LoginHistory | null>(null);
     const [selectedHistory, setSelectedHistory] = useState<LoginHistory | null>(null);
     const [loginHistories, setLoginHistories] = useState<LoginHistory[]>([]);
     const [loading, setLoading] = useState(true);
@@ -211,24 +224,45 @@ export default function UserLoginHistoryPage() {
 
 
     const handleCancel = (history: LoginHistory) => {
-        const historyKey = history._id || `${history.user_id}-${history.login_date}-${history.login_time}`;
+        setHistoryToCancel(history);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = () => {
+        if (!historyToCancel) return;
+        
+        const historyKey = historyToCancel._id || `${historyToCancel.user_id}-${historyToCancel.login_date}-${historyToCancel.login_time}`;
+        const isCancelled = cancelledHistories.has(historyKey);
         setCancelledHistories(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(historyKey)) {
+            if (isCancelled) {
                 newSet.delete(historyKey);
                 toast({
                     title: "Restored",
-                    description: `Login history for user ${history.user_id} has been restored`,
+                    description: `Login history for user ${historyToCancel.user_id} has been restored`,
                 });
             } else {
                 newSet.add(historyKey);
                 toast({
                     title: "Cancelled",
-                    description: `Login history for user ${history.user_id} has been cancelled`,
+                    description: `Login history for user ${historyToCancel.user_id} has been cancelled`,
                 });
             }
             return newSet;
         });
+        setIsCancelItemDialogOpen(false);
+        setHistoryToCancel(null);
+    };
+
+    const handleCancelClick = (modalType: 'edit') => {
+        setIsCancelDialogOpen(true);
+    };
+
+    const confirmCancel = () => {
+        setIsEditModalOpen(false);
+        setSelectedHistory(null);
+        setFormData({ user_id: "", login_date: "", login_time: "", logout_date: "", logout_time: "" });
+        setIsCancelDialogOpen(false);
     };
 
     return (
@@ -422,7 +456,7 @@ export default function UserLoginHistoryPage() {
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
-                                                            size="sm"
+                                                            size="icon"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleCancel(history);
@@ -430,7 +464,7 @@ export default function UserLoginHistoryPage() {
                                                             className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                             title={isCancelled ? "Restore history" : "Cancel history"}
                                                         >
-                                                            Cancel
+                                                            <X className="w-4 h-4" />
                                                         </Button>
                                                     </div>
                                                 </td>
@@ -485,12 +519,12 @@ export default function UserLoginHistoryPage() {
             <AnimatePresence>
                 {isEditModalOpen && (
                     <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => setIsEditModalOpen(false)} />
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => handleCancelClick('edit')} />
                         <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Login Record</h2>
-                                    <button onClick={() => setIsEditModalOpen(false)} className="text-white hover:bg-blue-700 rounded-lg p-2"><X className="w-6 h-6" /></button>
+                                    <button onClick={() => handleCancelClick('edit')} className="text-white hover:bg-blue-700 rounded-lg p-2"><X className="w-6 h-6" /></button>
                                 </div>
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="mb-6">
@@ -514,7 +548,15 @@ export default function UserLoginHistoryPage() {
                                         <Input type="time" name="logout_time" value={formData.logout_time} onChange={handleInputChange} />
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
+                                        <Button 
+                                            type="button" 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => handleCancelClick('edit')} 
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update Record</Button>
                                     </div>
                                 </form>
@@ -523,6 +565,60 @@ export default function UserLoginHistoryPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Cancel Confirmation Dialog (for modals) */}
+            <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to cancel? Any unsaved changes will be lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsCancelDialogOpen(false)}>
+                            No, Continue Editing
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Cancel Item Confirmation Dialog (for table actions) */}
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {historyToCancel && cancelledHistories.has(historyToCancel._id || `${historyToCancel.user_id}-${historyToCancel.login_date}-${historyToCancel.login_time}`) 
+                                ? "Confirm Restore" 
+                                : "Confirm Cancel"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {historyToCancel && cancelledHistories.has(historyToCancel._id || `${historyToCancel.user_id}-${historyToCancel.login_date}-${historyToCancel.login_time}`)
+                                ? `Are you sure you want to restore login history for user "${historyToCancel.user_id}"?`
+                                : `Are you sure you want to cancel login history for user "${historyToCancel?.user_id}"? This action can be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setIsCancelItemDialogOpen(false);
+                            setHistoryToCancel(null);
+                        }}>
+                            No, Keep Current Status
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmCancelItem} 
+                            className={historyToCancel && cancelledHistories.has(historyToCancel._id || `${historyToCancel.user_id}-${historyToCancel.login_date}-${historyToCancel.login_time}`) 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "bg-red-600 hover:bg-red-700"}
+                        >
+                            Yes, {historyToCancel && cancelledHistories.has(historyToCancel._id || `${historyToCancel.user_id}-${historyToCancel.login_date}-${historyToCancel.login_time}`) ? "Restore" : "Cancel"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

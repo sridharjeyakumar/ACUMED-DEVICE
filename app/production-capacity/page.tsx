@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,21 @@ export default function ProductionCapacityPage() {
         uom: "UNITS",
         avgHrsPerDay: "",
     });
+
+    // Reset form data when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({
+                machineId: "",
+                machineName: "",
+                section: "",
+                shortName: "",
+                qtyPerMin: "",
+                uom: "UNITS",
+                avgHrsPerDay: "",
+            });
+        }
+    }, [isAddModalOpen]);
 
     const machines: MachineRecord[] = [
         {
