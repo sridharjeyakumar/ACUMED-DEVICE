@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Clock } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, X, Pencil, Clock } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { userLoginHistoryAPI } from "@/services/api";
@@ -59,7 +59,6 @@ function formatTime(timeString: string | undefined): string {
 export default function UserLoginHistoryPage() {
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedHistory, setSelectedHistory] = useState<LoginHistory | null>(null);
     const [loginHistories, setLoginHistories] = useState<LoginHistory[]>([]);
@@ -128,32 +127,6 @@ export default function UserLoginHistoryPage() {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            await userLoginHistoryAPI.create({
-                user_id: formData.user_id,
-                Date_login_Date: formData.login_date,
-                Time_login_Time: formData.login_time,
-                Date_Logout_Date: formData.logout_date || undefined,
-                Time_Logout_Time: formData.logout_time || undefined,
-            });
-            toast({
-                title: "Success",
-                description: "Login history created successfully",
-            });
-            setIsAddModalOpen(false);
-            setFormData({ user_id: "", login_date: "", login_time: "", logout_date: "", logout_time: "" });
-            loadLoginHistories();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to create login history",
-                variant: "destructive",
-            });
-        }
     };
 
     const handleEdit = (history: LoginHistory) => {
@@ -275,13 +248,6 @@ export default function UserLoginHistoryPage() {
                                 <h1 className="text-3xl font-bold text-foreground mb-2">User Login History</h1>
                                 <p className="text-muted-foreground">Track and manage user login and logout activities</p>
                             </div>
-                            <Button
-                                onClick={() => setIsAddModalOpen(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                            >
-                                <Plus className="w-5 h-5" />
-                                Add Login Record
-                            </Button>
                         </div>
                     </motion.div>
 
@@ -514,49 +480,6 @@ export default function UserLoginHistoryPage() {
                     </motion.div>
                 </div>
             </main>
-
-            {/* Add Modal */}
-            <AnimatePresence>
-                {isAddModalOpen && (
-                    <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => setIsAddModalOpen(false)} />
-                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Add Login Record</h2>
-                                    <button onClick={() => setIsAddModalOpen(false)} className="text-white hover:bg-blue-700 rounded-lg p-2"><X className="w-6 h-6" /></button>
-                                </div>
-                                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">User ID <span className="text-red-500">*</span></label>
-                                        <Input name="user_id" value={formData.user_id} onChange={handleInputChange} placeholder="e.g., AD, OP1" required maxLength={10} />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Login Date <span className="text-red-500">*</span></label>
-                                        <Input type="date" name="login_date" value={formData.login_date} onChange={handleInputChange} required />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Login Time <span className="text-red-500">*</span></label>
-                                        <Input type="time" name="login_time" value={formData.login_time} onChange={handleInputChange} required />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Logout Date</label>
-                                        <Input type="date" name="logout_date" value={formData.logout_date} onChange={handleInputChange} />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Logout Time</label>
-                                        <Input type="time" name="logout_time" value={formData.logout_time} onChange={handleInputChange} />
-                                    </div>
-                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save Record</Button>
-                                    </div>
-                                </form>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
 
             {/* Edit Modal */}
             <AnimatePresence>
