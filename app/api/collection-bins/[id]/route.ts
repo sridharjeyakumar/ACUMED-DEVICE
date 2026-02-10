@@ -8,11 +8,12 @@ export const dynamic = 'force-dynamic';
 // GET /api/collection-bins/[id] - Get collection bin by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureConnection();
-    const collectionBin = await CollectionBinMaster.findOne({ bin_id: params.id }).lean();
+    const { id } = await params;
+    const collectionBin = await CollectionBinMaster.findOne({ bin_id: id }).lean();
     if (!collectionBin) {
       return NextResponse.json(
         { error: 'Collection bin not found' },
@@ -32,13 +33,14 @@ export async function GET(
 // PUT /api/collection-bins/[id] - Update collection bin
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureConnection();
+    const { id } = await params;
     const body = await request.json();
     const collectionBin = await CollectionBinMaster.findOneAndUpdate(
-      { bin_id: params.id },
+      { bin_id: id },
       {
         ...body,
         tare_weight_kg: body.tare_weight_kg ? Number(body.tare_weight_kg) : undefined,
@@ -73,11 +75,12 @@ export async function PUT(
 // DELETE /api/collection-bins/[id] - Delete collection bin
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureConnection();
-    const collectionBin = await CollectionBinMaster.findOneAndDelete({ bin_id: params.id });
+    const { id } = await params;
+    const collectionBin = await CollectionBinMaster.findOneAndDelete({ bin_id: id });
     if (!collectionBin) {
       return NextResponse.json(
         { error: 'Collection bin not found' },

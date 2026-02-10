@@ -8,11 +8,12 @@ export const dynamic = 'force-dynamic';
 // GET /api/employees/[id] - Get employee by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureConnection();
-    const employee = await EmployeeMaster.findOne({ emp_id: params.id }).lean();
+    const { id } = await params;
+    const employee = await EmployeeMaster.findOne({ emp_id: id }).lean();
     if (!employee) {
       return NextResponse.json(
         { error: 'Employee not found' },
@@ -32,10 +33,11 @@ export async function GET(
 // PUT /api/employees/[id] - Update employee
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureConnection();
+    const { id } = await params;
     const body = await request.json();
     
     // Parse dates if provided
@@ -50,7 +52,7 @@ export async function PUT(
     };
 
     const employee = await EmployeeMaster.findOneAndUpdate(
-      { emp_id: params.id },
+      { emp_id: id },
       {
         ...body,
         doj: body.doj ? parseDate(body.doj) : undefined,
@@ -88,11 +90,12 @@ export async function PUT(
 // DELETE /api/employees/[id] - Delete employee
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureConnection();
-    const employee = await EmployeeMaster.findOneAndDelete({ emp_id: params.id });
+    const { id } = await params;
+    const employee = await EmployeeMaster.findOneAndDelete({ emp_id: id });
     if (!employee) {
       return NextResponse.json(
         { error: 'Employee not found' },
