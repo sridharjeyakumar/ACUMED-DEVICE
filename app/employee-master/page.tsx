@@ -304,6 +304,7 @@ export default function EmployeeMasterPage() {
                 bloodGroup: "",
                 education: "",
                 status: "Active",
+                active: true,
             });
             loadRecords();
         } catch (error: any) {
@@ -339,6 +340,7 @@ export default function EmployeeMasterPage() {
             bloodGroup: employee.bloodGroup || "",
             education: employee.education || "",
             status: employee.status,
+            active: employee.active,
         });
         setIsEditModalOpen(true);
     };
@@ -390,6 +392,7 @@ export default function EmployeeMasterPage() {
                 bloodGroup: "",
                 education: "",
                 status: "Active",
+                active: true,
             });
             loadRecords();
         } catch (error: any) {
@@ -455,6 +458,7 @@ export default function EmployeeMasterPage() {
                 bloodGroup: "",
                 education: "",
                 status: "Active",
+                active: true,
             });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
@@ -481,6 +485,7 @@ export default function EmployeeMasterPage() {
                 bloodGroup: "",
                 education: "",
                 status: "Active",
+                active: true,
             });
         }
         setIsCancelDialogOpen(false);
