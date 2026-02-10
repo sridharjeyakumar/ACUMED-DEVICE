@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -58,7 +58,9 @@ export default function ProductMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [productToCancel, setProductToCancel] = useState<Product | null>(null);
+    const [cancelledProducts, setCancelledProducts] = useState<Set<string>>(new Set());
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [filterActive, setFilterActive] = useState<string>("all");
     const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -293,25 +295,48 @@ export default function ProductMasterPage() {
         }
     };
 
-    const handleDelete = (product: Product) => {
-        setSelectedProduct(product);
-        setIsDeleteDialogOpen(true);
+    const handleCancel = (product: Product) => {
+        setProductToCancel(product);
+        setIsCancelItemDialogOpen(true);
     };
 
-    const confirmDelete = async () => {
+    const confirmCancelItem = async () => {
+        if (!productToCancel) return;
+        
+        const isCancelled = cancelledProducts.has(productToCancel.product_id);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
         try {
-            await productAPI.delete(selectedProduct!.product_id);
-            toast({
-                title: "Success",
-                description: "Product deleted successfully",
+            await productAPI.update(productToCancel.product_id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
             });
-            setIsDeleteDialogOpen(false);
-            setSelectedProduct(null);
-            loadProducts();
+            
+            setCancelledProducts(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(productToCancel.product_id);
+                    toast({
+                        title: "Restored",
+                        description: `Product ${productToCancel.product_name} has been restored`,
+                    });
+                } else {
+                    newSet.add(productToCancel.product_id);
+                    toast({
+                        title: "Cancelled",
+                        description: `Product ${productToCancel.product_name} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadProducts(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setProductToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to delete product",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} product`,
                 variant: "destructive",
             });
         }
@@ -504,31 +529,116 @@ export default function ProductMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">product_id</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase min-w-[150px]">product_name</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase min-w-[150px]">product_shortname</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">uom</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">product category id</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">product spec</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">weight per piece</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">weight uom</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">wipes per KG</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">shelf life in months</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">storage condition</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">safety stock qty</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">default pack size id</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">batch no. pattern</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">product image</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">product image icon</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">QC required</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">COA checklist_id</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Sterilization required</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">last modified user id</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">last modified date & time</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Active</th>
-                                            <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">product_id</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">product_name</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">product_shortname</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">uom</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>product</span>
+                                                    <span>category id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>product</span>
+                                                    <span>spec</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>weight</span>
+                                                    <span>per piece</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>weight</span>
+                                                    <span>uom</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>wipes</span>
+                                                    <span>per KG</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>shelf life</span>
+                                                    <span>in months</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>storage</span>
+                                                    <span>condition</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>safety stock</span>
+                                                    <span>qty</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>default pack</span>
+                                                    <span>size id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>batch no.</span>
+                                                    <span>pattern</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>product</span>
+                                                    <span>image</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>product image</span>
+                                                    <span>icon</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>QC</span>
+                                                    <span>required</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>COA</span>
+                                                    <span>checklist_id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Sterilization</span>
+                                                    <span>required</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -597,7 +707,19 @@ export default function ProductMasterPage() {
                                                     ) : "-"}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm">{formatDateTime(product.last_modified_date_time)}</td>
-                                                <td className="px-4 py-3 text-sm font-semibold">{product.active ? "TRUE" : "FALSE"}</td>
+                                                <td className="px-4 py-3 text-left">
+                                                    {(() => {
+                                                        const isCancelled = cancelledProducts.has(product.product_id);
+                                                        const displayActive = !isCancelled && (product.active !== false);
+                                                        return (
+                                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                                displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                            }`}>
+                                                                {displayActive ? "TRUE" : "FALSE"}
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <Button
@@ -616,11 +738,12 @@ export default function ProductMasterPage() {
                                                             size="sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDelete(product);
+                                                                handleCancel(product);
                                                             }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            className={`${cancelledProducts.has(product.product_id) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={cancelledProducts.has(product.product_id) ? "Restore product" : "Cancel product"}
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <X className="w-4 h-4" />
                                                         </Button>
                                                     </div>
                                                 </td>
@@ -743,14 +866,6 @@ export default function ProductMasterPage() {
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setIsAddModalOpen(false)}
-                                            className="px-6"
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                         >
@@ -818,14 +933,6 @@ export default function ProductMasterPage() {
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setIsEditModalOpen(false)}
-                                            className="px-6"
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                         >
@@ -839,16 +946,16 @@ export default function ProductMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Delete Confirmation Dialog */}
+            {/* Cancel/Restore Confirmation Dialog */}
             <AnimatePresence>
-                {isDeleteDialogOpen && (
+                {isCancelItemDialogOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsDeleteDialogOpen(false)}
+                            onClick={() => setIsCancelItemDialogOpen(false)}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -857,34 +964,38 @@ export default function ProductMasterPage() {
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
+                                <div className={`${cancelledProducts.has(productToCancel?.product_id || '') ? 'bg-green-600' : 'bg-red-600'} text-white px-6 py-4 flex items-center justify-between`}>
+                                    <h2 className="text-xl font-bold">
+                                        {cancelledProducts.has(productToCancel?.product_id || '') ? "Restore Product" : "Cancel Product"}
+                                    </h2>
                                     <button
-                                        onClick={() => setIsDeleteDialogOpen(false)}
-                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
+                                        onClick={() => setIsCancelItemDialogOpen(false)}
+                                        className="text-white hover:opacity-80 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
                                 <div className="p-6">
                                     <p className="text-foreground mb-4">
-                                        Are you sure you want to delete <strong>{selectedProduct?.product_name}</strong>?
+                                        Are you sure you want to {cancelledProducts.has(productToCancel?.product_id || '') ? 'restore' : 'cancel'} <strong>{productToCancel?.product_name}</strong>?
                                     </p>
                                     <p className="text-sm text-muted-foreground mb-6">
-                                        This action cannot be undone.
+                                        {cancelledProducts.has(productToCancel?.product_id || '') 
+                                            ? "This will restore the product and set its active status to true."
+                                            : "This will cancel the product and set its active status to false."}
                                     </p>
                                     <div className="flex items-center justify-end gap-4">
                                         <Button
                                             variant="outline"
-                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                            onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
                                             Cancel
                                         </Button>
                                         <Button
-                                            onClick={confirmDelete}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                            onClick={confirmCancelItem}
+                                            className={`${cancelledProducts.has(productToCancel?.product_id || '') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                                         >
-                                            Delete
+                                            {cancelledProducts.has(productToCancel?.product_id || '') ? "Restore" : "Cancel"}
                                         </Button>
                                     </div>
                                 </div>

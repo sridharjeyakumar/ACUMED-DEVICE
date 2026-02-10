@@ -264,30 +264,47 @@ export default function HolidaysMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = () => {
-        if (!holidayToCancel) return;
+    const confirmCancelItem = async () => {
+        if (!holidayToCancel || !holidayToCancel._id) return;
         
         const holidayKey = holidayToCancel._id || `${formatDate(holidayToCancel.date)}-${holidayToCancel.year}`;
         const isCancelled = cancelledHolidays.has(holidayKey);
-        setCancelledHolidays(prev => {
-            const newSet = new Set(prev);
-            if (isCancelled) {
-                newSet.delete(holidayKey);
-                toast({
-                    title: "Restored",
-                    description: `Holiday ${holidayToCancel.remarks} has been restored`,
-                });
-            } else {
-                newSet.add(holidayKey);
-                toast({
-                    title: "Cancelled",
-                    description: `Holiday ${holidayToCancel.remarks} has been cancelled`,
-                });
-            }
-            return newSet;
-        });
-        setIsCancelItemDialogOpen(false);
-        setHolidayToCancel(null);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await holidaysAPI.update(holidayToCancel._id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledHolidays(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(holidayKey);
+                    toast({
+                        title: "Restored",
+                        description: `Holiday ${holidayToCancel.remarks} has been restored`,
+                    });
+                } else {
+                    newSet.add(holidayKey);
+                    toast({
+                        title: "Cancelled",
+                        description: `Holiday ${holidayToCancel.remarks} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadHolidays(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setHolidayToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} holiday`,
+                variant: "destructive",
+            });
+        }
     };
 
     return (
@@ -419,14 +436,24 @@ export default function HolidaysMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">DATE</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">REMARKS</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">YEAR</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID / NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Date</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Year</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -614,14 +641,6 @@ export default function HolidaysMasterPage() {
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setIsAddModalOpen(false)}
-                                            className="px-6"
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                             disabled={isSubmittingRef.current}
@@ -705,14 +724,6 @@ export default function HolidaysMasterPage() {
                                         />
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setIsEditModalOpen(false)}
-                                            className="px-6"
-                                        >
-                                            Cancel
-                                        </Button>
                                         <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"

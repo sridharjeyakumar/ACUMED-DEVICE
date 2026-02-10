@@ -421,29 +421,46 @@ export default function CompanyMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = () => {
+    const confirmCancelItem = async () => {
         if (!companyToCancel) return;
         
         const isCancelled = cancelledCompanies.has(companyToCancel.comp_id);
-        setCancelledCompanies(prev => {
-            const newSet = new Set(prev);
-            if (isCancelled) {
-                newSet.delete(companyToCancel.comp_id);
-                toast({
-                    title: "Restored",
-                    description: `Company ${companyToCancel.company_name} has been restored`,
-                });
-            } else {
-                newSet.add(companyToCancel.comp_id);
-                toast({
-                    title: "Cancelled",
-                    description: `Company ${companyToCancel.company_name} has been cancelled`,
-                });
-            }
-            return newSet;
-        });
-        setIsCancelItemDialogOpen(false);
-        setCompanyToCancel(null);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await companyAPI.update(companyToCancel.comp_id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledCompanies(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(companyToCancel.comp_id);
+                    toast({
+                        title: "Restored",
+                        description: `Company ${companyToCancel.company_name} has been restored`,
+                    });
+                } else {
+                    newSet.add(companyToCancel.comp_id);
+                    toast({
+                        title: "Cancelled",
+                        description: `Company ${companyToCancel.company_name} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadCompanies(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setCompanyToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} company`,
+                variant: "destructive",
+            });
+        }
     };
 
     return (
@@ -611,37 +628,54 @@ export default function CompanyMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-20">COMP ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">COMPANY NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[120px]">SHORT NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[150px]">ADDRESS 1</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[150px]">ADDRESS 2</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">CITY</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">STATE</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">PINCODE</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">GST NO.</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">CIN NO.</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">PAN NO.</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">EMAIL ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">WEBSITE</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-36">CONTACT PERSON</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">CONTACT NO</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">LOGO</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">comp id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">company name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">company short name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">address 1</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">address 2</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">city</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">state</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">pincode</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">GST No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">CIN No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">PAN No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">email id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">website</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>contact</span>
+                                                    <span>Person</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Contact No</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">logo</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={17} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={19} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading companies...
                                                 </td>
                                             </tr>
                                         ) : filteredCompanies.length === 0 ? (
                                             <tr>
-                                                <td colSpan={17} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={19} className="px-6 py-4 text-center text-muted-foreground">
                                                     No companies found
                                                 </td>
                                             </tr>
@@ -707,6 +741,14 @@ export default function CompanyMasterPage() {
                                                         ) : (
                                                             <span className="text-xs text-muted-foreground">-</span>
                                                         )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{company.last_modified_user_id || "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">
+                                                            {company.last_modified_date_time ? new Date(company.last_modified_date_time).toLocaleString() : "-"}
+                                                        </span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center justify-center gap-2">
@@ -1040,15 +1082,6 @@ export default function CompanyMasterPage() {
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleCancelClick('add')}
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
-                                        <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                             disabled={isSubmittingRef.current}
@@ -1315,15 +1348,6 @@ export default function CompanyMasterPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleCancelClick('edit')}
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
                                         <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"

@@ -228,30 +228,47 @@ export default function UserLoginHistoryPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = () => {
-        if (!historyToCancel) return;
+    const confirmCancelItem = async () => {
+        if (!historyToCancel || !historyToCancel._id) return;
         
         const historyKey = historyToCancel._id || `${historyToCancel.user_id}-${historyToCancel.login_date}-${historyToCancel.login_time}`;
         const isCancelled = cancelledHistories.has(historyKey);
-        setCancelledHistories(prev => {
-            const newSet = new Set(prev);
-            if (isCancelled) {
-                newSet.delete(historyKey);
-                toast({
-                    title: "Restored",
-                    description: `Login history for user ${historyToCancel.user_id} has been restored`,
-                });
-            } else {
-                newSet.add(historyKey);
-                toast({
-                    title: "Cancelled",
-                    description: `Login history for user ${historyToCancel.user_id} has been cancelled`,
-                });
-            }
-            return newSet;
-        });
-        setIsCancelItemDialogOpen(false);
-        setHistoryToCancel(null);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await userLoginHistoryAPI.update(historyToCancel._id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledHistories(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(historyKey);
+                    toast({
+                        title: "Restored",
+                        description: `Login history for user ${historyToCancel.user_id} has been restored`,
+                    });
+                } else {
+                    newSet.add(historyKey);
+                    toast({
+                        title: "Cancelled",
+                        description: `Login history for user ${historyToCancel.user_id} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadLoginHistories(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setHistoryToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} login history`,
+                variant: "destructive",
+            });
+        }
     };
 
     const handleCancelClick = (modalType: 'edit') => {
@@ -387,14 +404,14 @@ export default function UserLoginHistoryPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">USER ID / NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">LOGIN DATE</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">LOGIN TIME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">LOGOUT DATE</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">LOGOUT TIME</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">ACTIONS</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">user id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">login Date</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">login Time</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Logout Date</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Logout Time</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -548,15 +565,6 @@ export default function UserLoginHistoryPage() {
                                         <Input type="time" name="logout_time" value={formData.logout_time} onChange={handleInputChange} />
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button 
-                                            type="button" 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            onClick={() => handleCancelClick('edit')} 
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update Record</Button>
                                     </div>
                                 </form>

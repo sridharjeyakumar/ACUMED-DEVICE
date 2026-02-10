@@ -615,7 +615,6 @@ export default function ProductionUpdatePage() {
                                         <Input name="remarks" value={formData.remarks} onChange={handleInputChange} placeholder="Notes..." />
                                     </div>
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save Update</Button>
                                     </div>
                                 </form>
@@ -715,7 +714,6 @@ export default function ProductionUpdatePage() {
                                         <Input name="remarks" value={formData.remarks} onChange={handleInputChange} placeholder="Notes..." />
                                     </div>
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update Record</Button>
                                     </div>
                                 </form>

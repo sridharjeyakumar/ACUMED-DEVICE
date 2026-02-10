@@ -284,29 +284,46 @@ export default function UserMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = () => {
+    const confirmCancelItem = async () => {
         if (!userToCancel) return;
         
         const isCancelled = cancelledUsers.has(userToCancel.user_id);
-        setCancelledUsers(prev => {
-            const newSet = new Set(prev);
-            if (isCancelled) {
-                newSet.delete(userToCancel.user_id);
-                toast({
-                    title: "Restored",
-                    description: `User ${userToCancel.user_id} has been restored`,
-                });
-            } else {
-                newSet.add(userToCancel.user_id);
-                toast({
-                    title: "Cancelled",
-                    description: `User ${userToCancel.user_id} has been cancelled`,
-                });
-            }
-            return newSet;
-        });
-        setIsCancelItemDialogOpen(false);
-        setUserToCancel(null);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await userAPI.update(userToCancel.user_id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledUsers(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(userToCancel.user_id);
+                    toast({
+                        title: "Restored",
+                        description: `User ${userToCancel.user_id} has been restored`,
+                    });
+                } else {
+                    newSet.add(userToCancel.user_id);
+                    toast({
+                        title: "Cancelled",
+                        description: `User ${userToCancel.user_id} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadAllData(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setUserToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} user`,
+                variant: "destructive",
+            });
+        }
     };
 
     const handleCancelClick = (modalType: 'add' | 'edit') => {
@@ -499,30 +516,31 @@ export default function UserMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">USER ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">EMPLOYEE ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">ROLE ID / NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">PASSWORD CHANGED DATE</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">PASSWORD EXPIRY DATE</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">PASSWORD EXPIRY DAYS</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST LOGIN DATE</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST LOGIN TIME</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIVE</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">user id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">employee id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">password</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">role id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">password changed date</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">password expiry date</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">password expiry days</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">last login date</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">last login time</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">active</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={11} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading...
                                                 </td>
                                             </tr>
                                         ) : filteredUsers.length === 0 ? (
                                             <tr>
-                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={11} className="px-6 py-4 text-center text-muted-foreground">
                                                     No users found
                                                 </td>
                                             </tr>
@@ -542,6 +560,9 @@ export default function UserMasterPage() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-foreground">{user.employee_id}</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-muted-foreground font-mono">••••••••</span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {user.role_id ? (
@@ -568,7 +589,7 @@ export default function UserMasterPage() {
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-foreground">{formatTime(user.last_login_time)}</span>
                                                 </td>
-                                                <td className="px-6 py-4 text-center">
+                                                <td className="px-6 py-4 text-left">
                                                     <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
                                                         user.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                     }`}>
@@ -689,15 +710,6 @@ export default function UserMasterPage() {
                                         </label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button 
-                                            type="button" 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            onClick={() => handleCancelClick('add')} 
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save User</Button>
                                     </div>
                                 </form>
@@ -746,15 +758,6 @@ export default function UserMasterPage() {
                                         </label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button 
-                                            type="button" 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            onClick={() => handleCancelClick('edit')} 
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update User</Button>
                                     </div>
                                 </form>

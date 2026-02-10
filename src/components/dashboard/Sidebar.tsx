@@ -54,48 +54,43 @@ const navSections: NavSection[] = [
     items: [{ icon: LayoutDashboard, label: "Dashboard", active: true, href: "/" }],
   },
   {
+    title: "MASTER",
+    items: [
+      { icon: Package, label: "Product Master", href: "/product-master" },
+      { icon: Layers, label: "Material Master", href: "/material-master" },
+      { icon: Factory, label: "Production Machinery Master", href: "/production-capacity" },
+      { icon: Box, label: "Pack Size Master", href: "/pack-size-master" },
+      { icon: Truck, label: "Carton Type Master", href: "/carton-type-master" },
+      { icon: Archive, label: "Carton Capacity Master", href: "/carton-capacity-master" },
+      { icon: FileText, label: "Product BOM", href: "/product-bom" },
+      { icon: Trash2, label: "Collection Bin Master", href: "/collection-bin-master" },
+      { icon: CheckCircle2, label: "COA Checklist Master", href: "/coa-checklist-master" },
+      { icon: FileText, label: "COA Checklist Detail", href: "/coa-checklist-detail" },
+      { icon: UserCircle, label: "Employee Master", href: "/employee-master" },
+    ],
+  },
+  {
     title: "CONFIGURATION",
+    items: [
+      { icon: Building2, label: "Company Master", href: "/company-master" },
+      { icon: PackageOpen, label: "Product Category Master", href: "/product-category-master" },
+      { icon: Layers, label: "Material Category Master", href: "/material-category-master" },
+      { icon: CheckCircle2, label: "Product Status Master", href: "/product-status-master" },
+      { icon: Package, label: "Material Status Master", href: "/material-status-master" },
+      { icon: Factory, label: "Department Master", href: "/department-master" },
+      { icon: Award, label: "Employee Grade Master", href: "/employee-grade-master" },
+      { icon: CalendarDays, label: "Holidays Master", href: "/holidays-master" },
+      { icon: CalendarOff, label: "Weekly Off Master", href: "/weekly-off-master" },
+    ],
+  },
+  {
+    title: "SYSTEM",
     items: [
       { icon: MenuIcon, label: "Menu Master", href: "/menu-master" },
       { icon: Users, label: "Role Master", href: "/role-master" },
       { icon: Key, label: "Menu Access Master", href: "/menu-access-master" },
       { icon: UserCircle, label: "User Master", href: "/user-master" },
       { icon: Clock, label: "User Login History", href: "/user-login-history" },
-      { icon: Building2, label: "Company Master", href: "/company-master" },
-      { icon: Factory, label: "Department Master", href: "/department-master" },
-      { icon: Award, label: "Employee Grade Master", href: "/employee-grade-master" },
-      { icon: CheckCircle2, label: "Product Status Master", href: "/product-status-master" },
-      { icon: Package, label: "Material Status Master", href: "/material-status-master" },
-      { icon: PackageOpen, label: "Product Category Master", href: "/product-category-master" },
-      { icon: Layers, label: "Material Category Master", href: "/material-category-master" },
-      { icon: CalendarDays, label: "Holidays Master", href: "/holidays-master" },
-      { icon: CalendarOff, label: "Weekly Off Master", href: "/weekly-off-master" },
-    ],
-  },
-  {
-    title: "MASTER",
-    items: [
-      { icon: Package, label: "Product Master", href: "/product-master" },
-      { icon: Layers, label: "Material Master", href: "/material-master" },
-      { icon: Factory, label: "Production Capacity", href: "/production-capacity" },
-      { icon: Box, label: "Pack Size Master", href: "/pack-size-master" },
-      { icon: Truck, label: "Carton Type Master", href: "/carton-type-master" },
-      { icon: Archive, label: "Carton Capacity Master", href: "/carton-capacity-master" },
-      { icon: FileText, label: "Product BOM", href: "/product-bom" },
-      { icon: List, label: "Packing BOM", href: "/packing-bom" },
-      { icon: Trash2, label: "Collection Bin Master", href: "/collection-bin-master" },
-      { icon: UserCircle, label: "Employee Master", href: "/employee-master" },
-    ],
-  },
-  {
-    title: "TRANSACTION",
-    items: [
-      { icon: Target, label: "Monthly Production Target", href: "/monthly-production-target" },
-      { icon: Upload, label: "Production Update", href: "/production-update" },
-      { icon: AlertCircle, label: "Production Rejected Update", href: "/production-rejected-update" },
-      { icon: FileBarChart, label: "Daily Production Record", href: "/daily-production-record" },
-      { icon: TrendingUp, label: "Product movement", href: "/product-movement" },
-      { icon: PackageOpen, label: "Material movement", href: "/material-movement" },
     ],
   },
 ];
@@ -129,7 +124,7 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
   // Initialize expanded sections with the active section included
   const [expandedSections, setExpandedSections] = useState<string[]>(() => {
     const activeSection = getActiveSection();
-    const defaultSections = ["CONFIGURATION", "MASTER", "TRANSACTION"];
+    const defaultSections = ["MASTER"];
     if (activeSection && !defaultSections.includes(activeSection)) {
       return [...defaultSections, activeSection];
     }
@@ -222,14 +217,20 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
               {section.title && (
                 <button
                   onClick={() => toggleSection(section.title!)}
-                  className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-sidebar-muted hover:text-foreground transition-colors"
+                  className={cn(
+                    "w-full flex items-center justify-between px-4 py-2 text-xs font-medium transition-colors",
+                    expandedSections.includes(section.title)
+                      ? "text-foreground font-bold"
+                      : "text-sidebar-muted hover:text-foreground"
+                  )}
                   suppressHydrationWarning
                 >
                   {section.title}
                   <ChevronDown
                     className={cn(
                       "w-4 h-4 transition-transform duration-200",
-                      expandedSections.includes(section.title) ? "rotate-0" : "-rotate-90"
+                      expandedSections.includes(section.title) ? "rotate-0" : "-rotate-90",
+                      expandedSections.includes(section.title) ? "text-foreground" : "text-sidebar-muted"
                     )}
                   />
                 </button>

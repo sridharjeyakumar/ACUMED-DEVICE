@@ -44,3 +44,15 @@ export type { IWeeklyOffMaster } from './WeeklyOffMaster';
 export { default as CartonTypeMaster } from './CartonTypeMaster';
 export type { ICartonTypeMaster } from './CartonTypeMaster';
 
+export { default as CollectionBinMaster } from './CollectionBinMaster';
+export type { ICollectionBinMaster } from './CollectionBinMaster';
+
+export { default as COAChecklistMaster } from './COAChecklistMaster';
+export type { ICOAChecklistMaster } from './COAChecklistMaster';
+
+export { default as COAChecklistDetail } from './COAChecklistDetail';
+export type { ICOAChecklistDetail } from './COAChecklistDetail';
+
+export { default as EmployeeMaster } from './EmployeeMaster';
+export type { IEmployeeMaster } from './EmployeeMaster';
+

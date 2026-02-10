@@ -35,7 +35,7 @@ export default function RootLayout({
             <div className="fixed bottom-0 left-0 z-50 p-3 pointer-events-none">
               <div className="bg-gray-200/60 backdrop-blur-sm rounded-full px-4 py-2 shadow-sm">
                 <span className="text-xs font-medium text-gray-600">
-                  APP VERSION <span className="font-bold text-gray-900">0.1.2</span>
+                  APP VERSION <span className="font-bold text-gray-900">0.1.3</span>
                 </span>
               </div>
             </div>

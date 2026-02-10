@@ -276,29 +276,46 @@ export default function MenuMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = () => {
+    const confirmCancelItem = async () => {
         if (!menuToCancel) return;
         
         const isCancelled = cancelledMenus.has(menuToCancel.menu_id);
-        setCancelledMenus(prev => {
-            const newSet = new Set(prev);
-            if (isCancelled) {
-                newSet.delete(menuToCancel.menu_id);
-                toast({
-                    title: "Restored",
-                    description: `Menu ${menuToCancel.menu_desc} has been restored`,
-                });
-            } else {
-                newSet.add(menuToCancel.menu_id);
-                toast({
-                    title: "Cancelled",
-                    description: `Menu ${menuToCancel.menu_desc} has been cancelled`,
-                });
-            }
-            return newSet;
-        });
-        setIsCancelItemDialogOpen(false);
-        setMenuToCancel(null);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await menuAPI.update(menuToCancel.menu_id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledMenus(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(menuToCancel.menu_id);
+                    toast({
+                        title: "Restored",
+                        description: `Menu ${menuToCancel.menu_desc} has been restored`,
+                    });
+                } else {
+                    newSet.add(menuToCancel.menu_id);
+                    toast({
+                        title: "Cancelled",
+                        description: `Menu ${menuToCancel.menu_desc} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadMenus(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setMenuToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} menu`,
+                variant: "destructive",
+            });
+        }
     };
 
     const handleCancelClick = (modalType: 'add' | 'edit') => {
@@ -457,26 +474,24 @@ export default function MenuMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
-                                                MENU ID
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">menu id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">menu desc</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">active</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
                                             </th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">
-                                                MENU DESCRIPTION
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
                                             </th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
-                                                LAST MODIFIED USER ID / NAME
-                                            </th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">
-                                                LAST MODIFIED DATE & TIME
-                                            </th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
-                                                STATUS
-                                            </th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">
-                                                ACTIONS
-                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -513,6 +528,13 @@ export default function MenuMasterPage() {
                                                         {menu.menu_desc}
                                                     </span>
                                                 </td>
+                                                <td className="px-6 py-4 text-left">
+                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                        menu.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                    }`}>
+                                                        {menu.active ? "TRUE" : "FALSE"}
+                                                    </span>
+                                                </td>
                                                 <td className="px-6 py-4">
                                                     {menu.last_modified_user_id ? (
                                                         <div className="flex flex-col">
@@ -528,13 +550,6 @@ export default function MenuMasterPage() {
                                                         {menu.last_modified_date_time 
                                                             ? formatDateTime(menu.last_modified_date_time)
                                                             : "-"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                        menu.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                    }`}>
-                                                        {menu.active ? "Active" : "Inactive"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -684,15 +699,6 @@ export default function MenuMasterPage() {
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleCancelClick('add')}
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
-                                        <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                             disabled={isSubmittingRef.current}
@@ -772,15 +778,6 @@ export default function MenuMasterPage() {
                                         </label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleCancelClick('edit')}
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
                                         <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"

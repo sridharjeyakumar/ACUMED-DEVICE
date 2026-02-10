@@ -304,29 +304,46 @@ export default function ProductStatusMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = () => {
+    const confirmCancelItem = async () => {
         if (!statusToCancel) return;
         
         const isCancelled = cancelledStatuses.has(statusToCancel.prod_status_id);
-        setCancelledStatuses(prev => {
-            const newSet = new Set(prev);
-            if (isCancelled) {
-                newSet.delete(statusToCancel.prod_status_id);
-                toast({
-                    title: "Restored",
-                    description: `Product status ${statusToCancel.product_status} has been restored`,
-                });
-            } else {
-                newSet.add(statusToCancel.prod_status_id);
-                toast({
-                    title: "Cancelled",
-                    description: `Product status ${statusToCancel.product_status} has been cancelled`,
-                });
-            }
-            return newSet;
-        });
-        setIsCancelItemDialogOpen(false);
-        setStatusToCancel(null);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await productStatusAPI.update(statusToCancel.prod_status_id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledStatuses(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(statusToCancel.prod_status_id);
+                    toast({
+                        title: "Restored",
+                        description: `Product status ${statusToCancel.product_status} has been restored`,
+                    });
+                } else {
+                    newSet.add(statusToCancel.prod_status_id);
+                    toast({
+                        title: "Cancelled",
+                        description: `Product status ${statusToCancel.product_status} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadStatuses(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setStatusToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} product status`,
+                variant: "destructive",
+            });
+        }
     };
 
     const handleCancelClick = (modalType: 'add' | 'edit') => {
@@ -519,17 +536,27 @@ export default function ProductStatusMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">PROD STATUS ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">PRODUCT STATUS</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">STOCK MOVEMENT</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">EFFECT IN STOCK</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">SEQ NO.</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID / NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">ACTIVE</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">prod status id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">product status</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">stock movement</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">effect in stock</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">seq no.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">active</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -571,6 +598,13 @@ export default function ProductStatusMasterPage() {
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{status.seq_no}</span>
                                                     </td>
+                                                    <td className="px-6 py-4 text-left">
+                                                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                            status.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                        }`}>
+                                                            {status.active ? "TRUE" : "FALSE"}
+                                                        </span>
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         {status.last_modified_user_id ? (
                                                             <div className="flex flex-col">
@@ -586,13 +620,6 @@ export default function ProductStatusMasterPage() {
                                                             {status.last_modified_date_time 
                                                                 ? formatDateTime(status.last_modified_date_time)
                                                                 : "-"}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                            status.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                        }`}>
-                                                            {status.active ? "TRUE" : "FALSE"}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
@@ -779,15 +806,6 @@ export default function ProductStatusMasterPage() {
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleCancelClick('add')}
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
-                                        <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                             disabled={isSubmittingRef.current}
@@ -918,15 +936,6 @@ export default function ProductStatusMasterPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleCancelClick('edit')}
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
                                         <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"

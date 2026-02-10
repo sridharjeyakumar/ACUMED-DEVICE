@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatsCards } from "@/components/dashboard/StatsCards";
-import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
+import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -41,7 +41,9 @@ export default function CartonTypeMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [cartonTypeToCancel, setCartonTypeToCancel] = useState<CartonType | null>(null);
+    const [cancelledCartonTypes, setCancelledCartonTypes] = useState<Set<string>>(new Set());
     const [selectedCartonType, setSelectedCartonType] = useState<CartonType | null>(null);
     const [cartonTypes, setCartonTypes] = useState<CartonType[]>([]);
     const [loading, setLoading] = useState(true);
@@ -243,66 +245,48 @@ export default function CartonTypeMasterPage() {
         }
     };
 
-    const handleDelete = (cartonType: CartonType) => {
-        setSelectedCartonType(cartonType);
-        setIsDeleteDialogOpen(true);
+    const handleCancel = (cartonType: CartonType) => {
+        setCartonTypeToCancel(cartonType);
+        setIsCancelItemDialogOpen(true);
     };
 
-    const confirmDelete = async () => {
-        if (!selectedCartonType) return;
+    const confirmCancelItem = async () => {
+        if (!cartonTypeToCancel) return;
         
-        // Store previous state for undo
-        const previousData = { ...selectedCartonType };
+        const isCancelled = cancelledCartonTypes.has(cartonTypeToCancel.carton_type_id);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
         
         try {
-            await cartonTypeAPI.delete(selectedCartonType.carton_type_id);
-            
-            // Store last action for undo
-            setLastAction({ type: 'delete', data: previousData });
-            
-            toast({
-                title: "Success",
-                description: "Carton type deleted successfully",
-                action: (
-                    <ToastAction altText="Undo" onClick={handleUndoDelete}>
-                        Undo
-                    </ToastAction>
-                ),
+            await cartonTypeAPI.update(cartonTypeToCancel.carton_type_id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
             });
-            setIsDeleteDialogOpen(false);
-            setSelectedCartonType(null);
-            loadCartonTypes();
+            
+            setCancelledCartonTypes(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(cartonTypeToCancel.carton_type_id);
+                    toast({
+                        title: "Restored",
+                        description: `Carton type ${cartonTypeToCancel.carton_type_name} has been restored`,
+                    });
+                } else {
+                    newSet.add(cartonTypeToCancel.carton_type_id);
+                    toast({
+                        title: "Cancelled",
+                        description: `Carton type ${cartonTypeToCancel.carton_type_name} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadCartonTypes(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setCartonTypeToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to delete carton type",
-                variant: "destructive",
-            });
-        }
-    };
-    
-    const handleUndoDelete = async () => {
-        if (!lastAction || lastAction.type !== 'delete') return;
-        
-        try {
-            // Restore deleted data
-            await cartonTypeAPI.create({
-                carton_type_id: lastAction.data.carton_type_id,
-                carton_type_name: lastAction.data.carton_type_name,
-                carton_type_shortname: lastAction.data.carton_type_shortname,
-                active: lastAction.data.active,
-                last_modified_user_id: lastAction.data.last_modified_user_id || "ADMIN",
-            });
-            toast({
-                title: "Restored",
-                description: "Carton type has been restored",
-            });
-            setLastAction(null);
-            loadCartonTypes();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to restore carton type",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} carton type`,
                 variant: "destructive",
             });
         }
@@ -450,15 +434,35 @@ export default function CartonTypeMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton type_id</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton type name</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton type shortname</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">last modified user id</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">last modified date & time</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Active</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">carton type_id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>carton type</span>
+                                                    <span>name</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>carton type</span>
+                                                    <span>shortname</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -504,14 +508,18 @@ export default function CartonTypeMasterPage() {
                                                             ? formatDateTime(item.last_modified_date_time)
                                                             : "-"}
                                                     </td>
-                                                    <td className="px-6 py-6 text-center align-middle">
-                                                        <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium ${
-                                                            item.active 
-                                                                ? 'bg-green-100 text-green-800' 
-                                                                : 'bg-red-100 text-red-800'
-                                                        }`}>
-                                                            {item.active ? 'TRUE' : 'FALSE'}
-                                                        </span>
+                                                    <td className="px-6 py-6 text-left align-middle">
+                                                        {(() => {
+                                                            const isCancelled = cancelledCartonTypes.has(item.carton_type_id);
+                                                            const displayActive = !isCancelled && (item.active !== false);
+                                                            return (
+                                                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                                    displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                                }`}>
+                                                                    {displayActive ? "TRUE" : "FALSE"}
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </td>
                                                     <td className="px-6 py-6 text-center align-middle">
                                                         <div className="flex items-center justify-center gap-2">
@@ -531,11 +539,12 @@ export default function CartonTypeMasterPage() {
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleDelete(item);
+                                                                    handleCancel(item);
                                                                 }}
-                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                className={`${cancelledCartonTypes.has(item.carton_type_id) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                                title={cancelledCartonTypes.has(item.carton_type_id) ? "Restore carton type" : "Cancel carton type"}
                                                             >
-                                                                <Trash2 className="w-4 h-4" />
+                                                                <X className="w-4 h-4" />
                                                             </Button>
                                                         </div>
                                                     </td>
@@ -679,9 +688,6 @@ export default function CartonTypeMasterPage() {
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">
-                                            Cancel
-                                        </Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6" disabled={isSubmittingRef.current}>
                                             Save
                                         </Button>
@@ -779,9 +785,6 @@ export default function CartonTypeMasterPage() {
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">
-                                            Cancel
-                                        </Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6" disabled={isSubmittingRef.current}>
                                             Update
                                         </Button>
@@ -793,16 +796,16 @@ export default function CartonTypeMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Delete Confirmation Dialog */}
+            {/* Cancel/Restore Confirmation Dialog */}
             <AnimatePresence>
-                {isDeleteDialogOpen && (
+                {isCancelItemDialogOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsDeleteDialogOpen(false)}
+                            onClick={() => setIsCancelItemDialogOpen(false)}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -811,11 +814,13 @@ export default function CartonTypeMasterPage() {
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
+                                <div className={`${cancelledCartonTypes.has(cartonTypeToCancel?.carton_type_id || '') ? 'bg-green-600' : 'bg-red-600'} text-white px-6 py-4 flex items-center justify-between`}>
+                                    <h2 className="text-xl font-bold">
+                                        {cancelledCartonTypes.has(cartonTypeToCancel?.carton_type_id || '') ? "Restore Carton Type" : "Cancel Carton Type"}
+                                    </h2>
                                     <button
-                                        onClick={() => setIsDeleteDialogOpen(false)}
-                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
+                                        onClick={() => setIsCancelItemDialogOpen(false)}
+                                        className="text-white hover:opacity-80 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -823,24 +828,26 @@ export default function CartonTypeMasterPage() {
 
                                 <div className="p-6">
                                     <p className="text-foreground mb-4">
-                                        Are you sure you want to delete <strong>{selectedCartonType?.carton_type_name}</strong>?
+                                        Are you sure you want to {cancelledCartonTypes.has(cartonTypeToCancel?.carton_type_id || '') ? 'restore' : 'cancel'} <strong>{cartonTypeToCancel?.carton_type_name}</strong>?
                                     </p>
                                     <p className="text-sm text-muted-foreground mb-6">
-                                        This action cannot be undone.
+                                        {cancelledCartonTypes.has(cartonTypeToCancel?.carton_type_id || '') 
+                                            ? "This will restore the carton type and set its active status to true."
+                                            : "This will cancel the carton type and set its active status to false."}
                                     </p>
 
                                     <div className="flex items-center justify-end gap-4">
                                         <Button
                                             variant="outline"
-                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                            onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
                                             Cancel
                                         </Button>
                                         <Button
-                                            onClick={confirmDelete}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                            onClick={confirmCancelItem}
+                                            className={`${cancelledCartonTypes.has(cartonTypeToCancel?.carton_type_id || '') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                                         >
-                                            Delete
+                                            {cancelledCartonTypes.has(cartonTypeToCancel?.carton_type_id || '') ? "Restore" : "Cancel"}
                                         </Button>
                                     </div>
                                 </div>

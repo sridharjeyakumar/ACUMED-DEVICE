@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -56,7 +56,9 @@ export default function MaterialMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [materialToCancel, setMaterialToCancel] = useState<Material | null>(null);
+    const [cancelledMaterials, setCancelledMaterials] = useState<Set<string>>(new Set());
     const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
     const [filterActive, setFilterActive] = useState<string>("all");
     const [filterType, setFilterType] = useState<string>("all");
@@ -282,25 +284,48 @@ export default function MaterialMasterPage() {
         }
     };
 
-    const handleDelete = (material: Material) => {
-        setSelectedMaterial(material);
-        setIsDeleteDialogOpen(true);
+    const handleCancel = (material: Material) => {
+        setMaterialToCancel(material);
+        setIsCancelItemDialogOpen(true);
     };
 
-    const confirmDelete = async () => {
+    const confirmCancelItem = async () => {
+        if (!materialToCancel) return;
+        
+        const isCancelled = cancelledMaterials.has(materialToCancel.material_id);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
         try {
-            await materialAPI.delete(selectedMaterial!.material_id);
-            toast({
-                title: "Success",
-                description: "Material deleted successfully",
+            await materialAPI.update(materialToCancel.material_id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
             });
-            setIsDeleteDialogOpen(false);
-            setSelectedMaterial(null);
-            loadMaterials();
+            
+            setCancelledMaterials(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(materialToCancel.material_id);
+                    toast({
+                        title: "Restored",
+                        description: `Material ${materialToCancel.material_name} has been restored`,
+                    });
+                } else {
+                    newSet.add(materialToCancel.material_id);
+                    toast({
+                        title: "Cancelled",
+                        description: `Material ${materialToCancel.material_name} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadMaterials(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setMaterialToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to delete material",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} material`,
                 variant: "destructive",
             });
         }
@@ -532,29 +557,114 @@ export default function MaterialMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">material_id</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">material name</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase min-w-[150px]">material short name</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">uom</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">material category id</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">material type</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">material spec</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">safety stock qty</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">re-order qty</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">min order qty</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Lead Time Days Min</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Lead Time Days Max</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">shelf life in months</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">QC required</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">COA checklist_id</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">material image</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">material image icon</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">last modified user id</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">last modified date & time</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Active</th>
-                                            <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">material_id</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>material</span>
+                                                    <span>name</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>material</span>
+                                                    <span>short name</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">uom</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>material</span>
+                                                    <span>category id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>material</span>
+                                                    <span>type</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>material</span>
+                                                    <span>spec</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>safety stock</span>
+                                                    <span>qty</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>re-order</span>
+                                                    <span>qty</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>min order</span>
+                                                    <span>qty</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Lead Time</span>
+                                                    <span>Days Min</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Lead Time</span>
+                                                    <span>Days Max</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>shelf life</span>
+                                                    <span>in months</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>QC</span>
+                                                    <span>required</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>COA</span>
+                                                    <span>checklist_id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>material</span>
+                                                    <span>image</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>material image</span>
+                                                    <span>icon</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -612,7 +722,19 @@ export default function MaterialMasterPage() {
                                                     ) : "-"}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm">{formatDateTime(material.last_modified_date_time)}</td>
-                                                <td className="px-4 py-3 text-sm font-semibold">{material.active ? "TRUE" : "FALSE"}</td>
+                                                <td className="px-4 py-3 text-left">
+                                                    {(() => {
+                                                        const isCancelled = cancelledMaterials.has(material.material_id);
+                                                        const displayActive = !isCancelled && (material.active !== false);
+                                                        return (
+                                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                                displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                            }`}>
+                                                                {displayActive ? "TRUE" : "FALSE"}
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <Button
@@ -631,11 +753,12 @@ export default function MaterialMasterPage() {
                                                             size="sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDelete(material);
+                                                                handleCancel(material);
                                                             }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            className={`${cancelledMaterials.has(material.material_id) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={cancelledMaterials.has(material.material_id) ? "Restore material" : "Cancel material"}
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <X className="w-4 h-4" />
                                                         </Button>
                                                     </div>
                                                 </td>
@@ -772,14 +895,6 @@ export default function MaterialMasterPage() {
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setIsAddModalOpen(false)}
-                                            className="px-6"
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                         >
@@ -847,14 +962,6 @@ export default function MaterialMasterPage() {
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setIsEditModalOpen(false)}
-                                            className="px-6"
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                         >
@@ -868,16 +975,16 @@ export default function MaterialMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Delete Confirmation Dialog */}
+            {/* Cancel/Restore Confirmation Dialog */}
             <AnimatePresence>
-                {isDeleteDialogOpen && (
+                {isCancelItemDialogOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsDeleteDialogOpen(false)}
+                            onClick={() => setIsCancelItemDialogOpen(false)}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -886,34 +993,38 @@ export default function MaterialMasterPage() {
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
+                                <div className={`${cancelledMaterials.has(materialToCancel?.material_id || '') ? 'bg-green-600' : 'bg-red-600'} text-white px-6 py-4 flex items-center justify-between`}>
+                                    <h2 className="text-xl font-bold">
+                                        {cancelledMaterials.has(materialToCancel?.material_id || '') ? "Restore Material" : "Cancel Material"}
+                                    </h2>
                                     <button
-                                        onClick={() => setIsDeleteDialogOpen(false)}
-                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
+                                        onClick={() => setIsCancelItemDialogOpen(false)}
+                                        className="text-white hover:opacity-80 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
                                 <div className="p-6">
                                     <p className="text-foreground mb-4">
-                                        Are you sure you want to delete <strong>{selectedMaterial?.material_name}</strong>?
+                                        Are you sure you want to {cancelledMaterials.has(materialToCancel?.material_id || '') ? 'restore' : 'cancel'} <strong>{materialToCancel?.material_name}</strong>?
                                     </p>
                                     <p className="text-sm text-muted-foreground mb-6">
-                                        This action cannot be undone.
+                                        {cancelledMaterials.has(materialToCancel?.material_id || '') 
+                                            ? "This will restore the material and set its active status to true."
+                                            : "This will cancel the material and set its active status to false."}
                                     </p>
                                     <div className="flex items-center justify-end gap-4">
                                         <Button
                                             variant="outline"
-                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                            onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
                                             Cancel
                                         </Button>
                                         <Button
-                                            onClick={confirmDelete}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                            onClick={confirmCancelItem}
+                                            className={`${cancelledMaterials.has(materialToCancel?.material_id || '') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                                         >
-                                            Delete
+                                            {cancelledMaterials.has(materialToCancel?.material_id || '') ? "Restore" : "Cancel"}
                                         </Button>
                                     </div>
                                 </div>

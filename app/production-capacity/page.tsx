@@ -5,10 +5,9 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, Factory, ChevronDown, Scale, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, Pencil, Factory, ChevronDown, Scale, X } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 
@@ -21,13 +20,18 @@ interface MachineRecord {
     qtyPerMin: number;
     uom: "NOS" | "PACKS" | "CARTONS";
     avgHrsPerDay: number;
+    lastModifiedUserId?: string;
+    lastModifiedDateTime?: string;
+    active: boolean;
 }
 
 export default function ProductionCapacityPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [machineToCancel, setMachineToCancel] = useState<MachineRecord | null>(null);
+    const [cancelledMachines, setCancelledMachines] = useState<Set<string>>(new Set());
     const [selectedMachine, setSelectedMachine] = useState<MachineRecord | null>(null);
     const [filterUom, setFilterUom] = useState<string>("all");
     const [filterSection, setFilterSection] = useState<string>("all");
@@ -59,23 +63,29 @@ export default function ProductionCapacityPage() {
     const machines: MachineRecord[] = [
         {
             id: "1",
-            machineId: "MAC1",
+            machineId: "M1",
             machineName: "Machine 1",
             section: "",
-            shortName: "Machine 1",
+            shortName: "Old",
             qtyPerMin: 80,
             uom: "NOS",
             avgHrsPerDay: 6,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
         {
             id: "2",
-            machineId: "MAC2",
+            machineId: "M2",
             machineName: "Machine 2",
             section: "",
-            shortName: "Machine 2",
+            shortName: "New",
             qtyPerMin: 80,
             uom: "NOS",
             avgHrsPerDay: 6,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
     ];
 
@@ -141,15 +151,33 @@ export default function ProductionCapacityPage() {
         });
     };
 
-    const handleDelete = (machine: MachineRecord) => {
-        setSelectedMachine(machine);
-        setIsDeleteDialogOpen(true);
+    const handleCancel = (machine: MachineRecord) => {
+        setMachineToCancel(machine);
+        setIsCancelItemDialogOpen(true);
     };
 
-    const confirmDelete = () => {
-        console.log("Deleting machine:", selectedMachine);
-        setIsDeleteDialogOpen(false);
-        setSelectedMachine(null);
+    const confirmCancelItem = () => {
+        if (!machineToCancel) return;
+        
+        const isCancelled = cancelledMachines.has(machineToCancel.id);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        // Update the machine's active status locally
+        // In a real implementation, this would call an API
+        setCancelledMachines(prev => {
+            const newSet = new Set(prev);
+            if (isCancelled) {
+                newSet.delete(machineToCancel.id);
+                console.log(`Machine ${machineToCancel.machineName} has been restored`);
+            } else {
+                newSet.add(machineToCancel.id);
+                console.log(`Machine ${machineToCancel.machineName} has been cancelled`);
+            }
+            return newSet;
+        });
+        
+        setIsCancelItemDialogOpen(false);
+        setMachineToCancel(null);
     };
 
     const getUomBadgeStyle = (uom: string) => {
@@ -179,7 +207,7 @@ export default function ProductionCapacityPage() {
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <h1 className="text-3xl font-bold text-foreground mb-2">Production Capacity Master</h1>
+                                <h1 className="text-3xl font-bold text-foreground mb-2">Production Machinery Master</h1>
                                 <p className="text-muted-foreground">Configure and manage manufacturing line throughput and operational parameters</p>
                             </div>
                             <Button
@@ -187,7 +215,7 @@ export default function ProductionCapacityPage() {
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                             >
                                 <Plus className="w-5 h-5" />
-                                Add New Capacity
+                                Add New Machinery
                             </Button>
                         </div>
                     </motion.div>
@@ -322,19 +350,35 @@ export default function ProductionCapacityPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">machine_id</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">machine name</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">machine short name</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">prod qty per minute</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">uom</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Avg Prod Hrs per day</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">0</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">machine name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">machine short name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">prod qty per minute</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">uom</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Avg Prod Hrs per day</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredMachines.map((machine, index) => (
+                                        {filteredMachines.map((machine, index) => {
+                                            const isCancelled = cancelledMachines.has(machine.id);
+                                            const displayActive = !isCancelled;
+                                            return (
                                             <motion.tr
                                                 key={machine.id}
                                                 initial={{ opacity: 0, x: -20 }}
@@ -355,10 +399,23 @@ export default function ProductionCapacityPage() {
                                                     {machine.qtyPerMin}
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm font-semibold">NOS</span>
+                                                    <span className="text-sm font-semibold">{machine.uom}</span>
                                                 </td>
                                                 <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
                                                     {machine.avgHrsPerDay}
+                                                </td>
+                                                <td className="px-6 py-6 align-middle">
+                                                    <span className="text-sm text-foreground">{machine.lastModifiedUserId || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-6 align-middle">
+                                                    <span className="text-sm text-foreground">{machine.lastModifiedDateTime || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-6 text-left align-middle">
+                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                        displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                    }`}>
+                                                        {displayActive ? "TRUE" : "FALSE"}
+                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-middle">
                                                     <div className="flex items-center justify-center gap-2">
@@ -378,16 +435,18 @@ export default function ProductionCapacityPage() {
                                                             size="sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDelete(machine);
+                                                                handleCancel(machine);
                                                             }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={isCancelled ? "Restore machine" : "Cancel machine"}
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <X className="w-4 h-4" />
                                                         </Button>
                                                     </div>
                                                 </td>
                                             </motion.tr>
-                                        ))}
+                                        );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -438,7 +497,7 @@ export default function ProductionCapacityPage() {
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Add New Capacity</h2>
+                                    <h2 className="text-2xl font-bold">Add New Machinery</h2>
                                     <button
                                         onClick={() => setIsAddModalOpen(false)}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
@@ -494,7 +553,6 @@ export default function ProductionCapacityPage() {
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
                                     </div>
                                 </form>
@@ -523,7 +581,7 @@ export default function ProductionCapacityPage() {
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Edit Capacity</h2>
+                                    <h2 className="text-2xl font-bold">Edit Machinery</h2>
                                     <button
                                         onClick={() => setIsEditModalOpen(false)}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
@@ -579,7 +637,6 @@ export default function ProductionCapacityPage() {
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
                                     </div>
                                 </form>
@@ -590,14 +647,14 @@ export default function ProductionCapacityPage() {
             </AnimatePresence>
 
             <AnimatePresence>
-                {isDeleteDialogOpen && (
+                {isCancelItemDialogOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsDeleteDialogOpen(false)}
+                            onClick={() => setIsCancelItemDialogOpen(false)}
                         />
 
                         <motion.div
@@ -607,11 +664,13 @@ export default function ProductionCapacityPage() {
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
+                                <div className={`${cancelledMachines.has(machineToCancel?.id || '') ? 'bg-green-600' : 'bg-red-600'} text-white px-6 py-4 flex items-center justify-between`}>
+                                    <h2 className="text-xl font-bold">
+                                        {cancelledMachines.has(machineToCancel?.id || '') ? "Restore Machine" : "Cancel Machine"}
+                                    </h2>
                                     <button
-                                        onClick={() => setIsDeleteDialogOpen(false)}
-                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
+                                        onClick={() => setIsCancelItemDialogOpen(false)}
+                                        className="text-white hover:opacity-80 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -619,24 +678,26 @@ export default function ProductionCapacityPage() {
 
                                 <div className="p-6">
                                     <p className="text-foreground mb-4">
-                                        Are you sure you want to delete <strong>{selectedMachine?.machineName}</strong>?
+                                        Are you sure you want to {cancelledMachines.has(machineToCancel?.id || '') ? 'restore' : 'cancel'} <strong>{machineToCancel?.machineName}</strong>?
                                     </p>
                                     <p className="text-sm text-muted-foreground mb-6">
-                                        This action cannot be undone.
+                                        {cancelledMachines.has(machineToCancel?.id || '') 
+                                            ? "This will restore the machine and set its active status to true."
+                                            : "This will cancel the machine and set its active status to false."}
                                     </p>
 
                                     <div className="flex items-center justify-end gap-4">
                                         <Button
                                             variant="outline"
-                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                            onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
                                             Cancel
                                         </Button>
                                         <Button
-                                            onClick={confirmDelete}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                            onClick={confirmCancelItem}
+                                            className={`${cancelledMachines.has(machineToCancel?.id || '') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                                         >
-                                            Delete
+                                            {cancelledMachines.has(machineToCancel?.id || '') ? "Restore" : "Cancel"}
                                         </Button>
                                     </div>
                                 </div>

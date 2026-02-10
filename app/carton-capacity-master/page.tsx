@@ -5,191 +5,443 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, Archive, ChevronDown, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, Pencil, Archive, ChevronDown, X } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { cartonCapacityAPI } from "@/services/api";
 
 interface CartonCapacityRecord {
     id: string;
-    capacityId: string;
-    capacityName: string;
-    subtitle: string;
-    shortName: string;
+    cartonCapacityId: string;
+    cartonCapacityName: string;
+    cartonCapacityShortname: string;
+    productId: string;
     packSizeId: string;
-    materialId: string;
+    packMatlId: string;
+    cartonTypeId: string;
+    cartonMaterialId: string;
     packsPerCarton: number;
+    lastModifiedUserId?: string;
+    lastModifiedDateTime?: string;
+    active: boolean;
 }
 
 export default function CartonCapacityMasterPage() {
+    const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [capacityToCancel, setCapacityToCancel] = useState<CartonCapacityRecord | null>(null);
+    const [cancelledCapacities, setCancelledCapacities] = useState<Set<string>>(new Set());
     const [selectedCapacity, setSelectedCapacity] = useState<CartonCapacityRecord | null>(null);
     const [filterPackSize, setFilterPackSize] = useState<string>("all");
     const [filterMaterial, setFilterMaterial] = useState<string>("all");
+    const [records, setRecords] = useState<CartonCapacityRecord[]>([]);
+    const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState({
-        capacityId: "",
-        capacityName: "",
-        subtitle: "",
-        shortName: "",
+        cartonCapacityId: "",
+        cartonCapacityName: "",
+        cartonCapacityShortname: "",
+        productId: "",
         packSizeId: "",
-        materialId: "",
+        packMatlId: "",
+        cartonTypeId: "",
+        cartonMaterialId: "",
         packsPerCarton: "",
+        active: true,
     });
+
+    // Helper function to convert snake_case to camelCase
+    const toCamelCase = (data: any): CartonCapacityRecord => {
+        return {
+            id: data._id || data.carton_capacity_id,
+            cartonCapacityId: data.carton_capacity_id,
+            cartonCapacityName: data.carton_capacity_name,
+            cartonCapacityShortname: data.carton_capacity_shortname,
+            productId: data.product_id,
+            packSizeId: data.pack_size_id,
+            packMatlId: data.pack_matl_id,
+            cartonTypeId: data.carton_type_id,
+            cartonMaterialId: data.carton_material_id,
+            packsPerCarton: data.packs_per_carton,
+            lastModifiedUserId: data.last_modified_user_id || "",
+            lastModifiedDateTime: data.last_modified_date_time ? new Date(data.last_modified_date_time).toLocaleString() : "",
+            active: data.active !== false,
+        };
+    };
+
+    // Helper function to convert camelCase to snake_case
+    const toSnakeCase = (data: any) => {
+        return {
+            carton_capacity_id: data.cartonCapacityId,
+            carton_capacity_name: data.cartonCapacityName,
+            carton_capacity_shortname: data.cartonCapacityShortname,
+            product_id: data.productId,
+            pack_size_id: data.packSizeId,
+            pack_matl_id: data.packMatlId,
+            carton_type_id: data.cartonTypeId,
+            carton_material_id: data.cartonMaterialId,
+            packs_per_carton: Number(data.packsPerCarton),
+            active: data.active !== false,
+        };
+    };
+
+    // Load data from API
+    useEffect(() => {
+        loadRecords();
+    }, []);
+
+    const loadRecords = async () => {
+        try {
+            setLoading(true);
+            const data = await cartonCapacityAPI.getAll();
+            setRecords(data.map(toCamelCase));
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load carton capacities",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
             setFormData({
-                capacityId: "",
-                capacityName: "",
-                subtitle: "",
-                shortName: "",
+                cartonCapacityId: "",
+                cartonCapacityName: "",
+                cartonCapacityShortname: "",
+                productId: "",
                 packSizeId: "",
-                materialId: "",
+                packMatlId: "",
+                cartonTypeId: "",
+                cartonMaterialId: "",
                 packsPerCarton: "",
+                active: true,
             });
         }
     }, [isAddModalOpen]);
 
-    const records: CartonCapacityRecord[] = [
+    const hardcodedRecords: CartonCapacityRecord[] = [
         {
             id: "1",
-            capacityId: "STER06",
-            capacityName: "Sterilization Carton - 6s",
-            subtitle: "",
-            shortName: "Sterilization Carton",
-            packSizeId: "PaCK06",
-            materialId: "PjM004",
-            packsPerCarton: 850,
+            cartonCapacityId: "SDU24",
+            cartonCapacityName: "DUVET Sterilization Carton - 24s",
+            cartonCapacityShortname: "Sterilization Carton",
+            productId: "P0001",
+            packSizeId: "PK24",
+            packMatlId: "PM001",
+            cartonTypeId: "ST",
+            cartonMaterialId: "PM004",
+            packsPerCarton: 206,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
         {
             id: "2",
-            capacityId: "STER12",
-            capacityName: "Sterilization Carton - 12s",
-            subtitle: "",
-            shortName: "Sterilization Carton",
-            packSizeId: "PaCK12",
-            materialId: "PjM004",
+            cartonCapacityId: "SDU12",
+            cartonCapacityName: "DUVET Sterilization Carton - 12s",
+            cartonCapacityShortname: "Sterilization Carton",
+            productId: "P0001",
+            packSizeId: "PK12",
+            packMatlId: "PM002",
+            cartonTypeId: "ST",
+            cartonMaterialId: "PM004",
             packsPerCarton: 412,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
         {
             id: "3",
-            capacityId: "STER24",
-            capacityName: "Sterilization Carton - 24s",
-            subtitle: "",
-            shortName: "Sterilization Carton",
-            packSizeId: "PaCK24",
-            materialId: "PjM004",
-            packsPerCarton: 206,
+            cartonCapacityId: "SDU06",
+            cartonCapacityName: "DUVET Sterilization Carton - 6s",
+            cartonCapacityShortname: "Sterilization Carton",
+            productId: "P0001",
+            packSizeId: "PK06",
+            packMatlId: "PM003",
+            cartonTypeId: "ST",
+            cartonMaterialId: "PM004",
+            packsPerCarton: 824,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
         {
             id: "4",
-            capacityId: "SHIP06",
-            capacityName: "Shipper Carton - 6s",
-            subtitle: "",
-            shortName: "Shipper Carton",
-            packSizeId: "PaCK06",
-            materialId: "PjM005",
-            packsPerCarton: 250,
+            cartonCapacityId: "DDU24",
+            cartonCapacityName: "DUVET Shipper Carton - 24s",
+            cartonCapacityShortname: "Shipper Carton",
+            productId: "P0001",
+            packSizeId: "PK24",
+            packMatlId: "PM001",
+            cartonTypeId: "SH",
+            cartonMaterialId: "PM005",
+            packsPerCarton: 60,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
         {
             id: "5",
-            capacityId: "SHIP12",
-            capacityName: "Shipper Carton - 12s",
-            subtitle: "",
-            shortName: "Shipper Carton",
-            packSizeId: "PaCK12",
-            materialId: "PjM005",
+            cartonCapacityId: "DDU12",
+            cartonCapacityName: "DUVET Shipper Carton - 12s",
+            cartonCapacityShortname: "Shipper Carton",
+            productId: "P0001",
+            packSizeId: "PK12",
+            packMatlId: "PM002",
+            cartonTypeId: "SH",
+            cartonMaterialId: "PM005",
             packsPerCarton: 120,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
         {
             id: "6",
-            capacityId: "SHIP24",
-            capacityName: "Shipper Carton - 24s",
-            subtitle: "",
-            shortName: "Shipper Carton",
-            packSizeId: "PaCK24",
-            materialId: "PjM005",
-            packsPerCarton: 60,
+            cartonCapacityId: "DDU06",
+            cartonCapacityName: "DUVET Shipper Carton - 6s",
+            cartonCapacityShortname: "Shipper Carton",
+            productId: "P0001",
+            packSizeId: "PK06",
+            packMatlId: "PM003",
+            cartonTypeId: "SH",
+            cartonMaterialId: "PM005",
+            packsPerCarton: 240,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
+        },
+        {
+            id: "7",
+            cartonCapacityId: "SXL24",
+            cartonCapacityName: "DUVET XL Sterilization Carton - 24s",
+            cartonCapacityShortname: "Sterilization Carton",
+            productId: "P0002",
+            packSizeId: "PK24",
+            packMatlId: "PM006",
+            cartonTypeId: "ST",
+            cartonMaterialId: "PM007",
+            packsPerCarton: 206,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
+        },
+        {
+            id: "8",
+            cartonCapacityId: "DXL24",
+            cartonCapacityName: "DUVET XL Shipper Carton - 24s",
+            cartonCapacityShortname: "Shipper Carton",
+            productId: "P0002",
+            packSizeId: "PK24",
+            packMatlId: "PM006",
+            cartonTypeId: "SH",
+            cartonMaterialId: "PM008",
+            packsPerCarton: 412,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
+        },
+        {
+            id: "9",
+            cartonCapacityId: "SUL06",
+            cartonCapacityName: "DUVET Ultra Sterilization Carton - 6s",
+            cartonCapacityShortname: "Sterilization Carton",
+            productId: "P0003",
+            packSizeId: "PK06",
+            packMatlId: "PM009",
+            cartonTypeId: "ST",
+            cartonMaterialId: "PM010",
+            packsPerCarton: 206,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
+        },
+        {
+            id: "10",
+            cartonCapacityId: "DUL06",
+            cartonCapacityName: "DUVET Ultra Shipper Carton - 6s",
+            cartonCapacityShortname: "Shipper Carton",
+            productId: "P0003",
+            packSizeId: "PK06",
+            packMatlId: "PM009",
+            cartonTypeId: "SH",
+            cartonMaterialId: "PM011",
+            packsPerCarton: 412,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
+        },
+        {
+            id: "11",
+            cartonCapacityId: "DNA24",
+            cartonCapacityName: "Nanai Shipper Carton - 24s",
+            cartonCapacityShortname: "Shipper Carton",
+            productId: "P0004",
+            packSizeId: "PK24",
+            packMatlId: "PM012",
+            cartonTypeId: "SH",
+            cartonMaterialId: "PM013",
+            packsPerCarton: 412,
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
     ];
 
     const filteredRecords = records.filter((item) => {
-        const matchesSearch = item.capacityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.capacityId.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = item.cartonCapacityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.cartonCapacityId.toLowerCase().includes(searchQuery.toLowerCase());
         
         const matchesPackSize = filterPackSize === "all" || item.packSizeId === filterPackSize;
-        const matchesMaterial = filterMaterial === "all" || item.materialId === filterMaterial;
+        const matchesMaterial = filterMaterial === "all" || item.packMatlId === filterMaterial;
         
         return matchesSearch && matchesPackSize && matchesMaterial;
     });
 
     const uniquePackSizes = Array.from(new Set(records.map(r => r.packSizeId)));
-    const uniqueMaterials = Array.from(new Set(records.map(r => r.materialId)));
+    const uniqueMaterials = Array.from(new Set(records.map(r => r.packMatlId)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
-        setIsAddModalOpen(false);
-        setFormData({
-            capacityId: "",
-            capacityName: "",
-            subtitle: "",
-            shortName: "",
-            packSizeId: "",
-            materialId: "",
-            packsPerCarton: "",
-        });
+        try {
+            const dataToSend = toSnakeCase(formData);
+            await cartonCapacityAPI.create(dataToSend);
+            toast({
+                title: "Success",
+                description: "Carton capacity created successfully",
+            });
+            setIsAddModalOpen(false);
+            setFormData({
+                cartonCapacityId: "",
+                cartonCapacityName: "",
+                cartonCapacityShortname: "",
+                productId: "",
+                packSizeId: "",
+                packMatlId: "",
+                cartonTypeId: "",
+                cartonMaterialId: "",
+                packsPerCarton: "",
+                active: true,
+            });
+            loadRecords();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to create carton capacity",
+                variant: "destructive",
+            });
+        }
     };
 
     const handleEdit = (capacity: CartonCapacityRecord) => {
         setSelectedCapacity(capacity);
         setFormData({
-            capacityId: capacity.capacityId,
-            capacityName: capacity.capacityName,
-            subtitle: capacity.subtitle,
-            shortName: capacity.shortName,
+            cartonCapacityId: capacity.cartonCapacityId,
+            cartonCapacityName: capacity.cartonCapacityName,
+            cartonCapacityShortname: capacity.cartonCapacityShortname,
+            productId: capacity.productId,
             packSizeId: capacity.packSizeId,
-            materialId: capacity.materialId,
+            packMatlId: capacity.packMatlId,
+            cartonTypeId: capacity.cartonTypeId,
+            cartonMaterialId: capacity.cartonMaterialId,
             packsPerCarton: capacity.packsPerCarton.toString(),
+            active: capacity.active,
         });
         setIsEditModalOpen(true);
     };
 
-    const handleEditSubmit = (e: React.FormEvent) => {
+    const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Edit submitted:", { ...selectedCapacity, ...formData });
-        setIsEditModalOpen(false);
-        setSelectedCapacity(null);
-        setFormData({
-            capacityId: "",
-            capacityName: "",
-            subtitle: "",
-            shortName: "",
-            packSizeId: "",
-            materialId: "",
-            packsPerCarton: "",
-        });
+        if (!selectedCapacity) return;
+        try {
+            const dataToSend = toSnakeCase(formData);
+            await cartonCapacityAPI.update(selectedCapacity.cartonCapacityId, dataToSend);
+            toast({
+                title: "Success",
+                description: "Carton capacity updated successfully",
+            });
+            setIsEditModalOpen(false);
+            setSelectedCapacity(null);
+            setFormData({
+                cartonCapacityId: "",
+                cartonCapacityName: "",
+                cartonCapacityShortname: "",
+                productId: "",
+                packSizeId: "",
+                packMatlId: "",
+                cartonTypeId: "",
+                cartonMaterialId: "",
+                packsPerCarton: "",
+                active: true,
+            });
+            loadRecords();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to update carton capacity",
+                variant: "destructive",
+            });
+        }
     };
 
-    const handleDelete = (capacity: CartonCapacityRecord) => {
-        setSelectedCapacity(capacity);
-        setIsDeleteDialogOpen(true);
+    const handleCancel = (capacity: CartonCapacityRecord) => {
+        setCapacityToCancel(capacity);
+        setIsCancelItemDialogOpen(true);
     };
 
-    const confirmDelete = () => {
-        console.log("Deleting capacity:", selectedCapacity);
-        setIsDeleteDialogOpen(false);
-        setSelectedCapacity(null);
+    const confirmCancelItem = async () => {
+        if (!capacityToCancel) return;
+        
+        const isCancelled = cancelledCapacities.has(capacityToCancel.cartonCapacityId);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await cartonCapacityAPI.update(capacityToCancel.cartonCapacityId, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledCapacities(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(capacityToCancel.cartonCapacityId);
+                    toast({
+                        title: "Restored",
+                        description: `Carton capacity ${capacityToCancel.cartonCapacityName} has been restored`,
+                    });
+                } else {
+                    newSet.add(capacityToCancel.cartonCapacityId);
+                    toast({
+                        title: "Cancelled",
+                        description: `Carton capacity ${capacityToCancel.cartonCapacityName} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadRecords(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setCapacityToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} carton capacity`,
+                variant: "destructive",
+            });
+        }
     };
 
     return (
@@ -206,7 +458,7 @@ export default function CartonCapacityMasterPage() {
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <h1 className="text-3xl font-bold text-foreground mb-2">Carton Capacity Master</h1>
+                                <h1 className="text-3xl font-bold text-foreground mb-2">Carton Capacity</h1>
                                 <p className="text-muted-foreground">Manage packaging capacity rules and pack-per-carton configurations</p>
                             </div>
                             <Button
@@ -332,7 +584,7 @@ export default function CartonCapacityMasterPage() {
                                 <div className="h-6 w-px bg-border mx-2"></div>
 
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-{filteredRecords.length} OF {records.length} CONFIGURATIONS
+                                    SHOWING 1-{filteredRecords.length} OF {records.length} RECORDS
                                 </span>
 
                                 <div className="flex items-center gap-2 ml-auto">
@@ -355,20 +607,63 @@ export default function CartonCapacityMasterPage() {
                     >
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
+                                {loading ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <div className="text-muted-foreground">Loading carton capacities...</div>
+                                    </div>
+                                ) : (
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton_capacity_id</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton capacity name</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">carton capacity shortname</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">packsize_id</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material_id</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">packs per carton</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>carton_</span>
+                                                    <span>capacity_id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">carton capacity name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">carton capacity shortname</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">product_id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">pack size_id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">pack matl_id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">carton type_id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>carton</span>
+                                                    <span>material_id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>packs per</span>
+                                                    <span>carton</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredRecords.map((item, index) => (
+                                        {filteredRecords.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={13} className="px-6 py-12 text-center text-muted-foreground">
+                                                    No carton capacities found
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                        filteredRecords.map((item, index) => (
                                             <motion.tr
                                                 key={item.id}
                                                 initial={{ opacity: 0, x: -20 }}
@@ -376,29 +671,67 @@ export default function CartonCapacityMasterPage() {
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
-                                                <td className="px-6 py-6 text-sm font-semibold text-blue-600 align-middle">
-                                                    {item.capacityId}
+                                                <td className="px-6 py-6 text-sm font-semibold text-foreground align-middle">
+                                                    {item.cartonCapacityId}
                                                 </td>
                                                 <td className="px-6 py-6 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.capacityName}</span>
+                                                    <span className="text-sm font-semibold text-foreground">{item.cartonCapacityName}</span>
                                                 </td>
                                                 <td className="px-6 py-6 text-sm text-foreground align-middle">
-                                                    {item.shortName}
+                                                    {item.cartonCapacityShortname}
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm font-semibold text-blue-600">
+                                                    <span className="text-sm font-semibold text-foreground">
+                                                        {item.productId}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-6 text-center align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {item.packSizeId}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm font-semibold text-blue-600">
-                                                        {item.materialId}
+                                                    <span className="text-sm font-semibold text-foreground">
+                                                        {item.packMatlId}
                                                     </span>
                                                 </td>
-                                                <td className={`px-6 py-6 text-center align-middle ${index === 0 ? 'bg-yellow-300' : ''}`}>
+                                                <td className="px-6 py-6 text-center align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">
+                                                        {item.cartonTypeId}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-6 text-center align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">
+                                                        {item.cartonMaterialId}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-6 text-center align-middle">
                                                     <span className="text-sm font-semibold text-foreground">
                                                         {item.packsPerCarton}
                                                     </span>
+                                                </td>
+                                                <td className="px-6 py-6 text-center align-middle">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {item.lastModifiedUserId || "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-6 text-center align-middle">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {item.lastModifiedDateTime || "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-6 text-left align-middle">
+                                                    {(() => {
+                                                        const isCancelled = cancelledCapacities.has(item.cartonCapacityId);
+                                                        const displayActive = !isCancelled && (item.active !== false);
+                                                        return (
+                                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                                displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                            }`}>
+                                                                {displayActive ? "TRUE" : "FALSE"}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-middle">
                                                     <div className="flex items-center justify-center gap-2">
@@ -409,7 +742,7 @@ export default function CartonCapacityMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleEdit(item);
                                                             }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            className="text-foreground hover:text-foreground hover:bg-muted"
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -418,27 +751,32 @@ export default function CartonCapacityMasterPage() {
                                                             size="sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDelete(item);
+                                                                handleCancel(item);
                                                             }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            className={`${cancelledCapacities.has(item.cartonCapacityId) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={cancelledCapacities.has(item.cartonCapacityId) ? "Restore carton capacity" : "Cancel carton capacity"}
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <X className="w-4 h-4" />
                                                         </Button>
                                                     </div>
                                                 </td>
                                             </motion.tr>
-                                        ))}
+                                        ))
+                                        )}
                                     </tbody>
                                 </table>
+                                )}
                             </div>
 
+                            {!loading && (
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-white">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PAGE 1 OF 5</span>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PAGE 1 OF 1</span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" className="h-8 text-xs text-muted-foreground">Previous</Button>
-                                    <Button variant="outline" size="sm" className="h-8 text-xs text-blue-600 border-blue-200 bg-blue-50">Next</Button>
+                                    <Button variant="outline" size="sm" className="h-8 text-xs text-muted-foreground" disabled>Previous</Button>
+                                    <Button variant="outline" size="sm" className="h-8 text-xs text-muted-foreground" disabled>Next</Button>
                                 </div>
                             </div>
+                            )}
                         </Card>
                     </motion.div>
 
@@ -490,43 +828,54 @@ export default function CartonCapacityMasterPage() {
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6 mb-4">
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Capacity ID <span className="text-red-500">*</span></label>
-                                            <Input name="capacityId" value={formData.capacityId} onChange={handleInputChange} placeholder="CAP-XXX-XX" required />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Carton Capacity ID <span className="text-red-500">*</span></label>
+                                            <Input name="cartonCapacityId" value={formData.cartonCapacityId} onChange={handleInputChange} placeholder="SDU24" required />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
-                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-CODE" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Carton Capacity Shortname</label>
+                                            <Input name="cartonCapacityShortname" value={formData.cartonCapacityShortname} onChange={handleInputChange} placeholder="Sterilization Carton" />
                                         </div>
                                     </div>
 
                                     <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Capacity Name <span className="text-red-500">*</span></label>
-                                        <Input name="capacityName" value={formData.capacityName} onChange={handleInputChange} required />
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Carton Capacity Name <span className="text-red-500">*</span></label>
+                                        <Input name="cartonCapacityName" value={formData.cartonCapacityName} onChange={handleInputChange} required />
                                     </div>
 
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Description / Subtitle</label>
-                                        <Input name="subtitle" value={formData.subtitle} onChange={handleInputChange} placeholder="e.g. PRIMARY PACKAGING LINE" />
+                                    <div className="grid grid-cols-2 gap-6 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Product ID</label>
+                                            <Input name="productId" value={formData.productId} onChange={handleInputChange} placeholder="P0001" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Pack Size ID</label>
+                                            <Input name="packSizeId" value={formData.packSizeId} onChange={handleInputChange} placeholder="PK24" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-6 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Pack Matl ID</label>
+                                            <Input name="packMatlId" value={formData.packMatlId} onChange={handleInputChange} placeholder="PM001" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Carton Type ID</label>
+                                            <Input name="cartonTypeId" value={formData.cartonTypeId} onChange={handleInputChange} placeholder="ST" />
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-6 mb-6">
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Pack Size ID</label>
-                                            <Input name="packSizeId" value={formData.packSizeId} onChange={handleInputChange} placeholder="PS-XXX" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Carton Material ID</label>
+                                            <Input name="cartonMaterialId" value={formData.cartonMaterialId} onChange={handleInputChange} placeholder="PM004" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Material ID</label>
-                                            <Input name="materialId" value={formData.materialId} onChange={handleInputChange} placeholder="MAT-XXX-XXX" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Packs Per Carton <span className="text-red-500">*</span></label>
+                                            <Input type="number" name="packsPerCarton" value={formData.packsPerCarton} onChange={handleInputChange} required />
                                         </div>
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Packs Per Carton <span className="text-red-500">*</span></label>
-                                        <Input type="number" name="packsPerCarton" value={formData.packsPerCarton} onChange={handleInputChange} required />
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
                                     </div>
                                 </form>
@@ -567,43 +916,54 @@ export default function CartonCapacityMasterPage() {
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6 mb-4">
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Capacity ID <span className="text-red-500">*</span></label>
-                                            <Input name="capacityId" value={formData.capacityId} onChange={handleInputChange} placeholder="CAP-XXX-XX" required />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Carton Capacity ID <span className="text-red-500">*</span></label>
+                                            <Input name="cartonCapacityId" value={formData.cartonCapacityId} onChange={handleInputChange} placeholder="SDU24" required />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
-                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-CODE" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Carton Capacity Shortname</label>
+                                            <Input name="cartonCapacityShortname" value={formData.cartonCapacityShortname} onChange={handleInputChange} placeholder="Sterilization Carton" />
                                         </div>
                                     </div>
 
                                     <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Capacity Name <span className="text-red-500">*</span></label>
-                                        <Input name="capacityName" value={formData.capacityName} onChange={handleInputChange} required />
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Carton Capacity Name <span className="text-red-500">*</span></label>
+                                        <Input name="cartonCapacityName" value={formData.cartonCapacityName} onChange={handleInputChange} required />
                                     </div>
 
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Description / Subtitle</label>
-                                        <Input name="subtitle" value={formData.subtitle} onChange={handleInputChange} placeholder="e.g. PRIMARY PACKAGING LINE" />
+                                    <div className="grid grid-cols-2 gap-6 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Product ID</label>
+                                            <Input name="productId" value={formData.productId} onChange={handleInputChange} placeholder="P0001" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Pack Size ID</label>
+                                            <Input name="packSizeId" value={formData.packSizeId} onChange={handleInputChange} placeholder="PK24" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-6 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Pack Matl ID</label>
+                                            <Input name="packMatlId" value={formData.packMatlId} onChange={handleInputChange} placeholder="PM001" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Carton Type ID</label>
+                                            <Input name="cartonTypeId" value={formData.cartonTypeId} onChange={handleInputChange} placeholder="ST" />
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-6 mb-6">
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Pack Size ID</label>
-                                            <Input name="packSizeId" value={formData.packSizeId} onChange={handleInputChange} placeholder="PS-XXX" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Carton Material ID</label>
+                                            <Input name="cartonMaterialId" value={formData.cartonMaterialId} onChange={handleInputChange} placeholder="PM004" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Material ID</label>
-                                            <Input name="materialId" value={formData.materialId} onChange={handleInputChange} placeholder="MAT-XXX-XXX" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Packs Per Carton <span className="text-red-500">*</span></label>
+                                            <Input type="number" name="packsPerCarton" value={formData.packsPerCarton} onChange={handleInputChange} required />
                                         </div>
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Packs Per Carton <span className="text-red-500">*</span></label>
-                                        <Input type="number" name="packsPerCarton" value={formData.packsPerCarton} onChange={handleInputChange} required />
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
                                     </div>
                                 </form>
@@ -614,14 +974,14 @@ export default function CartonCapacityMasterPage() {
             </AnimatePresence>
 
             <AnimatePresence>
-                {isDeleteDialogOpen && (
+                {isCancelItemDialogOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsDeleteDialogOpen(false)}
+                            onClick={() => setIsCancelItemDialogOpen(false)}
                         />
 
                         <motion.div
@@ -631,11 +991,13 @@ export default function CartonCapacityMasterPage() {
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
+                                <div className={`${cancelledCapacities.has(capacityToCancel?.cartonCapacityId || '') ? 'bg-green-600' : 'bg-red-600'} text-white px-6 py-4 flex items-center justify-between`}>
+                                    <h2 className="text-xl font-bold">
+                                        {cancelledCapacities.has(capacityToCancel?.cartonCapacityId || '') ? "Restore Carton Capacity" : "Cancel Carton Capacity"}
+                                    </h2>
                                     <button
-                                        onClick={() => setIsDeleteDialogOpen(false)}
-                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
+                                        onClick={() => setIsCancelItemDialogOpen(false)}
+                                        className="text-white hover:opacity-80 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -643,24 +1005,26 @@ export default function CartonCapacityMasterPage() {
 
                                 <div className="p-6">
                                     <p className="text-foreground mb-4">
-                                        Are you sure you want to delete <strong>{selectedCapacity?.capacityName}</strong>?
+                                        Are you sure you want to {cancelledCapacities.has(capacityToCancel?.cartonCapacityId || '') ? 'restore' : 'cancel'} <strong>{capacityToCancel?.cartonCapacityName}</strong>?
                                     </p>
                                     <p className="text-sm text-muted-foreground mb-6">
-                                        This action cannot be undone.
+                                        {cancelledCapacities.has(capacityToCancel?.cartonCapacityId || '') 
+                                            ? "This will restore the carton capacity and set its active status to true."
+                                            : "This will cancel the carton capacity and set its active status to false."}
                                     </p>
 
                                     <div className="flex items-center justify-end gap-4">
                                         <Button
                                             variant="outline"
-                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                            onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
                                             Cancel
                                         </Button>
                                         <Button
-                                            onClick={confirmDelete}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                            onClick={confirmCancelItem}
+                                            className={`${cancelledCapacities.has(capacityToCancel?.cartonCapacityId || '') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                                         >
-                                            Delete
+                                            {cancelledCapacities.has(capacityToCancel?.cartonCapacityId || '') ? "Restore" : "Cancel"}
                                         </Button>
                                     </div>
                                 </div>

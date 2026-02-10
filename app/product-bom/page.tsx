@@ -5,12 +5,14 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, FileText, ChevronDown, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, Pencil, FileText, ChevronDown, X } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { productBOMAPI } from "@/services/api";
 
 interface BOMRecord {
     id: string;
@@ -23,16 +25,24 @@ interface BOMRecord {
     materialId: string;
     inputQty: number;
     inputUom: string;
+    lastModifiedUserId?: string;
+    lastModifiedDateTime?: string;
+    active: boolean;
 }
 
 export default function ProductBOMPage() {
+    const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [bomToCancel, setBomToCancel] = useState<BOMRecord | null>(null);
+    const [cancelledBOMs, setCancelledBOMs] = useState<Set<string>>(new Set());
     const [selectedBOM, setSelectedBOM] = useState<BOMRecord | null>(null);
     const [filterProduct, setFilterProduct] = useState<string>("all");
     const [filterMaterial, setFilterMaterial] = useState<string>("all");
+    const [records, setRecords] = useState<BOMRecord[]>([]);
+    const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState({
         bomId: "",
         description: "",
@@ -44,6 +54,61 @@ export default function ProductBOMPage() {
         inputQty: "",
         inputUom: "",
     });
+
+    // Helper function to convert snake_case to camelCase
+    const toCamelCase = (data: any): BOMRecord => {
+        return {
+            id: data._id || `${data.bom_id}-${data.material_id}`,
+            bomId: data.bom_id,
+            description: data.bom_description,
+            subtitle: "",
+            productId: data.product_id,
+            outputQty: data.output_qty !== null && data.output_qty !== undefined ? data.output_qty : null,
+            outputUom: data.output_uom,
+            materialId: data.material_id,
+            inputQty: data.input_qty,
+            inputUom: data.input_uom,
+            lastModifiedUserId: data.last_modified_user_id || "",
+            lastModifiedDateTime: data.last_modified_date_time ? new Date(data.last_modified_date_time).toLocaleString() : "",
+            active: data.active !== false,
+        };
+    };
+
+    // Helper function to convert camelCase to snake_case
+    const toSnakeCase = (data: any) => {
+        return {
+            bom_id: data.bomId,
+            bom_description: data.description,
+            product_id: data.productId,
+            output_qty: data.outputQty === '' || data.outputQty === null ? null : Number(data.outputQty),
+            output_uom: data.outputUom,
+            material_id: data.materialId,
+            input_qty: Number(data.inputQty),
+            input_uom: data.inputUom,
+            active: data.active !== false,
+        };
+    };
+
+    // Load data from API
+    useEffect(() => {
+        loadRecords();
+    }, []);
+
+    const loadRecords = async () => {
+        try {
+            setLoading(true);
+            const data = await productBOMAPI.getAll();
+            setRecords(data.map(toCamelCase));
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load product BOMs",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Reset form data when Add modal opens
     useEffect(() => {
@@ -62,10 +127,10 @@ export default function ProductBOMPage() {
         }
     }, [isAddModalOpen]);
 
-    const records: BOMRecord[] = [
+    const hardcodedRecords: BOMRecord[] = [
         {
             id: "1",
-            bomId: "BOM1",
+            bomId: "BM01",
             description: "DUVET",
             subtitle: "",
             productId: "P0001",
@@ -73,11 +138,14 @@ export default function ProductBOMPage() {
             outputUom: "NOS",
             materialId: "RM001",
             inputQty: 1,
-            inputUom: "KG",
+            inputUom: "KGS",
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
         {
             id: "2",
-            bomId: "BOM1",
+            bomId: "BM01",
             description: "DUVET",
             subtitle: "",
             productId: "P0001",
@@ -85,11 +153,14 @@ export default function ProductBOMPage() {
             outputUom: "NOS",
             materialId: "RM002",
             inputQty: 1,
-            inputUom: "KG",
+            inputUom: "KGS",
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
         {
             id: "3",
-            bomId: "BOM2",
+            bomId: "BM02",
             description: "DUVET XL",
             subtitle: "",
             productId: "P0002",
@@ -97,11 +168,14 @@ export default function ProductBOMPage() {
             outputUom: "NOS",
             materialId: "RM003",
             inputQty: 1,
-            inputUom: "KG",
+            inputUom: "KGS",
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
         {
             id: "4",
-            bomId: "BOM2",
+            bomId: "BM02",
             description: "DUVET XL",
             subtitle: "",
             productId: "P0002",
@@ -109,11 +183,14 @@ export default function ProductBOMPage() {
             outputUom: "NOS",
             materialId: "RM004",
             inputQty: 1,
-            inputUom: "KG",
+            inputUom: "KGS",
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
         {
             id: "5",
-            bomId: "BOM3",
+            bomId: "BM03",
             description: "DUVET Ultra",
             subtitle: "",
             productId: "P0003",
@@ -121,11 +198,14 @@ export default function ProductBOMPage() {
             outputUom: "NOS",
             materialId: "RM005",
             inputQty: 1,
-            inputUom: "KG",
+            inputUom: "KGS",
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
         {
             id: "6",
-            bomId: "BOM3",
+            bomId: "BM03",
             description: "DUVET Ultra",
             subtitle: "",
             productId: "P0003",
@@ -133,7 +213,10 @@ export default function ProductBOMPage() {
             outputUom: "NOS",
             materialId: "RM006",
             inputQty: 1,
-            inputUom: "KG",
+            inputUom: "KGS",
+            lastModifiedUserId: "",
+            lastModifiedDateTime: "",
+            active: true,
         },
     ];
 
@@ -154,21 +237,35 @@ export default function ProductBOMPage() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
-        setIsAddModalOpen(false);
-        setFormData({
-            bomId: "",
-            description: "",
-            subtitle: "",
-            productId: "",
-            outputQty: "",
-            outputUom: "",
-            materialId: "",
-            inputQty: "",
-            inputUom: "",
-        });
+        try {
+            const dataToSend = toSnakeCase(formData);
+            await productBOMAPI.create(dataToSend);
+            toast({
+                title: "Success",
+                description: "Product BOM created successfully",
+            });
+            setIsAddModalOpen(false);
+            setFormData({
+                bomId: "",
+                description: "",
+                subtitle: "",
+                productId: "",
+                outputQty: "",
+                outputUom: "",
+                materialId: "",
+                inputQty: "",
+                inputUom: "",
+            });
+            loadRecords();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to create product BOM",
+                variant: "destructive",
+            });
+        }
     };
 
     const handleEdit = (bom: BOMRecord) => {
@@ -187,33 +284,84 @@ export default function ProductBOMPage() {
         setIsEditModalOpen(true);
     };
 
-    const handleEditSubmit = (e: React.FormEvent) => {
+    const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Edit submitted:", { ...selectedBOM, ...formData });
-        setIsEditModalOpen(false);
-        setSelectedBOM(null);
-        setFormData({
-            bomId: "",
-            description: "",
-            subtitle: "",
-            productId: "",
-            outputQty: "",
-            outputUom: "",
-            materialId: "",
-            inputQty: "",
-            inputUom: "",
-        });
+        if (!selectedBOM) return;
+        try {
+            const dataToSend = toSnakeCase(formData);
+            await productBOMAPI.update(selectedBOM.id, dataToSend);
+            toast({
+                title: "Success",
+                description: "Product BOM updated successfully",
+            });
+            setIsEditModalOpen(false);
+            setSelectedBOM(null);
+            setFormData({
+                bomId: "",
+                description: "",
+                subtitle: "",
+                productId: "",
+                outputQty: "",
+                outputUom: "",
+                materialId: "",
+                inputQty: "",
+                inputUom: "",
+            });
+            loadRecords();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to update product BOM",
+                variant: "destructive",
+            });
+        }
     };
 
-    const handleDelete = (bom: BOMRecord) => {
-        setSelectedBOM(bom);
-        setIsDeleteDialogOpen(true);
+    const handleCancel = (bom: BOMRecord) => {
+        setBomToCancel(bom);
+        setIsCancelItemDialogOpen(true);
     };
 
-    const confirmDelete = () => {
-        console.log("Deleting BOM:", selectedBOM);
-        setIsDeleteDialogOpen(false);
-        setSelectedBOM(null);
+    const confirmCancelItem = async () => {
+        if (!bomToCancel) return;
+        
+        const isCancelled = cancelledBOMs.has(bomToCancel.id);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await productBOMAPI.update(bomToCancel.id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledBOMs(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(bomToCancel.id);
+                    toast({
+                        title: "Restored",
+                        description: `Product BOM ${bomToCancel.bomId} has been restored`,
+                    });
+                } else {
+                    newSet.add(bomToCancel.id);
+                    toast({
+                        title: "Cancelled",
+                        description: `Product BOM ${bomToCancel.bomId} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadRecords(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setBomToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} product BOM`,
+                variant: "destructive",
+            });
+        }
     };
 
     return (
@@ -390,22 +538,47 @@ export default function ProductBOMPage() {
                     >
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
+                                {loading ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <div className="text-muted-foreground">Loading product BOMs...</div>
+                                    </div>
+                                ) : (
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-32">bom_id</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">bom description</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">product_id</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">output qty</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">output uom</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material_id</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">input qty</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">input uom</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">bom_id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">bom description</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">product_id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">output qty</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">output uom</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">material_id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">input qty</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">input uom</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredRecords.map((item, index) => (
+                                        {filteredRecords.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={12} className="px-6 py-12 text-center text-muted-foreground">
+                                                    No product BOMs found
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                        filteredRecords.map((item, index) => (
                                             <motion.tr
                                                 key={item.id}
                                                 initial={{ opacity: 0, x: -20 }}
@@ -414,7 +587,7 @@ export default function ProductBOMPage() {
                                                 className="hover:bg-muted/30 transition-colors cursor-pointer"
                                             >
                                                 <td className="px-6 py-6 align-top">
-                                                    <span className="text-sm font-semibold text-blue-600">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {item.bomId}
                                                     </span>
                                                 </td>
@@ -422,11 +595,11 @@ export default function ProductBOMPage() {
                                                     <span className="text-sm font-semibold text-foreground">{item.description}</span>
                                                 </td>
                                                 <td className="px-6 py-6 align-top text-center">
-                                                    <span className="text-sm font-semibold text-blue-600">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {item.productId}
                                                     </span>
                                                 </td>
-                                                <td className={`px-6 py-6 text-sm font-semibold text-foreground text-center align-top ${(index === 2 || index === 5) ? 'bg-yellow-300' : ''}`}>
+                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-top">
                                                     {item.outputQty ? item.outputQty.toLocaleString() : ''}
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-top">
@@ -435,7 +608,7 @@ export default function ProductBOMPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-top">
-                                                    <span className="text-sm font-semibold text-blue-600">
+                                                    <span className="text-sm font-semibold text-foreground">
                                                         {item.materialId}
                                                     </span>
                                                 </td>
@@ -448,6 +621,29 @@ export default function ProductBOMPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-6 text-center align-top">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {item.lastModifiedUserId || "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-6 text-center align-top">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {item.lastModifiedDateTime || "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-6 text-left align-top">
+                                                    {(() => {
+                                                        const isCancelled = cancelledBOMs.has(item.id);
+                                                        const displayActive = !isCancelled && (item.active !== false);
+                                                        return (
+                                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                                displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                            }`}>
+                                                                {displayActive ? "TRUE" : "FALSE"}
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </td>
+                                                <td className="px-6 py-6 text-center align-top">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <Button
                                                             variant="ghost"
@@ -456,7 +652,7 @@ export default function ProductBOMPage() {
                                                                 e.stopPropagation();
                                                                 handleEdit(item);
                                                             }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            className="text-foreground hover:text-foreground hover:bg-muted"
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -465,27 +661,32 @@ export default function ProductBOMPage() {
                                                             size="sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDelete(item);
+                                                                handleCancel(item);
                                                             }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            className={`${cancelledBOMs.has(item.id) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={cancelledBOMs.has(item.id) ? "Restore product BOM" : "Cancel product BOM"}
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <X className="w-4 h-4" />
                                                         </Button>
                                                     </div>
                                                 </td>
                                             </motion.tr>
-                                        ))}
+                                        ))
+                                        )}
                                     </tbody>
                                 </table>
+                                )}
                             </div>
 
+                            {!loading && (
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-white">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PAGE 1 OF 5</span>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PAGE 1 OF 1</span>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" className="h-8 text-xs text-muted-foreground">Previous</Button>
-                                    <Button variant="outline" size="sm" className="h-8 text-xs text-blue-600 border-blue-200 bg-blue-50">Next</Button>
+                                    <Button variant="outline" size="sm" className="h-8 text-xs text-muted-foreground" disabled>Previous</Button>
+                                    <Button variant="outline" size="sm" className="h-8 text-xs text-muted-foreground" disabled>Next</Button>
                                 </div>
                             </div>
+                            )}
                         </Card>
                     </motion.div>
 
@@ -592,7 +793,6 @@ export default function ProductBOMPage() {
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
                                     </div>
                                 </form>
@@ -688,7 +888,6 @@ export default function ProductBOMPage() {
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
                                     </div>
                                 </form>
@@ -699,14 +898,14 @@ export default function ProductBOMPage() {
             </AnimatePresence>
 
             <AnimatePresence>
-                {isDeleteDialogOpen && (
+                {isCancelItemDialogOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsDeleteDialogOpen(false)}
+                            onClick={() => setIsCancelItemDialogOpen(false)}
                         />
 
                         <motion.div
@@ -716,11 +915,13 @@ export default function ProductBOMPage() {
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
+                                <div className={`${cancelledBOMs.has(bomToCancel?.id || '') ? 'bg-green-600' : 'bg-red-600'} text-white px-6 py-4 flex items-center justify-between`}>
+                                    <h2 className="text-xl font-bold">
+                                        {cancelledBOMs.has(bomToCancel?.id || '') ? "Restore Product BOM" : "Cancel Product BOM"}
+                                    </h2>
                                     <button
-                                        onClick={() => setIsDeleteDialogOpen(false)}
-                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
+                                        onClick={() => setIsCancelItemDialogOpen(false)}
+                                        className="text-white hover:opacity-80 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -728,24 +929,26 @@ export default function ProductBOMPage() {
 
                                 <div className="p-6">
                                     <p className="text-foreground mb-4">
-                                        Are you sure you want to delete <strong>{selectedBOM?.description}</strong>?
+                                        Are you sure you want to {cancelledBOMs.has(bomToCancel?.id || '') ? 'restore' : 'cancel'} <strong>{bomToCancel?.description}</strong>?
                                     </p>
                                     <p className="text-sm text-muted-foreground mb-6">
-                                        This action cannot be undone.
+                                        {cancelledBOMs.has(bomToCancel?.id || '') 
+                                            ? "This will restore the product BOM and set its active status to true."
+                                            : "This will cancel the product BOM and set its active status to false."}
                                     </p>
 
                                     <div className="flex items-center justify-end gap-4">
                                         <Button
                                             variant="outline"
-                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                            onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
                                             Cancel
                                         </Button>
                                         <Button
-                                            onClick={confirmDelete}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                            onClick={confirmCancelItem}
+                                            className={`${cancelledBOMs.has(bomToCancel?.id || '') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                                         >
-                                            Delete
+                                            {cancelledBOMs.has(bomToCancel?.id || '') ? "Restore" : "Cancel"}
                                         </Button>
                                     </div>
                                 </div>

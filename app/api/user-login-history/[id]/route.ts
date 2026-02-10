@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/server/db/connection';
 import UserLoginHistory from '@/server/models/UserLoginHistory';

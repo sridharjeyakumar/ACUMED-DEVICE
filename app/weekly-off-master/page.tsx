@@ -254,30 +254,47 @@ export default function WeeklyOffMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = () => {
-        if (!weeklyOffToCancel) return;
+    const confirmCancelItem = async () => {
+        if (!weeklyOffToCancel || !weeklyOffToCancel._id) return;
         
         const weeklyOffKey = weeklyOffToCancel._id || weeklyOffToCancel.week_off_id.toString();
         const isCancelled = cancelledWeeklyOffs.has(weeklyOffKey);
-        setCancelledWeeklyOffs(prev => {
-            const newSet = new Set(prev);
-            if (isCancelled) {
-                newSet.delete(weeklyOffKey);
-                toast({
-                    title: "Restored",
-                    description: `Weekly off record has been restored`,
-                });
-            } else {
-                newSet.add(weeklyOffKey);
-                toast({
-                    title: "Cancelled",
-                    description: `Weekly off record has been cancelled`,
-                });
-            }
-            return newSet;
-        });
-        setIsCancelItemDialogOpen(false);
-        setWeeklyOffToCancel(null);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await weeklyOffAPI.update(weeklyOffToCancel._id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledWeeklyOffs(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(weeklyOffKey);
+                    toast({
+                        title: "Restored",
+                        description: `Weekly off record has been restored`,
+                    });
+                } else {
+                    newSet.add(weeklyOffKey);
+                    toast({
+                        title: "Cancelled",
+                        description: `Weekly off record has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadWeeklyOffs(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setWeeklyOffToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} weekly off record`,
+                variant: "destructive",
+            });
+        }
     };
 
     return (
@@ -411,14 +428,24 @@ export default function WeeklyOffMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-24">WEEK OFF ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[150px]">DAY OF WEEK</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">WEEK OF MONTH</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID / NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">week off id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">day of week</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">week of month</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -621,14 +648,6 @@ export default function WeeklyOffMasterPage() {
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setIsAddModalOpen(false)}
-                                            className="px-6"
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                             disabled={isSubmittingRef.current}
@@ -723,14 +742,6 @@ export default function WeeklyOffMasterPage() {
                                         </select>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setIsEditModalOpen(false)}
-                                            className="px-6"
-                                        >
-                                            Cancel
-                                        </Button>
                                         <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"

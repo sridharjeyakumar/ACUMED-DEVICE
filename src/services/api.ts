@@ -194,3 +194,57 @@ export const cartonTypeAPI = {
   delete: (id: string) => fetchAPI(`/carton-types/${id}`, { method: 'DELETE' }),
 };
 
+// Carton Capacity Master API
+export const cartonCapacityAPI = {
+  getAll: () => fetchAPI('/carton-capacities'),
+  getById: (id: string) => fetchAPI(`/carton-capacities/${id}`),
+  create: (data: any) => fetchAPI('/carton-capacities', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/carton-capacities/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/carton-capacities/${id}`, { method: 'DELETE' }),
+};
+
+// Product BOM Master API
+export const productBOMAPI = {
+  getAll: () => fetchAPI('/product-bom'),
+  getById: (id: string) => fetchAPI(`/product-bom/${id}`),
+  create: (data: any) => fetchAPI('/product-bom', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/product-bom/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/product-bom/${id}`, { method: 'DELETE' }),
+};
+
+// Collection Bin Master API
+export const collectionBinAPI = {
+  getAll: () => fetchAPI('/collection-bins'),
+  getById: (id: string) => fetchAPI(`/collection-bins/${id}`),
+  create: (data: any) => fetchAPI('/collection-bins', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/collection-bins/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/collection-bins/${id}`, { method: 'DELETE' }),
+};
+
+// COA Checklist Master API
+export const coaChecklistAPI = {
+  getAll: () => fetchAPI('/coa-checklists'),
+  getById: (id: string) => fetchAPI(`/coa-checklists/${id}`),
+  create: (data: any) => fetchAPI('/coa-checklists', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/coa-checklists/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/coa-checklists/${id}`, { method: 'DELETE' }),
+};
+
+// COA Checklist Detail API
+export const coaChecklistDetailAPI = {
+  getAll: () => fetchAPI('/coa-checklist-details'),
+  getByChecklistId: (checklistId: string) => fetchAPI(`/coa-checklist-details/${checklistId}`),
+  create: (data: any) => fetchAPI('/coa-checklist-details', { method: 'POST', body: JSON.stringify(data) }),
+  update: (checklistId: string, sno: number, data: any) => fetchAPI(`/coa-checklist-details/${checklistId}/${sno}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (checklistId: string, sno: number) => fetchAPI(`/coa-checklist-details/${checklistId}/${sno}`, { method: 'DELETE' }),
+};
+
+// Employee Master API
+export const employeeAPI = {
+  getAll: () => fetchAPI('/employees'),
+  getById: (id: string) => fetchAPI(`/employees/${id}`),
+  create: (data: any) => fetchAPI('/employees', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/employees/${id}`, { method: 'DELETE' }),
+};
+

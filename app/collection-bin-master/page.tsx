@@ -5,44 +5,102 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, Trash2, ChevronDown } from "lucide-react";
+import { Search, Plus, Filter, Pencil, X, ChevronDown } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { collectionBinAPI } from "@/services/api";
 
 interface BinRecord {
     id: string;
     binId: string;
     binName: string;
-    location: string;
-    shortName: string;
-    binType: "collection" | "Rejected";
-    colorName: string;
-    colorHex: string;
-    tareWeight: number;
-    capacity: number;
+    binShortName: string;
+    binType: string;
+    color: string;
+    tareWeightKg: number;
+    grossCapacityKg: number;
+    lastModifiedUserId?: string;
+    lastModifiedDateTime?: string;
+    active: boolean;
 }
 
 export default function CollectionBinMasterPage() {
+    const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [binToCancel, setBinToCancel] = useState<BinRecord | null>(null);
+    const [cancelledBins, setCancelledBins] = useState<Set<string>>(new Set());
     const [selectedBin, setSelectedBin] = useState<BinRecord | null>(null);
     const [filterBinType, setFilterBinType] = useState<string>("all");
+    const [records, setRecords] = useState<BinRecord[]>([]);
+    const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState({
         binId: "",
         binName: "",
-        location: "",
-        shortName: "",
-        binType: "GENERAL",
-        colorName: "",
-        colorHex: "#000000",
-        tareWeight: "",
-        capacity: "",
+        binShortName: "",
+        binType: "Normal",
+        color: "",
+        tareWeightKg: "",
+        grossCapacityKg: "",
     });
+
+    // Helper function to convert snake_case to camelCase
+    const toCamelCase = (data: any): BinRecord => {
+        return {
+            id: data._id || data.bin_id,
+            binId: data.bin_id,
+            binName: data.bin_name,
+            binShortName: data.bin_short_name,
+            binType: data.bin_type,
+            color: data.color,
+            tareWeightKg: data.tare_weight_kg,
+            grossCapacityKg: data.gross_capacity_kg,
+            lastModifiedUserId: data.last_modified_user_id || "",
+            lastModifiedDateTime: data.last_modified_date_time ? new Date(data.last_modified_date_time).toLocaleString() : "",
+            active: data.active !== false,
+        };
+    };
+
+    // Helper function to convert camelCase to snake_case
+    const toSnakeCase = (data: any) => {
+        return {
+            bin_id: data.binId,
+            bin_name: data.binName,
+            bin_short_name: data.binShortName,
+            bin_type: data.binType,
+            color: data.color,
+            tare_weight_kg: Number(data.tareWeightKg),
+            gross_capacity_kg: Number(data.grossCapacityKg),
+            active: data.active !== false,
+        };
+    };
+
+    // Load data from API
+    useEffect(() => {
+        loadRecords();
+    }, []);
+
+    const loadRecords = async () => {
+        try {
+            setLoading(true);
+            const data = await collectionBinAPI.getAll();
+            setRecords(data.map(toCamelCase));
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load collection bins",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Reset form data when Add modal opens
     useEffect(() => {
@@ -50,55 +108,14 @@ export default function CollectionBinMasterPage() {
             setFormData({
                 binId: "",
                 binName: "",
-                location: "",
-                shortName: "",
-                binType: "GENERAL",
-                colorName: "",
-                colorHex: "#000000",
-                tareWeight: "",
-                capacity: "",
+                binShortName: "",
+                binType: "Normal",
+                color: "",
+                tareWeightKg: "",
+                grossCapacityKg: "",
             });
         }
     }, [isAddModalOpen]);
-
-    const records: BinRecord[] = [
-        {
-            id: "1",
-            binId: "1",
-            binName: "Product collection Bin 1",
-            location: "",
-            shortName: "Bin 1",
-            binType: "collection",
-            colorName: "Blue",
-            colorHex: "#3B82F6",
-            tareWeight: 5,
-            capacity: 50,
-        },
-        {
-            id: "2",
-            binId: "2",
-            binName: "Product collection Bin 2",
-            location: "",
-            shortName: "Bin 2",
-            binType: "collection",
-            colorName: "Blue",
-            colorHex: "#3B82F6",
-            tareWeight: 5,
-            capacity: 50,
-        },
-        {
-            id: "3",
-            binId: "91",
-            binName: "Rejected collection Bin 91",
-            location: "",
-            shortName: "Rej Bin 91",
-            binType: "Rejected",
-            colorName: "Red",
-            colorHex: "#EF4444",
-            tareWeight: 5,
-            capacity: 50,
-        },
-    ];
 
     const filteredRecords = records.filter((item) => {
         const matchesSearch = item.binName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -109,36 +126,37 @@ export default function CollectionBinMasterPage() {
         return matchesSearch && matchesBinType;
     });
 
-    const getBadgeStyle = (type: string) => {
-        switch (type) {
-            case "HAZARDOUS": return "bg-red-50 text-red-600 border-red-100";
-            case "RECYCLABLE": return "bg-green-50 text-green-600 border-green-100";
-            case "SCRAP": return "bg-gray-100 text-gray-600 border-gray-200";
-            case "REWORK": return "bg-yellow-50 text-yellow-600 border-yellow-100";
-            case "GENERAL": return "bg-blue-50 text-blue-600 border-blue-100";
-            default: return "bg-gray-50 text-gray-600 border-gray-100";
-        }
-    };
-
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
-        setIsAddModalOpen(false);
-        setFormData({
-            binId: "",
-            binName: "",
-            location: "",
-            shortName: "",
-            binType: "GENERAL",
-            colorName: "",
-            colorHex: "#000000",
-            tareWeight: "",
-            capacity: "",
-        });
+        try {
+            const dataToSend = toSnakeCase(formData);
+            await collectionBinAPI.create(dataToSend);
+            toast({
+                title: "Success",
+                description: "Collection bin created successfully",
+            });
+            setIsAddModalOpen(false);
+            setFormData({
+                binId: "",
+                binName: "",
+                binShortName: "",
+                binType: "Normal",
+                color: "",
+                tareWeightKg: "",
+                grossCapacityKg: "",
+            });
+            loadRecords();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to create collection bin",
+                variant: "destructive",
+            });
+        }
     };
 
     const handleEdit = (bin: BinRecord) => {
@@ -146,44 +164,91 @@ export default function CollectionBinMasterPage() {
         setFormData({
             binId: bin.binId,
             binName: bin.binName,
-            location: bin.location,
-            shortName: bin.shortName,
-            binType: bin.binType === "collection" ? "GENERAL" : bin.binType,
-            colorName: bin.colorName,
-            colorHex: bin.colorHex,
-            tareWeight: bin.tareWeight.toString(),
-            capacity: bin.capacity.toString(),
+            binShortName: bin.binShortName,
+            binType: bin.binType,
+            color: bin.color,
+            tareWeightKg: bin.tareWeightKg.toString(),
+            grossCapacityKg: bin.grossCapacityKg.toString(),
         });
         setIsEditModalOpen(true);
     };
 
-    const handleEditSubmit = (e: React.FormEvent) => {
+    const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Edit submitted:", { ...selectedBin, ...formData });
-        setIsEditModalOpen(false);
-        setSelectedBin(null);
-        setFormData({
-            binId: "",
-            binName: "",
-            location: "",
-            shortName: "",
-            binType: "GENERAL",
-            colorName: "",
-            colorHex: "#000000",
-            tareWeight: "",
-            capacity: "",
-        });
+        if (!selectedBin) return;
+        try {
+            const dataToSend = toSnakeCase(formData);
+            await collectionBinAPI.update(selectedBin.binId, dataToSend);
+            toast({
+                title: "Success",
+                description: "Collection bin updated successfully",
+            });
+            setIsEditModalOpen(false);
+            setSelectedBin(null);
+            setFormData({
+                binId: "",
+                binName: "",
+                binShortName: "",
+                binType: "Normal",
+                color: "",
+                tareWeightKg: "",
+                grossCapacityKg: "",
+            });
+            loadRecords();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to update collection bin",
+                variant: "destructive",
+            });
+        }
     };
 
-    const handleDelete = (bin: BinRecord) => {
-        setSelectedBin(bin);
-        setIsDeleteDialogOpen(true);
+    const handleCancel = (bin: BinRecord) => {
+        setBinToCancel(bin);
+        setIsCancelItemDialogOpen(true);
     };
 
-    const confirmDelete = () => {
-        console.log("Deleting bin:", selectedBin);
-        setIsDeleteDialogOpen(false);
-        setSelectedBin(null);
+    const confirmCancelItem = async () => {
+        if (!binToCancel) return;
+        
+        const isCancelled = cancelledBins.has(binToCancel.binId);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await collectionBinAPI.update(binToCancel.binId, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledBins(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(binToCancel.binId);
+                    toast({
+                        title: "Restored",
+                        description: `Collection bin ${binToCancel.binName} has been restored`,
+                    });
+                } else {
+                    newSet.add(binToCancel.binId);
+                    toast({
+                        title: "Cancelled",
+                        description: `Collection bin ${binToCancel.binName} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadRecords(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setBinToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} collection bin`,
+                variant: "destructive",
+            });
+        }
     };
 
     return (
@@ -262,13 +327,13 @@ export default function CollectionBinMasterPage() {
                                                     <div className="flex items-center space-x-2">
                                                         <input 
                                                             type="radio" 
-                                                            id="bintype-collection" 
+                                                            id="bintype-normal" 
                                                             name="binTypeFilter"
-                                                            checked={filterBinType === "collection"}
-                                                            onChange={() => setFilterBinType("collection")}
+                                                            checked={filterBinType === "Normal"}
+                                                            onChange={() => setFilterBinType("Normal")}
                                                             className="h-4 w-4"
                                                         />
-                                                        <Label htmlFor="bintype-collection" className="text-sm font-normal cursor-pointer">Collection</Label>
+                                                        <Label htmlFor="bintype-normal" className="text-sm font-normal cursor-pointer">Normal</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
                                                         <input 
@@ -298,18 +363,8 @@ export default function CollectionBinMasterPage() {
                                 <div className="h-6 w-px bg-border mx-2"></div>
 
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-{filteredRecords.length} OF {records.length} RECORDS
+                                    {loading ? "LOADING..." : `SHOWING 1-${filteredRecords.length} OF ${records.length} RECORDS`}
                                 </span>
-
-                                <div className="flex items-center gap-2 ml-auto">
-                                    <Button variant="ghost" size="icon" className="text-muted-foreground">
-                                        <div className="space-y-1">
-                                            <div className="w-4 h-0.5 bg-current"></div>
-                                            <div className="w-3 h-0.5 bg-current ml-auto"></div>
-                                            <div className="w-2 h-0.5 bg-current ml-auto"></div>
-                                        </div>
-                                    </Button>
-                                </div>
                             </div>
                         </Card>
                     </motion.div>
@@ -322,92 +377,138 @@ export default function CollectionBinMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">bin id</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">bin name</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">bin short name</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">bin type</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">color</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">tare weight kg</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">capacity kg</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">bin id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">bin name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">bin short name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">bin type</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">color</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">tare weight kg</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>gross capacity</span>
+                                                    <span>kg</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredRecords.map((item, index) => (
-                                            <motion.tr
-                                                key={item.id}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors cursor-pointer"
-                                            >
-                                                <td className="px-6 py-6 align-middle">
-                                                    <span className="text-sm font-semibold text-blue-600">
-                                                        {item.binId}
-                                                    </span>
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={11} className="px-6 py-8 text-center text-muted-foreground">
+                                                    Loading...
                                                 </td>
-                                                <td className="px-6 py-6 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.binName}</span>
+                                            </tr>
+                                        ) : filteredRecords.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={11} className="px-6 py-8 text-center text-muted-foreground">
+                                                    No collection bins found
                                                 </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.shortName}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.binType}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-sm font-semibold text-foreground align-middle">
-                                                    {item.colorName}
-                                                </td>
-                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
-                                                    {item.tareWeight}
-                                                </td>
-                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
-                                                    {item.capacity}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEdit(item);
-                                                            }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDelete(item);
-                                                            }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </motion.tr>
-                                        ))}
+                                            </tr>
+                                        ) : (
+                                            filteredRecords.map((item, index) => (
+                                                <motion.tr
+                                                    key={item.id}
+                                                    initial={{ opacity: 0, x: -20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                                                    className="hover:bg-muted/30 transition-colors cursor-pointer"
+                                                >
+                                                    <td className="px-6 py-6 align-middle">
+                                                        <span className="text-sm font-semibold text-blue-600">
+                                                            {item.binId}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-6 align-middle">
+                                                        <span className="text-sm font-semibold text-foreground">{item.binName}</span>
+                                                    </td>
+                                                    <td className="px-6 py-6 text-center align-middle">
+                                                        <span className="text-sm font-semibold text-foreground">
+                                                            {item.binShortName}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-6 text-center align-middle">
+                                                        <span className={`text-sm font-semibold px-2 py-1 rounded ${
+                                                            item.binType === "Normal" ? "bg-blue-50 text-blue-600" : "bg-red-50 text-red-600"
+                                                        }`}>
+                                                            {item.binType}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-6 text-sm font-semibold text-foreground align-middle">
+                                                        {item.color}
+                                                    </td>
+                                                    <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
+                                                        {item.tareWeightKg}
+                                                    </td>
+                                                    <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
+                                                        {item.grossCapacityKg}
+                                                    </td>
+                                                    <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
+                                                        {item.lastModifiedUserId || "-"}
+                                                    </td>
+                                                    <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
+                                                        {item.lastModifiedDateTime || "-"}
+                                                    </td>
+                                                    <td className="px-6 py-6 text-left align-middle">
+                                                        {(() => {
+                                                            const isCancelled = cancelledBins.has(item.binId);
+                                                            const displayActive = !isCancelled && (item.active !== false);
+                                                            return (
+                                                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                                    displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                                }`}>
+                                                                    {displayActive ? "TRUE" : "FALSE"}
+                                                                </span>
+                                                            );
+                                                        })()}
+                                                    </td>
+                                                    <td className="px-6 py-6 text-center align-middle">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleEdit(item);
+                                                                }}
+                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            >
+                                                                <Pencil className="w-4 h-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleCancel(item);
+                                                                }}
+                                                                className={`${cancelledBins.has(item.binId) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                                title={cancelledBins.has(item.binId) ? "Restore collection bin" : "Cancel collection bin"}
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </motion.tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
-                            </div>
-
-                            <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-white">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">PAGE 1 OF 3</span>
-                                <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" className="h-8 text-xs text-muted-foreground">Previous</Button>
-                                    <Button variant="outline" size="sm" className="h-8 text-xs text-blue-600 border-blue-200 bg-blue-50">Next</Button>
-                                </div>
                             </div>
                         </Card>
                     </motion.div>
@@ -458,70 +559,52 @@ export default function CollectionBinMasterPage() {
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Bin ID <span className="text-red-500">*</span></label>
-                                            <Input name="binId" value={formData.binId} onChange={handleInputChange} placeholder="BIN-XXX-XX" required />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
-                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-CODE" />
-                                        </div>
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin ID <span className="text-red-500">*</span></label>
+                                        <Input name="binId" value={formData.binId} onChange={handleInputChange} placeholder="e.g., 1, 2, 91" required />
                                     </div>
 
                                     <div className="mb-4">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Bin Name <span className="text-red-500">*</span></label>
-                                        <Input name="binName" value={formData.binName} onChange={handleInputChange} required />
+                                        <Input name="binName" value={formData.binName} onChange={handleInputChange} placeholder="e.g., Product collection Bin 1" required />
                                     </div>
 
                                     <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Location / Section</label>
-                                        <Input name="location" value={formData.location} onChange={handleInputChange} placeholder="e.g. SECTION A-4 FLOOR" />
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Short Name <span className="text-red-500">*</span></label>
+                                        <Input name="binShortName" value={formData.binShortName} onChange={handleInputChange} placeholder="e.g., Bin 1" required />
                                     </div>
 
                                     <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Type</label>
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Type <span className="text-red-500">*</span></label>
                                         <select
                                             name="binType"
                                             value={formData.binType}
                                             onChange={handleInputChange}
                                             className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            required
                                         >
-                                            <option value="GENERAL">General</option>
-                                            <option value="HAZARDOUS">Hazardous</option>
-                                            <option value="RECYCLABLE">Recyclable</option>
-                                            <option value="SCRAP">Scrap</option>
-                                            <option value="REWORK">Rework</option>
+                                            <option value="Normal">Normal</option>
+                                            <option value="Rejected">Rejected</option>
                                         </select>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Color Name</label>
-                                            <Input name="colorName" value={formData.colorName} onChange={handleInputChange} placeholder="Color Name" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Color Hex</label>
-                                            <div className="flex gap-2">
-                                                <Input type="color" name="colorHex" value={formData.colorHex} onChange={handleInputChange} className="w-12 p-1" />
-                                                <Input name="colorHex" value={formData.colorHex} onChange={handleInputChange} placeholder="#000000" />
-                                            </div>
-                                        </div>
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Color <span className="text-red-500">*</span></label>
+                                        <Input name="color" value={formData.color} onChange={handleInputChange} placeholder="e.g., Blue, Red" required />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-6 mb-6">
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Tare Weight (KG)</label>
-                                            <Input type="number" step="0.01" name="tareWeight" value={formData.tareWeight} onChange={handleInputChange} />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Tare Weight (KG) <span className="text-red-500">*</span></label>
+                                            <Input type="number" step="0.01" name="tareWeightKg" value={formData.tareWeightKg} onChange={handleInputChange} required />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Capacity (KG)</label>
-                                            <Input type="number" step="0.01" name="capacity" value={formData.capacity} onChange={handleInputChange} />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Gross Capacity (KG) <span className="text-red-500">*</span></label>
+                                            <Input type="number" step="0.01" name="grossCapacityKg" value={formData.grossCapacityKg} onChange={handleInputChange} required />
                                         </div>
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
                                     </div>
                                 </form>
@@ -560,15 +643,9 @@ export default function CollectionBinMasterPage() {
                                 </div>
 
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Bin ID <span className="text-red-500">*</span></label>
-                                            <Input name="binId" value={formData.binId} onChange={handleInputChange} placeholder="BIN-XXX-XX" required />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
-                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-CODE" />
-                                        </div>
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin ID <span className="text-red-500">*</span></label>
+                                        <Input name="binId" value={formData.binId} onChange={handleInputChange} disabled />
                                     </div>
 
                                     <div className="mb-4">
@@ -577,53 +654,41 @@ export default function CollectionBinMasterPage() {
                                     </div>
 
                                     <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Location / Section</label>
-                                        <Input name="location" value={formData.location} onChange={handleInputChange} placeholder="e.g. SECTION A-4 FLOOR" />
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Short Name <span className="text-red-500">*</span></label>
+                                        <Input name="binShortName" value={formData.binShortName} onChange={handleInputChange} required />
                                     </div>
 
                                     <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Type</label>
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Type <span className="text-red-500">*</span></label>
                                         <select
                                             name="binType"
                                             value={formData.binType}
                                             onChange={handleInputChange}
                                             className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            required
                                         >
-                                            <option value="GENERAL">General</option>
-                                            <option value="HAZARDOUS">Hazardous</option>
-                                            <option value="RECYCLABLE">Recyclable</option>
-                                            <option value="SCRAP">Scrap</option>
-                                            <option value="REWORK">Rework</option>
+                                            <option value="Normal">Normal</option>
+                                            <option value="Rejected">Rejected</option>
                                         </select>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Color Name</label>
-                                            <Input name="colorName" value={formData.colorName} onChange={handleInputChange} placeholder="Color Name" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Color Hex</label>
-                                            <div className="flex gap-2">
-                                                <Input type="color" name="colorHex" value={formData.colorHex} onChange={handleInputChange} className="w-12 p-1" />
-                                                <Input name="colorHex" value={formData.colorHex} onChange={handleInputChange} placeholder="#000000" />
-                                            </div>
-                                        </div>
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Color <span className="text-red-500">*</span></label>
+                                        <Input name="color" value={formData.color} onChange={handleInputChange} required />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-6 mb-6">
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Tare Weight (KG)</label>
-                                            <Input type="number" step="0.01" name="tareWeight" value={formData.tareWeight} onChange={handleInputChange} />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Tare Weight (KG) <span className="text-red-500">*</span></label>
+                                            <Input type="number" step="0.01" name="tareWeightKg" value={formData.tareWeightKg} onChange={handleInputChange} required />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Capacity (KG)</label>
-                                            <Input type="number" step="0.01" name="capacity" value={formData.capacity} onChange={handleInputChange} />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Gross Capacity (KG) <span className="text-red-500">*</span></label>
+                                            <Input type="number" step="0.01" name="grossCapacityKg" value={formData.grossCapacityKg} onChange={handleInputChange} required />
                                         </div>
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
                                     </div>
                                 </form>
@@ -634,14 +699,14 @@ export default function CollectionBinMasterPage() {
             </AnimatePresence>
 
             <AnimatePresence>
-                {isDeleteDialogOpen && (
+                {isCancelItemDialogOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsDeleteDialogOpen(false)}
+                            onClick={() => setIsCancelItemDialogOpen(false)}
                         />
 
                         <motion.div
@@ -651,11 +716,13 @@ export default function CollectionBinMasterPage() {
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Confirm Delete</h2>
+                                <div className={`${cancelledBins.has(binToCancel?.binId || '') ? 'bg-green-600' : 'bg-red-600'} text-white px-6 py-4 flex items-center justify-between`}>
+                                    <h2 className="text-xl font-bold">
+                                        {cancelledBins.has(binToCancel?.binId || '') ? "Restore Collection Bin" : "Cancel Collection Bin"}
+                                    </h2>
                                     <button
-                                        onClick={() => setIsDeleteDialogOpen(false)}
-                                        className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors"
+                                        onClick={() => setIsCancelItemDialogOpen(false)}
+                                        className="text-white hover:opacity-80 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -663,24 +730,26 @@ export default function CollectionBinMasterPage() {
 
                                 <div className="p-6">
                                     <p className="text-foreground mb-4">
-                                        Are you sure you want to delete <strong>{selectedBin?.binName}</strong>?
+                                        Are you sure you want to {cancelledBins.has(binToCancel?.binId || '') ? 'restore' : 'cancel'} <strong>{binToCancel?.binName}</strong>?
                                     </p>
                                     <p className="text-sm text-muted-foreground mb-6">
-                                        This action cannot be undone.
+                                        {cancelledBins.has(binToCancel?.binId || '') 
+                                            ? "This will restore the collection bin and set its active status to true."
+                                            : "This will cancel the collection bin and set its active status to false."}
                                     </p>
 
                                     <div className="flex items-center justify-end gap-4">
                                         <Button
                                             variant="outline"
-                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                            onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
                                             Cancel
                                         </Button>
                                         <Button
-                                            onClick={confirmDelete}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                            onClick={confirmCancelItem}
+                                            className={`${cancelledBins.has(binToCancel?.binId || '') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                                         >
-                                            Delete
+                                            {cancelledBins.has(binToCancel?.binId || '') ? "Restore" : "Cancel"}
                                         </Button>
                                     </div>
                                 </div>
@@ -692,6 +761,3 @@ export default function CollectionBinMasterPage() {
         </div>
     );
 }
-
-
-

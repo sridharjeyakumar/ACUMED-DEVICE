@@ -230,29 +230,46 @@ export default function ProductCategoryMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = () => {
+    const confirmCancelItem = async () => {
         if (!categoryToCancel) return;
         
         const isCancelled = cancelledCategories.has(categoryToCancel.product_category_id);
-        setCancelledCategories(prev => {
-            const newSet = new Set(prev);
-            if (isCancelled) {
-                newSet.delete(categoryToCancel.product_category_id);
-                toast({
-                    title: "Restored",
-                    description: `Product category ${categoryToCancel.product_category_name} has been restored`,
-                });
-            } else {
-                newSet.add(categoryToCancel.product_category_id);
-                toast({
-                    title: "Cancelled",
-                    description: `Product category ${categoryToCancel.product_category_name} has been cancelled`,
-                });
-            }
-            return newSet;
-        });
-        setIsCancelItemDialogOpen(false);
-        setCategoryToCancel(null);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await productCategoryAPI.update(categoryToCancel.product_category_id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledCategories(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(categoryToCancel.product_category_id);
+                    toast({
+                        title: "Restored",
+                        description: `Product category ${categoryToCancel.product_category_name} has been restored`,
+                    });
+                } else {
+                    newSet.add(categoryToCancel.product_category_id);
+                    toast({
+                        title: "Cancelled",
+                        description: `Product category ${categoryToCancel.product_category_name} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadCategories(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setCategoryToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} product category`,
+                variant: "destructive",
+            });
+        }
     };
 
     return (
@@ -345,13 +362,34 @@ export default function ProductCategoryMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">PRODUCT CATEGORY ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">PRODUCT CATEGORY NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID / NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>product</span>
+                                                    <span>category_id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>product</span>
+                                                    <span>category</span>
+                                                    <span>name</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -523,14 +561,6 @@ export default function ProductCategoryMasterPage() {
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setIsAddModalOpen(false)}
-                                            className="px-6"
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                             disabled={isSubmittingRef.current}
@@ -599,14 +629,6 @@ export default function ProductCategoryMasterPage() {
                                         />
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setIsEditModalOpen(false)}
-                                            className="px-6"
-                                        >
-                                            Cancel
-                                        </Button>
                                         <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"

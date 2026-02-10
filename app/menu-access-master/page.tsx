@@ -264,30 +264,47 @@ export default function MenuAccessMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = () => {
+    const confirmCancelItem = async () => {
         if (!accessToCancel) return;
         
         const accessKey = `${accessToCancel.rold_id}-${accessToCancel.menu_id}`;
         const isCancelled = cancelledAccesses.has(accessKey);
-        setCancelledAccesses(prev => {
-            const newSet = new Set(prev);
-            if (isCancelled) {
-                newSet.delete(accessKey);
-                toast({
-                    title: "Restored",
-                    description: `Menu access for Role ${accessToCancel.rold_id} - Menu ${accessToCancel.menu_id} has been restored`,
-                });
-            } else {
-                newSet.add(accessKey);
-                toast({
-                    title: "Cancelled",
-                    description: `Menu access for Role ${accessToCancel.rold_id} - Menu ${accessToCancel.menu_id} has been cancelled`,
-                });
-            }
-            return newSet;
-        });
-        setIsCancelItemDialogOpen(false);
-        setAccessToCancel(null);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await menuAccessAPI.update(accessToCancel.rold_id, accessToCancel.menu_id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledAccesses(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(accessKey);
+                    toast({
+                        title: "Restored",
+                        description: `Menu access for Role ${accessToCancel.rold_id} - Menu ${accessToCancel.menu_id} has been restored`,
+                    });
+                } else {
+                    newSet.add(accessKey);
+                    toast({
+                        title: "Cancelled",
+                        description: `Menu access for Role ${accessToCancel.rold_id} - Menu ${accessToCancel.menu_id} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadAllData(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setAccessToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} menu access`,
+                variant: "destructive",
+            });
+        }
     };
 
     const handleCancelClick = (modalType: 'add' | 'edit') => {
@@ -524,18 +541,28 @@ export default function MenuAccessMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">ROLE ID / NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">MENU ID / NAME</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">ACCESS</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">ADD</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">EDIT</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">VIEW</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">CANCEL</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID / NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">ACTIONS</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">rold id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">menu id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">access</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">can_add</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">can_edit</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">can_view</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">can_cancel</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -738,15 +765,6 @@ export default function MenuAccessMasterPage() {
                                         </label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button 
-                                            type="button" 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            onClick={() => handleCancelClick('add')} 
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save Access</Button>
                                     </div>
                                 </form>
@@ -784,15 +802,6 @@ export default function MenuAccessMasterPage() {
                                         <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="can_cancel" checked={formData.can_cancel} onChange={handleInputChange} className="w-4 h-4 text-blue-600" /><span className="text-sm font-medium">Can Cancel</span></label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button 
-                                            type="button" 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            onClick={() => handleCancelClick('edit')} 
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update Access</Button>
                                     </div>
                                 </form>

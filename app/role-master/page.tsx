@@ -247,29 +247,46 @@ export default function RoleMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = () => {
+    const confirmCancelItem = async () => {
         if (!roleToCancel) return;
         
         const isCancelled = cancelledRoles.has(roleToCancel.roll_id);
-        setCancelledRoles(prev => {
-            const newSet = new Set(prev);
-            if (isCancelled) {
-                newSet.delete(roleToCancel.roll_id);
-                toast({
-                    title: "Restored",
-                    description: `Role ${roleToCancel.roll_description} has been restored`,
-                });
-            } else {
-                newSet.add(roleToCancel.roll_id);
-                toast({
-                    title: "Cancelled",
-                    description: `Role ${roleToCancel.roll_description} has been cancelled`,
-                });
-            }
-            return newSet;
-        });
-        setIsCancelItemDialogOpen(false);
-        setRoleToCancel(null);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await roleAPI.update(roleToCancel.roll_id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledRoles(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(roleToCancel.roll_id);
+                    toast({
+                        title: "Restored",
+                        description: `Role ${roleToCancel.roll_description} has been restored`,
+                    });
+                } else {
+                    newSet.add(roleToCancel.roll_id);
+                    toast({
+                        title: "Cancelled",
+                        description: `Role ${roleToCancel.roll_description} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadRoles(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setRoleToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} role`,
+                variant: "destructive",
+            });
+        }
     };
 
     return (
@@ -410,29 +427,25 @@ export default function RoleMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
-                                                ROLE ID
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">roll id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">roll description</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">remarks</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">active</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
                                             </th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-64">
-                                                ROLE DESCRIPTION
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
                                             </th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">
-                                                REMARKS
-                                            </th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
-                                                LAST MODIFIED USER ID / NAME
-                                            </th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">
-                                                LAST MODIFIED DATE & TIME
-                                            </th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">
-                                                STATUS
-                                            </th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase">
-                                                ACTIONS
-                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -474,6 +487,13 @@ export default function RoleMasterPage() {
                                                         {role.remarks || "-"}
                                                     </span>
                                                 </td>
+                                                <td className="px-6 py-4 text-left">
+                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                        role.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                    }`}>
+                                                        {role.active ? "TRUE" : "FALSE"}
+                                                    </span>
+                                                </td>
                                                 <td className="px-6 py-4">
                                                     {role.last_modified_user_id ? (
                                                         <div className="flex flex-col">
@@ -489,13 +509,6 @@ export default function RoleMasterPage() {
                                                         {role.last_modified_date_time 
                                                             ? formatDateTime(role.last_modified_date_time)
                                                             : "-"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                        role.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                    }`}>
-                                                        {role.active ? "Active" : "Inactive"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -642,15 +655,6 @@ export default function RoleMasterPage() {
                                             </div>
                                             <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                                 <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleCancelClick('add')}
-                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </Button>
-                                                <Button
                                                     type="submit"
                                                     className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                                 >
@@ -745,15 +749,6 @@ export default function RoleMasterPage() {
                                                 </label>
                                             </div>
                                             <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleCancelClick('edit')}
-                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </Button>
                                                 <Button
                                                     type="submit"
                                                     className="bg-blue-600 hover:bg-blue-700 text-white px-6"

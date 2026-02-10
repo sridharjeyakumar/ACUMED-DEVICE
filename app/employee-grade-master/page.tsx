@@ -243,29 +243,46 @@ export default function EmployeeGradeMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = () => {
+    const confirmCancelItem = async () => {
         if (!gradeToCancel) return;
         
         const isCancelled = cancelledGrades.has(gradeToCancel.grade_id);
-        setCancelledGrades(prev => {
-            const newSet = new Set(prev);
-            if (isCancelled) {
-                newSet.delete(gradeToCancel.grade_id);
-                toast({
-                    title: "Restored",
-                    description: `Employee grade ${gradeToCancel.grade_name} has been restored`,
-                });
-            } else {
-                newSet.add(gradeToCancel.grade_id);
-                toast({
-                    title: "Cancelled",
-                    description: `Employee grade ${gradeToCancel.grade_name} has been cancelled`,
-                });
-            }
-            return newSet;
-        });
-        setIsCancelItemDialogOpen(false);
-        setGradeToCancel(null);
+        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        
+        try {
+            await employeeGradeAPI.update(gradeToCancel.grade_id, {
+                active: newActiveStatus,
+                last_modified_user_id: "ADMIN",
+            });
+            
+            setCancelledGrades(prev => {
+                const newSet = new Set(prev);
+                if (isCancelled) {
+                    newSet.delete(gradeToCancel.grade_id);
+                    toast({
+                        title: "Restored",
+                        description: `Employee grade ${gradeToCancel.grade_name} has been restored`,
+                    });
+                } else {
+                    newSet.add(gradeToCancel.grade_id);
+                    toast({
+                        title: "Cancelled",
+                        description: `Employee grade ${gradeToCancel.grade_name} has been cancelled`,
+                    });
+                }
+                return newSet;
+            });
+            
+            loadGrades(); // Reload data from API
+            setIsCancelItemDialogOpen(false);
+            setGradeToCancel(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} employee grade`,
+                variant: "destructive",
+            });
+        }
     };
 
     const handleCancelClick = (modalType: 'add' | 'edit') => {
@@ -376,25 +393,36 @@ export default function EmployeeGradeMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">GRADE ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase min-w-[200px]">GRADE NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">LAST MODIFIED USER ID / NAME</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-40">LAST MODIFIED DATE & TIME</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase w-32">ACTIONS</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">grade_id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">grade name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>user id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>last modified</span>
+                                                    <span>date & time</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">active</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading employee grades...
                                                 </td>
                                             </tr>
                                         ) : filteredGrades.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
                                                     No grades found
                                                 </td>
                                             </tr>
@@ -432,6 +460,13 @@ export default function EmployeeGradeMasterPage() {
                                                             {grade.last_modified_date_time 
                                                                 ? formatDateTime(grade.last_modified_date_time)
                                                                 : "-"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-left">
+                                                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                            !isCancelled ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                        }`}>
+                                                            {!isCancelled ? "TRUE" : "FALSE"}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
@@ -554,15 +589,6 @@ export default function EmployeeGradeMasterPage() {
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleCancelClick('add')}
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
-                                        <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                             disabled={isSubmittingRef.current}
@@ -631,15 +657,6 @@ export default function EmployeeGradeMasterPage() {
                                         />
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleCancelClick('edit')}
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
                                         <Button
                                             type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
