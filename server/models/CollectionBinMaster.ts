@@ -86,3 +86,5 @@ const CollectionBinMaster = (mongoose.models.CollectionBinMaster as mongoose.Mod
 
 export default CollectionBinMaster;
 
+
+

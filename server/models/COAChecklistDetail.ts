@@ -64,3 +64,5 @@ const COAChecklistDetail = (mongoose.models.COAChecklistDetail as mongoose.Model
 
 export default COAChecklistDetail;
 
+
+
