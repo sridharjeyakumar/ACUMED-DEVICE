@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,10 +76,6 @@ export default function MaterialStatusMasterPage() {
         active: true,
     });
 
-    useEffect(() => {
-        loadStatuses();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -94,7 +90,7 @@ export default function MaterialStatusMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadStatuses = async () => {
+    const loadStatuses = useCallback(async () => {
         try {
             setLoading(true);
             const data = await materialStatusAPI.getAll();
@@ -108,7 +104,11 @@ export default function MaterialStatusMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadStatuses();
+    }, [loadStatuses]);
 
     const filteredStatuses = statuses.filter((status) => {
         const matchesSearch = status.matl_status_id.toLowerCase().includes(searchQuery.toLowerCase()) ||

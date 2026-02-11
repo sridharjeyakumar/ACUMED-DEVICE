@@ -89,11 +89,7 @@ export default function UserLoginHistoryPage() {
         logout_time: "",
     });
 
-    useEffect(() => {
-        loadLoginHistories();
-    }, []);
-
-    const loadLoginHistories = async () => {
+    const loadLoginHistories = useCallback(async () => {
         try {
             setLoading(true);
             const data = await userLoginHistoryAPI.getAll();
@@ -114,7 +110,11 @@ export default function UserLoginHistoryPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadLoginHistories();
+    }, [loadLoginHistories]);
 
     const filteredHistories = loginHistories.filter((history) => {
         const matchesSearch = history.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,10 +62,6 @@ export default function DepartmentMasterPage() {
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
-    useEffect(() => {
-        loadDepartments();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -73,7 +69,7 @@ export default function DepartmentMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadDepartments = async () => {
+    const loadDepartments = useCallback(async () => {
         try {
             setLoading(true);
             const data = await departmentAPI.getAll();
@@ -87,7 +83,11 @@ export default function DepartmentMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadDepartments();
+    }, [loadDepartments]);
     const [formData, setFormData] = useState({
         dept_id: "",
         department_name: "",

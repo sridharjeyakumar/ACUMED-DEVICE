@@ -60,10 +60,6 @@ export default function MaterialCategoryMasterPage() {
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
-    useEffect(() => {
-        loadCategories();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -71,7 +67,7 @@ export default function MaterialCategoryMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadCategories = async () => {
+    const loadCategories = useCallback(async () => {
         try {
             setLoading(true);
             const data = await materialCategoryAPI.getAll();
@@ -85,7 +81,11 @@ export default function MaterialCategoryMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadCategories();
+    }, [loadCategories]);
     const [formData, setFormData] = useState({
         material_category_id: "",
         material_category_name: "",

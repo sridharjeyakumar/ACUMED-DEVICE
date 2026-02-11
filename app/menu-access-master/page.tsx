@@ -82,10 +82,6 @@ export default function MenuAccessMasterPage() {
         can_cancel: true,
     });
 
-    useEffect(() => {
-        loadAllData();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -93,7 +89,7 @@ export default function MenuAccessMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadAllData = async () => {
+    const loadAllData = useCallback(async () => {
         try {
             setLoading(true);
             const [accessesData, rolesData, menusData, usersData] = await Promise.all([
@@ -115,7 +111,11 @@ export default function MenuAccessMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadAllData();
+    }, [loadAllData]);
 
     // Create lookup maps for quick access
     const roleMap = new Map(roles.map(r => [r.roll_id, r.roll_description]));

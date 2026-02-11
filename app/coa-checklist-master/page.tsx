@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Pencil, X } from "lucide-react";
+import { Search, Plus, Pencil, X, Filter } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { coaChecklistAPI } from "@/services/api";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface ChecklistRecord {
     id: string;
@@ -60,11 +62,7 @@ export default function COAChecklistMasterPage() {
     };
 
     // Load data from API
-    useEffect(() => {
-        loadRecords();
-    }, []);
-
-    const loadRecords = async () => {
+    const loadRecords = useCallback(async () => {
         try {
             setLoading(true);
             const data = await coaChecklistAPI.getAll();
@@ -78,7 +76,11 @@ export default function COAChecklistMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadRecords();
+    }, [loadRecords]);
 
     // Reset form data when Add modal opens
     useEffect(() => {

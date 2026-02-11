@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -135,10 +135,6 @@ export default function CompanyMasterPage() {
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
     };
-
-    useEffect(() => {
-        loadCompanies();
-    }, []);
 
     // Reset form data when Add modal opens
     useEffect(() => {
@@ -737,6 +733,7 @@ export default function CompanyMasterPage() {
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
                                                         {company.logo ? (
+                                                            // eslint-disable-next-line @next/next/no-img-element
                                                             <img src={company.logo} alt="Logo" className="w-10 h-10 object-contain mx-auto" />
                                                         ) : (
                                                             <span className="text-xs text-muted-foreground">-</span>
@@ -917,6 +914,7 @@ export default function CompanyMasterPage() {
                                                     Upload Logo
                                                 </Button>
                                                 {formData.logo && (
+                                                    // eslint-disable-next-line @next/next/no-img-element
                                                     <img src={formData.logo} alt="Logo preview" className="w-16 h-16 object-contain border border-border rounded" />
                                                 )}
                                             </div>
@@ -1230,6 +1228,7 @@ export default function CompanyMasterPage() {
                                                     Upload Logo
                                                 </Button>
                                                 {formData.logo && (
+                                                    // eslint-disable-next-line @next/next/no-img-element
                                                     <img src={formData.logo} alt="Logo preview" className="w-16 h-16 object-contain border border-border rounded" />
                                                 )}
                                             </div>

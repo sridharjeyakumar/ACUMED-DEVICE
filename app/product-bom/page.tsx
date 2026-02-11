@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -91,11 +91,7 @@ export default function ProductBOMPage() {
     };
 
     // Load data from API
-    useEffect(() => {
-        loadRecords();
-    }, []);
-
-    const loadRecords = async () => {
+    const loadRecords = useCallback(async () => {
         try {
             setLoading(true);
             const data = await productBOMAPI.getAll();
@@ -109,7 +105,11 @@ export default function ProductBOMPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadRecords();
+    }, [loadRecords]);
 
     // Reset form data when Add modal opens
     useEffect(() => {

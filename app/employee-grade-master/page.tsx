@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,10 +62,6 @@ export default function EmployeeGradeMasterPage() {
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
-    useEffect(() => {
-        loadGrades();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -73,7 +69,7 @@ export default function EmployeeGradeMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadGrades = async () => {
+    const loadGrades = useCallback(async () => {
         try {
             setLoading(true);
             const data = await employeeGradeAPI.getAll();
@@ -87,7 +83,11 @@ export default function EmployeeGradeMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadGrades();
+    }, [loadGrades]);
     const [formData, setFormData] = useState({
         grade_id: "",
         grade_name: "",

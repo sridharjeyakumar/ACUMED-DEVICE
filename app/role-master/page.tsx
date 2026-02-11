@@ -71,10 +71,6 @@ export default function RoleMasterPage() {
         active: true,
     });
 
-    useEffect(() => {
-        loadRoles();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -82,7 +78,7 @@ export default function RoleMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadRoles = async () => {
+    const loadRoles = useCallback(async () => {
         try {
             setLoading(true);
             const data = await roleAPI.getAll();
@@ -96,7 +92,11 @@ export default function RoleMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadRoles();
+    }, [loadRoles]);
 
     const filteredRoles = roles.filter((role) => {
         const matchesSearch = role.roll_id.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -94,11 +94,11 @@ export default function PackSizeMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
 
     useEffect(() => {
         loadPackSizes();
-    }, []);
+    }, [loadPackSizes]);
 
     // Reset form data when Add modal opens
     useEffect(() => {

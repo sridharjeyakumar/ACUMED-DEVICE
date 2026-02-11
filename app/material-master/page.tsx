@@ -121,10 +121,6 @@ export default function MaterialMasterPage() {
         }
     };
 
-    useEffect(() => {
-        loadMaterials();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {

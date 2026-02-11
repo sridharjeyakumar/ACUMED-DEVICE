@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,10 +74,6 @@ export default function HolidaysMasterPage() {
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
-    useEffect(() => {
-        loadHolidays();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -85,7 +81,7 @@ export default function HolidaysMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadHolidays = async () => {
+    const loadHolidays = useCallback(async () => {
         try {
             setLoading(true);
             const data = await holidaysAPI.getAll();
@@ -99,7 +95,11 @@ export default function HolidaysMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadHolidays();
+    }, [loadHolidays]);
 
     const [formData, setFormData] = useState({
         date: "",

@@ -68,10 +68,6 @@ export default function ProductStatusMasterPage() {
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
-    useEffect(() => {
-        loadStatuses();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -86,7 +82,7 @@ export default function ProductStatusMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadStatuses = async () => {
+    const loadStatuses = useCallback(async () => {
         try {
             setLoading(true);
             const data = await productStatusAPI.getAll();
@@ -100,7 +96,11 @@ export default function ProductStatusMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadStatuses();
+    }, [loadStatuses]);
     const [formData, setFormData] = useState({
         prod_status_id: "",
         product_status: "",

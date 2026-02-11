@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,13 +70,6 @@ export default function MenuMasterPage() {
         active: true,
     });
 
-    useEffect(() => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:52',message:'useEffect mounted, calling loadMenus',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
-        // #endregion
-        loadMenus();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -84,7 +77,7 @@ export default function MenuMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadMenus = async () => {
+    const loadMenus = useCallback(async () => {
         // #region agent log
         fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:56',message:'loadMenus called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4,H5'})}).catch(()=>{});
         // #endregion
@@ -113,7 +106,14 @@ export default function MenuMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d8ecf44-de1f-4953-bc2e-dcacfba1f878',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-master/page.tsx:52',message:'useEffect mounted, calling loadMenus',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
+        // #endregion
+        loadMenus();
+    }, [loadMenus]);
 
     const filteredMenus = menus.filter((menu) => {
         const matchesSearch = menu.menu_id.toLowerCase().includes(searchQuery.toLowerCase()) ||

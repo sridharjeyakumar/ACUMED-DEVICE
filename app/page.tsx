@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from "react";
+import Image from "next/image";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Header } from "@/components/dashboard/Header";
 import { ProductionCard } from "@/components/dashboard/ProductionCard";
@@ -41,7 +42,7 @@ export default function Home() {
             <Menu className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+            <Image src="/logo.png" alt="Logo" width={32} height={32} className="object-contain" />
             <h1 className="font-semibold text-sm">ACUMED DEVICES</h1>
           </div>
         </div>

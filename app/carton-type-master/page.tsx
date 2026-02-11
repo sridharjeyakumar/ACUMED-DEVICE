@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,10 +59,6 @@ export default function CartonTypeMasterPage() {
     const isSubmittingRef = useRef(false);
     const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: CartonType } | null>(null);
 
-    useEffect(() => {
-        loadCartonTypes();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -75,7 +71,7 @@ export default function CartonTypeMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadCartonTypes = async () => {
+    const loadCartonTypes = useCallback(async () => {
         try {
             setLoading(true);
             const data = await cartonTypeAPI.getAll();
@@ -89,7 +85,11 @@ export default function CartonTypeMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadCartonTypes();
+    }, [loadCartonTypes]);
 
     const filteredCartonTypes = cartonTypes.filter((item) => {
         const matchesSearch = item.carton_type_name.toLowerCase().includes(searchQuery.toLowerCase()) ||

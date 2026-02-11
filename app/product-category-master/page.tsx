@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,10 +60,6 @@ export default function ProductCategoryMasterPage() {
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
-    useEffect(() => {
-        loadCategories();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -71,7 +67,7 @@ export default function ProductCategoryMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadCategories = async () => {
+    const loadCategories = useCallback(async () => {
         try {
             setLoading(true);
             const data = await productCategoryAPI.getAll();
@@ -85,7 +81,11 @@ export default function ProductCategoryMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadCategories();
+    }, [loadCategories]);
     const [formData, setFormData] = useState({
         product_category_id: "",
         product_category_name: "",

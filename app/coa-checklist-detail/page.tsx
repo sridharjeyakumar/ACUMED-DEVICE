@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,21 +70,16 @@ export default function COAChecklistDetailPage() {
     };
 
     // Load data from API
-    useEffect(() => {
-        loadChecklists();
-        loadRecords();
-    }, []);
-
-    const loadChecklists = async () => {
+    const loadChecklists = useCallback(async () => {
         try {
             const data = await coaChecklistAPI.getAll();
             setChecklists(data);
         } catch (error: any) {
             console.error('Failed to load checklists:', error);
         }
-    };
+    }, []);
 
-    const loadRecords = async () => {
+    const loadRecords = useCallback(async () => {
         try {
             setLoading(true);
             const data = await coaChecklistDetailAPI.getAll();
@@ -98,7 +93,12 @@ export default function COAChecklistDetailPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadChecklists();
+        loadRecords();
+    }, [loadChecklists, loadRecords]);
 
     // Reset form data when Add modal opens
     useEffect(() => {

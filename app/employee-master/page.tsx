@@ -68,12 +68,7 @@ export default function EmployeeMasterPage() {
         active: true,
     });
 
-    // Load employees from API
-    useEffect(() => {
-        loadEmployees();
-    }, []);
-
-    const loadEmployees = async () => {
+    const loadEmployees = useCallback(async () => {
         try {
             setLoading(true);
             const data = await employeeAPI.getAll();
@@ -103,7 +98,12 @@ export default function EmployeeMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    // Load employees from API
+    useEffect(() => {
+        loadEmployees();
+    }, [loadEmployees]);
 
     const filteredRecords = records.filter((item) => {
         const matchesSearch = item.empName.toLowerCase().includes(searchQuery.toLowerCase()) ||
