@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Image from "next/image";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -152,7 +153,7 @@ const CompanyMaster = () => {
                         <Menu className="w-5 h-5" />
                     </Button>
                     <div className="flex items-center gap-2">
-                        <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+                        <Image src="/logo.png" alt="Logo" width={32} height={32} className="object-contain" />
                         <h1 className="font-semibold text-sm">ACUMED DEVICES</h1>
                     </div>
                 </div>

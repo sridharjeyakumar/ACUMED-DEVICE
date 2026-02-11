@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,11 +35,7 @@ const UserLoginHistory = () => {
         logout_time: "",
     });
 
-    useEffect(() => {
-        loadLoginHistories();
-    }, []);
-
-    const loadLoginHistories = async () => {
+    const loadLoginHistories = useCallback(async () => {
         try {
             setLoading(true);
             const data = await userLoginHistoryAPI.getAll();
@@ -60,7 +56,11 @@ const UserLoginHistory = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadLoginHistories();
+    }, [loadLoginHistories]);
 
     const filteredHistories = loginHistories.filter((history) =>
         history.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||

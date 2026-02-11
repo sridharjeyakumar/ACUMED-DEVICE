@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,11 +38,7 @@ const MenuAccessMaster = () => {
         can_cancel: true,
     });
 
-    useEffect(() => {
-        loadMenuAccesses();
-    }, []);
-
-    const loadMenuAccesses = async () => {
+    const loadMenuAccesses = useCallback(async () => {
         try {
             setLoading(true);
             const data = await menuAccessAPI.getAll();
@@ -56,7 +52,11 @@ const MenuAccessMaster = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadMenuAccesses();
+    }, [loadMenuAccesses]);
 
     const filteredAccesses = menuAccesses.filter((access) =>
         access.rold_id.toLowerCase().includes(searchQuery.toLowerCase()) ||

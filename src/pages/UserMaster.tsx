@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,11 +33,7 @@ const UserMaster = () => {
         active: true,
     });
 
-    useEffect(() => {
-        loadUsers();
-    }, []);
-
-    const loadUsers = async () => {
+    const loadUsers = useCallback(async () => {
         try {
             setLoading(true);
             const data = await userAPI.getAll();
@@ -56,7 +52,11 @@ const UserMaster = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadUsers();
+    }, [loadUsers]);
 
     const filteredUsers = users.filter((user) =>
         user.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
