@@ -510,7 +510,7 @@ export default function CompanyMasterPage() {
                                         className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
-                                <span className="text-sm text-muted-foreground">
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
                                     SHOWING {filteredCompanies.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredCompanies.length)} OF {filteredCompanies.length}
                                 </span>
                                 <Popover>
@@ -831,7 +831,7 @@ export default function CompanyMasterPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Company</h2>
                                     <button
@@ -842,242 +842,276 @@ export default function CompanyMasterPage() {
                                     </button>
                                 </div>
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    {/* Company Details Section */}
-                                    <div className="mb-6">
-                                        <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">Company Details</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Company ID <span className="text-red-500">*</span>
-                                                </label>
-                                                <Input
-                                                    name="comp_id"
-                                                    value={formData.comp_id}
-                                                    onChange={handleInputChange}
-                                                    placeholder="e.g., CORP, FACT"
-                                                    required
-                                                    maxLength={4}
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Company Information Section */}
+                                        <div className="col-span-2">
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Company Information
+                                            </h3>
+                                        </div>
+
+                                        {/* Company ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Company ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="comp_id"
+                                                value={formData.comp_id}
+                                                onChange={handleInputChange}
+                                                placeholder="e.g., CORP, FACT"
+                                                required
+                                                maxLength={4}
+                                            />
+                                        </div>
+
+                                        {/* Company Name */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Company Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="company_name"
+                                                value={formData.company_name}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter company name"
+                                                required
+                                                maxLength={100}
+                                            />
+                                        </div>
+
+                                        {/* Company Short Name */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Company Short Name
+                                            </label>
+                                            <Input
+                                                name="company_short_name"
+                                                value={formData.company_short_name}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter short name"
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* Logo */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Logo
+                                            </label>
+                                            <div className="flex items-center gap-4">
+                                                <input
+                                                    ref={fileInputRef}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleFileChange}
+                                                    className="hidden"
                                                 />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Company Name <span className="text-red-500">*</span>
-                                                </label>
-                                                <Input
-                                                    name="company_name"
-                                                    value={formData.company_name}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter company name"
-                                                    required
-                                                    maxLength={100}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Company Short Name
-                                                </label>
-                                                <Input
-                                                    name="company_short_name"
-                                                    value={formData.company_short_name}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter short name"
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div className="md:col-span-3">
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Logo
-                                                </label>
-                                                <div className="flex items-center gap-4">
-                                                    <input
-                                                        ref={fileInputRef}
-                                                        type="file"
-                                                        accept="image/*"
-                                                        onChange={handleFileChange}
-                                                        className="hidden"
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        onClick={() => fileInputRef.current?.click()}
-                                                        className="flex items-center gap-2"
-                                                    >
-                                                        <Upload className="w-4 h-4" />
-                                                        Upload Logo
-                                                    </Button>
-                                                    {formData.logo && (
-                                                        <img src={formData.logo} alt="Logo preview" className="w-16 h-16 object-contain border border-border rounded" />
-                                                    )}
-                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <Upload className="w-4 h-4" />
+                                                    Upload Logo
+                                                </Button>
+                                                {formData.logo && (
+                                                    <img src={formData.logo} alt="Logo preview" className="w-16 h-16 object-contain border border-border rounded" />
+                                                )}
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* Statutory Details Section */}
-                                    <div className="mb-6">
-                                        <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">Statutory Details</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    GST No.
-                                                </label>
-                                                <Input
-                                                    name="gst_no"
-                                                    value={formData.gst_no}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter GST number"
-                                                    maxLength={15}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    CIN No.
-                                                </label>
-                                                <Input
-                                                    name="cin_no"
-                                                    value={formData.cin_no}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter CIN number"
-                                                    maxLength={21}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    PAN No.
-                                                </label>
-                                                <Input
-                                                    name="pan_no"
-                                                    value={formData.pan_no}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter PAN number"
-                                                    maxLength={15}
-                                                />
-                                            </div>
+                                        {/* Address Information Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Address Information
+                                            </h3>
                                         </div>
-                                    </div>
 
-                                    {/* Address Details Section */}
-                                    <div className="mb-6">
-                                        <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">Address Details</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="md:col-span-2">
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Address 1
-                                                </label>
-                                                <Input
-                                                    name="address_1"
-                                                    value={formData.address_1}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter address line 1"
-                                                    maxLength={100}
-                                                />
-                                            </div>
-                                            <div className="md:col-span-2">
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Address 2
-                                                </label>
-                                                <Input
-                                                    name="address_2"
-                                                    value={formData.address_2}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter address line 2"
-                                                    maxLength={100}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    City
-                                                </label>
-                                                <Input
-                                                    name="city"
-                                                    value={formData.city}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter city"
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    State
-                                                </label>
-                                                <Input
-                                                    name="state"
-                                                    value={formData.state}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter state"
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Pincode
-                                                </label>
-                                                <Input
-                                                    name="pincode"
-                                                    type="number"
-                                                    value={formData.pincode}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter pincode"
-                                                    maxLength={6}
-                                                />
-                                            </div>
+                                        {/* Address 1 */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Address 1
+                                            </label>
+                                            <Input
+                                                name="address_1"
+                                                value={formData.address_1}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter address line 1"
+                                                maxLength={100}
+                                            />
                                         </div>
-                                    </div>
 
-                                    {/* Contact Details Section */}
-                                    <div className="mb-6">
-                                        <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">Contact Details</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Email ID
-                                                </label>
-                                                <Input
-                                                    name="email_id"
-                                                    type="email"
-                                                    value={formData.email_id}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter email address"
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Website
-                                                </label>
-                                                <Input
-                                                    name="website"
-                                                    value={formData.website}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter website URL"
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Contact Person
-                                                </label>
-                                                <Input
-                                                    name="contact_person"
-                                                    value={formData.contact_person}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter contact person name"
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Contact No.
-                                                </label>
-                                                <Input
-                                                    name="contact_no"
-                                                    type="number"
-                                                    value={formData.contact_no}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter contact number"
-                                                    maxLength={10}
-                                                />
-                                            </div>
+                                        {/* Address 2 */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Address 2
+                                            </label>
+                                            <Input
+                                                name="address_2"
+                                                value={formData.address_2}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter address line 2"
+                                                maxLength={100}
+                                            />
+                                        </div>
+
+                                        {/* City */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                City
+                                            </label>
+                                            <Input
+                                                name="city"
+                                                value={formData.city}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter city"
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* State */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                State
+                                            </label>
+                                            <Input
+                                                name="state"
+                                                value={formData.state}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter state"
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* Pincode */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Pincode
+                                            </label>
+                                            <Input
+                                                name="pincode"
+                                                type="number"
+                                                value={formData.pincode}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter pincode"
+                                                maxLength={6}
+                                            />
+                                        </div>
+
+                                        {/* Tax & Registration Details Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Tax & Registration Details
+                                            </h3>
+                                        </div>
+
+                                        {/* GST No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                GST No.
+                                            </label>
+                                            <Input
+                                                name="gst_no"
+                                                value={formData.gst_no}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter GST number"
+                                                maxLength={15}
+                                            />
+                                        </div>
+
+                                        {/* CIN No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                CIN No.
+                                            </label>
+                                            <Input
+                                                name="cin_no"
+                                                value={formData.cin_no}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter CIN number"
+                                                maxLength={21}
+                                            />
+                                        </div>
+
+                                        {/* PAN No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                PAN No.
+                                            </label>
+                                            <Input
+                                                name="pan_no"
+                                                value={formData.pan_no}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter PAN number"
+                                                maxLength={15}
+                                            />
+                                        </div>
+
+                                        {/* Contact Information Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Contact Information
+                                            </h3>
+                                        </div>
+
+                                        {/* Email ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Email ID
+                                            </label>
+                                            <Input
+                                                name="email_id"
+                                                type="email"
+                                                value={formData.email_id}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter email address"
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* Website */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Website
+                                            </label>
+                                            <Input
+                                                name="website"
+                                                value={formData.website}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter website URL"
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* Contact Person */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Contact Person
+                                            </label>
+                                            <Input
+                                                name="contact_person"
+                                                value={formData.contact_person}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter contact person name"
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* Contact No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Contact No.
+                                            </label>
+                                            <Input
+                                                name="contact_no"
+                                                type="number"
+                                                value={formData.contact_no}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter contact number"
+                                                maxLength={10}
+                                            />
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
@@ -1113,7 +1147,7 @@ export default function CompanyMasterPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Company</h2>
                                     <button
@@ -1124,227 +1158,261 @@ export default function CompanyMasterPage() {
                                     </button>
                                 </div>
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    {/* Company Details Section */}
-                                    <div className="mb-6">
-                                        <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">Company Details</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Company ID <span className="text-red-500">*</span>
-                                                </label>
-                                                <Input
-                                                    name="comp_id"
-                                                    value={formData.comp_id}
-                                                    onChange={handleInputChange}
-                                                    required
-                                                    disabled
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Company Information Section */}
+                                        <div className="col-span-2">
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Company Information
+                                            </h3>
+                                        </div>
+
+                                        {/* Company ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Company ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="comp_id"
+                                                value={formData.comp_id}
+                                                onChange={handleInputChange}
+                                                required
+                                                disabled
+                                            />
+                                        </div>
+
+                                        {/* Company Name */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Company Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="company_name"
+                                                value={formData.company_name}
+                                                onChange={handleInputChange}
+                                                required
+                                                maxLength={100}
+                                            />
+                                        </div>
+
+                                        {/* Company Short Name */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Company Short Name
+                                            </label>
+                                            <Input
+                                                name="company_short_name"
+                                                value={formData.company_short_name}
+                                                onChange={handleInputChange}
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* Logo */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Logo
+                                            </label>
+                                            <div className="flex items-center gap-4">
+                                                <input
+                                                    ref={fileInputRef}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleFileChange}
+                                                    className="hidden"
                                                 />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Company Name <span className="text-red-500">*</span>
-                                                </label>
-                                                <Input
-                                                    name="company_name"
-                                                    value={formData.company_name}
-                                                    onChange={handleInputChange}
-                                                    required
-                                                    maxLength={100}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Company Short Name
-                                                </label>
-                                                <Input
-                                                    name="company_short_name"
-                                                    value={formData.company_short_name}
-                                                    onChange={handleInputChange}
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div className="md:col-span-3">
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Logo
-                                                </label>
-                                                <div className="flex items-center gap-4">
-                                                    <input
-                                                        ref={fileInputRef}
-                                                        type="file"
-                                                        accept="image/*"
-                                                        onChange={handleFileChange}
-                                                        className="hidden"
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        onClick={() => fileInputRef.current?.click()}
-                                                        className="flex items-center gap-2"
-                                                    >
-                                                        <Upload className="w-4 h-4" />
-                                                        Upload Logo
-                                                    </Button>
-                                                    {formData.logo && (
-                                                        <img src={formData.logo} alt="Logo preview" className="w-16 h-16 object-contain border border-border rounded" />
-                                                    )}
-                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <Upload className="w-4 h-4" />
+                                                    Upload Logo
+                                                </Button>
+                                                {formData.logo && (
+                                                    <img src={formData.logo} alt="Logo preview" className="w-16 h-16 object-contain border border-border rounded" />
+                                                )}
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* Statutory Details Section */}
-                                    <div className="mb-6">
-                                        <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">Statutory Details</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    GST No.
-                                                </label>
-                                                <Input
-                                                    name="gst_no"
-                                                    value={formData.gst_no}
-                                                    onChange={handleInputChange}
-                                                    maxLength={15}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    CIN No.
-                                                </label>
-                                                <Input
-                                                    name="cin_no"
-                                                    value={formData.cin_no}
-                                                    onChange={handleInputChange}
-                                                    maxLength={21}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    PAN No.
-                                                </label>
-                                                <Input
-                                                    name="pan_no"
-                                                    value={formData.pan_no}
-                                                    onChange={handleInputChange}
-                                                    maxLength={15}
-                                                />
-                                            </div>
+                                        {/* Address Information Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Address Information
+                                            </h3>
                                         </div>
-                                    </div>
 
-                                    {/* Address Details Section */}
-                                    <div className="mb-6">
-                                        <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">Address Details</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="md:col-span-2">
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Address 1
-                                                </label>
-                                                <Input
-                                                    name="address_1"
-                                                    value={formData.address_1}
-                                                    onChange={handleInputChange}
-                                                    maxLength={100}
-                                                />
-                                            </div>
-                                            <div className="md:col-span-2">
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Address 2
-                                                </label>
-                                                <Input
-                                                    name="address_2"
-                                                    value={formData.address_2}
-                                                    onChange={handleInputChange}
-                                                    maxLength={100}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    City
-                                                </label>
-                                                <Input
-                                                    name="city"
-                                                    value={formData.city}
-                                                    onChange={handleInputChange}
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    State
-                                                </label>
-                                                <Input
-                                                    name="state"
-                                                    value={formData.state}
-                                                    onChange={handleInputChange}
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Pincode
-                                                </label>
-                                                <Input
-                                                    name="pincode"
-                                                    type="number"
-                                                    value={formData.pincode}
-                                                    onChange={handleInputChange}
-                                                    maxLength={6}
-                                                />
-                                            </div>
+                                        {/* Address 1 */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Address 1
+                                            </label>
+                                            <Input
+                                                name="address_1"
+                                                value={formData.address_1}
+                                                onChange={handleInputChange}
+                                                maxLength={100}
+                                            />
                                         </div>
-                                    </div>
 
-                                    {/* Contact Details Section */}
-                                    <div className="mb-6">
-                                        <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">Contact Details</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Email ID
-                                                </label>
-                                                <Input
-                                                    name="email_id"
-                                                    type="email"
-                                                    value={formData.email_id}
-                                                    onChange={handleInputChange}
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Website
-                                                </label>
-                                                <Input
-                                                    name="website"
-                                                    value={formData.website}
-                                                    onChange={handleInputChange}
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Contact Person
-                                                </label>
-                                                <Input
-                                                    name="contact_person"
-                                                    value={formData.contact_person}
-                                                    onChange={handleInputChange}
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Contact No.
-                                                </label>
-                                                <Input
-                                                    name="contact_no"
-                                                    type="number"
-                                                    value={formData.contact_no}
-                                                    onChange={handleInputChange}
-                                                    maxLength={10}
-                                                />
-                                            </div>
+                                        {/* Address 2 */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Address 2
+                                            </label>
+                                            <Input
+                                                name="address_2"
+                                                value={formData.address_2}
+                                                onChange={handleInputChange}
+                                                maxLength={100}
+                                            />
+                                        </div>
+
+                                        {/* City */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                City
+                                            </label>
+                                            <Input
+                                                name="city"
+                                                value={formData.city}
+                                                onChange={handleInputChange}
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* State */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                State
+                                            </label>
+                                            <Input
+                                                name="state"
+                                                value={formData.state}
+                                                onChange={handleInputChange}
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* Pincode */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Pincode
+                                            </label>
+                                            <Input
+                                                name="pincode"
+                                                type="number"
+                                                value={formData.pincode}
+                                                onChange={handleInputChange}
+                                                maxLength={6}
+                                            />
+                                        </div>
+
+                                        {/* Tax & Registration Details Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Tax & Registration Details
+                                            </h3>
+                                        </div>
+
+                                        {/* GST No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                GST No.
+                                            </label>
+                                            <Input
+                                                name="gst_no"
+                                                value={formData.gst_no}
+                                                onChange={handleInputChange}
+                                                maxLength={15}
+                                            />
+                                        </div>
+
+                                        {/* CIN No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                CIN No.
+                                            </label>
+                                            <Input
+                                                name="cin_no"
+                                                value={formData.cin_no}
+                                                onChange={handleInputChange}
+                                                maxLength={21}
+                                            />
+                                        </div>
+
+                                        {/* PAN No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                PAN No.
+                                            </label>
+                                            <Input
+                                                name="pan_no"
+                                                value={formData.pan_no}
+                                                onChange={handleInputChange}
+                                                maxLength={15}
+                                            />
+                                        </div>
+
+                                        {/* Contact Information Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Contact Information
+                                            </h3>
+                                        </div>
+
+                                        {/* Email ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Email ID
+                                            </label>
+                                            <Input
+                                                name="email_id"
+                                                type="email"
+                                                value={formData.email_id}
+                                                onChange={handleInputChange}
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* Website */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Website
+                                            </label>
+                                            <Input
+                                                name="website"
+                                                value={formData.website}
+                                                onChange={handleInputChange}
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* Contact Person */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Contact Person
+                                            </label>
+                                            <Input
+                                                name="contact_person"
+                                                value={formData.contact_person}
+                                                onChange={handleInputChange}
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* Contact No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Contact No.
+                                            </label>
+                                            <Input
+                                                name="contact_no"
+                                                type="number"
+                                                value={formData.contact_no}
+                                                onChange={handleInputChange}
+                                                maxLength={10}
+                                            />
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">

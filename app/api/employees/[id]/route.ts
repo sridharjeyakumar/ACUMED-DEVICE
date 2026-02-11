@@ -51,18 +51,45 @@ export async function PUT(
       return new Date(dateStr);
     };
 
+    // Remove emp_id from update data to prevent changing it
+    const { emp_id, ...updateBody } = body;
+
+    const updateData: any = {
+      ...updateBody,
+      // Convert empty strings to undefined for optional fields
+      location: updateBody.location || undefined,
+      dept_id: updateBody.dept_id || undefined,
+      grade_id: updateBody.grade_id || undefined,
+      team: updateBody.team || undefined,
+      category: updateBody.category || undefined,
+      pf_no: updateBody.pf_no || undefined,
+      esi_no: updateBody.esi_no || undefined,
+      remarks: updateBody.remarks || undefined,
+      address: updateBody.address || undefined,
+      mobile_no: updateBody.mobile_no || undefined,
+      blood_group: updateBody.blood_group || undefined,
+      education: updateBody.education || undefined,
+      emp_photo: updateBody.emp_photo || undefined,
+      
+      // Parse dates
+      doj: updateBody.doj ? parseDate(updateBody.doj) : undefined,
+      dol: updateBody.dol ? parseDate(updateBody.dol) : undefined,
+      dob: updateBody.dob ? parseDate(updateBody.dob) : undefined,
+      
+      // Convert to Number
+      age: updateBody.age ? Number(updateBody.age) : undefined,
+      
+      // Convert to Boolean
+      married: updateBody.married === true || updateBody.married === 'TRUE' || updateBody.married === 'true',
+      active: updateBody.active !== undefined ? (updateBody.active === true || updateBody.active === 'true') : true,
+      
+      last_modified_user_id: updateBody.last_modified_user_id || 'ADMIN',
+      last_modified_date_time: new Date(),
+    };
+
     const employee = await EmployeeMaster.findOneAndUpdate(
       { emp_id: id },
-      {
-        ...body,
-        doj: body.doj ? parseDate(body.doj) : undefined,
-        dol: body.dol ? parseDate(body.dol) : undefined,
-        dob: body.dob ? parseDate(body.dob) : undefined,
-        age: body.age ? Number(body.age) : undefined,
-        married: body.married === true || body.married === 'TRUE' || body.married === 'true',
-        last_modified_user_id: body.last_modified_user_id || 'ADMIN',
-        last_modified_date_time: new Date(),
-      },
+      { $set: updateData },
       { new: true, runValidators: true }
     );
     if (!employee) {

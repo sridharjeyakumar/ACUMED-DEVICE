@@ -329,17 +329,19 @@ export default function CartonTypeMasterPage() {
                     >
                         <Card className="p-4">
                             <div className="flex items-center gap-4">
-                                <div className="flex-1 relative max-w-md">
+                                <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search Carton Type ID, Name, or Shortname..."
+                                        placeholder="Search by Carton Type ID, Name, or Shortname..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10 pr-4 py-2 w-full bg-background border-border"
+                                        className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
-
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                    SHOWING {filteredCartonTypes.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredCartonTypes.length)} OF {filteredCartonTypes.length}
+                                </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <Button variant="outline" size="icon" className="hover:text-foreground">
@@ -418,10 +420,6 @@ export default function CartonTypeMasterPage() {
                                         </div>
                                     </PopoverContent>
                                 </Popover>
-
-                                <span className="text-sm text-muted-foreground">
-                                    SHOWING {filteredCartonTypes.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredCartonTypes.length)} OF {filteredCartonTypes.length}
-                                </span>
                             </div>
                         </Card>
                     </motion.div>
@@ -615,7 +613,7 @@ export default function CartonTypeMasterPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Carton Type</h2>
                                     <button
@@ -627,69 +625,73 @@ export default function CartonTypeMasterPage() {
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Carton Type ID <span className="text-red-500">*</span>
-                                        </label>
-                                        <Input 
-                                            name="carton_type_id" 
-                                            value={formData.carton_type_id} 
-                                            onChange={handleInputChange} 
-                                            placeholder="e.g., PK, ST, SH" 
-                                            required 
-                                            maxLength={2}
-                                            className="uppercase"
-                                        />
-                                        <p className="text-xs text-muted-foreground mt-1">Maximum 2 characters</p>
-                                    </div>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Carton Type ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Carton Type ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="carton_type_id" 
+                                                value={formData.carton_type_id} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., PK, ST, SH" 
+                                                required 
+                                                maxLength={2}
+                                                className="uppercase"
+                                            />
+                                            <p className="text-xs text-muted-foreground mt-1">Maximum 2 characters</p>
+                                        </div>
 
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Carton Type Name <span className="text-red-500">*</span>
-                                        </label>
-                                        <Input 
-                                            name="carton_type_name" 
-                                            value={formData.carton_type_name} 
-                                            onChange={handleInputChange} 
-                                            placeholder="e.g., Packing Carton" 
-                                            required 
-                                            maxLength={100}
-                                        />
-                                    </div>
+                                        {/* Carton Type Name */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Carton Type Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="carton_type_name" 
+                                                value={formData.carton_type_name} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., Packing Carton" 
+                                                required 
+                                                maxLength={100}
+                                            />
+                                        </div>
 
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Carton Type Shortname <span className="text-red-500">*</span>
-                                        </label>
-                                        <Input 
-                                            name="carton_type_shortname" 
-                                            value={formData.carton_type_shortname} 
-                                            onChange={handleInputChange} 
-                                            placeholder="e.g., Packing" 
-                                            required 
-                                            maxLength={50}
-                                        />
-                                    </div>
+                                        {/* Carton Type Shortname */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Carton Type Shortname <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="carton_type_shortname" 
+                                                value={formData.carton_type_shortname} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., Packing" 
+                                                required 
+                                                maxLength={50}
+                                            />
+                                        </div>
 
-                                    <div className="mb-6">
-                                        <div className="flex items-center space-x-2">
+                                        {/* Active */}
+                                        <div className="flex items-center space-x-2 pt-6">
                                             <input
                                                 type="checkbox"
-                                                id="active"
+                                                id="active_add"
                                                 name="active"
                                                 checked={formData.active}
                                                 onChange={handleInputChange}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                             />
-                                            <label htmlFor="active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            <label htmlFor="active_add" className="text-sm font-semibold text-foreground cursor-pointer">
                                                 Active
                                             </label>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6" disabled={isSubmittingRef.current}>
-                                            Save
+                                            Save Carton Type
                                         </Button>
                                     </div>
                                 </form>
@@ -716,7 +718,7 @@ export default function CartonTypeMasterPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Carton Type</h2>
                                     <button
@@ -728,65 +730,69 @@ export default function CartonTypeMasterPage() {
                                 </div>
 
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Carton Type ID <span className="text-red-500">*</span>
-                                        </label>
-                                        <Input 
-                                            name="carton_type_id" 
-                                            value={formData.carton_type_id} 
-                                            onChange={handleInputChange} 
-                                            required 
-                                            disabled
-                                            className="uppercase"
-                                        />
-                                    </div>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Carton Type ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Carton Type ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="carton_type_id" 
+                                                value={formData.carton_type_id} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                                disabled
+                                                className="uppercase"
+                                            />
+                                        </div>
 
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Carton Type Name <span className="text-red-500">*</span>
-                                        </label>
-                                        <Input 
-                                            name="carton_type_name" 
-                                            value={formData.carton_type_name} 
-                                            onChange={handleInputChange} 
-                                            required 
-                                            maxLength={100}
-                                        />
-                                    </div>
+                                        {/* Carton Type Name */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Carton Type Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="carton_type_name" 
+                                                value={formData.carton_type_name} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                                maxLength={100}
+                                            />
+                                        </div>
 
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Carton Type Shortname <span className="text-red-500">*</span>
-                                        </label>
-                                        <Input 
-                                            name="carton_type_shortname" 
-                                            value={formData.carton_type_shortname} 
-                                            onChange={handleInputChange} 
-                                            required 
-                                            maxLength={50}
-                                        />
-                                    </div>
+                                        {/* Carton Type Shortname */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Carton Type Shortname <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="carton_type_shortname" 
+                                                value={formData.carton_type_shortname} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                                maxLength={50}
+                                            />
+                                        </div>
 
-                                    <div className="mb-6">
-                                        <div className="flex items-center space-x-2">
+                                        {/* Active */}
+                                        <div className="flex items-center space-x-2 pt-6">
                                             <input
                                                 type="checkbox"
-                                                id="edit-active"
+                                                id="active_edit"
                                                 name="active"
                                                 checked={formData.active}
                                                 onChange={handleInputChange}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                             />
-                                            <label htmlFor="edit-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            <label htmlFor="active_edit" className="text-sm font-semibold text-foreground cursor-pointer">
                                                 Active
                                             </label>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6" disabled={isSubmittingRef.current}>
-                                            Update
+                                            Update Carton Type
                                         </Button>
                                     </div>
                                 </form>

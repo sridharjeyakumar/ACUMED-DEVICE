@@ -388,7 +388,7 @@ export default function MenuAccessMasterPage() {
                                         className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
-                                <span className="text-sm text-muted-foreground">
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
                                     SHOWING {filteredAccesses.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredAccesses.length)} OF {filteredAccesses.length}
                                 </span>
                                 <Popover>

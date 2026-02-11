@@ -52,6 +52,7 @@ export default function ProductBOMPage() {
         materialId: "",
         inputQty: "",
         inputUom: "",
+        active: true,
     });
 
     // Helper function to convert snake_case to camelCase
@@ -82,9 +83,10 @@ export default function ProductBOMPage() {
             output_qty: data.outputQty === '' || data.outputQty === null ? null : Number(data.outputQty),
             output_uom: data.outputUom,
             material_id: data.materialId,
-            input_qty: Number(data.inputQty),
+            input_qty: data.inputQty ? Number(data.inputQty) : undefined,
             input_uom: data.inputUom,
             active: data.active !== false,
+            last_modified_user_id: "ADMIN",
         };
     };
 
@@ -122,6 +124,7 @@ export default function ProductBOMPage() {
                 materialId: "",
                 inputQty: "",
                 inputUom: "",
+                active: true,
             });
         }
     }, [isAddModalOpen]);
@@ -256,6 +259,7 @@ export default function ProductBOMPage() {
                 materialId: "",
                 inputQty: "",
                 inputUom: "",
+                active: true,
             });
             loadRecords();
         } catch (error: any) {
@@ -279,6 +283,7 @@ export default function ProductBOMPage() {
             materialId: bom.materialId,
             inputQty: bom.inputQty.toString(),
             inputUom: bom.inputUom,
+            active: bom.active !== undefined ? bom.active : true,
         });
         setIsEditModalOpen(true);
     };
@@ -305,6 +310,7 @@ export default function ProductBOMPage() {
                 materialId: "",
                 inputQty: "",
                 inputUom: "",
+                active: true,
             });
             loadRecords();
         } catch (error: any) {
@@ -400,122 +406,99 @@ export default function ProductBOMPage() {
                     >
                         <Card className="p-4">
                             <div className="flex items-center gap-4">
-                                <div className="flex-1 relative max-w-sm">
+                                <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search BOM ID or Desc..."
+                                        placeholder="Search by BOM ID or Description..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10 pr-4 py-2 w-full bg-background border-border"
+                                        className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
-
-                                <div className="flex gap-3">
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
-                                                <span className="text-xs font-medium">
-                                                    {filterProduct === "all" ? "All Products" : filterProduct}
-                                                </span>
-                                                <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                                            </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-56" align="start">
-                                            <div className="space-y-4">
-                                                <div className="space-y-2">
-                                                    <Label className="text-sm font-semibold">Product</Label>
-                                                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                                                        <div className="flex items-center space-x-2">
-                                                            <input 
-                                                                type="radio" 
-                                                                id="bom-product-all" 
-                                                                name="bomProductFilter"
-                                                                checked={filterProduct === "all"}
-                                                                onChange={() => setFilterProduct("all")}
-                                                                className="h-4 w-4"
-                                                            />
-                                                            <Label htmlFor="bom-product-all" className="text-sm font-normal cursor-pointer">All</Label>
-                                                        </div>
-                                                        {uniqueProducts.map((prod) => (
-                                                            <div key={prod} className="flex items-center space-x-2">
-                                                                <input 
-                                                                    type="radio" 
-                                                                    id={`bom-product-${prod}`} 
-                                                                    name="bomProductFilter"
-                                                                    checked={filterProduct === prod}
-                                                                    onChange={() => setFilterProduct(prod)}
-                                                                    className="h-4 w-4"
-                                                                />
-                                                                <Label htmlFor={`bom-product-${prod}`} className="text-sm font-normal cursor-pointer">{prod}</Label>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
-                                                <span className="text-xs font-medium">
-                                                    {filterMaterial === "all" ? "All Materials" : filterMaterial}
-                                                </span>
-                                                <Filter className="w-3 h-3 text-muted-foreground" />
-                                            </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-56" align="start">
-                                            <div className="space-y-4">
-                                                <div className="space-y-2">
-                                                    <Label className="text-sm font-semibold">Material</Label>
-                                                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                                                        <div className="flex items-center space-x-2">
-                                                            <input 
-                                                                type="radio" 
-                                                                id="bom-material-all" 
-                                                                name="bomMaterialFilter"
-                                                                checked={filterMaterial === "all"}
-                                                                onChange={() => setFilterMaterial("all")}
-                                                                className="h-4 w-4"
-                                                            />
-                                                            <Label htmlFor="bom-material-all" className="text-sm font-normal cursor-pointer">All</Label>
-                                                        </div>
-                                                        {uniqueMaterials.map((mat) => (
-                                                            <div key={mat} className="flex items-center space-x-2">
-                                                                <input 
-                                                                    type="radio" 
-                                                                    id={`bom-material-${mat}`} 
-                                                                    name="bomMaterialFilter"
-                                                                    checked={filterMaterial === mat}
-                                                                    onChange={() => setFilterMaterial(mat)}
-                                                                    className="h-4 w-4"
-                                                                />
-                                                                <Label htmlFor={`bom-material-${mat}`} className="text-sm font-normal cursor-pointer">{mat}</Label>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm" 
-                                                    className="w-full"
-                                                    onClick={() => {
-                                                        setFilterProduct("all");
-                                                        setFilterMaterial("all");
-                                                    }}
-                                                >
-                                                    Clear Filters
-                                                </Button>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-
-                                <div className="h-6 w-px bg-border mx-2"></div>
-
-                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-{filteredRecords.length} OF {records.length} RECORDS
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                    SHOWING {filteredRecords.length > 0 ? 1 : 0}-{filteredRecords.length} OF {filteredRecords.length}
                                 </span>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto max-w-4xl p-4" align="end">
+                                        <div className="flex flex-wrap gap-6 items-start">
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Product</Label>
+                                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="bom-product-all" 
+                                                            name="bomProductFilter"
+                                                            checked={filterProduct === "all"}
+                                                            onChange={() => setFilterProduct("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="bom-product-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    {uniqueProducts.map((prod) => (
+                                                        <div key={prod} className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id={`bom-product-${prod}`} 
+                                                                name="bomProductFilter"
+                                                                checked={filterProduct === prod}
+                                                                onChange={() => setFilterProduct(prod)}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor={`bom-product-${prod}`} className="text-sm font-normal cursor-pointer">{prod}</Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Material</Label>
+                                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="bom-material-all" 
+                                                            name="bomMaterialFilter"
+                                                            checked={filterMaterial === "all"}
+                                                            onChange={() => setFilterMaterial("all")}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        <Label htmlFor="bom-material-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    {uniqueMaterials.map((mat) => (
+                                                        <div key={mat} className="flex items-center space-x-2">
+                                                            <input 
+                                                                type="radio" 
+                                                                id={`bom-material-${mat}`} 
+                                                                name="bomMaterialFilter"
+                                                                checked={filterMaterial === mat}
+                                                                onChange={() => setFilterMaterial(mat)}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <Label htmlFor={`bom-material-${mat}`} className="text-sm font-normal cursor-pointer">{mat}</Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => {
+                                                    setFilterProduct("all");
+                                                    setFilterMaterial("all");
+                                                }}
+                                            >
+                                                Clear Filters
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
 
                                 <div className="flex items-center gap-2 ml-auto">
                                     <Button variant="ghost" size="icon" className="text-muted-foreground">
@@ -723,7 +706,7 @@ export default function ProductBOMPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New BOM</h2>
                                     <button
@@ -735,64 +718,151 @@ export default function ProductBOMPage() {
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* BOM ID */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">BOM ID <span className="text-red-500">*</span></label>
-                                            <Input name="bomId" value={formData.bomId} onChange={handleInputChange} placeholder="BOM-XXX-XX" required />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                BOM ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="bomId" 
+                                                value={formData.bomId} 
+                                                onChange={handleInputChange} 
+                                                placeholder="BOM-XXX-XX" 
+                                                required 
+                                            />
                                         </div>
-                                        <div className="col-span-2">
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Description</label>
-                                            <Input name="description" value={formData.description} onChange={handleInputChange} required />
-                                        </div>
-                                    </div>
 
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Line / Subtitle</label>
-                                        <Input name="subtitle" value={formData.subtitle} onChange={handleInputChange} placeholder="e.g. HIGH PRECISION LINE" />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-2">
-                                        <div className="col-span-2">
-                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2 border-b pb-1">Output Configuration</h3>
-                                        </div>
+                                        {/* Description */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Product ID</label>
-                                            <Input name="productId" value={formData.productId} onChange={handleInputChange} placeholder="PRD-XXX-XX" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Description <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="description" 
+                                                value={formData.description} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Output Qty</label>
-                                                <Input type="number" name="outputQty" value={formData.outputQty} onChange={handleInputChange} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">UOM</label>
-                                                <Input name="outputUom" value={formData.outputUom} onChange={handleInputChange} />
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6 mt-4">
-                                        <div className="col-span-2">
-                                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-2 border-b pb-1">Input Material Mapping</h3>
-                                        </div>
+                                        {/* Line / Subtitle */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Material ID</label>
-                                            <Input name="materialId" value={formData.materialId} onChange={handleInputChange} placeholder="MAT-XXX-XX" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Line / Subtitle
+                                            </label>
+                                            <Input 
+                                                name="subtitle" 
+                                                value={formData.subtitle} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g. HIGH PRECISION LINE" 
+                                            />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Input Qty</label>
-                                                <Input type="number" name="inputQty" value={formData.inputQty} onChange={handleInputChange} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">UOM</label>
-                                                <Input name="inputUom" value={formData.inputUom} onChange={handleInputChange} />
-                                            </div>
+
+                                        {/* Product ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="productId" 
+                                                value={formData.productId} 
+                                                onChange={handleInputChange} 
+                                                placeholder="PRD-XXX-XX" 
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* Output Qty */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Output Qty
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                name="outputQty" 
+                                                value={formData.outputQty} 
+                                                onChange={handleInputChange} 
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* Output UOM */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Output UOM <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="outputUom" 
+                                                value={formData.outputUom} 
+                                                onChange={handleInputChange} 
+                                                placeholder="NOS"
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* Material ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Material ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="materialId" 
+                                                value={formData.materialId} 
+                                                onChange={handleInputChange} 
+                                                placeholder="MAT-XXX-XX" 
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* Input Qty */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Input Qty <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                name="inputQty" 
+                                                value={formData.inputQty} 
+                                                onChange={handleInputChange} 
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* Input UOM */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Input UOM <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="inputUom" 
+                                                value={formData.inputUom} 
+                                                onChange={handleInputChange} 
+                                                placeholder="KGS"
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* Active */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="active_add"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="active_add" className="text-sm font-semibold text-foreground">
+                                                Active
+                                            </label>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">
+                                            Save BOM
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
@@ -818,7 +888,7 @@ export default function ProductBOMPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit BOM</h2>
                                     <button
@@ -830,64 +900,150 @@ export default function ProductBOMPage() {
                                 </div>
 
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* BOM ID */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">BOM ID <span className="text-red-500">*</span></label>
-                                            <Input name="bomId" value={formData.bomId} onChange={handleInputChange} placeholder="BOM-XXX-XX" required />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                BOM ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="bomId" 
+                                                value={formData.bomId} 
+                                                onChange={handleInputChange} 
+                                                disabled
+                                            />
                                         </div>
-                                        <div className="col-span-2">
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Description</label>
-                                            <Input name="description" value={formData.description} onChange={handleInputChange} required />
-                                        </div>
-                                    </div>
 
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Line / Subtitle</label>
-                                        <Input name="subtitle" value={formData.subtitle} onChange={handleInputChange} placeholder="e.g. HIGH PRECISION LINE" />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-2">
-                                        <div className="col-span-2">
-                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2 border-b pb-1">Output Configuration</h3>
-                                        </div>
+                                        {/* Description */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Product ID</label>
-                                            <Input name="productId" value={formData.productId} onChange={handleInputChange} placeholder="PRD-XXX-XX" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Description <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="description" 
+                                                value={formData.description} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Output Qty</label>
-                                                <Input type="number" name="outputQty" value={formData.outputQty} onChange={handleInputChange} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">UOM</label>
-                                                <Input name="outputUom" value={formData.outputUom} onChange={handleInputChange} />
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6 mt-4">
-                                        <div className="col-span-2">
-                                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-2 border-b pb-1">Input Material Mapping</h3>
-                                        </div>
+                                        {/* Line / Subtitle */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Material ID</label>
-                                            <Input name="materialId" value={formData.materialId} onChange={handleInputChange} placeholder="MAT-XXX-XX" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Line / Subtitle
+                                            </label>
+                                            <Input 
+                                                name="subtitle" 
+                                                value={formData.subtitle} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g. HIGH PRECISION LINE" 
+                                            />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Input Qty</label>
-                                                <Input type="number" name="inputQty" value={formData.inputQty} onChange={handleInputChange} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">UOM</label>
-                                                <Input name="inputUom" value={formData.inputUom} onChange={handleInputChange} />
-                                            </div>
+
+                                        {/* Product ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="productId" 
+                                                value={formData.productId} 
+                                                onChange={handleInputChange} 
+                                                placeholder="PRD-XXX-XX" 
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* Output Qty */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Output Qty
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                name="outputQty" 
+                                                value={formData.outputQty} 
+                                                onChange={handleInputChange} 
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* Output UOM */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Output UOM <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="outputUom" 
+                                                value={formData.outputUom} 
+                                                onChange={handleInputChange} 
+                                                placeholder="NOS"
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* Material ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Material ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="materialId" 
+                                                value={formData.materialId} 
+                                                onChange={handleInputChange} 
+                                                placeholder="MAT-XXX-XX" 
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* Input Qty */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Input Qty <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                name="inputQty" 
+                                                value={formData.inputQty} 
+                                                onChange={handleInputChange} 
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* Input UOM */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Input UOM <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="inputUom" 
+                                                value={formData.inputUom} 
+                                                onChange={handleInputChange} 
+                                                placeholder="KGS"
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* Active */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="active_edit"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="active_edit" className="text-sm font-semibold text-foreground">
+                                                Active
+                                            </label>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">
+                                            Update BOM
+                                        </Button>
                                     </div>
                                 </form>
                             </div>

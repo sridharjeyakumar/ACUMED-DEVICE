@@ -38,8 +38,16 @@ export async function PUT(
     await ensureConnection();
     const body = await request.json();
     
-    const updateData: any = { ...body };
-    delete updateData.carton_type_id; // Prevent ID change
+    // Helper function to convert empty strings to undefined
+    const cleanValue = (value: any) => (value === '' || value === null) ? undefined : value;
+    
+    const updateData: any = {};
+    
+    // Only include fields that are provided (not undefined)
+    if (body.carton_type_name !== undefined) updateData.carton_type_name = body.carton_type_name;
+    if (body.carton_type_shortname !== undefined) updateData.carton_type_shortname = body.carton_type_shortname;
+    if (body.active !== undefined) updateData.active = body.active !== false;
+    
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
     

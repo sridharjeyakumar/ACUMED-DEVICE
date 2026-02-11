@@ -43,6 +43,7 @@ export default function ProductionCapacityPage() {
         qtyPerMin: "",
         uom: "UNITS",
         avgHrsPerDay: "",
+        active: true,
     });
 
     // Reset form data when Add modal opens
@@ -56,6 +57,7 @@ export default function ProductionCapacityPage() {
                 qtyPerMin: "",
                 uom: "UNITS",
                 avgHrsPerDay: "",
+                active: true,
             });
         }
     }, [isAddModalOpen]);
@@ -103,7 +105,13 @@ export default function ProductionCapacityPage() {
     const uniqueSections = Array.from(new Set(machines.map(m => m.section).filter(s => s)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value, type } = e.target;
+        if (type === 'checkbox') {
+            const checked = (e.target as HTMLInputElement).checked;
+            setFormData({ ...formData, [name]: checked });
+        } else {
+            setFormData({ ...formData, [name]: value });
+        }
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -118,6 +126,7 @@ export default function ProductionCapacityPage() {
             qtyPerMin: "",
             uom: "UNITS",
             avgHrsPerDay: "",
+            active: true,
         });
     };
 
@@ -131,6 +140,7 @@ export default function ProductionCapacityPage() {
             qtyPerMin: machine.qtyPerMin.toString(),
             uom: machine.uom,
             avgHrsPerDay: machine.avgHrsPerDay.toString(),
+            active: machine.active !== undefined ? machine.active : true,
         });
         setIsEditModalOpen(true);
     };
@@ -148,6 +158,7 @@ export default function ProductionCapacityPage() {
             qtyPerMin: "",
             uom: "UNITS",
             avgHrsPerDay: "",
+            active: true,
         });
     };
 
@@ -230,27 +241,26 @@ export default function ProductionCapacityPage() {
                     >
                         <Card className="p-4">
                             <div className="flex items-center gap-4">
-                                <div className="flex-1 relative max-w-md">
+                                <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search Machine ID or Name..."
+                                        placeholder="Search by Machine ID or Name..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10 pr-4 py-2 w-full bg-background border-border"
+                                        className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
-
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                    SHOWING {filteredMachines.length > 0 ? 1 : 0}-{filteredMachines.length} OF {filteredMachines.length}
+                                </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
-                                            <span className="text-sm font-medium">
-                                                {filterUom === "all" ? "All UOM" : filterUom}
-                                            </span>
-                                            <Scale className="w-4 h-4 text-muted-foreground" />
-                                        </button>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-56" align="start">
+                                    <PopoverContent className="w-56" align="end">
                                         <div className="space-y-4">
                                             <div className="space-y-2">
                                                 <Label className="text-sm font-semibold">Unit of Measure</Label>
@@ -326,12 +336,6 @@ export default function ProductionCapacityPage() {
                                         </div>
                                     </PopoverContent>
                                 </Popover>
-
-                                <div className="h-6 w-px bg-border mx-2"></div>
-
-                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    SHOWING 1-{filteredMachines.length} OF {machines.length} MACHINES
-                                </span>
 
                                 <div className="flex items-center gap-2 ml-auto">
                                     <Button variant="ghost" size="icon" className="text-muted-foreground">
@@ -495,7 +499,7 @@ export default function ProductionCapacityPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Machinery</h2>
                                     <button
@@ -507,53 +511,149 @@ export default function ProductionCapacityPage() {
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Machine ID <span className="text-red-500">*</span></label>
-                                            <Input name="machineId" value={formData.machineId} onChange={handleInputChange} placeholder="MAC-XXX" required />
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Machine Information Section */}
+                                        <div className="col-span-2">
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Machine Information
+                                            </h3>
                                         </div>
+
+                                        {/* Machine ID */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
-                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-CODE" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Machine ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="machineId" 
+                                                value={formData.machineId} 
+                                                onChange={handleInputChange} 
+                                                placeholder="MAC-XXX" 
+                                                required 
+                                            />
                                         </div>
-                                    </div>
 
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Machine Name <span className="text-red-500">*</span></label>
-                                        <Input name="machineName" value={formData.machineName} onChange={handleInputChange} required />
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Section / Area</label>
-                                        <Input name="section" value={formData.section} onChange={handleInputChange} placeholder="e.g. SECTION A - PLASTIC COMPONENT" />
-                                    </div>
-
-                                    <div className="grid grid-cols-3 gap-4 mb-6">
+                                        {/* Machine Name */}
                                         <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">Prod Qty / Min</label>
-                                            <Input type="number" name="qtyPerMin" value={formData.qtyPerMin} onChange={handleInputChange} />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Machine Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="machineName" 
+                                                value={formData.machineName} 
+                                                onChange={handleInputChange} 
+                                                placeholder="Enter machine name"
+                                                required 
+                                            />
                                         </div>
+
+                                        {/* Section / Area */}
                                         <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">UOM</label>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Section / Area
+                                            </label>
+                                            <Input 
+                                                name="section" 
+                                                value={formData.section} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g. SECTION A - PLASTIC COMPONENT" 
+                                            />
+                                        </div>
+
+                                        {/* Short Name */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Short Name
+                                            </label>
+                                            <Input 
+                                                name="shortName" 
+                                                value={formData.shortName} 
+                                                onChange={handleInputChange} 
+                                                placeholder="SHORT-CODE" 
+                                            />
+                                        </div>
+
+                                        {/* Capacity Details Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Capacity Details
+                                            </h3>
+                                        </div>
+
+                                        {/* Prod Qty / Min */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Prod Qty / Min
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                name="qtyPerMin" 
+                                                value={formData.qtyPerMin} 
+                                                onChange={handleInputChange} 
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* UOM */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                UOM
+                                            </label>
                                             <select
                                                 name="uom"
                                                 value={formData.uom}
                                                 onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                             >
                                                 <option value="UNITS">UNITS</option>
                                                 <option value="PACKS">PACKS</option>
                                                 <option value="CARTONS">CARTONS</option>
+                                                <option value="NOS">NOS</option>
                                             </select>
                                         </div>
+
+                                        {/* Avg Prod Hrs/Day */}
                                         <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">Avg Prod Hrs/Day</label>
-                                            <Input type="number" step="0.5" name="avgHrsPerDay" value={formData.avgHrsPerDay} onChange={handleInputChange} />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Avg Prod Hrs/Day
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                step="0.5" 
+                                                name="avgHrsPerDay" 
+                                                value={formData.avgHrsPerDay} 
+                                                onChange={handleInputChange} 
+                                                placeholder="0.0"
+                                            />
+                                        </div>
+
+                                        {/* Status Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Status
+                                            </h3>
+                                        </div>
+
+                                        {/* Active */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="active_add"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="active_add" className="text-sm font-semibold text-foreground">
+                                                Active
+                                            </label>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">
+                                            Save Machinery
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
@@ -579,7 +679,7 @@ export default function ProductionCapacityPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Machinery</h2>
                                     <button
@@ -591,53 +691,147 @@ export default function ProductionCapacityPage() {
                                 </div>
 
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-2 gap-6 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Machine ID <span className="text-red-500">*</span></label>
-                                            <Input name="machineId" value={formData.machineId} onChange={handleInputChange} placeholder="MAC-XXX" required />
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Machine Information Section */}
+                                        <div className="col-span-2">
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Machine Information
+                                            </h3>
                                         </div>
+
+                                        {/* Machine ID */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Short Name</label>
-                                            <Input name="shortName" value={formData.shortName} onChange={handleInputChange} placeholder="SHORT-CODE" />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Machine ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="machineId" 
+                                                value={formData.machineId} 
+                                                onChange={handleInputChange} 
+                                                disabled
+                                            />
                                         </div>
-                                    </div>
 
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Machine Name <span className="text-red-500">*</span></label>
-                                        <Input name="machineName" value={formData.machineName} onChange={handleInputChange} required />
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Section / Area</label>
-                                        <Input name="section" value={formData.section} onChange={handleInputChange} placeholder="e.g. SECTION A - PLASTIC COMPONENT" />
-                                    </div>
-
-                                    <div className="grid grid-cols-3 gap-4 mb-6">
+                                        {/* Machine Name */}
                                         <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">Prod Qty / Min</label>
-                                            <Input type="number" name="qtyPerMin" value={formData.qtyPerMin} onChange={handleInputChange} />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Machine Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="machineName" 
+                                                value={formData.machineName} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
                                         </div>
+
+                                        {/* Section / Area */}
                                         <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">UOM</label>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Section / Area
+                                            </label>
+                                            <Input 
+                                                name="section" 
+                                                value={formData.section} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g. SECTION A - PLASTIC COMPONENT" 
+                                            />
+                                        </div>
+
+                                        {/* Short Name */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Short Name
+                                            </label>
+                                            <Input 
+                                                name="shortName" 
+                                                value={formData.shortName} 
+                                                onChange={handleInputChange} 
+                                                placeholder="SHORT-CODE" 
+                                            />
+                                        </div>
+
+                                        {/* Capacity Details Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Capacity Details
+                                            </h3>
+                                        </div>
+
+                                        {/* Prod Qty / Min */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Prod Qty / Min
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                name="qtyPerMin" 
+                                                value={formData.qtyPerMin} 
+                                                onChange={handleInputChange} 
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* UOM */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                UOM
+                                            </label>
                                             <select
                                                 name="uom"
                                                 value={formData.uom}
                                                 onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                             >
                                                 <option value="UNITS">UNITS</option>
                                                 <option value="PACKS">PACKS</option>
                                                 <option value="CARTONS">CARTONS</option>
+                                                <option value="NOS">NOS</option>
                                             </select>
                                         </div>
+
+                                        {/* Avg Prod Hrs/Day */}
                                         <div>
-                                            <label className="block text-xs font-semibold text-foreground mb-2">Avg Prod Hrs/Day</label>
-                                            <Input type="number" step="0.5" name="avgHrsPerDay" value={formData.avgHrsPerDay} onChange={handleInputChange} />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Avg Prod Hrs/Day
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                step="0.5" 
+                                                name="avgHrsPerDay" 
+                                                value={formData.avgHrsPerDay} 
+                                                onChange={handleInputChange} 
+                                                placeholder="0.0"
+                                            />
+                                        </div>
+
+                                        {/* Status Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Status
+                                            </h3>
+                                        </div>
+
+                                        {/* Active */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="active_edit"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="active_edit" className="text-sm font-semibold text-foreground">
+                                                Active
+                                            </label>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">
+                                            Update Machinery
+                                        </Button>
                                     </div>
                                 </form>
                             </div>

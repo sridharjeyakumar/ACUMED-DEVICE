@@ -153,7 +153,18 @@ export default function PackSizeMasterPage() {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
-            await packSizeAPI.create(formData);
+            // Format the data before sending
+            const formattedData: any = {
+                pack_size_id: formData.pack_size_id,
+                pack_size_name: formData.pack_size_name,
+                pack_size_short_name: formData.pack_size_short_name,
+                qty_per_carton: formData.qty_per_carton ? Number(formData.qty_per_carton) : undefined,
+                uom: formData.uom,
+                active: formData.active,
+                last_modified_user_id: "ADMIN",
+            };
+
+            await packSizeAPI.create(formattedData);
             toast({
                 title: "Success",
                 description: "Pack Size created successfully",
@@ -198,7 +209,17 @@ export default function PackSizeMasterPage() {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
-            await packSizeAPI.update(selectedPackSize!.pack_size_id, formData);
+            // Format the data before sending
+            const formattedData: any = {
+                pack_size_name: formData.pack_size_name,
+                pack_size_short_name: formData.pack_size_short_name,
+                qty_per_carton: formData.qty_per_carton ? Number(formData.qty_per_carton) : undefined,
+                uom: formData.uom,
+                active: formData.active,
+                last_modified_user_id: "ADMIN",
+            };
+
+            await packSizeAPI.update(selectedPackSize!.pack_size_id, formattedData);
             toast({
                 title: "Success",
                 description: "Pack Size updated successfully",
@@ -572,7 +593,7 @@ export default function PackSizeMasterPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Pack Size</h2>
                                     <button
@@ -584,6 +605,13 @@ export default function PackSizeMasterPage() {
                                 </div>
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6">
+                                        {/* Basic Information Section */}
+                                        <div className="col-span-2">
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Basic Information
+                                            </h3>
+                                        </div>
+
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Pack Size ID <span className="text-red-500">*</span>
@@ -620,6 +648,14 @@ export default function PackSizeMasterPage() {
                                                 required
                                             />
                                         </div>
+
+                                        {/* Capacity Details Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Capacity Details
+                                            </h3>
+                                        </div>
+
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Qty Per Carton <span className="text-red-500">*</span>
@@ -682,7 +718,7 @@ export default function PackSizeMasterPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Pack Size</h2>
                                     <button
@@ -694,6 +730,13 @@ export default function PackSizeMasterPage() {
                                 </div>
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6">
+                                        {/* Basic Information Section */}
+                                        <div className="col-span-2">
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Basic Information
+                                            </h3>
+                                        </div>
+
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Pack Size ID <span className="text-red-500">*</span>
@@ -727,6 +770,14 @@ export default function PackSizeMasterPage() {
                                                 required
                                             />
                                         </div>
+
+                                        {/* Capacity Details Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Capacity Details
+                                            </h3>
+                                        </div>
+
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Qty Per Carton <span className="text-red-500">*</span>

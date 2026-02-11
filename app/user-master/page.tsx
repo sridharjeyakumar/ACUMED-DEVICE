@@ -391,7 +391,7 @@ export default function UserMasterPage() {
                                         className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
-                                <span className="text-sm text-muted-foreground">
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
                                     SHOWING {filteredUsers.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredUsers.length)} OF {filteredUsers.length}
                                 </span>
                                 <Popover>
@@ -677,40 +677,94 @@ export default function UserMasterPage() {
                     <>
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => handleCancelClick('add')} />
                         <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New User</h2>
                                     <button onClick={() => handleCancelClick('add')} className="text-white hover:bg-blue-700 rounded-lg p-2"><X className="w-6 h-6" /></button>
                                 </div>
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">User ID <span className="text-red-500">*</span></label>
-                                        <Input name="user_id" value={formData.user_id} onChange={handleInputChange} placeholder="e.g., E1001" required maxLength={10} />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Employee ID <span className="text-red-500">*</span></label>
-                                        <Input name="employee_id" value={formData.employee_id} onChange={handleInputChange} placeholder="e.g., E1001" required maxLength={5} />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Role ID <span className="text-red-500">*</span></label>
-                                        <Input name="role_id" value={formData.role_id} onChange={handleInputChange} placeholder="e.g., ADM, MGR, OPR" required maxLength={3} />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Password <span className="text-red-500">*</span></label>
-                                        <Input type="password" name="password" value={formData.password} onChange={handleInputChange} required />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Password Expiry Days</label>
-                                        <Input type="number" name="password_expiry_days" value={formData.password_expiry_days} onChange={handleInputChange} min="0" max="999" />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" name="active" checked={formData.active} onChange={handleInputChange} className="w-4 h-4 text-blue-600" />
-                                            <span className="text-sm font-medium">Active</span>
-                                        </label>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                User ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="user_id" 
+                                                value={formData.user_id} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., E1001" 
+                                                required 
+                                                maxLength={10} 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Employee ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="employee_id" 
+                                                value={formData.employee_id} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., E1001" 
+                                                required 
+                                                maxLength={5} 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Role ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="role_id" 
+                                                value={formData.role_id} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., ADM, MGR, OPR" 
+                                                required 
+                                                maxLength={3} 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Password <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                type="password" 
+                                                name="password" 
+                                                value={formData.password} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Password Expiry Days
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                name="password_expiry_days" 
+                                                value={formData.password_expiry_days} 
+                                                onChange={handleInputChange} 
+                                                min="0" 
+                                                max="999" 
+                                            />
+                                        </div>
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input 
+                                                type="checkbox" 
+                                                name="active" 
+                                                checked={formData.active} 
+                                                onChange={handleInputChange} 
+                                                className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                                            />
+                                            <label className="text-sm font-semibold text-foreground">
+                                                Active
+                                            </label>
+                                        </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save User</Button>
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">
+                                            Save User
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
@@ -725,40 +779,91 @@ export default function UserMasterPage() {
                     <>
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => handleCancelClick('edit')} />
                         <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit User</h2>
                                     <button onClick={() => handleCancelClick('edit')} className="text-white hover:bg-blue-700 rounded-lg p-2"><X className="w-6 h-6" /></button>
                                 </div>
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">User ID <span className="text-red-500">*</span></label>
-                                        <Input name="user_id" value={formData.user_id} onChange={handleInputChange} required disabled />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Employee ID <span className="text-red-500">*</span></label>
-                                        <Input name="employee_id" value={formData.employee_id} onChange={handleInputChange} required />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Role ID <span className="text-red-500">*</span></label>
-                                        <Input name="role_id" value={formData.role_id} onChange={handleInputChange} placeholder="e.g., ADM, MGR, OPR" required maxLength={3} />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">New Password</label>
-                                        <Input type="password" name="password" value={formData.password} onChange={handleInputChange} placeholder="Leave blank to keep current password" />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Password Expiry Days</label>
-                                        <Input type="number" name="password_expiry_days" value={formData.password_expiry_days} onChange={handleInputChange} min="0" max="999" />
-                                    </div>
-                                    <div className="mb-6">
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" name="active" checked={formData.active} onChange={handleInputChange} className="w-4 h-4 text-blue-600" />
-                                            <span className="text-sm font-medium">Active</span>
-                                        </label>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                User ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="user_id" 
+                                                value={formData.user_id} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                                disabled 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Employee ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="employee_id" 
+                                                value={formData.employee_id} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Role ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="role_id" 
+                                                value={formData.role_id} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., ADM, MGR, OPR" 
+                                                required 
+                                                maxLength={3} 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                New Password
+                                            </label>
+                                            <Input 
+                                                type="password" 
+                                                name="password" 
+                                                value={formData.password} 
+                                                onChange={handleInputChange} 
+                                                placeholder="Leave blank to keep current password" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Password Expiry Days
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                name="password_expiry_days" 
+                                                value={formData.password_expiry_days} 
+                                                onChange={handleInputChange} 
+                                                min="0" 
+                                                max="999" 
+                                            />
+                                        </div>
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input 
+                                                type="checkbox" 
+                                                name="active" 
+                                                checked={formData.active} 
+                                                onChange={handleInputChange} 
+                                                className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                                            />
+                                            <label className="text-sm font-semibold text-foreground">
+                                                Active
+                                            </label>
+                                        </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update User</Button>
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">
+                                            Update User
+                                        </Button>
                                     </div>
                                 </form>
                             </div>

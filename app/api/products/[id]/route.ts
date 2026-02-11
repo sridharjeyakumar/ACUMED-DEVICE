@@ -61,20 +61,34 @@ export async function PUT(
     await ensureDbConnection();
     const body = await request.json();
     
-    const updateData: any = {
-      ...body,
-      weight_per_piece: body.weight_per_piece ? Number(body.weight_per_piece) : undefined,
-      wipes_per_kg: body.wipes_per_kg ? Number(body.wipes_per_kg) : undefined,
-      shelf_life_in_months: body.shelf_life_in_months ? Number(body.shelf_life_in_months) : undefined,
-      safety_stock_qty: body.safety_stock_qty ? Number(body.safety_stock_qty) : undefined,
-      qc_required: body.qc_required === true || body.qc_required === "true",
-      sterilization_required: body.sterilization_required === true || body.sterilization_required === "true",
-      last_modified_user_id: body.last_modified_user_id || 'ADMIN',
-      last_modified_date_time: new Date(),
-    };
+    // Helper function to convert empty strings to undefined
+    const cleanValue = (value: any) => (value === '' || value === null) ? undefined : value;
     
-    // Remove product_id from update data to prevent changing it
-    delete updateData.product_id;
+    const updateData: any = {};
+    
+    // Only include fields that are provided (not undefined)
+    if (body.product_name !== undefined) updateData.product_name = body.product_name;
+    if (body.product_shortname !== undefined) updateData.product_shortname = body.product_shortname;
+    if (body.uom !== undefined) updateData.uom = body.uom;
+    if (body.product_category_id !== undefined) updateData.product_category_id = cleanValue(body.product_category_id);
+    if (body.product_spec !== undefined) updateData.product_spec = cleanValue(body.product_spec);
+    if (body.weight_per_piece !== undefined) updateData.weight_per_piece = body.weight_per_piece ? Number(body.weight_per_piece) : undefined;
+    if (body.weight_uom !== undefined) updateData.weight_uom = cleanValue(body.weight_uom);
+    if (body.wipes_per_kg !== undefined) updateData.wipes_per_kg = body.wipes_per_kg ? Number(body.wipes_per_kg) : undefined;
+    if (body.shelf_life_in_months !== undefined) updateData.shelf_life_in_months = body.shelf_life_in_months ? Number(body.shelf_life_in_months) : undefined;
+    if (body.storage_condition !== undefined) updateData.storage_condition = cleanValue(body.storage_condition);
+    if (body.safety_stock_qty !== undefined) updateData.safety_stock_qty = body.safety_stock_qty ? Number(body.safety_stock_qty) : undefined;
+    if (body.default_pack_size_id !== undefined) updateData.default_pack_size_id = cleanValue(body.default_pack_size_id);
+    if (body.batch_no_pattern !== undefined) updateData.batch_no_pattern = cleanValue(body.batch_no_pattern);
+    if (body.product_image !== undefined) updateData.product_image = cleanValue(body.product_image);
+    if (body.product_image_icon !== undefined) updateData.product_image_icon = cleanValue(body.product_image_icon);
+    if (body.qc_required !== undefined) updateData.qc_required = body.qc_required === true || body.qc_required === "true";
+    if (body.coa_checklist_id !== undefined) updateData.coa_checklist_id = cleanValue(body.coa_checklist_id);
+    if (body.sterilization_required !== undefined) updateData.sterilization_required = body.sterilization_required === true || body.sterilization_required === "true";
+    if (body.active !== undefined) updateData.active = body.active !== false;
+    
+    updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
+    updateData.last_modified_date_time = new Date();
     
     const product = await ProductMaster.findOneAndUpdate(
       { product_id: id },
@@ -137,6 +151,7 @@ export async function DELETE(
     );
   }
 }
+
 
 
 

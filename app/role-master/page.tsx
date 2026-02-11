@@ -336,7 +336,7 @@ export default function RoleMasterPage() {
                                         className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
-                                <span className="text-sm text-muted-foreground">
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
                                     SHOWING {filteredRoles.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredRoles.length)} OF {filteredRoles.length}
                                 </span>
                                 <Popover>
@@ -590,7 +590,7 @@ export default function RoleMasterPage() {
                                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
                                     className="fixed inset-0 z-50 flex items-center justify-center p-4"
                                 >
-                                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                         <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                             <h2 className="text-2xl font-bold">Add New Role</h2>
                                             <button
@@ -685,7 +685,7 @@ export default function RoleMasterPage() {
                                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
                                     className="fixed inset-0 z-50 flex items-center justify-center p-4"
                                 >
-                                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                         <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                             <h2 className="text-2xl font-bold">Edit Role</h2>
                                             <button

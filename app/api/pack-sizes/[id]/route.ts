@@ -61,15 +61,20 @@ export async function PUT(
     await ensureDbConnection();
     const body = await request.json();
     
-    const updateData: any = {
-      ...body,
-      qty_per_carton: body.qty_per_carton ? Number(body.qty_per_carton) : undefined,
-      last_modified_user_id: body.last_modified_user_id || 'ADMIN',
-      last_modified_date_time: new Date(),
-    };
+    // Helper function to convert empty strings to undefined
+    const cleanValue = (value: any) => (value === '' || value === null) ? undefined : value;
     
-    // Remove pack_size_id from update data to prevent changing it
-    delete updateData.pack_size_id;
+    const updateData: any = {};
+    
+    // Only include fields that are provided (not undefined)
+    if (body.pack_size_name !== undefined) updateData.pack_size_name = body.pack_size_name;
+    if (body.pack_size_short_name !== undefined) updateData.pack_size_short_name = body.pack_size_short_name;
+    if (body.qty_per_carton !== undefined) updateData.qty_per_carton = body.qty_per_carton ? Number(body.qty_per_carton) : undefined;
+    if (body.uom !== undefined) updateData.uom = body.uom;
+    if (body.active !== undefined) updateData.active = body.active !== false;
+    
+    updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
+    updateData.last_modified_date_time = new Date();
     
     const packSize = await PackSizeMaster.findOneAndUpdate(
       { pack_size_id: id },
@@ -132,6 +137,7 @@ export async function DELETE(
     );
   }
 }
+
 
 
 

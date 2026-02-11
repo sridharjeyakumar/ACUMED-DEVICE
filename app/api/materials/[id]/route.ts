@@ -61,25 +61,36 @@ export async function PUT(
     await ensureDbConnection();
     const body = await request.json();
     
-    // Handle "??" values for lead time - convert to null
+    // Helper function to convert empty strings to undefined
+    const cleanValue = (value: any) => (value === '' || value === null) ? undefined : value;
+    
+    // Handle "??" values for lead time - convert to null/undefined
     const leadTimeMin = body.lead_time_days_min === "??" || body.lead_time_days_min === "" ? null : body.lead_time_days_min;
     const leadTimeMax = body.lead_time_days_max === "??" || body.lead_time_days_max === "" ? null : body.lead_time_days_max;
     
-    const updateData: any = {
-      ...body,
-      lead_time_days_min: leadTimeMin ? Number(leadTimeMin) : undefined,
-      lead_time_days_max: leadTimeMax ? Number(leadTimeMax) : undefined,
-      safety_stock_qty: body.safety_stock_qty ? Number(body.safety_stock_qty) : undefined,
-      re_order_qty: body.re_order_qty ? Number(body.re_order_qty) : undefined,
-      min_order_qty: body.min_order_qty ? Number(body.min_order_qty) : undefined,
-      shelf_life_in_months: body.shelf_life_in_months ? Number(body.shelf_life_in_months) : undefined,
-      qc_required: body.qc_required === true || body.qc_required === "true",
-      last_modified_user_id: body.last_modified_user_id || 'ADMIN',
-      last_modified_date_time: new Date(),
-    };
+    const updateData: any = {};
     
-    // Remove material_id from update data to prevent changing it
-    delete updateData.material_id;
+    // Only include fields that are provided (not undefined)
+    if (body.material_name !== undefined) updateData.material_name = body.material_name;
+    if (body.material_short_name !== undefined) updateData.material_short_name = body.material_short_name;
+    if (body.uom !== undefined) updateData.uom = body.uom;
+    if (body.material_category_id !== undefined) updateData.material_category_id = cleanValue(body.material_category_id);
+    if (body.material_type !== undefined) updateData.material_type = body.material_type;
+    if (body.material_spec !== undefined) updateData.material_spec = cleanValue(body.material_spec);
+    if (body.safety_stock_qty !== undefined) updateData.safety_stock_qty = body.safety_stock_qty ? Number(body.safety_stock_qty) : undefined;
+    if (body.re_order_qty !== undefined) updateData.re_order_qty = body.re_order_qty ? Number(body.re_order_qty) : undefined;
+    if (body.min_order_qty !== undefined) updateData.min_order_qty = body.min_order_qty ? Number(body.min_order_qty) : undefined;
+    if (body.lead_time_days_min !== undefined) updateData.lead_time_days_min = leadTimeMin ? Number(leadTimeMin) : null;
+    if (body.lead_time_days_max !== undefined) updateData.lead_time_days_max = leadTimeMax ? Number(leadTimeMax) : null;
+    if (body.shelf_life_in_months !== undefined) updateData.shelf_life_in_months = body.shelf_life_in_months ? Number(body.shelf_life_in_months) : undefined;
+    if (body.qc_required !== undefined) updateData.qc_required = body.qc_required === true || body.qc_required === "true";
+    if (body.coa_checklist_id !== undefined) updateData.coa_checklist_id = cleanValue(body.coa_checklist_id);
+    if (body.material_image !== undefined) updateData.material_image = cleanValue(body.material_image);
+    if (body.material_image_icon !== undefined) updateData.material_image_icon = cleanValue(body.material_image_icon);
+    if (body.active !== undefined) updateData.active = body.active !== false;
+    
+    updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
+    updateData.last_modified_date_time = new Date();
     
     const material = await MaterialMaster.findOneAndUpdate(
       { material_id: id },
@@ -142,6 +153,7 @@ export async function DELETE(
     );
   }
 }
+
 
 
 

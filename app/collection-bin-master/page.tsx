@@ -47,6 +47,7 @@ export default function CollectionBinMasterPage() {
         color: "",
         tareWeightKg: "",
         grossCapacityKg: "",
+        active: true,
     });
 
     // Helper function to convert snake_case to camelCase
@@ -74,9 +75,10 @@ export default function CollectionBinMasterPage() {
             bin_short_name: data.binShortName,
             bin_type: data.binType,
             color: data.color,
-            tare_weight_kg: Number(data.tareWeightKg),
-            gross_capacity_kg: Number(data.grossCapacityKg),
+            tare_weight_kg: data.tareWeightKg ? Number(data.tareWeightKg) : undefined,
+            gross_capacity_kg: data.grossCapacityKg ? Number(data.grossCapacityKg) : undefined,
             active: data.active !== false,
+            last_modified_user_id: "ADMIN",
         };
     };
 
@@ -112,6 +114,7 @@ export default function CollectionBinMasterPage() {
                 color: "",
                 tareWeightKg: "",
                 grossCapacityKg: "",
+                active: true,
             });
         }
     }, [isAddModalOpen]);
@@ -147,6 +150,7 @@ export default function CollectionBinMasterPage() {
                 color: "",
                 tareWeightKg: "",
                 grossCapacityKg: "",
+                active: true,
             });
             loadRecords();
         } catch (error: any) {
@@ -168,6 +172,7 @@ export default function CollectionBinMasterPage() {
             color: bin.color,
             tareWeightKg: bin.tareWeightKg.toString(),
             grossCapacityKg: bin.grossCapacityKg.toString(),
+            active: bin.active !== undefined ? bin.active : true,
         });
         setIsEditModalOpen(true);
     };
@@ -192,6 +197,7 @@ export default function CollectionBinMasterPage() {
                 color: "",
                 tareWeightKg: "",
                 grossCapacityKg: "",
+                active: true,
             });
             loadRecords();
         } catch (error: any) {
@@ -287,27 +293,26 @@ export default function CollectionBinMasterPage() {
                     >
                         <Card className="p-4">
                             <div className="flex items-center gap-4">
-                                <div className="flex-1 relative max-w-sm">
+                                <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search Bin ID or Name..."
+                                        placeholder="Search by Bin ID or Name..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10 pr-4 py-2 w-full bg-background border-border"
+                                        className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
-
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                    {loading ? "LOADING..." : `SHOWING ${filteredRecords.length > 0 ? 1 : 0}-${filteredRecords.length} OF ${filteredRecords.length}`}
+                                </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer w-40 justify-between">
-                                            <span className="text-sm font-medium">
-                                                {filterBinType === "all" ? "All Bin Types" : filterBinType}
-                                            </span>
-                                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                                        </button>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-56" align="start">
+                                    <PopoverContent className="w-56" align="end">
                                         <div className="space-y-4">
                                             <div className="space-y-2">
                                                 <Label className="text-sm font-semibold">Bin Type</Label>
@@ -358,12 +363,6 @@ export default function CollectionBinMasterPage() {
                                         </div>
                                     </PopoverContent>
                                 </Popover>
-
-                                <div className="h-6 w-px bg-border mx-2"></div>
-
-                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    {loading ? "LOADING..." : `SHOWING 1-${filteredRecords.length} OF ${records.length} RECORDS`}
-                                </span>
                             </div>
                         </Card>
                     </motion.div>
@@ -546,7 +545,7 @@ export default function CollectionBinMasterPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Bin</h2>
                                     <button
@@ -558,53 +557,135 @@ export default function CollectionBinMasterPage() {
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin ID <span className="text-red-500">*</span></label>
-                                        <Input name="binId" value={formData.binId} onChange={handleInputChange} placeholder="e.g., 1, 2, 91" required />
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Name <span className="text-red-500">*</span></label>
-                                        <Input name="binName" value={formData.binName} onChange={handleInputChange} placeholder="e.g., Product collection Bin 1" required />
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Short Name <span className="text-red-500">*</span></label>
-                                        <Input name="binShortName" value={formData.binShortName} onChange={handleInputChange} placeholder="e.g., Bin 1" required />
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Type <span className="text-red-500">*</span></label>
-                                        <select
-                                            name="binType"
-                                            value={formData.binType}
-                                            onChange={handleInputChange}
-                                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                            required
-                                        >
-                                            <option value="Normal">Normal</option>
-                                            <option value="Rejected">Rejected</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Color <span className="text-red-500">*</span></label>
-                                        <Input name="color" value={formData.color} onChange={handleInputChange} placeholder="e.g., Blue, Red" required />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-6 mb-6">
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Bin ID */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Tare Weight (KG) <span className="text-red-500">*</span></label>
-                                            <Input type="number" step="0.01" name="tareWeightKg" value={formData.tareWeightKg} onChange={handleInputChange} required />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Bin ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="binId" 
+                                                value={formData.binId} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., 1, 2, 91" 
+                                                required 
+                                            />
                                         </div>
+
+                                        {/* Bin Name */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Gross Capacity (KG) <span className="text-red-500">*</span></label>
-                                            <Input type="number" step="0.01" name="grossCapacityKg" value={formData.grossCapacityKg} onChange={handleInputChange} required />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Bin Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="binName" 
+                                                value={formData.binName} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., Product collection Bin 1" 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Bin Short Name */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Bin Short Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="binShortName" 
+                                                value={formData.binShortName} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., Bin 1" 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Bin Type */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Bin Type <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="binType"
+                                                value={formData.binType}
+                                                onChange={handleInputChange}
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                required
+                                            >
+                                                <option value="Normal">Normal</option>
+                                                <option value="Rejected">Rejected</option>
+                                                <option value="GENERAL">GENERAL</option>
+                                                <option value="HAZARDOUS">HAZARDOUS</option>
+                                                <option value="RECYCLABLE">RECYCLABLE</option>
+                                                <option value="SCRAP">SCRAP</option>
+                                                <option value="REWORK">REWORK</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Color */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Color <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="color" 
+                                                value={formData.color} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., Blue, Red" 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Tare Weight (KG) */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Tare Weight (KG) <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                step="0.01" 
+                                                name="tareWeightKg" 
+                                                value={formData.tareWeightKg} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Gross Capacity (KG) */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Gross Capacity (KG) <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                step="0.01" 
+                                                name="grossCapacityKg" 
+                                                value={formData.grossCapacityKg} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Active */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="active_add"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="active_add" className="text-sm font-semibold text-foreground">
+                                                Active
+                                            </label>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">
+                                            Save Bin
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
@@ -630,7 +711,7 @@ export default function CollectionBinMasterPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Bin</h2>
                                     <button
@@ -642,53 +723,131 @@ export default function CollectionBinMasterPage() {
                                 </div>
 
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin ID <span className="text-red-500">*</span></label>
-                                        <Input name="binId" value={formData.binId} onChange={handleInputChange} disabled />
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Name <span className="text-red-500">*</span></label>
-                                        <Input name="binName" value={formData.binName} onChange={handleInputChange} required />
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Short Name <span className="text-red-500">*</span></label>
-                                        <Input name="binShortName" value={formData.binShortName} onChange={handleInputChange} required />
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Bin Type <span className="text-red-500">*</span></label>
-                                        <select
-                                            name="binType"
-                                            value={formData.binType}
-                                            onChange={handleInputChange}
-                                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                            required
-                                        >
-                                            <option value="Normal">Normal</option>
-                                            <option value="Rejected">Rejected</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Color <span className="text-red-500">*</span></label>
-                                        <Input name="color" value={formData.color} onChange={handleInputChange} required />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-6 mb-6">
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Bin ID */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Tare Weight (KG) <span className="text-red-500">*</span></label>
-                                            <Input type="number" step="0.01" name="tareWeightKg" value={formData.tareWeightKg} onChange={handleInputChange} required />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Bin ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="binId" 
+                                                value={formData.binId} 
+                                                onChange={handleInputChange} 
+                                                disabled 
+                                            />
                                         </div>
+
+                                        {/* Bin Name */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Gross Capacity (KG) <span className="text-red-500">*</span></label>
-                                            <Input type="number" step="0.01" name="grossCapacityKg" value={formData.grossCapacityKg} onChange={handleInputChange} required />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Bin Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="binName" 
+                                                value={formData.binName} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Bin Short Name */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Bin Short Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="binShortName" 
+                                                value={formData.binShortName} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Bin Type */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Bin Type <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="binType"
+                                                value={formData.binType}
+                                                onChange={handleInputChange}
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                required
+                                            >
+                                                <option value="Normal">Normal</option>
+                                                <option value="Rejected">Rejected</option>
+                                                <option value="GENERAL">GENERAL</option>
+                                                <option value="HAZARDOUS">HAZARDOUS</option>
+                                                <option value="RECYCLABLE">RECYCLABLE</option>
+                                                <option value="SCRAP">SCRAP</option>
+                                                <option value="REWORK">REWORK</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Color */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Color <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="color" 
+                                                value={formData.color} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Tare Weight (KG) */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Tare Weight (KG) <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                step="0.01" 
+                                                name="tareWeightKg" 
+                                                value={formData.tareWeightKg} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Gross Capacity (KG) */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Gross Capacity (KG) <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                type="number" 
+                                                step="0.01" 
+                                                name="grossCapacityKg" 
+                                                value={formData.grossCapacityKg} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Active */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="active_edit"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="active_edit" className="text-sm font-semibold text-foreground">
+                                                Active
+                                            </label>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">
+                                            Update Bin
+                                        </Button>
                                     </div>
                                 </form>
                             </div>

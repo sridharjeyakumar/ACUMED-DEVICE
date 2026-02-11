@@ -203,7 +203,32 @@ export default function ProductMasterPage() {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
-            await productAPI.create(formData);
+            // Format the data before sending
+            const formattedData: any = {
+                product_id: formData.product_id,
+                product_name: formData.product_name,
+                product_shortname: formData.product_shortname,
+                uom: formData.uom,
+                product_category_id: formData.product_category_id || undefined,
+                product_spec: formData.product_spec || undefined,
+                weight_per_piece: formData.weight_per_piece ? Number(formData.weight_per_piece) : undefined,
+                weight_uom: formData.weight_uom || undefined,
+                wipes_per_kg: formData.wipes_per_kg ? Number(formData.wipes_per_kg) : undefined,
+                shelf_life_in_months: formData.shelf_life_in_months ? Number(formData.shelf_life_in_months) : undefined,
+                storage_condition: formData.storage_condition || undefined,
+                safety_stock_qty: formData.safety_stock_qty ? Number(formData.safety_stock_qty) : undefined,
+                default_pack_size_id: formData.default_pack_size_id || undefined,
+                batch_no_pattern: formData.batch_no_pattern || undefined,
+                product_image: formData.product_image || undefined,
+                product_image_icon: formData.product_image_icon || undefined,
+                qc_required: formData.qc_required,
+                coa_checklist_id: formData.coa_checklist_id || undefined,
+                sterilization_required: formData.sterilization_required,
+                active: formData.active,
+                last_modified_user_id: "ADMIN",
+            };
+
+            await productAPI.create(formattedData);
             toast({
                 title: "Success",
                 description: "Product created successfully",
@@ -276,7 +301,31 @@ export default function ProductMasterPage() {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
-            await productAPI.update(selectedProduct!.product_id, formData);
+            // Format the data before sending
+            const formattedData: any = {
+                product_name: formData.product_name,
+                product_shortname: formData.product_shortname,
+                uom: formData.uom,
+                product_category_id: formData.product_category_id || undefined,
+                product_spec: formData.product_spec || undefined,
+                weight_per_piece: formData.weight_per_piece ? Number(formData.weight_per_piece) : undefined,
+                weight_uom: formData.weight_uom || undefined,
+                wipes_per_kg: formData.wipes_per_kg ? Number(formData.wipes_per_kg) : undefined,
+                shelf_life_in_months: formData.shelf_life_in_months ? Number(formData.shelf_life_in_months) : undefined,
+                storage_condition: formData.storage_condition || undefined,
+                safety_stock_qty: formData.safety_stock_qty ? Number(formData.safety_stock_qty) : undefined,
+                default_pack_size_id: formData.default_pack_size_id || undefined,
+                batch_no_pattern: formData.batch_no_pattern || undefined,
+                product_image: formData.product_image || undefined,
+                product_image_icon: formData.product_image_icon || undefined,
+                qc_required: formData.qc_required,
+                coa_checklist_id: formData.coa_checklist_id || undefined,
+                sterilization_required: formData.sterilization_required,
+                active: formData.active,
+                last_modified_user_id: "ADMIN",
+            };
+
+            await productAPI.update(selectedProduct!.product_id, formattedData);
             toast({
                 title: "Success",
                 description: "Product updated successfully",
@@ -799,7 +848,7 @@ export default function ProductMasterPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Product</h2>
                                     <button
@@ -811,6 +860,14 @@ export default function ProductMasterPage() {
                                 </div>
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6">
+                                        {/* Product Information Section */}
+                                        <div className="col-span-2">
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Product Information
+                                            </h3>
+                                        </div>
+
+                                        {/* Product ID */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Product ID <span className="text-red-500">*</span>
@@ -823,6 +880,8 @@ export default function ProductMasterPage() {
                                                 required
                                             />
                                         </div>
+
+                                        {/* Product Name */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Product Name <span className="text-red-500">*</span>
@@ -835,6 +894,8 @@ export default function ProductMasterPage() {
                                                 required
                                             />
                                         </div>
+
+                                        {/* Product Shortname */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Product Shortname <span className="text-red-500">*</span>
@@ -847,6 +908,8 @@ export default function ProductMasterPage() {
                                                 required
                                             />
                                         </div>
+
+                                        {/* UOM */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 UOM <span className="text-red-500">*</span>
@@ -861,7 +924,269 @@ export default function ProductMasterPage() {
                                                 <option value="NOS">NOS</option>
                                                 <option value="KG">KG</option>
                                                 <option value="GMS">GMS</option>
+                                                <option value="PCS">PCS</option>
+                                                <option value="BOX">BOX</option>
+                                                <option value="CARTON">CARTON</option>
                                             </select>
+                                        </div>
+
+                                        {/* Product Category ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Category ID
+                                            </label>
+                                            <Input
+                                                name="product_category_id"
+                                                value={formData.product_category_id}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter category ID"
+                                            />
+                                        </div>
+
+                                        {/* Specifications Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Specifications
+                                            </h3>
+                                        </div>
+
+                                        {/* Product Spec */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Spec
+                                            </label>
+                                            <Input
+                                                name="product_spec"
+                                                value={formData.product_spec}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter product specification"
+                                            />
+                                        </div>
+
+                                        {/* Weight Per Piece */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Weight Per Piece
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                name="weight_per_piece"
+                                                value={formData.weight_per_piece}
+                                                onChange={handleInputChange}
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+
+                                        {/* Weight UOM */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Weight UOM
+                                            </label>
+                                            <select
+                                                name="weight_uom"
+                                                value={formData.weight_uom}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="GMS">GMS</option>
+                                                <option value="KG">KG</option>
+                                                <option value="MG">MG</option>
+                                                <option value="">-</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Wipes Per KG */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Wipes Per KG
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="wipes_per_kg"
+                                                value={formData.wipes_per_kg}
+                                                onChange={handleInputChange}
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* Inventory & Storage Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Inventory & Storage
+                                            </h3>
+                                        </div>
+
+                                        {/* Shelf Life In Months */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Shelf Life In Months
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="shelf_life_in_months"
+                                                value={formData.shelf_life_in_months}
+                                                onChange={handleInputChange}
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* Storage Condition */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Storage Condition
+                                            </label>
+                                            <Input
+                                                name="storage_condition"
+                                                value={formData.storage_condition}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter storage condition"
+                                            />
+                                        </div>
+
+                                        {/* Safety Stock Qty */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Safety Stock Qty
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="safety_stock_qty"
+                                                value={formData.safety_stock_qty}
+                                                onChange={handleInputChange}
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* Default Pack Size ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Default Pack Size ID
+                                            </label>
+                                            <Input
+                                                name="default_pack_size_id"
+                                                value={formData.default_pack_size_id}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter pack size ID"
+                                            />
+                                        </div>
+
+                                        {/* Batch No. Pattern */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Batch No. Pattern
+                                            </label>
+                                            <Input
+                                                name="batch_no_pattern"
+                                                value={formData.batch_no_pattern}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter batch number pattern"
+                                            />
+                                        </div>
+
+                                        {/* Quality Control Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Quality Control
+                                            </h3>
+                                        </div>
+
+                                        {/* QC Required */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="qc_required_add"
+                                                name="qc_required"
+                                                checked={formData.qc_required}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="qc_required_add" className="text-sm font-semibold text-foreground">
+                                                QC Required
+                                            </label>
+                                        </div>
+
+                                        {/* COA Checklist ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                COA Checklist ID
+                                            </label>
+                                            <Input
+                                                name="coa_checklist_id"
+                                                value={formData.coa_checklist_id}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter COA checklist ID"
+                                            />
+                                        </div>
+
+                                        {/* Sterilization Required */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="sterilization_required_add"
+                                                name="sterilization_required"
+                                                checked={formData.sterilization_required}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="sterilization_required_add" className="text-sm font-semibold text-foreground">
+                                                Sterilization Required
+                                            </label>
+                                        </div>
+
+                                        {/* Images Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Images
+                                            </h3>
+                                        </div>
+
+                                        {/* Product Image */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Image
+                                            </label>
+                                            <Input
+                                                name="product_image"
+                                                value={formData.product_image}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter image URL or path"
+                                            />
+                                        </div>
+
+                                        {/* Product Image Icon */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Image Icon
+                                            </label>
+                                            <Input
+                                                name="product_image_icon"
+                                                value={formData.product_image_icon}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter icon URL or path"
+                                            />
+                                        </div>
+
+                                        {/* Status Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Status
+                                            </h3>
+                                        </div>
+
+                                        {/* Active */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="active_add"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="active_add" className="text-sm font-semibold text-foreground">
+                                                Active
+                                            </label>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
@@ -896,7 +1221,7 @@ export default function ProductMasterPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Product</h2>
                                     <button
@@ -908,6 +1233,14 @@ export default function ProductMasterPage() {
                                 </div>
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6">
+                                        {/* Product Information Section */}
+                                        <div className="col-span-2">
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Product Information
+                                            </h3>
+                                        </div>
+
+                                        {/* Product ID */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Product ID <span className="text-red-500">*</span>
@@ -919,6 +1252,8 @@ export default function ProductMasterPage() {
                                                 disabled
                                             />
                                         </div>
+
+                                        {/* Product Name */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Product Name <span className="text-red-500">*</span>
@@ -927,8 +1262,303 @@ export default function ProductMasterPage() {
                                                 name="product_name"
                                                 value={formData.product_name}
                                                 onChange={handleInputChange}
+                                                placeholder="Enter product name"
                                                 required
                                             />
+                                        </div>
+
+                                        {/* Product Shortname */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Shortname <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="product_shortname"
+                                                value={formData.product_shortname}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter shortname"
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* UOM */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                UOM <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="uom"
+                                                value={formData.uom}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                required
+                                            >
+                                                <option value="NOS">NOS</option>
+                                                <option value="KG">KG</option>
+                                                <option value="GMS">GMS</option>
+                                                <option value="PCS">PCS</option>
+                                                <option value="BOX">BOX</option>
+                                                <option value="CARTON">CARTON</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Product Category ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Category ID
+                                            </label>
+                                            <Input
+                                                name="product_category_id"
+                                                value={formData.product_category_id}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter category ID"
+                                            />
+                                        </div>
+
+                                        {/* Specifications Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Specifications
+                                            </h3>
+                                        </div>
+
+                                        {/* Product Spec */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Spec
+                                            </label>
+                                            <Input
+                                                name="product_spec"
+                                                value={formData.product_spec}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter product specification"
+                                            />
+                                        </div>
+
+                                        {/* Weight Per Piece */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Weight Per Piece
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                name="weight_per_piece"
+                                                value={formData.weight_per_piece}
+                                                onChange={handleInputChange}
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+
+                                        {/* Weight UOM */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Weight UOM
+                                            </label>
+                                            <select
+                                                name="weight_uom"
+                                                value={formData.weight_uom}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="GMS">GMS</option>
+                                                <option value="KG">KG</option>
+                                                <option value="MG">MG</option>
+                                                <option value="">-</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Wipes Per KG */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Wipes Per KG
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="wipes_per_kg"
+                                                value={formData.wipes_per_kg}
+                                                onChange={handleInputChange}
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* Inventory & Storage Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Inventory & Storage
+                                            </h3>
+                                        </div>
+
+                                        {/* Shelf Life In Months */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Shelf Life In Months
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="shelf_life_in_months"
+                                                value={formData.shelf_life_in_months}
+                                                onChange={handleInputChange}
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* Storage Condition */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Storage Condition
+                                            </label>
+                                            <Input
+                                                name="storage_condition"
+                                                value={formData.storage_condition}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter storage condition"
+                                            />
+                                        </div>
+
+                                        {/* Safety Stock Qty */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Safety Stock Qty
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="safety_stock_qty"
+                                                value={formData.safety_stock_qty}
+                                                onChange={handleInputChange}
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* Default Pack Size ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Default Pack Size ID
+                                            </label>
+                                            <Input
+                                                name="default_pack_size_id"
+                                                value={formData.default_pack_size_id}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter pack size ID"
+                                            />
+                                        </div>
+
+                                        {/* Batch No. Pattern */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Batch No. Pattern
+                                            </label>
+                                            <Input
+                                                name="batch_no_pattern"
+                                                value={formData.batch_no_pattern}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter batch number pattern"
+                                            />
+                                        </div>
+
+                                        {/* Quality Control Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Quality Control
+                                            </h3>
+                                        </div>
+
+                                        {/* QC Required */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="qc_required_edit"
+                                                name="qc_required"
+                                                checked={formData.qc_required}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="qc_required_edit" className="text-sm font-semibold text-foreground">
+                                                QC Required
+                                            </label>
+                                        </div>
+
+                                        {/* COA Checklist ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                COA Checklist ID
+                                            </label>
+                                            <Input
+                                                name="coa_checklist_id"
+                                                value={formData.coa_checklist_id}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter COA checklist ID"
+                                            />
+                                        </div>
+
+                                        {/* Sterilization Required */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="sterilization_required_edit"
+                                                name="sterilization_required"
+                                                checked={formData.sterilization_required}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="sterilization_required_edit" className="text-sm font-semibold text-foreground">
+                                                Sterilization Required
+                                            </label>
+                                        </div>
+
+                                        {/* Images Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Images
+                                            </h3>
+                                        </div>
+
+                                        {/* Product Image */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Image
+                                            </label>
+                                            <Input
+                                                name="product_image"
+                                                value={formData.product_image}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter image URL or path"
+                                            />
+                                        </div>
+
+                                        {/* Product Image Icon */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Image Icon
+                                            </label>
+                                            <Input
+                                                name="product_image_icon"
+                                                value={formData.product_image_icon}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter icon URL or path"
+                                            />
+                                        </div>
+
+                                        {/* Status Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                Status
+                                            </h3>
+                                        </div>
+
+                                        {/* Active */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="active_edit"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="active_edit" className="text-sm font-semibold text-foreground">
+                                                Active
+                                            </label>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">

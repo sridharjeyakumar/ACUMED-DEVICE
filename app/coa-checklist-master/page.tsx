@@ -34,6 +34,7 @@ export default function COAChecklistMasterPage() {
     const [formData, setFormData] = useState({
         checklistId: "",
         checklistDescription: "",
+        active: true,
     });
 
     // Helper function to convert snake_case to camelCase
@@ -54,6 +55,7 @@ export default function COAChecklistMasterPage() {
             checklist_id: data.checklistId,
             checklist_description: data.checklistDescription,
             active: data.active !== false,
+            last_modified_user_id: "ADMIN",
         };
     };
 
@@ -84,6 +86,7 @@ export default function COAChecklistMasterPage() {
             setFormData({
                 checklistId: "",
                 checklistDescription: "",
+                active: true,
             });
         }
     }, [isAddModalOpen]);
@@ -111,6 +114,7 @@ export default function COAChecklistMasterPage() {
             setFormData({
                 checklistId: "",
                 checklistDescription: "",
+                active: true,
             });
             loadRecords();
         } catch (error: any) {
@@ -127,6 +131,7 @@ export default function COAChecklistMasterPage() {
         setFormData({
             checklistId: checklist.checklistId,
             checklistDescription: checklist.checklistDescription,
+            active: checklist.active !== undefined ? checklist.active : true,
         });
         setIsEditModalOpen(true);
     };
@@ -146,6 +151,7 @@ export default function COAChecklistMasterPage() {
             setFormData({
                 checklistId: "",
                 checklistDescription: "",
+                active: true,
             });
             loadRecords();
         } catch (error: any) {
@@ -241,22 +247,36 @@ export default function COAChecklistMasterPage() {
                     >
                         <Card className="p-4">
                             <div className="flex items-center gap-4">
-                                <div className="flex-1 relative max-w-sm">
+                                <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search Checklist ID or Description..."
+                                        placeholder="Search by Checklist ID or Description..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10 pr-4 py-2 w-full bg-background border-border"
+                                        className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
-
-                                <div className="h-6 w-px bg-border mx-2"></div>
-
-                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    {loading ? "LOADING..." : `SHOWING 1-${filteredRecords.length} OF ${records.length} RECORDS`}
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                    {loading ? "LOADING..." : `SHOWING ${filteredRecords.length > 0 ? 1 : 0}-${filteredRecords.length} OF ${filteredRecords.length}`}
                                 </span>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon" className="hover:text-foreground">
+                                            <Filter className="w-4 h-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80 p-0" align="end">
+                                        <div className="p-4 border-b border-border">
+                                            <h3 className="font-semibold text-sm text-foreground">Filters</h3>
+                                        </div>
+                                        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                                            <div className="text-sm text-muted-foreground">
+                                                No filters available
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </Card>
                     </motion.div>
@@ -399,7 +419,7 @@ export default function COAChecklistMasterPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add New Checklist</h2>
                                     <button
@@ -411,18 +431,55 @@ export default function COAChecklistMasterPage() {
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Checklist ID <span className="text-red-500">*</span></label>
-                                        <Input name="checklistId" value={formData.checklistId} onChange={handleInputChange} placeholder="e.g., CL01, CL02" required />
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Checklist ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Checklist ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="checklistId" 
+                                                value={formData.checklistId} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., CL01, CL02" 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Checklist Description */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Checklist Description <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="checklistDescription" 
+                                                value={formData.checklistDescription} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g., DUVET - QC - Checklist" 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Active */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="active_add"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="active_add" className="text-sm font-semibold text-foreground">
+                                                Active
+                                            </label>
+                                        </div>
                                     </div>
 
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Checklist Description <span className="text-red-500">*</span></label>
-                                        <Input name="checklistDescription" value={formData.checklistDescription} onChange={handleInputChange} placeholder="e.g., DUVET - QC - Checklist" required />
-                                    </div>
-
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save</Button>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">
+                                            Save Checklist
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
@@ -448,7 +505,7 @@ export default function COAChecklistMasterPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Checklist</h2>
                                     <button
@@ -460,18 +517,53 @@ export default function COAChecklistMasterPage() {
                                 </div>
 
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Checklist ID <span className="text-red-500">*</span></label>
-                                        <Input name="checklistId" value={formData.checklistId} onChange={handleInputChange} disabled />
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Checklist ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Checklist ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="checklistId" 
+                                                value={formData.checklistId} 
+                                                onChange={handleInputChange} 
+                                                disabled 
+                                            />
+                                        </div>
+
+                                        {/* Checklist Description */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Checklist Description <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input 
+                                                name="checklistDescription" 
+                                                value={formData.checklistDescription} 
+                                                onChange={handleInputChange} 
+                                                required 
+                                            />
+                                        </div>
+
+                                        {/* Active */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="active_edit"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="active_edit" className="text-sm font-semibold text-foreground">
+                                                Active
+                                            </label>
+                                        </div>
                                     </div>
 
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Checklist Description <span className="text-red-500">*</span></label>
-                                        <Input name="checklistDescription" value={formData.checklistDescription} onChange={handleInputChange} required />
-                                    </div>
-
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update</Button>
+                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">
+                                            Update Checklist
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
