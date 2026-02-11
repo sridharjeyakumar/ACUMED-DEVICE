@@ -66,7 +66,7 @@ export default function PackSizeMasterPage() {
     });
 
     // Load pack sizes from API
-    const loadPackSizes = async () => {
+    const loadPackSizes = useCallback(async () => {
         try {
             setLoading(true);
             const data = await packSizeAPI.getAll();
