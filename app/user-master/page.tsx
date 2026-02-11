@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -88,10 +88,6 @@ export default function UserMasterPage() {
         active: true,
     });
 
-    useEffect(() => {
-        loadAllData();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -99,7 +95,7 @@ export default function UserMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadAllData = async () => {
+    const loadAllData = useCallback(async () => {
         try {
             setLoading(true);
             const [usersData, rolesData] = await Promise.all([
@@ -127,7 +123,11 @@ export default function UserMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadAllData();
+    }, [loadAllData]);
 
     // Create lookup map for roles
     const roleMap = new Map(roles.map(r => [r.roll_id, r.roll_description]));

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, memo, useCallback, useRef, useEffect } from "react";
+import Image from "next/image";
 import {
   LayoutDashboard,
   Building2,
@@ -202,7 +203,7 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
         {/* Logo */}
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Acumed Devices Logo" className="w-10 h-10 object-contain" />
+            <Image src="/logo.png" alt="Acumed Devices Logo" width={40} height={40} className="object-contain" />
             <div>
               <h1 className="font-semibold text-foreground text-sm">ACUMED DEVICES</h1>
               <p className="text-[10px] text-sidebar-muted leading-tight">Production & Inventory Management System</p>

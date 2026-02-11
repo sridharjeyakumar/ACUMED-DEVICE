@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,10 +70,6 @@ export default function WeeklyOffMasterPage() {
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
-    useEffect(() => {
-        loadWeeklyOffs();
-    }, []);
-
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -81,7 +77,7 @@ export default function WeeklyOffMasterPage() {
         }
     }, [isAddModalOpen]);
 
-    const loadWeeklyOffs = async () => {
+    const loadWeeklyOffs = useCallback(async () => {
         try {
             setLoading(true);
             const data = await weeklyOffAPI.getAll();
@@ -95,7 +91,11 @@ export default function WeeklyOffMasterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadWeeklyOffs();
+    }, [loadWeeklyOffs]);
 
     const [formData, setFormData] = useState({
         week_off_id: "",
