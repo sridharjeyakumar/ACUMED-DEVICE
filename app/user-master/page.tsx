@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, User } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
-import { userAPI, roleAPI } from "@/services/api";
+import { userAPI, roleAPI, employeeAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -72,6 +72,7 @@ export default function UserMasterPage() {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [roles, setRoles] = useState<any[]>([]);
+    const [employees, setEmployees] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterActive, setFilterActive] = useState<string>("all");
     const [filterRole, setFilterRole] = useState<string>("all");
@@ -98,9 +99,10 @@ export default function UserMasterPage() {
     const loadAllData = useCallback(async () => {
         try {
             setLoading(true);
-            const [usersData, rolesData] = await Promise.all([
+            const [usersData, rolesData, employeesData] = await Promise.all([
                 userAPI.getAll(),
                 roleAPI.getAll(),
+                employeeAPI.getAll(),
             ]);
             setUsers(usersData.map((u: any) => ({
                 user_id: u.user_id,
@@ -114,6 +116,7 @@ export default function UserMasterPage() {
                 active: u.active !== false,
             })));
             setRoles(rolesData);
+            setEmployees(employeesData || []);
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -159,9 +162,14 @@ export default function UserMasterPage() {
 
     const uniqueRoles = Array.from(new Set(users.map(u => u.role_id).filter(r => r)));
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type, checked } = e.target;
-        setFormData({ ...formData, [name]: type === "checkbox" ? checked : value });
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value, type } = e.target;
+        if (type === "checkbox") {
+            const checked = (e.target as HTMLInputElement).checked;
+            setFormData({ ...formData, [name]: checked });
+        } else {
+            setFormData({ ...formData, [name]: value });
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -701,27 +709,43 @@ export default function UserMasterPage() {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Employee ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="employee_id" 
-                                                value={formData.employee_id} 
-                                                onChange={handleInputChange} 
-                                                placeholder="e.g., E1001" 
-                                                required 
-                                                maxLength={5} 
-                                            />
+                                            <select
+                                                name="employee_id"
+                                                value={formData.employee_id}
+                                                onChange={handleInputChange}
+                                                required
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            >
+                                                <option value="">Select Employee ID</option>
+                                                {employees
+                                                    .filter((emp: any) => emp.active !== false)
+                                                    .map((emp: any) => (
+                                                        <option key={emp.emp_id || emp._id} value={emp.emp_id}>
+                                                            {emp.emp_id} - {emp.emp_name || emp.empName || ''}
+                                                        </option>
+                                                    ))}
+                                            </select>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Role ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="role_id" 
-                                                value={formData.role_id} 
-                                                onChange={handleInputChange} 
-                                                placeholder="e.g., ADM, MGR, OPR" 
-                                                required 
-                                                maxLength={3} 
-                                            />
+                                            <select
+                                                name="role_id"
+                                                value={formData.role_id}
+                                                onChange={handleInputChange}
+                                                required
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            >
+                                                <option value="">Select Role ID</option>
+                                                {roles
+                                                    .filter((role: any) => role.active !== false)
+                                                    .map((role: any) => (
+                                                        <option key={role.roll_id || role.role_id} value={role.roll_id || role.role_id}>
+                                                            {role.roll_id || role.role_id} - {role.roll_description || role.role_description || ''}
+                                                        </option>
+                                                    ))}
+                                            </select>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
@@ -802,25 +826,43 @@ export default function UserMasterPage() {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Employee ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="employee_id" 
-                                                value={formData.employee_id} 
-                                                onChange={handleInputChange} 
-                                                required 
-                                            />
+                                            <select
+                                                name="employee_id"
+                                                value={formData.employee_id}
+                                                onChange={handleInputChange}
+                                                required
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            >
+                                                <option value="">Select Employee ID</option>
+                                                {employees
+                                                    .filter((emp: any) => emp.active !== false)
+                                                    .map((emp: any) => (
+                                                        <option key={emp.emp_id || emp._id} value={emp.emp_id}>
+                                                            {emp.emp_id} - {emp.emp_name || emp.empName || ''}
+                                                        </option>
+                                                    ))}
+                                            </select>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Role ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="role_id" 
-                                                value={formData.role_id} 
-                                                onChange={handleInputChange} 
-                                                placeholder="e.g., ADM, MGR, OPR" 
-                                                required 
-                                                maxLength={3} 
-                                            />
+                                            <select
+                                                name="role_id"
+                                                value={formData.role_id}
+                                                onChange={handleInputChange}
+                                                required
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            >
+                                                <option value="">Select Role ID</option>
+                                                {roles
+                                                    .filter((role: any) => role.active !== false)
+                                                    .map((role: any) => (
+                                                        <option key={role.roll_id || role.role_id} value={role.roll_id || role.role_id}>
+                                                            {role.roll_id || role.role_id} - {role.roll_description || role.role_description || ''}
+                                                        </option>
+                                                    ))}
+                                            </select>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
