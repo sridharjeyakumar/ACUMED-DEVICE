@@ -45,15 +45,6 @@ async function seedCOAChecklistDetail() {
       console.log('Created CL02');
     }
 
-    // Check if data already exists
-    const existingCount = await COAChecklistDetailMaster.countDocuments();
-    if (existingCount > 0) {
-      console.log(`\nFound ${existingCount} existing COA Checklist Detail records.`);
-      console.log('To avoid duplicates, please delete existing records first or modify this script.');
-      console.log('You can delete all records using: DELETE /api/coa-checklist-details');
-      return;
-    }
-
     const currentDate = new Date();
 
     // Seed COA Checklist Detail data based on the image
@@ -116,22 +107,45 @@ async function seedCOAChecklistDetail() {
       },
     ];
 
-    // Insert the data
-    await COAChecklistDetailMaster.insertMany(checklistDetailData);
-    console.log(`\n✅ Successfully inserted ${checklistDetailData.length} COA Checklist Detail records`);
+    // Check for existing records and only insert new ones
+    let insertedCount = 0;
+    let skippedCount = 0;
 
-    // Display summary
-    console.log('\n📊 Summary:');
-    console.log('CL01 - 3 parameters:');
-    console.log('  1. Perforation - Ok');
-    console.log('  2. Both Side Open Cut - Ok');
-    console.log('  3. Weight - Ok');
-    console.log('\nCL02 - 3 parameters:');
-    console.log('  1. Color - Ok');
-    console.log('  2. No Damage - Ok');
-    console.log('  3. Correct Weight - Ok');
+    for (const data of checklistDetailData) {
+      const existing = await COAChecklistDetailMaster.findOne({
+        checklist_id: data.checklist_id,
+        checklist_sno: data.checklist_sno,
+      });
 
-    console.log('\n✅ COA Checklist Detail data has been seeded successfully!');
+      if (existing) {
+        console.log(`⏭️  Skipping existing record: ${data.checklist_id} - ${data.checklist_sno}`);
+        skippedCount++;
+      } else {
+        const newRecord = new COAChecklistDetailMaster(data);
+        await newRecord.save();
+        console.log(`✅ Added: ${data.checklist_id} - ${data.checklist_sno} (${data.checklist_parameter})`);
+        insertedCount++;
+      }
+    }
+
+    console.log(`\n📊 Summary:`);
+    console.log(`   ✅ Inserted: ${insertedCount} new records`);
+    console.log(`   ⏭️  Skipped: ${skippedCount} existing records`);
+    console.log(`   📝 Total: ${checklistDetailData.length} records processed`);
+
+    if (insertedCount > 0) {
+      console.log('\n📋 Data added:');
+      console.log('CL01 - 3 parameters:');
+      console.log('  1. Perforation - Ok');
+      console.log('  2. Both Side Open Cut - Ok');
+      console.log('  3. Weight - Ok');
+      console.log('\nCL02 - 3 parameters:');
+      console.log('  1. Color - Ok');
+      console.log('  2. No Damage - Ok');
+      console.log('  3. Correct Weight - Ok');
+    }
+
+    console.log('\n✅ COA Checklist Detail data seeding completed!');
     process.exit(0);
   } catch (error: any) {
     console.error('❌ Error seeding COA Checklist Detail data:', error);
@@ -144,4 +158,5 @@ async function seedCOAChecklistDetail() {
 
 // Run the script
 seedCOAChecklistDetail();
+
 
