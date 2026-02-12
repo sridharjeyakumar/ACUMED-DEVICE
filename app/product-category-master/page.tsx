@@ -366,27 +366,27 @@ export default function ProductCategoryMasterPage() {
                                         <tr className="bg-gray-100 border-b border-border">
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>product</span>
-                                                    <span>category_id</span>
+                                                    <span>Product</span>
+                                                    <span>Category Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>product</span>
-                                                    <span>category</span>
-                                                    <span>name</span>
+                                                    <span>Product</span>
+                                                    <span>Category</span>
+                                                    <span>Name</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>user id</span>
+                                                    <span>Last Modified</span>
+                                                    <span>User Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>date & time</span>
+                                                    <span>Last Modified</span>
+                                                    <span>Date & Time</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import PackSizeMaster from '@/server/models/PackSizeMaster';
+import { safeNumber } from '@/utils/numberUtils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -69,7 +70,7 @@ export async function PUT(
     // Only include fields that are provided (not undefined)
     if (body.pack_size_name !== undefined) updateData.pack_size_name = body.pack_size_name;
     if (body.pack_size_short_name !== undefined) updateData.pack_size_short_name = body.pack_size_short_name;
-    if (body.qty_per_carton !== undefined) updateData.qty_per_carton = body.qty_per_carton ? Number(body.qty_per_carton) : undefined;
+    if (body.qty_per_carton !== undefined) updateData.qty_per_carton = safeNumber(body.qty_per_carton) || undefined;
     if (body.uom !== undefined) updateData.uom = body.uom;
     if (body.active !== undefined) updateData.active = body.active !== false;
     

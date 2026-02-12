@@ -580,110 +580,110 @@ export default function ProductMasterPage() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">product_id</th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">product_name</th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">product_shortname</th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">uom</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Product Id</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Product Name</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Product Shortname</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Uom</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>product</span>
-                                                    <span>category id</span>
+                                                    <span>Product</span>
+                                                    <span>Category Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>product</span>
-                                                    <span>spec</span>
+                                                    <span>Product</span>
+                                                    <span>Spec</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>weight</span>
-                                                    <span>per piece</span>
+                                                    <span>Weight</span>
+                                                    <span>Per Piece</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>weight</span>
-                                                    <span>uom</span>
+                                                    <span>Weight</span>
+                                                    <span>Uom</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>wipes</span>
-                                                    <span>per KG</span>
+                                                    <span>Wipes</span>
+                                                    <span>Per Kg</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>shelf life</span>
-                                                    <span>in months</span>
+                                                    <span>Shelf Life</span>
+                                                    <span>In Months</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>storage</span>
-                                                    <span>condition</span>
+                                                    <span>Storage</span>
+                                                    <span>Condition</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>safety stock</span>
-                                                    <span>qty</span>
+                                                    <span>Safety Stock</span>
+                                                    <span>Qty</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>default pack</span>
-                                                    <span>size id</span>
+                                                    <span>Default Pack</span>
+                                                    <span>Size Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>batch no.</span>
-                                                    <span>pattern</span>
+                                                    <span>Batch No.</span>
+                                                    <span>Pattern</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>product</span>
-                                                    <span>image</span>
+                                                    <span>Product</span>
+                                                    <span>Image</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>product image</span>
-                                                    <span>icon</span>
+                                                    <span>Product Image</span>
+                                                    <span>Icon</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>QC</span>
-                                                    <span>required</span>
+                                                    <span>Qc</span>
+                                                    <span>Required</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>COA</span>
-                                                    <span>checklist_id</span>
+                                                    <span>Coa</span>
+                                                    <span>Checklist Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
                                                     <span>Sterilization</span>
-                                                    <span>required</span>
+                                                    <span>Required</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>user id</span>
+                                                    <span>Last Modified</span>
+                                                    <span>User Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>date & time</span>
+                                                    <span>Last Modified</span>
+                                                    <span>Date & Time</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>

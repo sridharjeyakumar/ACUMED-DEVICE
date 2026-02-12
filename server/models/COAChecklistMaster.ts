@@ -1,11 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICOAChecklistMaster extends Document {
-  checklist_id: string; // Char(10) - PK (e.g., "CL01", "CL02")
-  checklist_description: string; // Char(200) (e.g., "DUVET - QC - Checklist")
+  checklist_id: string; // Char(10) - PK
+  checklist_description: string; // Char(500)
+  active: boolean; // Boolean
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
-  active: boolean; // Boolean
 }
 
 const COAChecklistMasterSchema: Schema = new Schema({
@@ -15,14 +15,19 @@ const COAChecklistMasterSchema: Schema = new Schema({
     unique: true,
     maxlength: 10,
     trim: true,
-    uppercase: true,
     index: true,
   },
   checklist_description: {
     type: String,
     required: true,
-    maxlength: 200,
+    maxlength: 500,
     trim: true,
+  },
+  active: {
+    type: Boolean,
+    required: true,
+    default: true,
+    index: true,
   },
   last_modified_user_id: {
     type: String,
@@ -34,17 +39,13 @@ const COAChecklistMasterSchema: Schema = new Schema({
     type: Date,
     required: false,
   },
-  active: {
-    type: Boolean,
-    required: true,
-    default: true,
-  },
 }, {
   timestamps: true,
+  collection: 'coachecklistmasters', // Explicitly set collection name to match existing database
 });
 
-// Add indexes for better query performance
-COAChecklistMasterSchema.index({ active: 1 }); // For filtering by active status
+// Create indexes
+COAChecklistMasterSchema.index({ active: 1 });
 
 const COAChecklistMaster = (mongoose.models.COAChecklistMaster as mongoose.Model<ICOAChecklistMaster>) || 
   mongoose.model<ICOAChecklistMaster>('COAChecklistMaster', COAChecklistMasterSchema);

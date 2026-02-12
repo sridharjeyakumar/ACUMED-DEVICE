@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,20 +38,6 @@ export default function DailyProductionRecordPage() {
         numberOfPacks: "",
         avgProdHrs: "",
     });
-
-    // Reset form data when Add modal opens
-    useEffect(() => {
-        if (isAddModalOpen) {
-            setFormData({
-                batchNo: "",
-                date: "",
-                productId: "",
-                packSizeId: "",
-                numberOfPacks: "",
-                avgProdHrs: "",
-            });
-        }
-    }, [isAddModalOpen]);
 
     const records: DailyRecord[] = [
         {
@@ -318,15 +304,15 @@ export default function DailyProductionRecordPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">BATCH NO</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">DATE</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">PRODUCT ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">PACK SIZE ID</th>
-                                            <th className="text-right px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">NO. OF PACKS</th>
-                                            <th className="text-right px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">AVG PROD HRS</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Batch No</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Date</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Product Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Pack Size Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">No. Of Packs</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Avg Prod Hrs</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -467,6 +453,7 @@ export default function DailyProductionRecordPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save Record</Button>
                                     </div>
                                 </form>
@@ -530,6 +517,7 @@ export default function DailyProductionRecordPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update Record</Button>
                                     </div>
                                 </form>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import MaterialMaster from '@/server/models/MaterialMaster';
+import { safeNumber } from '@/utils/numberUtils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,12 +38,12 @@ export async function POST(request: NextRequest) {
     
     const material = new MaterialMaster({ 
       ...body,
-      lead_time_days_min: leadTimeMin ? Number(leadTimeMin) : undefined,
-      lead_time_days_max: leadTimeMax ? Number(leadTimeMax) : undefined,
-      safety_stock_qty: body.safety_stock_qty ? Number(body.safety_stock_qty) : undefined,
-      re_order_qty: body.re_order_qty ? Number(body.re_order_qty) : undefined,
-      min_order_qty: body.min_order_qty ? Number(body.min_order_qty) : undefined,
-      shelf_life_in_months: body.shelf_life_in_months ? Number(body.shelf_life_in_months) : undefined,
+      lead_time_days_min: safeNumber(leadTimeMin) || undefined,
+      lead_time_days_max: safeNumber(leadTimeMax) || undefined,
+      safety_stock_qty: safeNumber(body.safety_stock_qty) || undefined,
+      re_order_qty: safeNumber(body.re_order_qty) || undefined,
+      min_order_qty: safeNumber(body.min_order_qty) || undefined,
+      shelf_life_in_months: safeNumber(body.shelf_life_in_months) || undefined,
       qc_required: body.qc_required === true || body.qc_required === "true",
       active: body.active !== undefined ? body.active : true,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
@@ -70,6 +71,8 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+
 
 
 

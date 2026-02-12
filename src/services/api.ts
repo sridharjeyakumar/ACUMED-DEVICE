@@ -212,6 +212,15 @@ export const productBOMAPI = {
   delete: (id: string) => fetchAPI(`/product-bom/${id}`, { method: 'DELETE' }),
 };
 
+// Employee Master API
+export const employeeAPI = {
+  getAll: () => fetchAPI('/employees'),
+  getById: (id: string) => fetchAPI(`/employees/${id}`),
+  create: (data: any) => fetchAPI('/employees', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/employees/${id}`, { method: 'DELETE' }),
+};
+
 // Collection Bin Master API
 export const collectionBinAPI = {
   getAll: () => fetchAPI('/collection-bins'),
@@ -233,18 +242,14 @@ export const coaChecklistAPI = {
 // COA Checklist Detail API
 export const coaChecklistDetailAPI = {
   getAll: () => fetchAPI('/coa-checklist-details'),
-  getByChecklistId: (checklistId: string) => fetchAPI(`/coa-checklist-details/${checklistId}`),
+  getById: (id: string) => fetchAPI(`/coa-checklist-details/${id}`),
   create: (data: any) => fetchAPI('/coa-checklist-details', { method: 'POST', body: JSON.stringify(data) }),
-  update: (checklistId: string, sno: number, data: any) => fetchAPI(`/coa-checklist-details/${checklistId}/${sno}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (checklistId: string, sno: number) => fetchAPI(`/coa-checklist-details/${checklistId}/${sno}`, { method: 'DELETE' }),
-};
-
-// Employee Master API
-export const employeeAPI = {
-  getAll: () => fetchAPI('/employees'),
-  getById: (id: string) => fetchAPI(`/employees/${id}`),
-  create: (data: any) => fetchAPI('/employees', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: any) => fetchAPI(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id: string) => fetchAPI(`/employees/${id}`, { method: 'DELETE' }),
+  update: (checklistId: string, checklistSno: number, data: any) => 
+    fetchAPI('/coa-checklist-details', { 
+      method: 'PUT', 
+      body: JSON.stringify({ checklistId, checklistSno, ...data })
+    }),
+  delete: (id: string) => fetchAPI(`/coa-checklist-details/${id}`, { method: 'DELETE' }),
+  deleteAll: () => fetchAPI('/coa-checklist-details', { method: 'DELETE' }),
 };
 

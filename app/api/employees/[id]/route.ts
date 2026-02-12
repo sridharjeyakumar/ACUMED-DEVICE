@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import EmployeeMaster from '@/server/models/EmployeeMaster';
+import { safeNumber } from '@/utils/numberUtils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -77,7 +78,7 @@ export async function PUT(
       dob: updateBody.dob ? parseDate(updateBody.dob) : undefined,
       
       // Convert to Number
-      age: updateBody.age ? Number(updateBody.age) : undefined,
+      age: safeNumber(updateBody.age) || undefined,
       
       // Convert to Boolean
       married: updateBody.married === true || updateBody.married === 'TRUE' || updateBody.married === 'true',

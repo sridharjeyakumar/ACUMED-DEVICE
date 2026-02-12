@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,20 +38,6 @@ export default function ProductionRejectedUpdatePage() {
         weight: "",
         approxTotalQty: "",
     });
-
-    // Reset form data when Add modal opens
-    useEffect(() => {
-        if (isAddModalOpen) {
-            setFormData({
-                batchNo: "",
-                date: "",
-                machineId: "",
-                productId: "",
-                weight: "",
-                approxTotalQty: "",
-            });
-        }
-    }, [isAddModalOpen]);
 
     const records: RejectionRecord[] = [
         {
@@ -308,15 +294,15 @@ export default function ProductionRejectedUpdatePage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">BATCH NO.</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">DATE</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">MACHINE ID</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">PRODUCT ID</th>
-                                            <th className="text-right px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">WEIGHT (KGS)</th>
-                                            <th className="text-right px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">APPROX. TOTAL QTY</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Batch No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Date</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Machine Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Product Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Weight (Kgs)</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Approx. Total Qty</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -459,6 +445,7 @@ export default function ProductionRejectedUpdatePage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save Rejection</Button>
                                     </div>
                                 </form>
@@ -524,6 +511,7 @@ export default function ProductionRejectedUpdatePage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update Rejection</Button>
                                     </div>
                                 </form>

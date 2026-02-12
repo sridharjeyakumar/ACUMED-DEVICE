@@ -434,29 +434,29 @@ export default function CartonTypeMasterPage() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">carton type_id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Carton Type Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>carton type</span>
-                                                    <span>name</span>
+                                                    <span>Carton Type</span>
+                                                    <span>Name</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>carton type</span>
-                                                    <span>shortname</span>
+                                                    <span>Carton Type</span>
+                                                    <span>Shortname</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>user id</span>
+                                                    <span>Last Modified</span>
+                                                    <span>User Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>date & time</span>
+                                                    <span>Last Modified</span>
+                                                    <span>Date & Time</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>

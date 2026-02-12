@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import ProductMaster from '@/server/models/ProductMaster';
+import { safeNumber } from '@/utils/numberUtils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,10 +34,10 @@ export async function POST(request: NextRequest) {
     
     const product = new ProductMaster({ 
       ...body,
-      weight_per_piece: body.weight_per_piece ? Number(body.weight_per_piece) : undefined,
-      wipes_per_kg: body.wipes_per_kg ? Number(body.wipes_per_kg) : undefined,
-      shelf_life_in_months: body.shelf_life_in_months ? Number(body.shelf_life_in_months) : undefined,
-      safety_stock_qty: body.safety_stock_qty ? Number(body.safety_stock_qty) : undefined,
+      weight_per_piece: safeNumber(body.weight_per_piece) || undefined,
+      wipes_per_kg: safeNumber(body.wipes_per_kg) || undefined,
+      shelf_life_in_months: safeNumber(body.shelf_life_in_months) || undefined,
+      safety_stock_qty: safeNumber(body.safety_stock_qty) || undefined,
       qc_required: body.qc_required === true || body.qc_required === "true",
       sterilization_required: body.sterilization_required === true || body.sterilization_required === "true",
       active: body.active !== undefined ? body.active : true,
@@ -65,6 +66,8 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+
 
 
 

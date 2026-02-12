@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import CollectionBinMaster from '@/server/models/CollectionBinMaster';
+import { safeNumber } from '@/utils/numberUtils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,7 +10,6 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     await ensureConnection();
-    // Use lean() for faster queries
     const collectionBins = await CollectionBinMaster.find().lean().sort({ bin_id: 1 });
     return NextResponse.json(collectionBins, {
       headers: {
@@ -32,8 +32,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const collectionBin = new CollectionBinMaster({ 
       ...body,
-      tare_weight_kg: body.tare_weight_kg ? Number(body.tare_weight_kg) : 0,
-      gross_capacity_kg: body.gross_capacity_kg ? Number(body.gross_capacity_kg) : 0,
+      tare_weight_kg: safeNumber(body.tare_weight_kg) || undefined,
+      gross_capacity_kg: safeNumber(body.gross_capacity_kg) || undefined,
+      active: body.active !== undefined ? body.active : true,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
     });
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     console.error('Error creating collection bin:', error);
     if (error.code === 11000) {
       return NextResponse.json(
-        { error: 'Collection bin ID already exists' },
+        { error: 'Collection Bin ID already exists' },
         { status: 400 }
       );
     }
@@ -59,7 +60,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-
 

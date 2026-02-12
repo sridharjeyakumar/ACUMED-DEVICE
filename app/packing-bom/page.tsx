@@ -350,16 +350,16 @@ export default function PackingBOMPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-32">bom_id</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">bom description</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">packing for</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">product_id</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">packsize_id</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">material_id</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-24">packs per carton</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap w-32">Bom Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Bom Description</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Packing For</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Product Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Packsize Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Material Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap w-24">Packs Per Carton</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">

@@ -406,9 +406,9 @@ export default function UserLoginHistoryPage() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">user id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">login Date</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">login Time</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">User Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Login Date</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Login Time</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Logout Date</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Logout Time</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>

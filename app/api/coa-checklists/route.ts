@@ -9,9 +9,8 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     await ensureConnection();
-    // Use lean() for faster queries
-    const coaChecklists = await COAChecklistMaster.find().lean().sort({ checklist_id: 1 });
-    return NextResponse.json(coaChecklists, {
+    const checklists = await COAChecklistMaster.find().lean().sort({ checklist_id: 1 });
+    return NextResponse.json(checklists, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
       },
@@ -30,18 +29,19 @@ export async function POST(request: NextRequest) {
   try {
     await ensureConnection();
     const body = await request.json();
-    const coaChecklist = new COAChecklistMaster({ 
+    const checklist = new COAChecklistMaster({ 
       ...body,
+      active: body.active !== undefined ? body.active : true,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
     });
-    await coaChecklist.save();
-    return NextResponse.json(coaChecklist, { status: 201 });
+    await checklist.save();
+    return NextResponse.json(checklist, { status: 201 });
   } catch (error: any) {
     console.error('Error creating COA checklist:', error);
     if (error.code === 11000) {
       return NextResponse.json(
-        { error: 'COA checklist ID already exists' },
+        { error: 'COA Checklist ID already exists' },
         { status: 400 }
       );
     }
@@ -57,7 +57,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-
 

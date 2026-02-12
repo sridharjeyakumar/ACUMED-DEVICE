@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,20 +41,6 @@ export default function MonthlyProductionTargetPage() {
         targetQty: "",
         remarks: "",
     });
-
-    // Reset form data when Add modal opens
-    useEffect(() => {
-        if (isAddModalOpen) {
-            setFormData({
-                monthYear: "",
-                batchNo: "",
-                productId: "",
-                packSizeId: "",
-                targetQty: "",
-                remarks: "",
-            });
-        }
-    }, [isAddModalOpen]);
 
     const targets: ProductionTarget[] = [
         {
@@ -382,17 +368,17 @@ export default function MonthlyProductionTargetPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">month year (YYYYMM)</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">batch no.</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">remarks</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">product_id</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">packsize_id</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">target qty</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">actual qty</th>
-                                            <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">final</th>
-                                            <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Month Year (Yyyymm)</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Batch No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Product Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Packsize Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Target Qty</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Actual Qty</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Final</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -551,6 +537,7 @@ export default function MonthlyProductionTargetPage() {
                                         />
                                     </div>
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save Target</Button>
                                     </div>
                                 </form>
@@ -623,6 +610,7 @@ export default function MonthlyProductionTargetPage() {
                                         />
                                     </div>
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update Target</Button>
                                     </div>
                                 </form>

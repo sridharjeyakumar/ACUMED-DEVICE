@@ -605,38 +605,38 @@ export default function CartonCapacityMasterPage() {
                                         <tr className="bg-gray-100 border-b border-border">
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>carton_</span>
-                                                    <span>capacity_id</span>
+                                                    <span>Carton</span>
+                                                    <span>Capacity Id</span>
                                                 </div>
                                             </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">carton capacity name</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">carton capacity shortname</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">product_id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">pack size_id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">pack matl_id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">carton type_id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Carton Capacity Name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Carton Capacity Shortname</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Product Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Pack Size Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Pack Matl Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Carton Type Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>carton</span>
-                                                    <span>material_id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>packs per</span>
-                                                    <span>carton</span>
+                                                    <span>Carton</span>
+                                                    <span>Material Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>user id</span>
+                                                    <span>Packs Per</span>
+                                                    <span>Carton</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>date & time</span>
+                                                    <span>Last Modified</span>
+                                                    <span>User Id</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Last Modified</span>
+                                                    <span>Date & Time</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>

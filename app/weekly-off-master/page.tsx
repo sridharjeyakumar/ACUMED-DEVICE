@@ -430,19 +430,19 @@ export default function WeeklyOffMasterPage() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">week off id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">day of week</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">week of month</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Week Off Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Day Of Week</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Week Of Month</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>user id</span>
+                                                    <span>Last Modified</span>
+                                                    <span>User Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>date & time</span>
+                                                    <span>Last Modified</span>
+                                                    <span>Date & Time</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>

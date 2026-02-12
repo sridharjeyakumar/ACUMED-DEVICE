@@ -626,37 +626,37 @@ export default function CompanyMasterPage() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">comp id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">company name</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">company short name</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">address 1</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">address 2</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">city</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">state</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">pincode</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">GST No.</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">CIN No.</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">PAN No.</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">email id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">website</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Comp Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Company Name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Company Short Name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Address 1</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Address 2</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">City</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">State</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Pincode</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Gst No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Cin No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Pan No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Email Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Website</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>contact</span>
+                                                    <span>Contact</span>
                                                     <span>Person</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Contact No</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">logo</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Logo</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>user id</span>
+                                                    <span>Last Modified</span>
+                                                    <span>User Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>date & time</span>
+                                                    <span>Last Modified</span>
+                                                    <span>Date & Time</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>

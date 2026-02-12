@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import ProductMaster from '@/server/models/ProductMaster';
+import { safeNumber } from '@/utils/numberUtils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -72,12 +73,12 @@ export async function PUT(
     if (body.uom !== undefined) updateData.uom = body.uom;
     if (body.product_category_id !== undefined) updateData.product_category_id = cleanValue(body.product_category_id);
     if (body.product_spec !== undefined) updateData.product_spec = cleanValue(body.product_spec);
-    if (body.weight_per_piece !== undefined) updateData.weight_per_piece = body.weight_per_piece ? Number(body.weight_per_piece) : undefined;
+    if (body.weight_per_piece !== undefined) updateData.weight_per_piece = safeNumber(body.weight_per_piece) || undefined;
     if (body.weight_uom !== undefined) updateData.weight_uom = cleanValue(body.weight_uom);
-    if (body.wipes_per_kg !== undefined) updateData.wipes_per_kg = body.wipes_per_kg ? Number(body.wipes_per_kg) : undefined;
-    if (body.shelf_life_in_months !== undefined) updateData.shelf_life_in_months = body.shelf_life_in_months ? Number(body.shelf_life_in_months) : undefined;
+    if (body.wipes_per_kg !== undefined) updateData.wipes_per_kg = safeNumber(body.wipes_per_kg) || undefined;
+    if (body.shelf_life_in_months !== undefined) updateData.shelf_life_in_months = safeNumber(body.shelf_life_in_months) || undefined;
     if (body.storage_condition !== undefined) updateData.storage_condition = cleanValue(body.storage_condition);
-    if (body.safety_stock_qty !== undefined) updateData.safety_stock_qty = body.safety_stock_qty ? Number(body.safety_stock_qty) : undefined;
+    if (body.safety_stock_qty !== undefined) updateData.safety_stock_qty = safeNumber(body.safety_stock_qty) || undefined;
     if (body.default_pack_size_id !== undefined) updateData.default_pack_size_id = cleanValue(body.default_pack_size_id);
     if (body.batch_no_pattern !== undefined) updateData.batch_no_pattern = cleanValue(body.batch_no_pattern);
     if (body.product_image !== undefined) updateData.product_image = cleanValue(body.product_image);

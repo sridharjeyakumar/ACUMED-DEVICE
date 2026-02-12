@@ -440,36 +440,36 @@ export default function PackSizeMasterPage() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">pack size_id</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Pack Size Id</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>pack size</span>
-                                                    <span>name</span>
+                                                    <span>Pack Size</span>
+                                                    <span>Name</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>pack size</span>
-                                                    <span>short name</span>
+                                                    <span>Pack Size</span>
+                                                    <span>Short Name</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>qty per</span>
-                                                    <span>carton</span>
+                                                    <span>Qty Per</span>
+                                                    <span>Carton</span>
                                                 </div>
                                             </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">uom</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Uom</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>user id</span>
+                                                    <span>Last Modified</span>
+                                                    <span>User Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>date & time</span>
+                                                    <span>Last Modified</span>
+                                                    <span>Date & Time</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>

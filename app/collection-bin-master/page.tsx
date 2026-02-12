@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { collectionBinAPI } from "@/services/api";
+import { safeNumber } from "@/utils/numberUtils";
 
 interface BinRecord {
     id: string;
@@ -75,8 +76,8 @@ export default function CollectionBinMasterPage() {
             bin_short_name: data.binShortName,
             bin_type: data.binType,
             color: data.color,
-            tare_weight_kg: data.tareWeightKg ? Number(data.tareWeightKg) : undefined,
-            gross_capacity_kg: data.grossCapacityKg ? Number(data.grossCapacityKg) : undefined,
+            tare_weight_kg: safeNumber(data.tareWeightKg) || undefined,
+            gross_capacity_kg: safeNumber(data.grossCapacityKg) || undefined,
             active: data.active !== false,
             last_modified_user_id: "ADMIN",
         };
@@ -377,28 +378,28 @@ export default function CollectionBinMasterPage() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">bin id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">bin name</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">bin short name</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">bin type</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">color</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">tare weight kg</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Bin Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Bin Name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Bin Short Name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Bin Type</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Color</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Tare Weight Kg</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>gross capacity</span>
-                                                    <span>kg</span>
+                                                    <span>Gross Capacity</span>
+                                                    <span>Kg</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>user id</span>
+                                                    <span>Last Modified</span>
+                                                    <span>User Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>date & time</span>
+                                                    <span>Last Modified</span>
+                                                    <span>Date & Time</span>
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>

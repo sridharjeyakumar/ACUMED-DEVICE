@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { coaChecklistDetailAPI, coaChecklistAPI } from "@/services/api";
+import { safeInteger } from "@/utils/numberUtils";
 
 interface ChecklistDetailRecord {
     id: string;
@@ -62,7 +63,7 @@ export default function COAChecklistDetailPage() {
     const toSnakeCase = (data: any) => {
         return {
             checklist_id: data.checklistId,
-            checklist_sno: Number(data.checklistSno),
+            checklist_sno: safeInteger(data.checklistSno) || 1,
             checklist_parameter: data.checklistParameter,
             expected_result: data.expectedResult,
             active: data.active !== false,
@@ -83,13 +84,28 @@ export default function COAChecklistDetailPage() {
         try {
             setLoading(true);
             const data = await coaChecklistDetailAPI.getAll();
+            
+            // Check if response is an error object
+            if (data && data.error) {
+                throw new Error(data.error || "Failed to load COA checklist details");
+            }
+            
+            // Ensure data is an array
+            if (!Array.isArray(data)) {
+                console.error('Unexpected response format:', data);
+                throw new Error("Invalid response format from server");
+            }
+            
+            console.log(`Loaded ${data.length} COA checklist details from database`);
             setRecords(data.map(toCamelCase));
         } catch (error: any) {
+            console.error('Error loading COA checklist details:', error);
             toast({
                 title: "Error",
                 description: error.message || "Failed to load COA checklist details",
                 variant: "destructive",
             });
+            setRecords([]); // Set empty array on error
         } finally {
             setLoading(false);
         }
@@ -362,13 +378,13 @@ export default function COAChecklistDetailPage() {
                                         <tr className="bg-gray-100 border-b border-border">
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>COA</span>
-                                                    <span>checklist_id</span>
+                                                    <span>Coa</span>
+                                                    <span>Checklist Id</span>
                                                 </div>
                                             </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">checklist Sno</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">checklist parameter</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">expected result</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Checklist Sno</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Checklist Parameter</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Expected Result</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,24 +48,6 @@ export default function ProductionUpdatePage() {
         status: "IN PROGRESS" as "COMPLETED" | "IN PROGRESS",
         remarks: "",
     });
-
-    // Reset form data when Add modal opens
-    useEffect(() => {
-        if (isAddModalOpen) {
-            setFormData({
-                batchNo: "",
-                date: "",
-                machineId: "",
-                productId: "",
-                binNo: "",
-                tareWeight: "",
-                grossWeight: "",
-                countQty: "",
-                status: "IN PROGRESS" as "COMPLETED" | "IN PROGRESS",
-                remarks: "",
-            });
-        }
-    }, [isAddModalOpen]);
 
     const records: ProductionUpdateRecord[] = [
         {
@@ -391,21 +373,21 @@ export default function ProductionUpdatePage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">BATCH NO.</th>
-                                            <th className="text-left px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">DATE</th>
-                                            <th className="text-left px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">MACHINE ID</th>
-                                            <th className="text-left px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">PRODUCT ID</th>
-                                            <th className="text-left px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">BIN NO.</th>
-                                            <th className="text-left px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">TARE (KGS)</th>
-                                            <th className="text-left px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">GROSS (KGS)</th>
-                                            <th className="text-left px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">NET (KGS)</th>
-                                            <th className="text-left px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">CALC QTY</th>
-                                            <th className="text-left px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">COUNT QTY</th>
-                                            <th className="text-left px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">STATUS</th>
-                                            <th className="text-left px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">REMARKS</th>
-                                            <th className="text-center px-4 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Batch No.</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Date</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Machine Id</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Product Id</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Bin No.</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Tare (Kgs)</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Gross (Kgs)</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Net (Kgs)</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Calc Qty</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Count Qty</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -615,6 +597,7 @@ export default function ProductionUpdatePage() {
                                         <Input name="remarks" value={formData.remarks} onChange={handleInputChange} placeholder="Notes..." />
                                     </div>
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save Update</Button>
                                     </div>
                                 </form>
@@ -714,6 +697,7 @@ export default function ProductionUpdatePage() {
                                         <Input name="remarks" value={formData.remarks} onChange={handleInputChange} placeholder="Notes..." />
                                     </div>
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
+                                        <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="px-6">Cancel</Button>
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update Record</Button>
                                     </div>
                                 </form>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import MaterialMaster from '@/server/models/MaterialMaster';
+import { safeNumber } from '@/utils/numberUtils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -77,12 +78,12 @@ export async function PUT(
     if (body.material_category_id !== undefined) updateData.material_category_id = cleanValue(body.material_category_id);
     if (body.material_type !== undefined) updateData.material_type = body.material_type;
     if (body.material_spec !== undefined) updateData.material_spec = cleanValue(body.material_spec);
-    if (body.safety_stock_qty !== undefined) updateData.safety_stock_qty = body.safety_stock_qty ? Number(body.safety_stock_qty) : undefined;
-    if (body.re_order_qty !== undefined) updateData.re_order_qty = body.re_order_qty ? Number(body.re_order_qty) : undefined;
-    if (body.min_order_qty !== undefined) updateData.min_order_qty = body.min_order_qty ? Number(body.min_order_qty) : undefined;
-    if (body.lead_time_days_min !== undefined) updateData.lead_time_days_min = leadTimeMin ? Number(leadTimeMin) : null;
-    if (body.lead_time_days_max !== undefined) updateData.lead_time_days_max = leadTimeMax ? Number(leadTimeMax) : null;
-    if (body.shelf_life_in_months !== undefined) updateData.shelf_life_in_months = body.shelf_life_in_months ? Number(body.shelf_life_in_months) : undefined;
+    if (body.safety_stock_qty !== undefined) updateData.safety_stock_qty = safeNumber(body.safety_stock_qty) || undefined;
+    if (body.re_order_qty !== undefined) updateData.re_order_qty = safeNumber(body.re_order_qty) || undefined;
+    if (body.min_order_qty !== undefined) updateData.min_order_qty = safeNumber(body.min_order_qty) || undefined;
+    if (body.lead_time_days_min !== undefined) updateData.lead_time_days_min = safeNumber(leadTimeMin);
+    if (body.lead_time_days_max !== undefined) updateData.lead_time_days_max = safeNumber(leadTimeMax);
+    if (body.shelf_life_in_months !== undefined) updateData.shelf_life_in_months = safeNumber(body.shelf_life_in_months) || undefined;
     if (body.qc_required !== undefined) updateData.qc_required = body.qc_required === true || body.qc_required === "true";
     if (body.coa_checklist_id !== undefined) updateData.coa_checklist_id = cleanValue(body.coa_checklist_id);
     if (body.material_image !== undefined) updateData.material_image = cleanValue(body.material_image);

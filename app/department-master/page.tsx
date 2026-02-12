@@ -395,21 +395,21 @@ export default function DepartmentMasterPage() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">dept_id</th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">department name</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Dept Id</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Department Name</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>user id</span>
+                                                    <span>Last Modified</span>
+                                                    <span>User Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>date & time</span>
+                                                    <span>Last Modified</span>
+                                                    <span>Date & Time</span>
                                                 </div>
                                             </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">active</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>

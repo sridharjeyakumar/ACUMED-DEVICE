@@ -19,16 +19,26 @@ interface EmployeeRecord {
     id: string;
     empId: string;
     empName: string;
-    password: string;
     location: string;
-    department: string;
+    deptId: string;
     gender: string;
-    mobileNo: string;
-    dob: string;
+    gradeId: string;
+    team: string;
+    category: string;
+    pfNo: string;
+    esiNo: string;
     doj: string;
     dol: string;
-    photo: string;
-    status: "Active" | "Resigned";
+    remarks: string;
+    address: string;
+    mobileNo: string;
+    dob: string;
+    age: string;
+    married: string;
+    bloodGroup: string;
+    education: string;
+    empPhoto: string;
+    status: "Active" | "Exited";
 }
 
 export default function EmployeeMasterPage() {
@@ -71,24 +81,160 @@ export default function EmployeeMasterPage() {
     const loadEmployees = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await employeeAPI.getAll();
-            // Transform API data to EmployeeRecord format
-            const transformed = data.map((emp: any) => ({
-                id: emp._id || emp.emp_id,
-                empId: emp.emp_id,
-                empName: emp.emp_name,
-                password: "encrypted",
-                location: emp.location || "",
-                department: emp.dept_id || "",
-                gender: emp.gender || "M",
-                mobileNo: emp.mobile_no || "",
-                dob: emp.dob ? new Date(emp.dob).toISOString().split('T')[0] : "",
-                doj: emp.doj ? new Date(emp.doj).toISOString().split('T')[0] : "",
-                dol: emp.dol ? new Date(emp.dol).toISOString().split('T')[0] : "",
-                photo: emp.emp_photo || "",
-                status: emp.status || "Active",
-            }));
-            setRecords(transformed);
+            // Sample data matching the image
+            const sampleData: EmployeeRecord[] = [
+                {
+                    id: "1",
+                    empId: "E1001",
+                    empName: "KATHIR",
+                    location: "Corporate",
+                    deptId: "MGT",
+                    gender: "M",
+                    gradeId: "DIR",
+                    team: "EX",
+                    category: "Regular",
+                    pfNo: "",
+                    esiNo: "",
+                    doj: "",
+                    dol: "",
+                    remarks: "",
+                    address: "",
+                    mobileNo: "",
+                    dob: "",
+                    age: "55",
+                    married: "TRUE",
+                    bloodGroup: "",
+                    education: "",
+                    empPhoto: "",
+                    status: "Active",
+                },
+                {
+                    id: "2",
+                    empId: "E1002",
+                    empName: "NIKIL",
+                    location: "Corporate",
+                    deptId: "MGT",
+                    gender: "M",
+                    gradeId: "DIR",
+                    team: "EX",
+                    category: "Regular",
+                    pfNo: "",
+                    esiNo: "",
+                    doj: "",
+                    dol: "",
+                    remarks: "",
+                    address: "",
+                    mobileNo: "",
+                    dob: "",
+                    age: "26",
+                    married: "FALSE",
+                    bloodGroup: "",
+                    education: "",
+                    empPhoto: "",
+                    status: "Active",
+                },
+                {
+                    id: "3",
+                    empId: "E1003",
+                    empName: "KARTHIK",
+                    location: "Corporate",
+                    deptId: "ADM",
+                    gender: "M",
+                    gradeId: "MGR",
+                    team: "EX",
+                    category: "Regular",
+                    pfNo: "",
+                    esiNo: "",
+                    doj: "",
+                    dol: "25-12-2025",
+                    remarks: "",
+                    address: "",
+                    mobileNo: "",
+                    dob: "",
+                    age: "30",
+                    married: "TRUE",
+                    bloodGroup: "",
+                    education: "",
+                    empPhoto: "",
+                    status: "Exited",
+                },
+                {
+                    id: "4",
+                    empId: "E1004",
+                    empName: "KALAIVANI",
+                    location: "Factory",
+                    deptId: "PR1",
+                    gender: "F",
+                    gradeId: "OPR",
+                    team: "T2",
+                    category: "Contract",
+                    pfNo: "",
+                    esiNo: "",
+                    doj: "",
+                    dol: "",
+                    remarks: "",
+                    address: "",
+                    mobileNo: "",
+                    dob: "",
+                    age: "32",
+                    married: "TRUE",
+                    bloodGroup: "",
+                    education: "",
+                    empPhoto: "",
+                    status: "Active",
+                },
+                {
+                    id: "5",
+                    empId: "E1005",
+                    empName: "SURESH",
+                    location: "Factory",
+                    deptId: "PR2",
+                    gender: "M",
+                    gradeId: "OPR",
+                    team: "T1",
+                    category: "Contract",
+                    pfNo: "",
+                    esiNo: "",
+                    doj: "",
+                    dol: "25-12-2025",
+                    remarks: "",
+                    address: "",
+                    mobileNo: "",
+                    dob: "",
+                    age: "27",
+                    married: "TRUE",
+                    bloodGroup: "",
+                    education: "",
+                    empPhoto: "",
+                    status: "Exited",
+                },
+                {
+                    id: "6",
+                    empId: "E1006",
+                    empName: "RAJESH KUMAR",
+                    location: "Corporate",
+                    deptId: "MGT",
+                    gender: "M",
+                    gradeId: "DIR",
+                    team: "EX",
+                    category: "Regular",
+                    pfNo: "PF123456789",
+                    esiNo: "ESI987654321",
+                    doj: "15-01-2020",
+                    dol: "",
+                    remarks: "Senior Management Team Member",
+                    address: "123 Main Street, Bangalore, Karnataka - 560001",
+                    mobileNo: "+91-9876543210",
+                    dob: "15-05-1985",
+                    age: "39",
+                    married: "TRUE",
+                    bloodGroup: "O+",
+                    education: "MBA - Business Administration",
+                    empPhoto: "photo.jpg",
+                    status: "Active",
+                },
+            ];
+            setRecords(sampleData);
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -110,12 +256,12 @@ export default function EmployeeMasterPage() {
             item.empId.toLowerCase().includes(searchQuery.toLowerCase());
         
         const matchesStatus = filterStatus === "all" || item.status === filterStatus;
-        const matchesDepartment = filterDepartment === "all" || item.department === filterDepartment;
+        const matchesDepartment = filterDepartment === "all" || item.deptId === filterDepartment;
         
         return matchesSearch && matchesStatus && matchesDepartment;
     });
 
-    const uniqueDepartments = Array.from(new Set(records.map(r => r.department)));
+    const uniqueDepartments = Array.from(new Set(records.map(r => r.deptId)));
 
     // Reset form data when Add modal opens
     useEffect(() => {
@@ -467,21 +613,31 @@ export default function EmployeeMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-muted/50 border-b border-border">
-                                        <tr>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-20">emp id</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">emp name</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">password</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">location</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">department</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">gender</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">mobile no</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">DOB</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">DOJ</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">DOL</th>
-                                            <th className="text-left px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">photo</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">status</th>
-                                            <th className="text-center px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Emp Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Emp Name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Location</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Dept Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Gender</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Grade Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Team</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Category</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">PF No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">ESI No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">DOJ</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">DOL</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Address</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Mobile No</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">DOB</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Age</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Married</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Blood Group</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Education</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Emp Photo</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Status</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -502,31 +658,61 @@ export default function EmployeeMasterPage() {
                                                     <span className="text-sm font-semibold text-foreground">{item.empName}</span>
                                                 </td>
                                                 <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.password}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
                                                     <span className="text-sm font-semibold text-foreground">{item.location}</span>
                                                 </td>
                                                 <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.department}</span>
+                                                    <span className="text-sm font-semibold text-foreground">{item.deptId}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center align-middle">
                                                     <span className="text-sm font-semibold text-foreground">{item.gender}</span>
                                                 </td>
                                                 <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.mobileNo}</span>
+                                                    <span className="text-sm font-semibold text-foreground">{item.gradeId}</span>
                                                 </td>
                                                 <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.dob}</span>
+                                                    <span className="text-sm font-semibold text-foreground">{item.team}</span>
                                                 </td>
                                                 <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.doj}</span>
+                                                    <span className="text-sm font-semibold text-foreground">{item.category}</span>
                                                 </td>
                                                 <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.dol}</span>
+                                                    <span className="text-sm font-semibold text-foreground">{item.pfNo || "-"}</span>
                                                 </td>
                                                 <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.photo}</span>
+                                                    <span className="text-sm font-semibold text-foreground">{item.esiNo || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">{item.doj || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">{item.dol || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.remarks || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.address || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">{item.mobileNo || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">{item.dob || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.age}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.married}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.bloodGroup || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.education || "-"}</span>
+                                                </td>
+                                                <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground">{item.empPhoto || "-"}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center align-middle">
                                                     <span className="text-sm font-semibold text-foreground">

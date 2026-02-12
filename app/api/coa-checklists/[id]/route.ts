@@ -4,6 +4,7 @@ import COAChecklistMaster from '@/server/models/COAChecklistMaster';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
 
 // GET /api/coa-checklists/[id] - Get COA checklist by ID
 export async function GET(
@@ -11,16 +12,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await ensureConnection();
     const { id } = await params;
-    const coaChecklist = await COAChecklistMaster.findOne({ checklist_id: id }).lean();
-    if (!coaChecklist) {
-      return NextResponse.json(
-        { error: 'COA checklist not found' },
-        { status: 404 }
-      );
+    await ensureConnection();
+    const checklist = await COAChecklistMaster.findOne({ checklist_id: id }).lean();
+    if (!checklist) {
+      return NextResponse.json({ error: 'COA checklist not found' }, { status: 404 });
     }
-    return NextResponse.json(coaChecklist);
+    return NextResponse.json(checklist);
   } catch (error: any) {
     console.error('Error fetching COA checklist:', error);
     return NextResponse.json(
@@ -36,25 +34,25 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await ensureConnection();
     const { id } = await params;
+    await ensureConnection();
     const body = await request.json();
-    const coaChecklist = await COAChecklistMaster.findOneAndUpdate(
+    
+    const updateData: any = { ...body };
+    if (body.active !== undefined) updateData.active = body.active !== false;
+    updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
+    updateData.last_modified_date_time = new Date();
+    
+    const checklist = await COAChecklistMaster.findOneAndUpdate(
       { checklist_id: id },
-      {
-        ...body,
-        last_modified_user_id: body.last_modified_user_id || 'ADMIN',
-        last_modified_date_time: new Date(),
-      },
+      { $set: updateData },
       { new: true, runValidators: true }
-    );
-    if (!coaChecklist) {
-      return NextResponse.json(
-        { error: 'COA checklist not found' },
-        { status: 404 }
-      );
+    ).lean();
+    
+    if (!checklist) {
+      return NextResponse.json({ error: 'COA checklist not found' }, { status: 404 });
     }
-    return NextResponse.json(coaChecklist);
+    return NextResponse.json(checklist);
   } catch (error: any) {
     console.error('Error updating COA checklist:', error);
     if (error.name === 'ValidationError') {
@@ -76,14 +74,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await ensureConnection();
     const { id } = await params;
-    const coaChecklist = await COAChecklistMaster.findOneAndDelete({ checklist_id: id });
-    if (!coaChecklist) {
-      return NextResponse.json(
-        { error: 'COA checklist not found' },
-        { status: 404 }
-      );
+    await ensureConnection();
+    const checklist = await COAChecklistMaster.findOneAndDelete({ checklist_id: id });
+    if (!checklist) {
+      return NextResponse.json({ error: 'COA checklist not found' }, { status: 404 });
     }
     return NextResponse.json({ message: 'COA checklist deleted successfully' });
   } catch (error: any) {

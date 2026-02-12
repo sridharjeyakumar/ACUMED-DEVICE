@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import PackSizeMaster from '@/server/models/PackSizeMaster';
+import { safeNumber } from '@/utils/numberUtils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     
     const packSize = new PackSizeMaster({ 
       ...body,
-      qty_per_carton: body.qty_per_carton ? Number(body.qty_per_carton) : undefined,
+      qty_per_carton: safeNumber(body.qty_per_carton) || undefined,
       active: body.active !== undefined ? body.active : true,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
@@ -59,6 +60,8 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+
 
 
 

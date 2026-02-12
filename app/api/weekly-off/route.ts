@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import WeeklyOffMaster from '@/server/models/WeeklyOffMaster';
+import { safeInteger } from '@/utils/numberUtils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,9 +32,9 @@ export async function POST(request: NextRequest) {
     await ensureConnection();
     const body = await request.json();
     const weeklyOff = new WeeklyOffMaster({ 
-      week_off_id: parseInt(body.week_off_id),
-      day_of_week: parseInt(body.day_of_week),
-      week_of_month: body.week_of_month ? parseInt(body.week_of_month) : undefined,
+      week_off_id: safeInteger(body.week_off_id) || 0,
+      day_of_week: safeInteger(body.day_of_week) || 0,
+      week_of_month: safeInteger(body.week_of_month) || undefined,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
     });

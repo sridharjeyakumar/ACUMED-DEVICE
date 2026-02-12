@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import ProductBOMMaster from '@/server/models/ProductBOMMaster';
+import { safeNumber } from '@/utils/numberUtils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,9 +31,10 @@ export async function POST(request: NextRequest) {
   try {
     await ensureConnection();
     const body = await request.json();
+    const numResult = safeNumber(body.output_qty);
     const productBOM = new ProductBOMMaster({ 
       ...body,
-      output_qty: body.output_qty === '' || body.output_qty === null ? null : Number(body.output_qty),
+      output_qty: numResult,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
     });
@@ -58,6 +60,8 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+
 
 
 

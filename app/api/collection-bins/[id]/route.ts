@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import CollectionBinMaster from '@/server/models/CollectionBinMaster';
+import { safeNumber } from '@/utils/numberUtils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
 
 // GET /api/collection-bins/[id] - Get collection bin by ID
 export async function GET(
@@ -11,14 +13,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await ensureConnection();
     const { id } = await params;
+    await ensureConnection();
     const collectionBin = await CollectionBinMaster.findOne({ bin_id: id }).lean();
     if (!collectionBin) {
-      return NextResponse.json(
-        { error: 'Collection bin not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Collection bin not found' }, { status: 404 });
     }
     return NextResponse.json(collectionBin);
   } catch (error: any) {
@@ -36,25 +35,25 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await ensureConnection();
     const { id } = await params;
+    await ensureConnection();
     const body = await request.json();
+    
+    const updateData: any = { ...body };
+    if (body.tare_weight_kg !== undefined) updateData.tare_weight_kg = safeNumber(body.tare_weight_kg) || undefined;
+    if (body.gross_capacity_kg !== undefined) updateData.gross_capacity_kg = safeNumber(body.gross_capacity_kg) || undefined;
+    if (body.active !== undefined) updateData.active = body.active !== false;
+    updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
+    updateData.last_modified_date_time = new Date();
+    
     const collectionBin = await CollectionBinMaster.findOneAndUpdate(
       { bin_id: id },
-      {
-        ...body,
-        tare_weight_kg: body.tare_weight_kg ? Number(body.tare_weight_kg) : undefined,
-        gross_capacity_kg: body.gross_capacity_kg ? Number(body.gross_capacity_kg) : undefined,
-        last_modified_user_id: body.last_modified_user_id || 'ADMIN',
-        last_modified_date_time: new Date(),
-      },
+      { $set: updateData },
       { new: true, runValidators: true }
-    );
+    ).lean();
+    
     if (!collectionBin) {
-      return NextResponse.json(
-        { error: 'Collection bin not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Collection bin not found' }, { status: 404 });
     }
     return NextResponse.json(collectionBin);
   } catch (error: any) {
@@ -78,14 +77,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await ensureConnection();
     const { id } = await params;
+    await ensureConnection();
     const collectionBin = await CollectionBinMaster.findOneAndDelete({ bin_id: id });
     if (!collectionBin) {
-      return NextResponse.json(
-        { error: 'Collection bin not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Collection bin not found' }, { status: 404 });
     }
     return NextResponse.json({ message: 'Collection bin deleted successfully' });
   } catch (error: any) {

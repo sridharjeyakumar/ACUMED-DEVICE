@@ -97,6 +97,9 @@ export default function MaterialMasterPage() {
     const loadMaterials = async () => {
         try {
             setLoading(true);
+            if (!materialAPI || !materialAPI.getAll) {
+                throw new Error('Material API is not available. Please check the API service configuration.');
+            }
             const data = await materialAPI.getAll();
             setMaterials(data);
             
@@ -120,6 +123,11 @@ export default function MaterialMasterPage() {
             setLoading(false);
         }
     };
+
+    // Load materials on component mount
+    useEffect(() => {
+        loadMaterials();
+    }, []);
 
     // Reset form data when Add modal opens
     useEffect(() => {
@@ -600,54 +608,54 @@ export default function MaterialMasterPage() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">material_id</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Material Id</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>material</span>
-                                                    <span>name</span>
+                                                    <span>Material</span>
+                                                    <span>Name</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>material</span>
-                                                    <span>short name</span>
+                                                    <span>Material</span>
+                                                    <span>Short Name</span>
                                                 </div>
                                             </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">uom</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Uom</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>material</span>
-                                                    <span>category id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>material</span>
-                                                    <span>type</span>
+                                                    <span>Material</span>
+                                                    <span>Category Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>material</span>
-                                                    <span>spec</span>
+                                                    <span>Material</span>
+                                                    <span>Type</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>safety stock</span>
-                                                    <span>qty</span>
+                                                    <span>Material</span>
+                                                    <span>Spec</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>re-order</span>
-                                                    <span>qty</span>
+                                                    <span>Safety Stock</span>
+                                                    <span>Qty</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>min order</span>
-                                                    <span>qty</span>
+                                                    <span>Re-Order</span>
+                                                    <span>Qty</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Min Order</span>
+                                                    <span>Qty</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
@@ -664,44 +672,44 @@ export default function MaterialMasterPage() {
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>shelf life</span>
-                                                    <span>in months</span>
+                                                    <span>Shelf Life</span>
+                                                    <span>In Months</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>QC</span>
-                                                    <span>required</span>
+                                                    <span>Qc</span>
+                                                    <span>Required</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>COA</span>
-                                                    <span>checklist_id</span>
+                                                    <span>Coa</span>
+                                                    <span>Checklist Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>material</span>
-                                                    <span>image</span>
+                                                    <span>Material</span>
+                                                    <span>Image</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>material image</span>
-                                                    <span>icon</span>
+                                                    <span>Material Image</span>
+                                                    <span>Icon</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>user id</span>
+                                                    <span>Last Modified</span>
+                                                    <span>User Id</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>date & time</span>
+                                                    <span>Last Modified</span>
+                                                    <span>Date & Time</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
