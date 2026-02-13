@@ -68,7 +68,7 @@ export default function MenuAccessMasterPage() {
     const [filterRole, setFilterRole] = useState<string>("all");
     const [filterMenu, setFilterMenu] = useState<string>("all");
     const [filterAccess, setFilterAccess] = useState<string>("all");
-    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: MenuAccess } | null>(null);
+    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: MenuAccess; newData?: { rold_id: string; menu_id: string } } | null>(null);
     const [cancelledAccesses, setCancelledAccesses] = useState<Set<string>>(new Set());
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
@@ -149,8 +149,9 @@ export default function MenuAccessMasterPage() {
     const uniqueRoles = Array.from(new Set(menuAccesses.map(a => a.rold_id)));
     const uniqueMenus = Array.from(new Set(menuAccesses.map(a => a.menu_id)));
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type, checked } = e.target;
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value, type } = e.target;
+        const checked = (e.target as HTMLInputElement).checked;
         setFormData({ ...formData, [name]: type === "checkbox" ? checked : value });
     };
 
@@ -195,17 +196,41 @@ export default function MenuAccessMasterPage() {
         // Store previous state for undo
         const previousData = { ...selectedAccess };
         
+        // Check if Role ID or Menu ID has changed
+        const roleIdChanged = formData.rold_id !== selectedAccess.rold_id;
+        const menuIdChanged = formData.menu_id !== selectedAccess.menu_id;
+        
         try {
-            await menuAccessAPI.update(selectedAccess.rold_id, selectedAccess.menu_id, {
-                access: formData.access,
-                can_add: formData.can_add,
-                can_edit: formData.can_edit,
-                can_view: formData.can_view,
-                can_cancel: formData.can_cancel,
-            });
-            
-            // Store last action for undo
-            setLastAction({ type: 'edit', data: previousData });
+            if (roleIdChanged || menuIdChanged) {
+                // If IDs changed, delete old record and create new one
+                await menuAccessAPI.delete(selectedAccess.rold_id, selectedAccess.menu_id);
+                await menuAccessAPI.create({
+                    rold_id: formData.rold_id,
+                    menu_id: formData.menu_id,
+                    access: formData.access,
+                    can_add: formData.can_add,
+                    can_edit: formData.can_edit,
+                    can_view: formData.can_view,
+                    can_cancel: formData.can_cancel,
+                });
+                // Store last action for undo with new IDs
+                setLastAction({ 
+                    type: 'edit', 
+                    data: previousData,
+                    newData: { rold_id: formData.rold_id, menu_id: formData.menu_id }
+                });
+            } else {
+                // If IDs haven't changed, just update the permissions
+                await menuAccessAPI.update(selectedAccess.rold_id, selectedAccess.menu_id, {
+                    access: formData.access,
+                    can_add: formData.can_add,
+                    can_edit: formData.can_edit,
+                    can_view: formData.can_view,
+                    can_cancel: formData.can_cancel,
+                });
+                // Store last action for undo
+                setLastAction({ type: 'edit', data: previousData });
+            }
             
             toast({
                 title: "Success",
@@ -234,14 +259,28 @@ export default function MenuAccessMasterPage() {
         
         try {
             if (lastAction.type === 'edit') {
-                // Restore previous data
-                await menuAccessAPI.update(lastAction.data.rold_id, lastAction.data.menu_id, {
-                    access: lastAction.data.access,
-                    can_add: lastAction.data.can_add,
-                    can_edit: lastAction.data.can_edit,
-                    can_view: lastAction.data.can_view,
-                    can_cancel: lastAction.data.can_cancel,
-                });
+                // If IDs were changed, we need to delete the new record and restore the old one
+                if (lastAction.newData) {
+                    await menuAccessAPI.delete(lastAction.newData.rold_id, lastAction.newData.menu_id);
+                    await menuAccessAPI.create({
+                        rold_id: lastAction.data.rold_id,
+                        menu_id: lastAction.data.menu_id,
+                        access: lastAction.data.access,
+                        can_add: lastAction.data.can_add,
+                        can_edit: lastAction.data.can_edit,
+                        can_view: lastAction.data.can_view,
+                        can_cancel: lastAction.data.can_cancel,
+                    });
+                } else {
+                    // If IDs weren't changed, just restore previous permissions
+                    await menuAccessAPI.update(lastAction.data.rold_id, lastAction.data.menu_id, {
+                        access: lastAction.data.access,
+                        can_add: lastAction.data.can_add,
+                        can_edit: lastAction.data.can_edit,
+                        can_view: lastAction.data.can_view,
+                        can_cancel: lastAction.data.can_cancel,
+                    });
+                }
                 toast({
                     title: "Undone",
                     description: "Changes have been reverted",
@@ -736,11 +775,41 @@ export default function MenuAccessMasterPage() {
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Role ID <span className="text-red-500">*</span></label>
-                                        <Input name="rold_id" value={formData.rold_id} onChange={handleInputChange} placeholder="e.g., ADM, OPR" required maxLength={3} />
+                                        <select
+                                            name="rold_id"
+                                            value={formData.rold_id}
+                                            onChange={handleInputChange}
+                                            required
+                                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        >
+                                            <option value="">Select Role ID</option>
+                                            {roles
+                                                .filter((role: any) => role.active !== false)
+                                                .map((role: any) => (
+                                                    <option key={role.roll_id || role.role_id} value={role.roll_id || role.role_id}>
+                                                        {role.roll_id || role.role_id} - {role.roll_description || role.role_description || ''}
+                                                    </option>
+                                                ))}
+                                        </select>
                                     </div>
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Menu ID <span className="text-red-500">*</span></label>
-                                        <Input name="menu_id" value={formData.menu_id} onChange={handleInputChange} placeholder="e.g., M00, T01" required maxLength={3} />
+                                        <select
+                                            name="menu_id"
+                                            value={formData.menu_id}
+                                            onChange={handleInputChange}
+                                            required
+                                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        >
+                                            <option value="">Select Menu ID</option>
+                                            {menus
+                                                .filter((menu: any) => menu.active !== false)
+                                                .map((menu: any) => (
+                                                    <option key={menu.menu_id} value={menu.menu_id}>
+                                                        {menu.menu_id} - {menu.menu_desc || menu.menu_description || ''}
+                                                    </option>
+                                                ))}
+                                        </select>
                                     </div>
                                     <div className="mb-6 space-y-3">
                                         <label className="flex items-center gap-2 cursor-pointer">
@@ -788,11 +857,41 @@ export default function MenuAccessMasterPage() {
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Role ID <span className="text-red-500">*</span></label>
-                                        <Input name="rold_id" value={formData.rold_id} onChange={handleInputChange} required disabled />
+                                        <select
+                                            name="rold_id"
+                                            value={formData.rold_id}
+                                            onChange={handleInputChange}
+                                            required
+                                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        >
+                                            <option value="">Select Role ID</option>
+                                            {roles
+                                                .filter((role: any) => role.active !== false)
+                                                .map((role: any) => (
+                                                    <option key={role.roll_id || role.role_id} value={role.roll_id || role.role_id}>
+                                                        {role.roll_id || role.role_id} - {role.roll_description || role.role_description || ''}
+                                                    </option>
+                                                ))}
+                                        </select>
                                     </div>
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Menu ID <span className="text-red-500">*</span></label>
-                                        <Input name="menu_id" value={formData.menu_id} onChange={handleInputChange} required disabled />
+                                        <select
+                                            name="menu_id"
+                                            value={formData.menu_id}
+                                            onChange={handleInputChange}
+                                            required
+                                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        >
+                                            <option value="">Select Menu ID</option>
+                                            {menus
+                                                .filter((menu: any) => menu.active !== false)
+                                                .map((menu: any) => (
+                                                    <option key={menu.menu_id} value={menu.menu_id}>
+                                                        {menu.menu_id} - {menu.menu_desc || menu.menu_description || ''}
+                                                    </option>
+                                                ))}
+                                        </select>
                                     </div>
                                     <div className="mb-6 space-y-3">
                                         <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="access" checked={formData.access} onChange={handleInputChange} className="w-4 h-4 text-blue-600" /><span className="text-sm font-medium">Access</span></label>
