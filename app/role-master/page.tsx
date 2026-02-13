@@ -159,17 +159,26 @@ export default function RoleMasterPage() {
 
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/role-master/page.tsx:160',message:'handleEditSubmit called',data:{selectedRole:selectedRole?{roll_id:selectedRole.roll_id}:null,formData},timestamp:Date.now(),runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
         if (!selectedRole) return;
         
         // Store previous state for undo
         const previousData = { ...selectedRole };
         
         try {
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/role-master/page.tsx:167',message:'Before roleAPI.update',data:{id:selectedRole.roll_id,updateData:{roll_description:formData.roll_description,remarks:formData.remarks,active:formData.active}},timestamp:Date.now(),runId:'run1',hypothesisId:'H3,H5'})}).catch(()=>{});
+            // #endregion
             await roleAPI.update(selectedRole.roll_id, {
                 roll_description: formData.roll_description,
                 remarks: formData.remarks,
                 active: formData.active,
             });
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/role-master/page.tsx:173',message:'After roleAPI.update success',data:{},timestamp:Date.now(),runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             
             // Store last action for undo
             setLastAction({ type: 'edit', data: previousData });
@@ -188,6 +197,9 @@ export default function RoleMasterPage() {
             setFormData({ roll_id: "", roll_description: "", remarks: "", active: true });
             loadRoles();
         } catch (error: any) {
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/role-master/page.tsx:189',message:'Edit submit error',data:{error:error.message,errorName:error.name,errorStack:error.stack},timestamp:Date.now(),runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             toast({
                 title: "Error",
                 description: error.message || "Failed to update role",

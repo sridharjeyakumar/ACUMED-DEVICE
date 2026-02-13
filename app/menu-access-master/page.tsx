@@ -92,17 +92,26 @@ export default function MenuAccessMasterPage() {
     const loadAllData = useCallback(async () => {
         try {
             setLoading(true);
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:92',message:'loadAllData called',data:{},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             const [accessesData, rolesData, menusData, usersData] = await Promise.all([
                 menuAccessAPI.getAll(),
                 roleAPI.getAll(),
                 menuAPI.getAll(),
                 userAPI.getAll(),
             ]);
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:105',message:'loadAllData data loaded',data:{accessesCount:accessesData.length,sampleAccess:accessesData[0]?{rold_id:accessesData[0].rold_id,menu_id:accessesData[0].menu_id,access:accessesData[0].access}:null},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             setMenuAccesses(accessesData);
             setRoles(rolesData);
             setMenus(menusData);
             setUsers(usersData);
         } catch (error: any) {
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:113',message:'loadAllData error',data:{error:error.message},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             toast({
                 title: "Error",
                 description: error.message || "Failed to load data",
@@ -152,6 +161,9 @@ export default function MenuAccessMasterPage() {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
         const checked = (e.target as HTMLInputElement).checked;
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:152',message:'handleInputChange called',data:{name,value,type,checked:type==='checkbox'?checked:undefined,currentFormData:formData},timestamp:Date.now(),runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
         setFormData({ ...formData, [name]: type === "checkbox" ? checked : value });
     };
 
@@ -191,6 +203,9 @@ export default function MenuAccessMasterPage() {
 
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:192',message:'handleEditSubmit called',data:{selectedAccess:selectedAccess?{rold_id:selectedAccess.rold_id,menu_id:selectedAccess.menu_id}:null,formData},timestamp:Date.now(),runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
         if (!selectedAccess) return;
         
         // Store previous state for undo
@@ -201,18 +216,77 @@ export default function MenuAccessMasterPage() {
         const menuIdChanged = formData.menu_id !== selectedAccess.menu_id;
         
         try {
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:203',message:'Before API call',data:{roleIdChanged,menuIdChanged,formData,selectedAccess:{rold_id:selectedAccess.rold_id,menu_id:selectedAccess.menu_id}},timestamp:Date.now(),runId:'run1',hypothesisId:'H3,H5'})}).catch(()=>{});
+            // #endregion
             if (roleIdChanged || menuIdChanged) {
-                // If IDs changed, delete old record and create new one
-                await menuAccessAPI.delete(selectedAccess.rold_id, selectedAccess.menu_id);
-                await menuAccessAPI.create({
-                    rold_id: formData.rold_id,
-                    menu_id: formData.menu_id,
-                    access: formData.access,
-                    can_add: formData.can_add,
-                    can_edit: formData.can_edit,
-                    can_view: formData.can_view,
-                    can_cancel: formData.can_cancel,
-                });
+                // If IDs changed, check if target record already exists
+                let targetExists = false;
+                try {
+                    await menuAccessAPI.getById(formData.rold_id, formData.menu_id);
+                    targetExists = true;
+                    // #region agent log
+                    fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:214',message:'Target record exists, will update',data:{targetRoldId:formData.rold_id,targetMenuId:formData.menu_id},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+                    // #endregion
+                } catch (error: any) {
+                    // Target record doesn't exist, will create new
+                    targetExists = false;
+                    // #region agent log
+                    fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:220',message:'Target record does not exist, will create',data:{targetRoldId:formData.rold_id,targetMenuId:formData.menu_id},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+                    // #endregion
+                }
+                
+                if (targetExists) {
+                    // If target exists, update it with new permissions
+                    const updatePayload = {
+                        access: formData.access,
+                        can_add: formData.can_add,
+                        can_edit: formData.can_edit,
+                        can_view: formData.can_view,
+                        can_cancel: formData.can_cancel,
+                        last_modified_user_id: "ADMIN",
+                    };
+                    // #region agent log
+                    fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:232',message:'Calling menuAccessAPI.update',data:{roldId:formData.rold_id,menuId:formData.menu_id,updatePayload},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+                    // #endregion
+                    const updateResult = await menuAccessAPI.update(formData.rold_id, formData.menu_id, updatePayload);
+                    // #region agent log
+                    fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:238',message:'menuAccessAPI.update response',data:{updateResult},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+                    // #endregion
+                    // Delete the old record if it's different
+                    if (selectedAccess.rold_id !== formData.rold_id || selectedAccess.menu_id !== formData.menu_id) {
+                        try {
+                            // #region agent log
+                            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:241',message:'Deleting old record',data:{oldRoldId:selectedAccess.rold_id,oldMenuId:selectedAccess.menu_id},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+                            // #endregion
+                            await menuAccessAPI.delete(selectedAccess.rold_id, selectedAccess.menu_id);
+                            // #region agent log
+                            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:243',message:'Old record deleted successfully',data:{},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+                            // #endregion
+                        } catch (deleteError: any) {
+                            // #region agent log
+                            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:245',message:'Delete old record error (ignored)',data:{error:deleteError.message},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+                            // #endregion
+                            // Ignore delete errors (record might not exist)
+                        }
+                    }
+                } else {
+                    // Target doesn't exist, delete old and create new
+                    try {
+                        await menuAccessAPI.delete(selectedAccess.rold_id, selectedAccess.menu_id);
+                    } catch (deleteError: any) {
+                        // Ignore delete errors (record might not exist)
+                    }
+                    await menuAccessAPI.create({
+                        rold_id: formData.rold_id,
+                        menu_id: formData.menu_id,
+                        access: formData.access,
+                        can_add: formData.can_add,
+                        can_edit: formData.can_edit,
+                        can_view: formData.can_view,
+                        can_cancel: formData.can_cancel,
+                    });
+                }
                 // Store last action for undo with new IDs
                 setLastAction({ 
                     type: 'edit', 
@@ -221,13 +295,21 @@ export default function MenuAccessMasterPage() {
                 });
             } else {
                 // If IDs haven't changed, just update the permissions
-                await menuAccessAPI.update(selectedAccess.rold_id, selectedAccess.menu_id, {
+                const updatePayload = {
                     access: formData.access,
                     can_add: formData.can_add,
                     can_edit: formData.can_edit,
                     can_view: formData.can_view,
                     can_cancel: formData.can_cancel,
-                });
+                    last_modified_user_id: "ADMIN",
+                };
+                // #region agent log
+                fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:265',message:'Calling menuAccessAPI.update (no ID change)',data:{roldId:selectedAccess.rold_id,menuId:selectedAccess.menu_id,updatePayload},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+                // #endregion
+                const updateResult = await menuAccessAPI.update(selectedAccess.rold_id, selectedAccess.menu_id, updatePayload);
+                // #region agent log
+                fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:270',message:'menuAccessAPI.update response (no ID change)',data:{updateResult},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+                // #endregion
                 // Store last action for undo
                 setLastAction({ type: 'edit', data: previousData });
             }
@@ -244,8 +326,20 @@ export default function MenuAccessMasterPage() {
             setIsEditModalOpen(false);
             setSelectedAccess(null);
             setFormData({ rold_id: "", menu_id: "", access: true, can_add: true, can_edit: true, can_view: true, can_cancel: true });
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:329',message:'About to call loadAllData',data:{},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             loadAllData();
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:332',message:'After calling loadAllData',data:{},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:247',message:'Edit submit success',data:{},timestamp:Date.now(),runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
         } catch (error: any) {
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/1da368eb-a05e-4f2c-9080-a05e648dee74',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/menu-access-master/page.tsx:249',message:'Edit submit error',data:{error:error.message,errorName:error.name,errorStack:error.stack},timestamp:Date.now(),runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             toast({
                 title: "Error",
                 description: error.message || "Failed to update menu access",

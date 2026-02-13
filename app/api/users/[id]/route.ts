@@ -50,11 +50,16 @@ export async function PUT(
     const { id } = await params;
     await ensureDbConnection();
     const body = await request.json();
-    const { employee_id, password, N_password_expiry_days, active } = body;
+    const { employee_id, role_id, password, N_password_expiry_days, active } = body;
     const updateData: any = {
       employee_id,
       active: active !== false,
     };
+    
+    // Update role_id if provided (allow empty string to clear role_id)
+    if (role_id !== undefined) {
+      updateData.role_id = role_id || undefined;
+    }
 
     // Update password if provided
     if (password) {
