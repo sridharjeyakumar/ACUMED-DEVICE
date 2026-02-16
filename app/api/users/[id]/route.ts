@@ -56,9 +56,9 @@ export async function PUT(
       active: active !== false,
     };
     
-    // Update role_id if provided (allow empty string to clear role_id)
+    // Update role_id if provided (allow empty string to clear role_id by setting to null)
     if (role_id !== undefined) {
-      updateData.role_id = role_id || undefined;
+      updateData.role_id = role_id === "" ? null : role_id;
     }
 
     // Update password if provided
@@ -77,6 +77,13 @@ export async function PUT(
       updateData.Date_password_expiry_date = passwordExpiryDate;
       updateData.N_password_expiry_days = N_password_expiry_days;
     }
+
+    // Remove undefined values from updateData to ensure proper MongoDB update
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
 
     const user = await UserMaster.findOneAndUpdate(
       { user_id: id },

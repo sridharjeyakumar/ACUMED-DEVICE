@@ -88,6 +88,7 @@ export default function UserMasterPage() {
         password_expiry_days: 90,
         active: true,
     });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Reset form data when Add modal opens
     useEffect(() => {
@@ -214,7 +215,11 @@ export default function UserMasterPage() {
 
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedUser) return;
+        if (!selectedUser || isSubmitting) {
+            return;
+        }
+        
+        setIsSubmitting(true);
         
         // Store previous state for undo
         const previousData = { ...selectedUser };
@@ -231,7 +236,27 @@ export default function UserMasterPage() {
             if (formData.password_expiry_days) {
                 updateData.N_password_expiry_days = formData.password_expiry_days;
             }
-            await userAPI.update(selectedUser.user_id, updateData);
+            
+            const response = await userAPI.update(selectedUser.user_id, updateData);
+            
+            // Update local state immediately with the response data
+            if (response) {
+                setUsers(prevUsers => prevUsers.map(u => 
+                    u.user_id === selectedUser.user_id 
+                        ? {
+                            user_id: response.user_id,
+                            employee_id: response.employee_id,
+                            role_id: response.role_id || response.roll_id || "",
+                            password_changed_date: response.password_changed_date || response.Date_password_changed_date,
+                            password_expiry_date: response.password_expiry_date || response.Date_password_expiry_date,
+                            password_expiry_days: response.password_expiry_days || response.N_password_expiry_days,
+                            last_login_date: response.last_login_date || response.Date_last_login_date,
+                            last_login_time: response.last_login_time || response.Time_last_login_time,
+                            active: response.active !== false,
+                        }
+                        : u
+                ));
+            }
             
             // Store last action for undo
             setLastAction({ type: 'edit', data: previousData });
@@ -248,13 +273,17 @@ export default function UserMasterPage() {
             setIsEditModalOpen(false);
             setSelectedUser(null);
             setFormData({ user_id: "", employee_id: "", role_id: "", password: "", password_expiry_days: 90, active: true });
-            loadAllData();
+            
+            // Also refresh all data in the background to ensure consistency
+            loadAllData().catch(() => {});
         } catch (error: any) {
             toast({
                 title: "Error",
                 description: error.message || "Failed to update user",
                 variant: "destructive",
             });
+        } finally {
+            setIsSubmitting(false);
         }
     };
     
