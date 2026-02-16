@@ -415,7 +415,7 @@ export default function MenuMasterPage() {
                                                 className="w-full"
                                                 onClick={() => setFilterActive("all")}
                                             >
-                                                Clear Filter
+                                                Clear Filters
                                             </Button>
                                         </div>
                                     </PopoverContent>

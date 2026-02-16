@@ -55,6 +55,7 @@ export default function MaterialCategoryMasterPage() {
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: MaterialCategory } | null>(null);
     const [cancelledCategories, setCancelledCategories] = useState<Set<string>>(new Set());
+    const [filterActive, setFilterActive] = useState<string>("all");
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [categoryToCancel, setCategoryToCancel] = useState<MaterialCategory | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -91,10 +92,16 @@ export default function MaterialCategoryMasterPage() {
         material_category_name: "",
     });
 
-    const filteredCategories = categories.filter((category) =>
-        category.material_category_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        category.material_category_name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredCategories = categories.filter((category) => {
+        const matchesSearch = category.material_category_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            category.material_category_name.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "active" && !cancelledCategories.has(category.material_category_id)) ||
+            (filterActive === "inactive" && cancelledCategories.has(category.material_category_id));
+        
+        return matchesSearch && matchesActive;
+    });
 
     // Pagination logic
     const totalPages = Math.ceil(filteredCategories.length / rowsPerPage);
@@ -105,7 +112,7 @@ export default function MaterialCategoryMasterPage() {
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, rowsPerPage]);
+    }, [searchQuery, filterActive, rowsPerPage]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -334,6 +341,44 @@ export default function MaterialCategoryMasterPage() {
                                         </div>
                                         <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
                                             <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">Status</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="mc-status-all" 
+                                                            name="mcStatusFilter"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="mc-status-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="mc-status-active" 
+                                                            name="mcStatusFilter"
+                                                            checked={filterActive === "active"}
+                                                            onChange={() => setFilterActive("active")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="mc-status-active" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="mc-status-inactive" 
+                                                            name="mcStatusFilter"
+                                                            checked={filterActive === "inactive"}
+                                                            onChange={() => setFilterActive("inactive")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="mc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3 pt-3 border-t border-border">
                                                 <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
                                                 <select
                                                     value={rowsPerPage}
@@ -347,6 +392,18 @@ export default function MaterialCategoryMasterPage() {
                                                     <option value={100}>100</option>
                                                 </select>
                                             </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => {
+                                                    setFilterActive("all");
+                                                }}
+                                            >
+                                                Clear Filters
+                                            </Button>
                                         </div>
                                     </PopoverContent>
                                 </Popover>

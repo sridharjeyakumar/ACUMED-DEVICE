@@ -411,7 +411,7 @@ export default function WeeklyOffMasterPage() {
                                                 className="w-full"
                                                 onClick={() => setFilterDay("all")}
                                             >
-                                                Clear Filter
+                                                Clear Filters
                                             </Button>
                                         </div>
                                     </PopoverContent>

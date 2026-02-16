@@ -71,6 +71,7 @@ export default function HolidaysMasterPage() {
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [holidayToCancel, setHolidayToCancel] = useState<Holiday | null>(null);
     const [filterYear, setFilterYear] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("all");
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
@@ -113,7 +114,12 @@ export default function HolidaysMasterPage() {
         
         const matchesYear = filterYear === "all" || holiday.year.toString() === filterYear;
         
-        return matchesSearch && matchesYear;
+        const holidayKey = holiday._id || `${formatDate(holiday.date)}-${holiday.year}`;
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "active" && !cancelledHolidays.has(holidayKey)) ||
+            (filterActive === "inactive" && cancelledHolidays.has(holidayKey));
+        
+        return matchesSearch && matchesYear && matchesActive;
     });
 
     // Pagination logic
@@ -125,7 +131,7 @@ export default function HolidaysMasterPage() {
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, filterYear, rowsPerPage]);
+    }, [searchQuery, filterYear, filterActive, rowsPerPage]);
 
     const uniqueYears = Array.from(new Set(holidays.map(h => h.year.toString()))).sort((a, b) => parseInt(b) - parseInt(a));
 
@@ -398,6 +404,44 @@ export default function HolidaysMasterPage() {
                                                 </div>
                                             </div>
                                             <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">Status</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="holiday-status-all" 
+                                                            name="holidayStatusFilter"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="holiday-status-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="holiday-status-active" 
+                                                            name="holidayStatusFilter"
+                                                            checked={filterActive === "active"}
+                                                            onChange={() => setFilterActive("active")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="holiday-status-active" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="holiday-status-inactive" 
+                                                            name="holidayStatusFilter"
+                                                            checked={filterActive === "inactive"}
+                                                            onChange={() => setFilterActive("inactive")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="holiday-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3 pt-3 border-t border-border">
                                                 <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
                                                 <select
                                                     value={rowsPerPage}
@@ -417,9 +461,12 @@ export default function HolidaysMasterPage() {
                                                 variant="outline" 
                                                 size="sm" 
                                                 className="w-full"
-                                                onClick={() => setFilterYear("all")}
+                                                onClick={() => {
+                                                    setFilterYear("all");
+                                                    setFilterActive("all");
+                                                }}
                                             >
-                                                Clear Filter
+                                                Clear Filters
                                             </Button>
                                         </div>
                                     </PopoverContent>

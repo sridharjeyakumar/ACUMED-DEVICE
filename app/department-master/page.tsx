@@ -59,6 +59,7 @@ export default function DepartmentMasterPage() {
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: Department } | null>(null);
     const [cancelledDepartments, setCancelledDepartments] = useState<Set<string>>(new Set());
+    const [filterActive, setFilterActive] = useState<string>("all");
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
@@ -93,10 +94,16 @@ export default function DepartmentMasterPage() {
         department_name: "",
     });
 
-    const filteredDepartments = departments.filter((dept) =>
-        dept.dept_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        dept.department_name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredDepartments = departments.filter((dept) => {
+        const matchesSearch = dept.dept_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            dept.department_name.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "active" && !cancelledDepartments.has(dept.dept_id)) ||
+            (filterActive === "inactive" && cancelledDepartments.has(dept.dept_id));
+        
+        return matchesSearch && matchesActive;
+    });
 
     // Pagination logic
     const totalPages = Math.ceil(filteredDepartments.length / rowsPerPage);
@@ -107,7 +114,7 @@ export default function DepartmentMasterPage() {
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, rowsPerPage]);
+    }, [searchQuery, filterActive, rowsPerPage]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -365,6 +372,44 @@ export default function DepartmentMasterPage() {
                                         </div>
                                         <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
                                             <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">Status</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="dept-status-all" 
+                                                            name="deptStatusFilter"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="dept-status-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="dept-status-active" 
+                                                            name="deptStatusFilter"
+                                                            checked={filterActive === "active"}
+                                                            onChange={() => setFilterActive("active")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="dept-status-active" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="dept-status-inactive" 
+                                                            name="deptStatusFilter"
+                                                            checked={filterActive === "inactive"}
+                                                            onChange={() => setFilterActive("inactive")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="dept-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3 pt-3 border-t border-border">
                                                 <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
                                                 <select
                                                     value={rowsPerPage}
@@ -378,6 +423,18 @@ export default function DepartmentMasterPage() {
                                                     <option value={100}>100</option>
                                                 </select>
                                             </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => {
+                                                    setFilterActive("all");
+                                                }}
+                                            >
+                                                Clear Filters
+                                            </Button>
                                         </div>
                                     </PopoverContent>
                                 </Popover>

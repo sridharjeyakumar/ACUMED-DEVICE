@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, X, ChevronDown } from "lucide-react";
+import { Search, Plus, Filter, Pencil, X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -38,8 +38,11 @@ export default function CollectionBinMasterPage() {
     const [cancelledBins, setCancelledBins] = useState<Set<string>>(new Set());
     const [selectedBin, setSelectedBin] = useState<BinRecord | null>(null);
     const [filterBinType, setFilterBinType] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("all");
     const [records, setRecords] = useState<BinRecord[]>([]);
     const [loading, setLoading] = useState(true);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+    const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
         binId: "",
         binName: "",
@@ -126,8 +129,23 @@ export default function CollectionBinMasterPage() {
         
         const matchesBinType = filterBinType === "all" || item.binType === filterBinType;
         
-        return matchesSearch && matchesBinType;
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "active" && item.active === true) ||
+            (filterActive === "inactive" && item.active === false);
+        
+        return matchesSearch && matchesBinType && matchesActive;
     });
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredRecords.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedRecords = filteredRecords.slice(startIndex, endIndex);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterBinType, filterActive, rowsPerPage]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -305,7 +323,7 @@ export default function CollectionBinMasterPage() {
                                     />
                                 </div>
                                 <span className="text-sm text-muted-foreground whitespace-nowrap">
-                                    {loading ? "LOADING..." : `SHOWING ${filteredRecords.length > 0 ? 1 : 0}-${filteredRecords.length} OF ${filteredRecords.length}`}
+                                    SHOWING {filteredRecords.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredRecords.length)} OF {filteredRecords.length}
                                 </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -313,11 +331,14 @@ export default function CollectionBinMasterPage() {
                                             <Filter className="w-4 h-4" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-56" align="end">
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-semibold">Bin Type</Label>
-                                                <div className="space-y-2">
+                                    <PopoverContent className="w-80 p-0" align="end">
+                                        <div className="p-4 border-b border-border">
+                                            <h3 className="font-semibold text-sm text-foreground">Filters</h3>
+                                        </div>
+                                        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">Bin Type</Label>
+                                                <div className="space-y-2 max-h-32 overflow-y-auto">
                                                     <div className="flex items-center space-x-2">
                                                         <input 
                                                             type="radio" 
@@ -325,9 +346,9 @@ export default function CollectionBinMasterPage() {
                                                             name="binTypeFilter"
                                                             checked={filterBinType === "all"}
                                                             onChange={() => setFilterBinType("all")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="bintype-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                        <Label htmlFor="bintype-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
                                                         <input 
@@ -336,9 +357,9 @@ export default function CollectionBinMasterPage() {
                                                             name="binTypeFilter"
                                                             checked={filterBinType === "Normal"}
                                                             onChange={() => setFilterBinType("Normal")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="bintype-normal" className="text-sm font-normal cursor-pointer">Normal</Label>
+                                                        <Label htmlFor="bintype-normal" className="text-sm font-normal cursor-pointer text-foreground">Normal</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
                                                         <input 
@@ -347,19 +368,76 @@ export default function CollectionBinMasterPage() {
                                                             name="binTypeFilter"
                                                             checked={filterBinType === "Rejected"}
                                                             onChange={() => setFilterBinType("Rejected")}
-                                                            className="h-4 w-4"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="bintype-rejected" className="text-sm font-normal cursor-pointer">Rejected</Label>
+                                                        <Label htmlFor="bintype-rejected" className="text-sm font-normal cursor-pointer text-foreground">Rejected</Label>
                                                     </div>
                                                 </div>
                                             </div>
+                                            <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">Status</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="bin-status-all" 
+                                                            name="binStatusFilter"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="bin-status-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="bin-status-active" 
+                                                            name="binStatusFilter"
+                                                            checked={filterActive === "active"}
+                                                            onChange={() => setFilterActive("active")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="bin-status-active" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="bin-status-inactive" 
+                                                            name="binStatusFilter"
+                                                            checked={filterActive === "inactive"}
+                                                            onChange={() => setFilterActive("inactive")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="bin-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
+                                                <select
+                                                    value={rowsPerPage}
+                                                    onChange={(e) => setRowsPerPage(parseInt(e.target.value))}
+                                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    <option value={5}>5</option>
+                                                    <option value={10}>10</option>
+                                                    <option value={25}>25</option>
+                                                    <option value={50}>50</option>
+                                                    <option value={100}>100</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
                                             <Button 
                                                 variant="outline" 
                                                 size="sm" 
                                                 className="w-full"
-                                                onClick={() => setFilterBinType("all")}
+                                                onClick={() => {
+                                                    setFilterBinType("all");
+                                                    setFilterActive("all");
+                                                }}
                                             >
-                                                Clear Filter
+                                                Clear Filters
                                             </Button>
                                         </div>
                                     </PopoverContent>
@@ -420,7 +498,7 @@ export default function CollectionBinMasterPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredRecords.map((item, index) => (
+                                            paginatedRecords.map((item, index) => (
                                                 <motion.tr
                                                     key={item.id}
                                                     initial={{ opacity: 0, x: -20 }}
@@ -508,6 +586,30 @@ export default function CollectionBinMasterPage() {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+
+                            <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
+                                <span className="text-sm text-muted-foreground">PAGE {currentPage} OF {totalPages || 1}</span>
+                                <div className="flex items-center gap-2">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronLeft className="w-4 h-4 mr-1" />
+                                        Previous
+                                    </Button>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage >= totalPages}
+                                    >
+                                        Next
+                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                    </Button>
+                                </div>
                             </div>
                         </Card>
                     </motion.div>
@@ -920,3 +1022,4 @@ export default function CollectionBinMasterPage() {
         </div>
     );
 }
+

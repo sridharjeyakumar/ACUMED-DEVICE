@@ -59,6 +59,7 @@ export default function EmployeeGradeMasterPage() {
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: EmployeeGrade } | null>(null);
     const [cancelledGrades, setCancelledGrades] = useState<Set<string>>(new Set());
+    const [filterActive, setFilterActive] = useState<string>("all");
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
@@ -93,10 +94,16 @@ export default function EmployeeGradeMasterPage() {
         grade_name: "",
     });
 
-    const filteredGrades = grades.filter((grade) =>
-        grade.grade_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        grade.grade_name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredGrades = grades.filter((grade) => {
+        const matchesSearch = grade.grade_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            grade.grade_name.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesActive = filterActive === "all" || 
+            (filterActive === "active" && !cancelledGrades.has(grade.grade_id)) ||
+            (filterActive === "inactive" && cancelledGrades.has(grade.grade_id));
+        
+        return matchesSearch && matchesActive;
+    });
 
     // Pagination logic
     const totalPages = Math.ceil(filteredGrades.length / rowsPerPage);
@@ -107,7 +114,7 @@ export default function EmployeeGradeMasterPage() {
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, rowsPerPage]);
+    }, [searchQuery, filterActive, rowsPerPage]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -365,6 +372,44 @@ export default function EmployeeGradeMasterPage() {
                                         </div>
                                         <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
                                             <div className="space-y-3">
+                                                <Label className="text-sm font-semibold text-foreground">Status</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="grade-status-all" 
+                                                            name="gradeStatusFilter"
+                                                            checked={filterActive === "all"}
+                                                            onChange={() => setFilterActive("all")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="grade-status-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="grade-status-active" 
+                                                            name="gradeStatusFilter"
+                                                            checked={filterActive === "active"}
+                                                            onChange={() => setFilterActive("active")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="grade-status-active" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input 
+                                                            type="radio" 
+                                                            id="grade-status-inactive" 
+                                                            name="gradeStatusFilter"
+                                                            checked={filterActive === "inactive"}
+                                                            onChange={() => setFilterActive("inactive")}
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <Label htmlFor="grade-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3 pt-3 border-t border-border">
                                                 <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
                                                 <select
                                                     value={rowsPerPage}
@@ -378,6 +423,18 @@ export default function EmployeeGradeMasterPage() {
                                                     <option value={100}>100</option>
                                                 </select>
                                             </div>
+                                        </div>
+                                        <div className="p-4 border-t border-border bg-muted/30">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => {
+                                                    setFilterActive("all");
+                                                }}
+                                            >
+                                                Clear Filters
+                                            </Button>
                                         </div>
                                     </PopoverContent>
                                 </Popover>
