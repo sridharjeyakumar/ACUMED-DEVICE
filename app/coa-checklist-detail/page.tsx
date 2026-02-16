@@ -96,7 +96,6 @@ export default function COAChecklistDetailPage() {
                 throw new Error("Invalid response format from server");
             }
             
-            console.log(`Loaded ${data.length} COA checklist details from database`);
             setRecords(data.map(toCamelCase));
         } catch (error: any) {
             console.error('Error loading COA checklist details:', error);

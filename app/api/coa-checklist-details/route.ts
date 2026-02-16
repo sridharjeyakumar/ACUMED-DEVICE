@@ -11,24 +11,8 @@ export async function GET() {
   try {
     await ensureConnection();
     
-    // Log collection name for debugging
-    const collectionName = COAChecklistDetailMaster.collection.name;
-    console.log('Fetching from collection:', collectionName);
-    
-    // Try to get count first to verify connection
-    const totalCount = await COAChecklistDetailMaster.countDocuments();
-    console.log(`Total documents in collection: ${totalCount}`);
-    
     // Fetch all checklist details
     const checklistDetails = await COAChecklistDetailMaster.find().lean().sort({ checklist_id: 1, checklist_sno: 1 });
-    
-    // Log count for debugging
-    console.log(`Found ${checklistDetails.length} COA checklist details`);
-    
-    // If no results but count > 0, there might be a query issue
-    if (checklistDetails.length === 0 && totalCount > 0) {
-      console.warn('Query returned 0 results but collection has documents. This might indicate a schema mismatch.');
-    }
     
     return NextResponse.json(checklistDetails, {
       headers: {
@@ -140,14 +124,8 @@ export async function DELETE(request: NextRequest) {
   try {
     await ensureConnection();
     
-    // Get count before deletion
-    const countBefore = await COAChecklistDetailMaster.countDocuments();
-    console.log(`Deleting ${countBefore} COA checklist detail records from database`);
-    
     // Delete all documents
     const result = await COAChecklistDetailMaster.deleteMany({});
-    
-    console.log(`Successfully deleted ${result.deletedCount} COA checklist detail records`);
     
     return NextResponse.json({ 
       message: `Successfully deleted ${result.deletedCount} COA checklist detail records`,

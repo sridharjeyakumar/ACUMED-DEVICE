@@ -124,7 +124,6 @@ export default function ProductionUpdatePage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
         setIsAddModalOpen(false);
         setFormData({
             batchNo: "",
@@ -159,7 +158,6 @@ export default function ProductionUpdatePage() {
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Edit submitted:", { ...selectedRecord, ...formData });
         setIsEditModalOpen(false);
         setSelectedRecord(null);
         setFormData({
@@ -182,7 +180,6 @@ export default function ProductionUpdatePage() {
     };
 
     const confirmDelete = () => {
-        console.log("Deleting record:", selectedRecord);
         setIsDeleteDialogOpen(false);
         setSelectedRecord(null);
     };

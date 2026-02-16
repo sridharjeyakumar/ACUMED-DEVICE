@@ -35,7 +35,7 @@ export default function RootLayout({
             <div className="fixed bottom-0 left-0 z-50 p-3 pointer-events-none">
               <div className="bg-background/80 backdrop-blur-sm border border-border rounded-lg px-3 py-1.5 shadow-lg">
                 <span className="text-xs font-medium text-muted-foreground">
-                  App Version: <span className="font-semibold text-foreground">v0.1</span>
+                  App Version: <span className="font-semibold text-foreground">v0.1.3</span>
                 </span>
               </div>
             </div>

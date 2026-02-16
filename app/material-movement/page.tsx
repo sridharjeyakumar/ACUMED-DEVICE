@@ -106,7 +106,6 @@ export default function MaterialMovementPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
         setIsAddModalOpen(false);
         setFormData({
             materialId: "",
@@ -135,7 +134,6 @@ export default function MaterialMovementPage() {
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Edit submitted:", { ...selectedRecord, ...formData });
         setIsEditModalOpen(false);
         setSelectedRecord(null);
         setFormData({
@@ -155,7 +153,6 @@ export default function MaterialMovementPage() {
     };
 
     const confirmDelete = () => {
-        console.log("Deleting record:", selectedRecord);
         setIsDeleteDialogOpen(false);
         setSelectedRecord(null);
     };

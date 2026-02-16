@@ -138,7 +138,6 @@ export default function PackingBOMPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
         setIsAddModalOpen(false);
         setFormData({
             bomId: "",
@@ -171,7 +170,6 @@ export default function PackingBOMPage() {
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Edit submitted:", { ...selectedPackingBOM, ...formData });
         setIsEditModalOpen(false);
         setSelectedPackingBOM(null);
         setFormData({
@@ -193,7 +191,6 @@ export default function PackingBOMPage() {
     };
 
     const confirmDelete = () => {
-        console.log("Deleting packing BOM:", selectedPackingBOM);
         setIsDeleteDialogOpen(false);
         setSelectedPackingBOM(null);
     };

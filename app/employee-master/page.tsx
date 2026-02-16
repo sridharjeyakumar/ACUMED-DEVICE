@@ -321,7 +321,6 @@ export default function EmployeeMasterPage() {
     };
 
     const confirmDelete = () => {
-        console.log("Deleting employee:", selectedEmployee);
         setIsDeleteDialogOpen(false);
         setSelectedEmployee(null);
     };

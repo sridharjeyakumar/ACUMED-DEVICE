@@ -116,7 +116,6 @@ export default function ProductionCapacityPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
         setIsAddModalOpen(false);
         setFormData({
             machineId: "",
@@ -147,7 +146,6 @@ export default function ProductionCapacityPage() {
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Edit submitted:", { ...selectedMachine, ...formData });
         setIsEditModalOpen(false);
         setSelectedMachine(null);
         setFormData({
@@ -179,10 +177,8 @@ export default function ProductionCapacityPage() {
             const newSet = new Set(prev);
             if (isCancelled) {
                 newSet.delete(machineToCancel.id);
-                console.log(`Machine ${machineToCancel.machineName} has been restored`);
             } else {
                 newSet.add(machineToCancel.id);
-                console.log(`Machine ${machineToCancel.machineName} has been cancelled`);
             }
             return newSet;
         });

@@ -138,7 +138,6 @@ export default function MonthlyProductionTargetPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
         setIsAddModalOpen(false);
         setFormData({
             monthYear: "",
@@ -165,7 +164,6 @@ export default function MonthlyProductionTargetPage() {
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Edit submitted:", { ...selectedTarget, ...formData });
         setIsEditModalOpen(false);
         setSelectedTarget(null);
         setFormData({
@@ -184,7 +182,6 @@ export default function MonthlyProductionTargetPage() {
     };
 
     const confirmDelete = () => {
-        console.log("Deleting target:", selectedTarget);
         setIsDeleteDialogOpen(false);
         setSelectedTarget(null);
     };
