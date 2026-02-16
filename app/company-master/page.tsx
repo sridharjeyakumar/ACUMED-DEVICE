@@ -193,6 +193,11 @@ export default function CompanyMasterPage() {
     const endIndex = startIndex + rowsPerPage;
     const paginatedCompanies = filteredCompanies.slice(startIndex, endIndex);
 
+    // Load companies on component mount
+    useEffect(() => {
+        loadCompanies();
+    }, []);
+
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
