@@ -28,7 +28,8 @@ interface Product {
     storage_condition?: string;
     safety_stock_qty?: number;
     default_pack_size_id?: string;
-    batch_no_pattern?: string;
+    batch_prefix?: string;
+    running_batch_sno?:number;
     product_image?: string;
     product_image_icon?: string;
     qc_required?: boolean;
@@ -88,7 +89,8 @@ export default function ProductMasterPage() {
         storage_condition: "",
         safety_stock_qty: "",
         default_pack_size_id: "",
-        batch_no_pattern: "",
+        batch_prefix: "",
+        running_batch_sno:"",
         product_image: "",
         product_image_icon: "",
         qc_required: false,
@@ -149,7 +151,8 @@ export default function ProductMasterPage() {
                 storage_condition: "",
                 safety_stock_qty: "",
                 default_pack_size_id: "",
-                batch_no_pattern: "",
+                batch_prefix: "",
+                running_batch_sno:"",
                 product_image: "",
                 product_image_icon: "",
                 qc_required: false,
@@ -187,16 +190,33 @@ export default function ProductMasterPage() {
 
     const uniqueCategories = Array.from(new Set(products.map(p => p.product_category_id).filter(c => c)));
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value, type } = e.target;
-        if (type === 'checkbox') {
-            const checked = (e.target as HTMLInputElement).checked;
-            setFormData({ ...formData, [name]: checked });
+    // const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    //     const { name, value, type } = e.target;
+    //     if (type === 'checkbox') {
+    //         const checked = (e.target as HTMLInputElement).checked;
+    //         setFormData({ ...formData, [name]: checked });
+    //     } else {
+    //         setFormData({ ...formData, [name]: value });
+    //     }
+    // };
+const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    
+    if (type === 'checkbox') {
+        const checked = (e.target as HTMLInputElement).checked;
+        setFormData({ ...formData, [name]: checked });
+    } else if (type === 'number') {
+        // For number inputs, check if the value is empty string (user deleted it)
+        if (value === '') {
+            setFormData({ ...formData, [name]: '' }); // Set to empty string to clear
         } else {
-            setFormData({ ...formData, [name]: value });
+            // Keep as string for the input field
+            setFormData({ ...formData, [name]: value }); // REMOVED Number() conversion
         }
-    };
-
+    } else {
+        setFormData({ ...formData, [name]: value });
+    }
+};
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -218,7 +238,8 @@ export default function ProductMasterPage() {
                 storage_condition: formData.storage_condition || undefined,
                 safety_stock_qty: formData.safety_stock_qty ? Number(formData.safety_stock_qty) : undefined,
                 default_pack_size_id: formData.default_pack_size_id || undefined,
-                batch_no_pattern: formData.batch_no_pattern || undefined,
+                batch_prefix: formData.batch_prefix || undefined,
+                running_batch_sno:formData.running_batch_sno||undefined,
                 product_image: formData.product_image || undefined,
                 product_image_icon: formData.product_image_icon || undefined,
                 qc_required: formData.qc_required,
@@ -248,7 +269,8 @@ export default function ProductMasterPage() {
                 storage_condition: "",
                 safety_stock_qty: "",
                 default_pack_size_id: "",
-                batch_no_pattern: "",
+                batch_prefix: "",
+                running_batch_sno:"",
                 product_image: "",
                 product_image_icon: "",
                 qc_required: false,
@@ -284,7 +306,8 @@ export default function ProductMasterPage() {
             storage_condition: product.storage_condition || "",
             safety_stock_qty: product.safety_stock_qty?.toString() || "",
             default_pack_size_id: product.default_pack_size_id || "",
-            batch_no_pattern: product.batch_no_pattern || "",
+            batch_prefix: product.batch_prefix || "",
+            running_batch_sno: product.running_batch_sno?.toString() || "",
             product_image: product.product_image || "",
             product_image_icon: product.product_image_icon || "",
             qc_required: product.qc_required || false,
@@ -295,102 +318,203 @@ export default function ProductMasterPage() {
         setIsEditModalOpen(true);
     };
 
-    const handleEditSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (isSubmittingRef.current) return;
-        isSubmittingRef.current = true;
-        try {
-            // Format the data before sending
-            const formattedData: any = {
-                product_name: formData.product_name,
-                product_shortname: formData.product_shortname,
-                uom: formData.uom,
-                product_category_id: formData.product_category_id || undefined,
-                product_spec: formData.product_spec || undefined,
-                weight_per_piece: formData.weight_per_piece ? Number(formData.weight_per_piece) : undefined,
-                weight_uom: formData.weight_uom || undefined,
-                wipes_per_kg: formData.wipes_per_kg ? Number(formData.wipes_per_kg) : undefined,
-                shelf_life_in_months: formData.shelf_life_in_months ? Number(formData.shelf_life_in_months) : undefined,
-                storage_condition: formData.storage_condition || undefined,
-                safety_stock_qty: formData.safety_stock_qty ? Number(formData.safety_stock_qty) : undefined,
-                default_pack_size_id: formData.default_pack_size_id || undefined,
-                batch_no_pattern: formData.batch_no_pattern || undefined,
-                product_image: formData.product_image || undefined,
-                product_image_icon: formData.product_image_icon || undefined,
-                qc_required: formData.qc_required,
-                coa_checklist_id: formData.coa_checklist_id || undefined,
-                sterilization_required: formData.sterilization_required,
-                active: formData.active,
-                last_modified_user_id: "ADMIN",
-            };
+const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    try {
+        // Format the data before sending
+        const formattedData: any = {
+            product_name: formData.product_name,
+            product_shortname: formData.product_shortname,
+            uom: formData.uom,
+            product_category_id: formData.product_category_id || undefined,
+            product_spec: formData.product_spec || undefined,
+            weight_per_piece: formData.weight_per_piece ? Number(formData.weight_per_piece) : undefined,
+            weight_uom: formData.weight_uom || undefined,
+            wipes_per_kg: formData.wipes_per_kg ? Number(formData.wipes_per_kg) : undefined,
+            shelf_life_in_months: formData.shelf_life_in_months ? Number(formData.shelf_life_in_months) : undefined,
+            storage_condition: formData.storage_condition || undefined,
+            safety_stock_qty: formData.safety_stock_qty ? Number(formData.safety_stock_qty) : undefined,
+            default_pack_size_id: formData.default_pack_size_id || undefined,
+            batch_prefix: formData.batch_prefix || undefined,
+            running_batch_sno: formData.running_batch_sno !== undefined && formData.running_batch_sno !== '' 
+    ? Number(formData.running_batch_sno) 
+    : undefined,
+            product_image: formData.product_image || undefined,
+            product_image_icon: formData.product_image_icon || undefined,
+            qc_required: formData.qc_required,
+            coa_checklist_id: formData.coa_checklist_id || undefined,
+            sterilization_required: formData.sterilization_required,
+            active: formData.active,
+            last_modified_user_id: "ADMIN",
+        };
+     Object.keys(formattedData).forEach(key => 
+            formattedData[key] === undefined && delete formattedData[key]
+        );
+        // Call API to update
+        await productAPI.update(selectedProduct!.product_id, formattedData);
+        
+        // Create updated product object with ALL fields preserved
+        const updatedProduct: Product = {
+            ...selectedProduct!,  // Keep all original fields
+            ...formattedData,      // Override with updated fields
+            last_modified_date_time: new Date(), // Update timestamp
+            // Ensure all fields are properly typed
+            product_id: selectedProduct!.product_id,
+            // Preserve any fields that might be undefined in formattedData
+            product_category_id: formattedData.product_category_id || selectedProduct!.product_category_id,
+            product_spec: formattedData.product_spec || selectedProduct!.product_spec,
+            weight_per_piece: formattedData.weight_per_piece !== undefined ? formattedData.weight_per_piece : selectedProduct!.weight_per_piece,
+            weight_uom: formattedData.weight_uom || selectedProduct!.weight_uom,
+            wipes_per_kg: formattedData.wipes_per_kg !== undefined ? formattedData.wipes_per_kg : selectedProduct!.wipes_per_kg,
+            shelf_life_in_months: formattedData.shelf_life_in_months !== undefined ? formattedData.shelf_life_in_months : selectedProduct!.shelf_life_in_months,
+            storage_condition: formattedData.storage_condition || selectedProduct!.storage_condition,
+            safety_stock_qty: formattedData.safety_stock_qty !== undefined ? formattedData.safety_stock_qty : selectedProduct!.safety_stock_qty,
+            default_pack_size_id: formattedData.default_pack_size_id || selectedProduct!.default_pack_size_id,
+            batch_prefix: formattedData.batch_prefix || selectedProduct!.batch_prefix,
+           running_batch_sno: formattedData.running_batch_sno !== undefined 
+        ? formattedData.running_batch_sno 
+        : selectedProduct!.running_batch_sno,
+            product_image: formattedData.product_image || selectedProduct!.product_image,
+            product_image_icon: formattedData.product_image_icon || selectedProduct!.product_image_icon,
+            coa_checklist_id: formattedData.coa_checklist_id || selectedProduct!.coa_checklist_id,
+        };
 
-            await productAPI.update(selectedProduct!.product_id, formattedData);
-            toast({
-                title: "Success",
-                description: "Product updated successfully",
+        // Update the products state
+        setProducts(prevProducts => 
+            prevProducts.map(product => 
+                product.product_id === selectedProduct!.product_id 
+                    ? updatedProduct
+                    : product
+            )
+        );
+
+        // Update cancelledProducts set if active status changed
+        if (selectedProduct!.active !== formData.active) {
+            setCancelledProducts(prev => {
+                const newSet = new Set(prev);
+                if (formData.active === false) {
+                    newSet.add(selectedProduct!.product_id);
+                } else {
+                    newSet.delete(selectedProduct!.product_id);
+                }
+                return newSet;
             });
-            setIsEditModalOpen(false);
-            setSelectedProduct(null);
-            loadProducts();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to update product",
-                variant: "destructive",
-            });
-        } finally {
-            isSubmittingRef.current = false;
         }
-    };
+
+        toast({
+            title: "Success",
+            description: "Product updated successfully",
+        });
+        
+        setIsEditModalOpen(false);
+        setSelectedProduct(null);
+        
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || "Failed to update product",
+            variant: "destructive",
+        });
+    } finally {
+        isSubmittingRef.current = false;
+    }
+};
 
     const handleCancel = (product: Product) => {
         setProductToCancel(product);
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = async () => {
-        if (!productToCancel) return;
+    // const confirmCancelItem = async () => {
+    //     if (!productToCancel) return;
         
-        const isCancelled = cancelledProducts.has(productToCancel.product_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+    //     const isCancelled = cancelledProducts.has(productToCancel.product_id);
+    //     const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
         
-        try {
-            await productAPI.update(productToCancel.product_id, {
-                active: newActiveStatus,
-                last_modified_user_id: "ADMIN",
-            });
+    //     try {
+    //         await productAPI.update(productToCancel.product_id, {
+    //             active: newActiveStatus,
+    //             last_modified_user_id: "ADMIN",
+    //         });
             
-            setCancelledProducts(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(productToCancel.product_id);
-                    toast({
-                        title: "Restored",
-                        description: `Product ${productToCancel.product_name} has been restored`,
-                    });
-                } else {
-                    newSet.add(productToCancel.product_id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Product ${productToCancel.product_name} has been cancelled`,
-                    });
-                }
-                return newSet;
-            });
+    //         setCancelledProducts(prev => {
+    //             const newSet = new Set(prev);
+    //             if (isCancelled) {
+    //                 newSet.delete(productToCancel.product_id);
+    //                 toast({
+    //                     title: "Restored",
+    //                     description: `Product ${productToCancel.product_name} has been restored`,
+    //                 });
+    //             } else {
+    //                 newSet.add(productToCancel.product_id);
+    //                 toast({
+    //                     title: "Cancelled",
+    //                     description: `Product ${productToCancel.product_name} has been cancelled`,
+    //                 });
+    //             }
+    //             return newSet;
+    //         });
             
-            loadProducts(); // Reload data from API
-            setIsCancelItemDialogOpen(false);
-            setProductToCancel(null);
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} product`,
-                variant: "destructive",
-            });
-        }
-    };
-
+    //         loadProducts(); // Reload data from API
+    //         setIsCancelItemDialogOpen(false);
+    //         setProductToCancel(null);
+    //     } catch (error: any) {
+    //         toast({
+    //             title: "Error",
+    //             description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} product`,
+    //             variant: "destructive",
+    //         });
+    //     }
+    // };
+const confirmCancelItem = async () => {
+    if (!productToCancel) return;
+    
+    // Get the current active status directly from the product
+    const currentActiveStatus = productToCancel.active === true;
+    const newActiveStatus = !currentActiveStatus; // Toggle the status
+    
+    console.log("Current active status:", currentActiveStatus);
+    console.log("New active status:", newActiveStatus);
+    
+    try {
+        // Call API to update
+        const response = await productAPI.update(productToCancel.product_id, {
+            active: newActiveStatus,
+            last_modified_user_id: "ADMIN",
+        });
+        
+        console.log("API Response:", response);
+        
+        // Update local products state with the response from API
+        setProducts(prevProducts => 
+            prevProducts.map(product => 
+                product.product_id === productToCancel.product_id 
+                    ? response // Use the complete response from API
+                    : product
+            )
+        );
+        
+        // Show success message
+        toast({
+            title: "Success",
+            description: `Product ${productToCancel.product_name} has been ${newActiveStatus ? 'restored' : 'cancelled'}`,
+        });
+        
+        setIsCancelItemDialogOpen(false);
+        setProductToCancel(null);
+        
+    } catch (error: any) {
+        console.error("Error in confirmCancelItem:", error);
+        toast({
+            title: "Error",
+            description: error.message || `Failed to update product`,
+            variant: "destructive",
+        });
+    }
+};
     if (loading) {
         return (
             <div className="flex min-h-screen bg-background">
@@ -640,8 +764,13 @@ export default function ProductMasterPage() {
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>Batch No.</span>
-                                                    <span>Pattern</span>
+                                                    <span>Batch Prefix</span>  
+                                                </div>
+                                            </th>
+                                                   <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Running</span>  
+                                                    <span>Batch S.No</span>
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
@@ -730,7 +859,8 @@ export default function ProductMasterPage() {
                                                         </div>
                                                     ) : "-"}
                                                 </td>
-                                                <td className="px-4 py-3 text-sm">{product.batch_no_pattern || "-"}</td>
+                                                <td className="px-4 py-3 text-sm">{product.batch_prefix || "-"}</td>
+                                                <td className="px-4 py-3 text-sm">{product.running_batch_sno || "-"}</td>
                                                 <td className="px-4 py-3 text-sm">{product.product_image || "-"}</td>
                                                 <td className="px-4 py-3 text-sm">{product.product_image_icon || "-"}</td>
                                                 <td className="px-4 py-3 text-sm">{product.qc_required ? "TRUE" : "FALSE"}</td>
@@ -769,7 +899,7 @@ export default function ProductMasterPage() {
                                                         );
                                                     })()}
                                                 </td>
-                                                <td className="px-4 py-3">
+                                                {/* <td className="px-4 py-3">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <Button
                                                             variant="ghost"
@@ -789,13 +919,59 @@ export default function ProductMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleCancel(product);
                                                             }}
-                                                            className={`${cancelledProducts.has(product.product_id) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                            title={cancelledProducts.has(product.product_id) ? "Restore product" : "Cancel product"}
+                                                            className={`${productToCancel?.active === true  ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            title={productToCancel?.active === true ? "Cancel Product" : "Restore Product"}
                                                         >
                                                             <X className="w-4 h-4" />
                                                         </Button>
                                                     </div>
-                                                </td>
+                                                </td> */}
+                                                <td className="px-4 py-3">
+  <div className="flex items-center justify-center gap-2">
+    
+    {/* EDIT BUTTON */}
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={!product.active}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!product.active) return;
+        handleEdit(product);
+      }}
+      title={!product.active ? "Already cancelled. Not able to edit" : "Edit Product"}
+      className={`${
+        product.active
+          ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+          : "text-gray-400 cursor-not-allowed"
+      }`}
+    >
+      <Pencil className="w-4 h-4" />
+    </Button>
+
+    {/* CANCEL / RESTORE BUTTON */}
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={!product.active}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!product.active) return;
+        handleCancel(product);
+      }}
+      title={!product.active ? "Already cancelled. Not able to edit" : "Cancel Product"}
+      className={`${
+        product.active
+          ? "text-red-600 hover:text-red-700 hover:bg-red-50"
+          : "text-gray-400 cursor-not-allowed"
+      }`}
+    >
+      <X className="w-4 h-4" />
+    </Button>
+
+  </div>
+</td>
+
                                             </motion.tr>
                                         ))}
                                     </tbody>
@@ -1074,13 +1250,24 @@ export default function ProductMasterPage() {
                                         {/* Batch No. Pattern */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Batch No. Pattern
+                                                Batch Prefix
                                             </label>
                                             <Input
-                                                name="batch_no_pattern"
-                                                value={formData.batch_no_pattern}
+                                                name="batch_prefix"
+                                                value={formData.batch_prefix}
                                                 onChange={handleInputChange}
-                                                placeholder="Enter batch number pattern"
+                                                placeholder="Enter batch prefix"
+                                            />
+                                        </div>
+                                          <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Running Batch Sno
+                                            </label>
+                                            <Input
+                                                name="running_batch_sno"
+                                                value={formData.running_batch_sno}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter running batch sno"
                                             />
                                         </div>
 
@@ -1446,16 +1633,26 @@ export default function ProductMasterPage() {
                                         {/* Batch No. Pattern */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Batch No. Pattern
+                                                Batch Prefix
                                             </label>
                                             <Input
-                                                name="batch_no_pattern"
-                                                value={formData.batch_no_pattern}
+                                                name="batch_prefix"
+                                                value={formData.batch_prefix}
                                                 onChange={handleInputChange}
-                                                placeholder="Enter batch number pattern"
+                                                placeholder="Enter batch prefix"
                                             />
                                         </div>
-
+                                            <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Running Batch Sno
+                                            </label>
+                                            <Input
+                                                name="running_batch_sno"
+                                                value={formData.running_batch_sno}
+                                                onChange={handleInputChange}
+                                                placeholder="Running Batch Sno"
+                                            />
+                                        </div>
                                         {/* Quality Control Section */}
                                         <div className="col-span-2 mt-4">
                                             <h3 className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-4 border-b pb-2">
@@ -1623,9 +1820,9 @@ export default function ProductMasterPage() {
                                         </Button>
                                         <Button
                                             onClick={confirmCancelItem}
-                                            className={`${cancelledProducts.has(productToCancel?.product_id || '') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
+                                                className={`${productToCancel?.active === true ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white`}
                                         >
-                                            {cancelledProducts.has(productToCancel?.product_id || '') ? "Restore" : "Cancel"}
+                                            {productToCancel?.active === true ? "Yes, Cancel" : "Yes, Restore"}
                                         </Button>
                                     </div>
                                 </div>

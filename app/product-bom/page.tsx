@@ -328,47 +328,48 @@ export default function ProductBOMPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = async () => {
-        if (!bomToCancel) return;
-        
-        const isCancelled = cancelledBOMs.has(bomToCancel.id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
-        try {
-            await productBOMAPI.update(bomToCancel.id, {
-                active: newActiveStatus,
-                last_modified_user_id: "ADMIN",
-            });
-            
-            setCancelledBOMs(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(bomToCancel.id);
-                    toast({
-                        title: "Restored",
-                        description: `Product BOM ${bomToCancel.bomId} has been restored`,
-                    });
-                } else {
-                    newSet.add(bomToCancel.id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Product BOM ${bomToCancel.bomId} has been cancelled`,
-                    });
-                }
-                return newSet;
-            });
-            
-            loadRecords(); // Reload data from API
-            setIsCancelItemDialogOpen(false);
-            setBomToCancel(null);
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} product BOM`,
-                variant: "destructive",
-            });
-        }
-    };
+const confirmCancelItem = async () => {
+    if (!bomToCancel) return;
+
+    const newActiveStatus = !bomToCancel.active; // flip active
+
+    try {
+        await productBOMAPI.update(bomToCancel.id, {
+            active: newActiveStatus,
+            last_modified_user_id: "ADMIN",
+        });
+
+        // Update local cancelledBOMs set for UI
+        setCancelledBOMs(prev => {
+            const newSet = new Set(prev);
+            if (newActiveStatus) {
+                newSet.delete(bomToCancel.id);
+                toast({
+                    title: "Restored",
+                    description: `Product BOM ${bomToCancel.bomId} has been restored`,
+                });
+            } else {
+                newSet.add(bomToCancel.id);
+                toast({
+                    title: "Cancelled",
+                    description: `Product BOM ${bomToCancel.bomId} has been cancelled`,
+                });
+            }
+            return newSet;
+        });
+
+        loadRecords(); // Reload data
+        setIsCancelItemDialogOpen(false);
+        setBomToCancel(null);
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || `Failed to ${bomToCancel.active ? 'cancel' : 'restore'} product BOM`,
+            variant: "destructive",
+        });
+    }
+};
+
 
     return (
         <div className="flex min-h-screen bg-background">
@@ -635,6 +636,7 @@ export default function ProductBOMPage() {
                                                                 e.stopPropagation();
                                                                 handleEdit(item);
                                                             }}
+                                                            disabled={!item.active}
                                                             className="text-foreground hover:text-foreground hover:bg-muted"
                                                         >
                                                             <Pencil className="w-4 h-4" />
@@ -646,6 +648,7 @@ export default function ProductBOMPage() {
                                                                 e.stopPropagation();
                                                                 handleCancel(item);
                                                             }}
+                                                            disabled={!item.active}
                                                             className={`${cancelledBOMs.has(item.id) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                             title={cancelledBOMs.has(item.id) ? "Restore product BOM" : "Cancel product BOM"}
                                                         >

@@ -243,47 +243,35 @@ export default function PackSizeMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = async () => {
-        if (!packSizeToCancel) return;
-        
-        const isCancelled = cancelledPackSizes.has(packSizeToCancel.pack_size_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
-        try {
-            await packSizeAPI.update(packSizeToCancel.pack_size_id, {
-                active: newActiveStatus,
-                last_modified_user_id: "ADMIN",
-            });
-            
-            setCancelledPackSizes(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(packSizeToCancel.pack_size_id);
-                    toast({
-                        title: "Restored",
-                        description: `Pack Size ${packSizeToCancel.pack_size_name} has been restored`,
-                    });
-                } else {
-                    newSet.add(packSizeToCancel.pack_size_id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Pack Size ${packSizeToCancel.pack_size_name} has been cancelled`,
-                    });
-                }
-                return newSet;
-            });
-            
-            loadPackSizes(); // Reload data from API
-            setIsCancelItemDialogOpen(false);
-            setPackSizeToCancel(null);
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} pack size`,
-                variant: "destructive",
-            });
-        }
-    };
+   const confirmCancelItem = async () => {
+    if (!packSizeToCancel) return;
+
+    const newActiveStatus = !packSizeToCancel.active; // toggle active
+
+    try {
+        await packSizeAPI.update(packSizeToCancel.pack_size_id, {
+            active: newActiveStatus,
+            last_modified_user_id: "ADMIN",
+        });
+
+        toast({
+            title: newActiveStatus ? "Restored" : "Cancelled",
+            description: `Pack Size ${packSizeToCancel.pack_size_name} has been ${newActiveStatus ? 'restored' : 'cancelled'}`,
+        });
+
+        setIsCancelItemDialogOpen(false);
+        setPackSizeToCancel(null);
+
+        loadPackSizes(); // refresh list from API
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || `Failed to ${newActiveStatus ? 'restore' : 'cancel'} pack size`,
+            variant: "destructive",
+        });
+    }
+};
+
 
     if (loading) {
         return (
@@ -507,40 +495,42 @@ export default function PackSizeMasterPage() {
                                                         const displayActive = !isCancelled && (packSize.active !== false);
                                                         return (
                                                             <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                                displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                                packSize.active? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                             }`}>
-                                                                {displayActive ? "TRUE" : "FALSE"}
+                                                                {packSize.active ? "TRUE" : "FALSE"}
                                                             </span>
                                                         );
                                                     })()}
                                                 </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEdit(packSize);
-                                                            }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleCancel(packSize);
-                                                            }}
-                                                            className={`${cancelledPackSizes.has(packSize.pack_size_id) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                            title={cancelledPackSizes.has(packSize.pack_size_id) ? "Restore pack size" : "Cancel pack size"}
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
+                                               <td className="px-4 py-3">
+  <div className="flex items-center justify-center gap-2">
+    {/* Edit button */}
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={(e) => { e.stopPropagation(); handleEdit(packSize); }}
+      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+      disabled={!packSize.active} // <-- disabled when inactive
+    >
+      <Pencil className="w-4 h-4" />
+    </Button>
+
+    {/* Cancel button */}
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={(e) => { e.stopPropagation(); handleCancel(packSize); }}
+      className={`${packSize.active
+        ? 'text-red-600 hover:text-red-700 hover:bg-red-50'
+        : 'text-gray-400 cursor-not-allowed'}`}
+      title={packSize.active ? "Cancel pack size" : "Inactive"}
+      disabled={!packSize.active} // <-- disabled when inactive
+    >
+      <X className="w-4 h-4" />
+    </Button>
+  </div>
+</td>
+
                                             </motion.tr>
                                         ))}
                                     </tbody>

@@ -6,7 +6,7 @@ import { safeNumber } from '@/utils/numberUtils';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// GET /api/products - Get all products
+
 export async function GET() {
   try {
     await ensureConnection();
@@ -14,7 +14,9 @@ export async function GET() {
     const products = await ProductMaster.find().lean().sort({ product_id: 1 });
     return NextResponse.json(products, {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
   } catch (error: any) {
@@ -25,7 +27,6 @@ export async function GET() {
     );
   }
 }
-
 // POST /api/products - Create new product
 export async function POST(request: NextRequest) {
   try {

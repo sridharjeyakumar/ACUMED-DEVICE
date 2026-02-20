@@ -233,47 +233,50 @@ export default function CollectionBinMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = async () => {
-        if (!binToCancel) return;
-        
-        const isCancelled = cancelledBins.has(binToCancel.binId);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
-        try {
-            await collectionBinAPI.update(binToCancel.binId, {
-                active: newActiveStatus,
-                last_modified_user_id: "ADMIN",
-            });
-            
-            setCancelledBins(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(binToCancel.binId);
-                    toast({
-                        title: "Restored",
-                        description: `Collection bin ${binToCancel.binName} has been restored`,
-                    });
-                } else {
-                    newSet.add(binToCancel.binId);
-                    toast({
-                        title: "Cancelled",
-                        description: `Collection bin ${binToCancel.binName} has been cancelled`,
-                    });
-                }
-                return newSet;
-            });
-            
-            loadRecords(); // Reload data from API
-            setIsCancelItemDialogOpen(false);
-            setBinToCancel(null);
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} collection bin`,
-                variant: "destructive",
-            });
-        }
-    };
+const confirmCancelItem = async () => {
+    if (!binToCancel) return;
+
+    // Toggle based on actual active status
+    const newActiveStatus = !binToCancel.active;
+
+    try {
+        // Update API with correct active status
+        await collectionBinAPI.update(binToCancel.binId, {
+            active: newActiveStatus,
+            last_modified_user_id: "ADMIN",
+        });
+
+        // Update local UI set for cancelled bins
+        setCancelledBins(prev => {
+            const newSet = new Set(prev);
+            if (newActiveStatus) {
+                newSet.delete(binToCancel.binId);
+                toast({
+                    title: "Restored",
+                    description: `Collection bin ${binToCancel.binName} has been restored`,
+                });
+            } else {
+                newSet.add(binToCancel.binId);
+                toast({
+                    title: "Cancelled",
+                    description: `Collection bin ${binToCancel.binName} has been cancelled`,
+                });
+            }
+            return newSet;
+        });
+
+        loadRecords(); // Reload data from API
+        setIsCancelItemDialogOpen(false);
+        setBinToCancel(null);
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || `Failed to ${binToCancel.active ? 'cancel' : 'restore'} collection bin`,
+            variant: "destructive",
+        });
+    }
+};
+
 
     return (
         <div className="flex min-h-screen bg-background">
@@ -563,6 +566,7 @@ export default function CollectionBinMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleEdit(item);
                                                                 }}
+                                                                disabled={!item.active}
                                                                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                                             >
                                                                 <Pencil className="w-4 h-4" />
@@ -574,6 +578,8 @@ export default function CollectionBinMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleCancel(item);
                                                                 }}
+                                                                disabled={!item.active}
+
                                                                 className={`${cancelledBins.has(item.binId) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                                 title={cancelledBins.has(item.binId) ? "Restore collection bin" : "Cancel collection bin"}
                                                             >

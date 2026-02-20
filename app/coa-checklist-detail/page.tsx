@@ -384,7 +384,7 @@ export default function COAChecklistDetailPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Checklist Sno</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Checklist Parameter</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Expected Result</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
+                                            {/* <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th> */}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -425,7 +425,7 @@ export default function COAChecklistDetailPage() {
                                                     <td className="px-6 py-6 align-middle">
                                                         <span className="text-sm font-semibold text-foreground">{item.expectedResult}</span>
                                                     </td>
-                                                    <td className="px-6 py-6 text-center align-middle">
+                                                    {/* <td className="px-6 py-6 text-center align-middle">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <Button
                                                                 variant="ghost"
@@ -451,7 +451,7 @@ export default function COAChecklistDetailPage() {
                                                                 <X className="w-4 h-4" />
                                                             </Button>
                                                         </div>
-                                                    </td>
+                                                    </td> */}
                                                 </motion.tr>
                                             ))
                                         )}

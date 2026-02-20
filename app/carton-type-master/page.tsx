@@ -251,46 +251,61 @@ export default function CartonTypeMasterPage() {
     };
 
     const confirmCancelItem = async () => {
-        if (!cartonTypeToCancel) return;
-        
-        const isCancelled = cancelledCartonTypes.has(cartonTypeToCancel.carton_type_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
-        try {
-            await cartonTypeAPI.update(cartonTypeToCancel.carton_type_id, {
-                active: newActiveStatus,
-                last_modified_user_id: "ADMIN",
-            });
-            
-            setCancelledCartonTypes(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(cartonTypeToCancel.carton_type_id);
-                    toast({
-                        title: "Restored",
-                        description: `Carton type ${cartonTypeToCancel.carton_type_name} has been restored`,
-                    });
-                } else {
-                    newSet.add(cartonTypeToCancel.carton_type_id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Carton type ${cartonTypeToCancel.carton_type_name} has been cancelled`,
-                    });
-                }
-                return newSet;
-            });
-            
-            loadCartonTypes(); // Reload data from API
-            setIsCancelItemDialogOpen(false);
-            setCartonTypeToCancel(null);
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} carton type`,
-                variant: "destructive",
-            });
-        }
-    };
+    if (!cartonTypeToCancel) return;
+
+    const isCurrentlyActive = cartonTypeToCancel.active; // Current status from API
+    const newActiveStatus = !isCurrentlyActive; // Toggle: cancel => false, restore => true
+
+    try {
+        // Update active status on server
+        await cartonTypeAPI.update(cartonTypeToCancel.carton_type_id, {
+            active: newActiveStatus,
+            last_modified_user_id: "ADMIN",
+        });
+
+        // Update local state for cancelledCartonTypes set
+        setCancelledCartonTypes(prev => {
+            const newSet = new Set(prev);
+            if (newActiveStatus) {
+                // Restored
+                newSet.delete(cartonTypeToCancel.carton_type_id);
+                toast({
+                    title: "Restored",
+                    description: `Carton type ${cartonTypeToCancel.carton_type_name} has been restored`,
+                });
+            } else {
+                // Cancelled
+                newSet.add(cartonTypeToCancel.carton_type_id);
+                toast({
+                    title: "Cancelled",
+                    description: `Carton type ${cartonTypeToCancel.carton_type_name} has been cancelled`,
+                });
+            }
+            return newSet;
+        });
+
+        // Update the local cartonTypes list to reflect change immediately
+        setCartonTypes(prev =>
+            prev.map(item =>
+                item.carton_type_id === cartonTypeToCancel.carton_type_id
+                    ? { ...item, active: newActiveStatus }
+                    : item
+            )
+        );
+
+        // Close modal and reset selection
+        setIsCancelItemDialogOpen(false);
+        setCartonTypeToCancel(null);
+
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || `Failed to ${newActiveStatus ? 'restore' : 'cancel'} carton type`,
+            variant: "destructive",
+        });
+    }
+};
+
 
     return (
         <div className="flex min-h-screen bg-background">
@@ -506,46 +521,53 @@ export default function CartonTypeMasterPage() {
                                                             ? formatDateTime(item.last_modified_date_time)
                                                             : "-"}
                                                     </td>
-                                                    <td className="px-6 py-6 text-left align-middle">
-                                                        {(() => {
-                                                            const isCancelled = cancelledCartonTypes.has(item.carton_type_id);
-                                                            const displayActive = !isCancelled && (item.active !== false);
-                                                            return (
-                                                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                                    displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                                }`}>
-                                                                    {displayActive ? "TRUE" : "FALSE"}
-                                                                </span>
-                                                            );
-                                                        })()}
-                                                    </td>
-                                                    <td className="px-6 py-6 text-center align-middle">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleEdit(item);
-                                                                }}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            >
-                                                                <Pencil className="w-4 h-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCancel(item);
-                                                                }}
-                                                                className={`${cancelledCartonTypes.has(item.carton_type_id) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={cancelledCartonTypes.has(item.carton_type_id) ? "Restore carton type" : "Cancel carton type"}
-                                                            >
-                                                                <X className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </td>
+<td className="px-6 py-6 text-left align-middle">
+    {(() => {
+        const isCancelled = cancelledCartonTypes.has(item.carton_type_id);
+        const displayActive = !isCancelled && item.active !== false;
+        return (
+            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+            }`}>
+                {displayActive ? "TRUE" : "FALSE"}
+            </span>
+        );
+    })()}
+</td>
+
+<td className="px-6 py-6 text-center align-middle">
+    <div className="flex items-center justify-center gap-2">
+        {/* Edit Button */}
+        <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(item);
+            }}
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            disabled={item.active === false} // DISABLED if active is false
+        >
+            <Pencil className="w-4 h-4" />
+        </Button>
+
+        {/* Cancel Button */}
+        <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+                e.stopPropagation();
+                handleCancel(item);
+            }}
+            className={`${item.active ? 'text-red-600 hover:text-red-700 hover:bg-red-50' : 'text-gray-400 cursor-not-allowed'}`}
+            title={item.active ? "Cancel carton type" : "Cannot cancel inactive carton type"}
+            disabled={item.active === false} // DISABLED if active is false
+        >
+            <X className="w-4 h-4" />
+        </Button>
+    </div>
+</td>
+
                                                 </motion.tr>
                                             ))
                                         )}

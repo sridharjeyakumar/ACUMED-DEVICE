@@ -15,6 +15,8 @@ export interface IProductMaster extends Document {
   safety_stock_qty?: number; // N(10)
   default_pack_size_id?: string; // Char(10)
   batch_no_pattern?: string; // Char(50)
+  batch_prefix?:string; //Char(3)
+  running_batch_sno?:number; //N(3)
   product_image?: string; // Image URL or base64
   product_image_icon?: string; // Image URL or base64
   qc_required?: boolean; // Boolean
@@ -111,6 +113,18 @@ const ProductMasterSchema: Schema = new Schema({
     required: false,
     maxlength: 50,
     trim: true,
+  },
+    batch_prefix:{
+        type: String,
+    required: false,
+    maxlength: 3,
+    trim: true,
+    },
+  running_batch_sno:{
+   type: Number,
+    required: false,
+    min:0,
+    max: 999, 
   },
   product_image: {
     type: String,

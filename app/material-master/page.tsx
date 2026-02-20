@@ -784,33 +784,60 @@ export default function MaterialMasterPage() {
                                                         );
                                                     })()}
                                                 </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEdit(material);
-                                                            }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleCancel(material);
-                                                            }}
-                                                            className={`${cancelledMaterials.has(material.material_id) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                            title={cancelledMaterials.has(material.material_id) ? "Restore material" : "Cancel material"}
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
+                                               <td className="px-4 py-3">
+  <div className="flex items-center justify-center gap-2">
+    
+    {/* EDIT BUTTON */}
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={!material.active}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!material.active) return;
+        handleEdit(material);
+      }}
+      title={
+        !material.active
+          ? "Already cancelled. Not able to edit"
+          : "Edit material"
+      }
+      className={`${
+        material.active
+          ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+          : "text-gray-400 cursor-not-allowed"
+      }`}
+    >
+      <Pencil className="w-4 h-4" />
+    </Button>
+
+    {/* CANCEL BUTTON */}
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={!material.active}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!material.active) return;
+        handleCancel(material);
+      }}
+      title={
+        !material.active
+          ? "Already cancelled. Not able to edit"
+          : "Cancel material"
+      }
+      className={`${
+        material.active
+          ? "text-red-600 hover:text-red-700 hover:bg-red-50"
+          : "text-gray-400 cursor-not-allowed"
+      }`}
+    >
+      <X className="w-4 h-4" />
+    </Button>
+
+  </div>
+</td>
+
                                             </motion.tr>
                                         ))}
                                     </tbody>

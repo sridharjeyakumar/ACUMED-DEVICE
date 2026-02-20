@@ -16,6 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { employeeAPI } from "@/services/api";
 
 interface EmployeeRecord {
+    email: string;
+    active: boolean;
     id: string;
     empId: string;
     empName: string;
@@ -109,6 +111,7 @@ export default function EmployeeMasterPage() {
                 education: emp.education || "",
                 empPhoto: emp.emp_photo || "",
                 status: emp.active !== false ? "Active" : "Exited",
+                active: emp.active !== false,
             }));
             setRecords(mappedRecords);
         } catch (error: any) {
@@ -333,10 +336,33 @@ export default function EmployeeMasterPage() {
         setIsDeleteDialogOpen(true);
     };
 
-    const confirmDelete = () => {
+const confirmDelete = async () => {
+    if (!selectedEmployee) return;
+    
+    try {
+        setLoading(true);
+        // Call API to update active status to false
+        await employeeAPI.update(selectedEmployee.empId, { active: false });
+        
+        toast({
+            title: "Success",
+            description: "Employee deactivated successfully",
+        });
+        
+        // Reload the employees list
+        await loadEmployees();
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || "Failed to deactivate employee",
+            variant: "destructive",
+        });
+    } finally {
         setIsDeleteDialogOpen(false);
         setSelectedEmployee(null);
-    };
+        setLoading(false);
+    }
+};
 
     return (
         <div className="flex min-h-screen bg-background">
@@ -537,6 +563,8 @@ export default function EmployeeMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Address</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Mobile No</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Email</th>
+
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">DOB</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Age</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Married</th>
@@ -603,6 +631,9 @@ export default function EmployeeMasterPage() {
                                                 <td className="px-6 py-4 align-middle">
                                                     <span className="text-sm font-semibold text-foreground whitespace-nowrap">{item.mobileNo || "-"}</span>
                                                 </td>
+                                                  <td className="px-6 py-4 align-middle">
+                                                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">{item.email || "-"}</span>
+                                                </td>
                                                 <td className="px-6 py-4 align-middle">
                                                     <span className="text-sm font-semibold text-foreground whitespace-nowrap">{item.dob || "-"}</span>
                                                 </td>
@@ -635,6 +666,8 @@ export default function EmployeeMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleEdit(item);
                                                             }}
+                                                            disabled={item.active !== true}
+
                                                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                                         >
                                                             <Pencil className="w-4 h-4" />
@@ -646,9 +679,10 @@ export default function EmployeeMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleDelete(item);
                                                             }}
+                                                            disabled={item.active !== true}
                                                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <X className="w-4 h-4" />
                                                         </Button>
                                                     </div>
                                                 </td>

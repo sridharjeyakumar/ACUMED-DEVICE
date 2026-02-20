@@ -60,6 +60,7 @@ export async function PUT(
     }
     
     await ensureDbConnection();
+    
     const body = await request.json();
     
     // Helper function to convert empty strings to undefined
@@ -87,7 +88,10 @@ export async function PUT(
     if (body.coa_checklist_id !== undefined) updateData.coa_checklist_id = cleanValue(body.coa_checklist_id);
     if (body.sterilization_required !== undefined) updateData.sterilization_required = body.sterilization_required === true || body.sterilization_required === "true";
     if (body.active !== undefined) updateData.active = body.active !== false;
-    
+        if (body.batch_prefix !== undefined) updateData.batch_prefix = cleanValue(body.batch_prefix);
+    if (body.running_batch_sno !== undefined) {
+      updateData.running_batch_sno = safeNumber(body.running_batch_sno) || undefined;
+    }
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
     

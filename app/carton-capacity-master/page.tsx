@@ -402,47 +402,53 @@ export default function CartonCapacityMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = async () => {
-        if (!capacityToCancel) return;
-        
-        const isCancelled = cancelledCapacities.has(capacityToCancel.cartonCapacityId);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
-        try {
-            await cartonCapacityAPI.update(capacityToCancel.cartonCapacityId, {
+const confirmCancelItem = async () => {
+    if (!capacityToCancel) return;
+
+    const newActiveStatus = !capacityToCancel.active; // toggle current status
+
+    try {
+        await fetch(`http://localhost:3000/api/carton-capacities/${capacityToCancel.cartonCapacityId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
                 active: newActiveStatus,
                 last_modified_user_id: "ADMIN",
-            });
-            
-            setCancelledCapacities(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(capacityToCancel.cartonCapacityId);
-                    toast({
-                        title: "Restored",
-                        description: `Carton capacity ${capacityToCancel.cartonCapacityName} has been restored`,
-                    });
-                } else {
-                    newSet.add(capacityToCancel.cartonCapacityId);
-                    toast({
-                        title: "Cancelled",
-                        description: `Carton capacity ${capacityToCancel.cartonCapacityName} has been cancelled`,
-                    });
-                }
-                return newSet;
-            });
-            
-            loadRecords(); // Reload data from API
-            setIsCancelItemDialogOpen(false);
-            setCapacityToCancel(null);
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} carton capacity`,
-                variant: "destructive",
-            });
-        }
-    };
+            }),
+        });
+
+        // Update local set
+        setCancelledCapacities(prev => {
+            const newSet = new Set(prev);
+            if (newActiveStatus) {
+                newSet.delete(capacityToCancel.cartonCapacityId);
+                toast({
+                    title: "Restored",
+                    description: `Carton capacity ${capacityToCancel.cartonCapacityName} has been restored`,
+                });
+            } else {
+                newSet.add(capacityToCancel.cartonCapacityId);
+                toast({
+                    title: "Cancelled",
+                    description: `Carton capacity ${capacityToCancel.cartonCapacityName} has been cancelled`,
+                });
+            }
+            return newSet;
+        });
+
+        loadRecords();
+        setIsCancelItemDialogOpen(false);
+        setCapacityToCancel(null);
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || "Failed to cancel/restore carton capacity",
+            variant: "destructive",
+        });
+    }
+};
+
+
 
     return (
         <div className="flex min-h-screen bg-background">
@@ -731,6 +737,7 @@ export default function CartonCapacityMasterPage() {
                                                                 handleEdit(item);
                                                             }}
                                                             className="text-foreground hover:text-foreground hover:bg-muted"
+                                                            disabled={!item.active}
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -741,7 +748,15 @@ export default function CartonCapacityMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleCancel(item);
                                                             }}
-                                                            className={`${cancelledCapacities.has(item.cartonCapacityId) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                                            disabled={!item.active}
+
+                                                             className={`${
+        item.active
+            ? cancelledCapacities.has(item.cartonCapacityId)
+                ? 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                : 'text-red-600 hover:text-red-700 hover:bg-red-50'
+            : 'text-gray-400 cursor-not-allowed'
+    }`}
                                                             title={cancelledCapacities.has(item.cartonCapacityId) ? "Restore carton capacity" : "Cancel carton capacity"}
                                                         >
                                                             <X className="w-4 h-4" />

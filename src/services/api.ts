@@ -1,16 +1,57 @@
 // Next.js API routes - always use relative path
 const API_BASE_URL = '/api';
 
+// async function fetchAPI(endpoint: string, options: RequestInit = {}) {
+//   // API_BASE_URL is always set (either '/api' for proxy or '/api' for same domain)
+  
+//   try {
+//     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+//       ...options,
+//       headers: {
+//         'Content-Type': 'application/json',
+//         ...options.headers,
+//       },
+//     });
+
+//     if (!response.ok) {
+//       const error = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }));
+//       throw new Error(error.error || 'Request failed');
+//     }
+
+//     return response.json();
+//   } catch (error: any) {
+//     // Handle network errors (server not running, CORS, etc.)
+//     if (error.name === 'TypeError' && error.message.includes('fetch')) {
+//       throw new Error('Cannot connect to server. Please check your network connection and try again.');
+//     }
+//     throw error;
+//   }
+// }
+
+// Menu Master API
+
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   // API_BASE_URL is always set (either '/api' for proxy or '/api' for same domain)
   
+  // Add timestamp for GET requests to prevent caching
+  let finalEndpoint = endpoint;
+  if (!options.method || options.method === 'GET') {
+    const timestamp = new Date().getTime();
+    const separator = endpoint.includes('?') ? '&' : '?';
+    finalEndpoint = `${endpoint}${separator}_t=${timestamp}`;
+  }
+
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}${finalEndpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
         ...options.headers,
       },
+      cache: 'no-store',
     });
 
     if (!response.ok) {
@@ -28,7 +69,6 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   }
 }
 
-// Menu Master API
 export const menuAPI = {
   getAll: () => fetchAPI('/menus'),
   getById: (id: string) => fetchAPI(`/menus/${id}`),
@@ -168,14 +208,28 @@ export const materialAPI = {
 };
 
 // Product Master API
+// export const productAPI = {
+//   getAll: () => fetchAPI('/products'),
+//   getById: (id: string) => fetchAPI(`/products/${id}`),
+//   create: (data: any) => fetchAPI('/products', { method: 'POST', body: JSON.stringify(data) }),
+//   update: (id: string, data: any) => fetchAPI(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+//   delete: (id: string) => fetchAPI(`/products/${id}`, { method: 'DELETE' }),
+// };
+// Product Master API
 export const productAPI = {
-  getAll: () => fetchAPI('/products'),
-  getById: (id: string) => fetchAPI(`/products/${id}`),
+  getAll: () => {
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
+    return fetchAPI(`/products?_t=${timestamp}`);
+  },
+  getById: (id: string) => {
+    const timestamp = new Date().getTime();
+    return fetchAPI(`/products/${id}?_t=${timestamp}`);
+  },
   create: (data: any) => fetchAPI('/products', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: any) => fetchAPI(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) => fetchAPI(`/products/${id}`, { method: 'DELETE' }),
 };
-
 // Pack Size Master API
 export const packSizeAPI = {
   getAll: () => fetchAPI('/pack-sizes'),

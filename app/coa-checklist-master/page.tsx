@@ -189,47 +189,50 @@ export default function COAChecklistMasterPage() {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = async () => {
-        if (!checklistToCancel) return;
-        
-        const isCancelled = cancelledChecklists.has(checklistToCancel.checklistId);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
-        try {
-            await coaChecklistAPI.update(checklistToCancel.checklistId, {
-                active: newActiveStatus,
-                last_modified_user_id: "ADMIN",
-            });
-            
-            setCancelledChecklists(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(checklistToCancel.checklistId);
-                    toast({
-                        title: "Restored",
-                        description: `COA checklist ${checklistToCancel.checklistId} has been restored`,
-                    });
-                } else {
-                    newSet.add(checklistToCancel.checklistId);
-                    toast({
-                        title: "Cancelled",
-                        description: `COA checklist ${checklistToCancel.checklistId} has been cancelled`,
-                    });
-                }
-                return newSet;
-            });
-            
-            loadRecords(); // Reload data from API
-            setIsCancelItemDialogOpen(false);
-            setChecklistToCancel(null);
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} COA checklist`,
-                variant: "destructive",
-            });
-        }
-    };
+const confirmCancelItem = async () => {
+    if (!checklistToCancel) return;
+
+    // Toggle based on actual active status from DB
+    const newActiveStatus = !checklistToCancel.active;
+
+    try {
+        // Send correct payload
+        await coaChecklistAPI.update(checklistToCancel.checklistId, {
+            active: newActiveStatus,
+            last_modified_user_id: "ADMIN",
+        });
+
+        // Update local UI set for cancelled items
+        setCancelledChecklists(prev => {
+            const newSet = new Set(prev);
+            if (newActiveStatus) {
+                newSet.delete(checklistToCancel.checklistId);
+                toast({
+                    title: "Restored",
+                    description: `COA checklist ${checklistToCancel.checklistId} has been restored`,
+                });
+            } else {
+                newSet.add(checklistToCancel.checklistId);
+                toast({
+                    title: "Cancelled",
+                    description: `COA checklist ${checklistToCancel.checklistId} has been cancelled`,
+                });
+            }
+            return newSet;
+        });
+
+        loadRecords(); // Reload data from API
+        setIsCancelItemDialogOpen(false);
+        setChecklistToCancel(null);
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || `Failed to ${checklistToCancel.active ? 'cancel' : 'restore'} COA checklist`,
+            variant: "destructive",
+        });
+    }
+};
+
 
     return (
         <div className="flex min-h-screen bg-background">
@@ -392,6 +395,8 @@ export default function COAChecklistMasterPage() {
                                                     <span>Date & Time</span>
                                                 </div>
                                             </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Active</th>
+
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
@@ -431,6 +436,18 @@ export default function COAChecklistMasterPage() {
                                                     <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
                                                         {item.lastModifiedDateTime || "-"}
                                                     </td>
+                                                    <td className="px-6 py-6 text-left align-middle">
+    {(() => {
+      
+        return (
+            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                item.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+            }`}>
+                {item.active ? "TRUE" : "FALSE"}
+            </span>
+        );
+    })()}
+</td>
                                                     <td className="px-6 py-6 text-center align-middle">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <Button
@@ -440,6 +457,7 @@ export default function COAChecklistMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleEdit(item);
                                                                 }}
+                                                                disabled={!item.active}
                                                                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                                             >
                                                                 <Pencil className="w-4 h-4" />
@@ -451,6 +469,8 @@ export default function COAChecklistMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleCancel(item);
                                                                 }}
+                                                                disabled={!item.active}
+
                                                                 className={`${cancelledChecklists.has(item.checklistId) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                                                                 title={cancelledChecklists.has(item.checklistId) ? "Restore COA checklist" : "Cancel COA checklist"}
                                                             >

@@ -35,6 +35,7 @@ export default function ProductionCapacityPage() {
     const [selectedMachine, setSelectedMachine] = useState<MachineRecord | null>(null);
     const [filterUom, setFilterUom] = useState<string>("all");
     const [filterSection, setFilterSection] = useState<string>("all");
+    const [machines, setMachines] = useState<MachineRecord[]>([]);
     const [formData, setFormData] = useState({
         machineId: "",
         machineName: "",
@@ -61,35 +62,33 @@ export default function ProductionCapacityPage() {
             });
         }
     }, [isAddModalOpen]);
+useEffect(() => {
+    fetchMachines();
+}, []);
+const fetchMachines = async () => {
+    try {
+        const res = await fetch("/api/machinery");
+        const data = await res.json();
 
-    const machines: MachineRecord[] = [
-        {
-            id: "1",
-            machineId: "M1",
-            machineName: "Machine 1",
+        const formatted = data.map((m: any) => ({
+            id: m._id,
+            machineId: m.machine_id,
+            machineName: m.machine_name,
             section: "",
-            shortName: "Old",
-            qtyPerMin: 80,
-            uom: "NOS",
-            avgHrsPerDay: 6,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "2",
-            machineId: "M2",
-            machineName: "Machine 2",
-            section: "",
-            shortName: "New",
-            qtyPerMin: 80,
-            uom: "NOS",
-            avgHrsPerDay: 6,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-    ];
+            shortName: m.machine_short_name,
+            qtyPerMin: m.prod_qty_per_minute,
+            uom: m.uom,
+            avgHrsPerDay: m.avg_prod_hrs_per_day,
+            lastModifiedUserId: m.last_modified_user_id,
+            lastModifiedDateTime: m.last_modified_date_time,
+            active: m.active,
+        }));
+
+        setMachines(formatted);
+    } catch (error) {
+        console.error("Failed to fetch machines", error);
+    }
+};
 
     const filteredMachines = machines.filter((machine) => {
         const matchesSearch = machine.machineName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -114,20 +113,26 @@ export default function ProductionCapacityPage() {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsAddModalOpen(false);
-        setFormData({
-            machineId: "",
-            machineName: "",
-            section: "",
-            shortName: "",
-            qtyPerMin: "",
-            uom: "UNITS",
-            avgHrsPerDay: "",
-            active: true,
+const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+        await fetch("/api/machinery", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
         });
-    };
+
+        await fetchMachines(); // refresh table
+        setIsAddModalOpen(false);
+    } catch (error) {
+        console.error("Error saving machine:", error);
+    }
+};
+
+
 
     const handleEdit = (machine: MachineRecord) => {
         setSelectedMachine(machine);
@@ -159,33 +164,33 @@ export default function ProductionCapacityPage() {
             active: true,
         });
     };
-
-    const handleCancel = (machine: MachineRecord) => {
+   const handleCancel = (machine: MachineRecord) => {
         setMachineToCancel(machine);
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = () => {
-        if (!machineToCancel) return;
-        
-        const isCancelled = cancelledMachines.has(machineToCancel.id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
-        // Update the machine's active status locally
-        // In a real implementation, this would call an API
-        setCancelledMachines(prev => {
-            const newSet = new Set(prev);
-            if (isCancelled) {
-                newSet.delete(machineToCancel.id);
-            } else {
-                newSet.add(machineToCancel.id);
-            }
-            return newSet;
+
+   const confirmCancelItem = async () => {
+    if (!machineToCancel) return;
+
+    try {
+        await fetch(`/api/machinery/${machineToCancel.id}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ active: false }),
         });
-        
+
+        await fetchMachines(); // refresh table
+
         setIsCancelItemDialogOpen(false);
         setMachineToCancel(null);
-    };
+    } catch (error) {
+        console.error("Cancel failed:", error);
+    }
+};
+
 
     const getUomBadgeStyle = (uom: string) => {
         switch (uom) {
@@ -352,7 +357,7 @@ export default function ProductionCapacityPage() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">0</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">machine_id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">machine name</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">machine short name</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">prod qty per minute</th>
@@ -412,38 +417,67 @@ export default function ProductionCapacityPage() {
                                                 </td>
                                                 <td className="px-6 py-6 text-left align-middle">
                                                     <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                        displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                        machine.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                     }`}>
-                                                        {displayActive ? "TRUE" : "FALSE"}
+                                                        {machine.active ? "TRUE" : "FALSE"}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEdit(machine);
-                                                            }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleCancel(machine);
-                                                            }}
-                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                            title={isCancelled ? "Restore machine" : "Cancel machine"}
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
+<td className="px-6 py-6 text-center align-middle">
+  <div className="flex items-center justify-center gap-2">
+
+    {/* EDIT BUTTON */}
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={!machine.active}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!machine.active) return;
+        handleEdit(machine);
+      }}
+      title={
+        !machine.active
+          ? "Already cancelled. Not able to edit"
+          : "Edit machine"
+      }
+      className={`${
+        machine.active
+          ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+          : "text-gray-400 cursor-not-allowed"
+      }`}
+    >
+      <Pencil className="w-4 h-4" />
+    </Button>
+
+    {/* CANCEL BUTTON */}
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={!machine.active}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!machine.active) return;
+        handleCancel(machine);
+      }}
+      title={
+        !machine.active
+          ? "Already cancelled"
+          : "Cancel machine"
+      }
+      className={`${
+        machine.active
+          ? "text-red-600 hover:text-red-700 hover:bg-red-50"
+          : "text-gray-400 cursor-not-allowed"
+      }`}
+    >
+      <X className="w-4 h-4" />
+    </Button>
+
+  </div>
+</td>
+
+
+
                                             </motion.tr>
                                         );
                                         })}
