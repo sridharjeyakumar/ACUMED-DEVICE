@@ -457,140 +457,188 @@ const confirmCancelItem = async () => {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Bin Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Bin Name</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Bin Short Name</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Bin Type</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Color</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Tare Weight Kg</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Gross Capacity</span>
-                                                    <span>Kg</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>User Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>Date & Time</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {loading ? (
-                                            <tr>
-                                                <td colSpan={11} className="px-6 py-8 text-center text-muted-foreground">
-                                                    Loading...
-                                                </td>
-                                            </tr>
-                                        ) : filteredRecords.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={11} className="px-6 py-8 text-center text-muted-foreground">
-                                                    No collection bins found
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            paginatedRecords.map((item, index) => (
-                                                <motion.tr
-                                                    key={item.id}
-                                                    initial={{ opacity: 0, x: -20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className="hover:bg-muted/30 transition-colors cursor-pointer"
-                                                >
-                                                    <td className="px-6 py-6 align-middle">
-                                                        <span className="text-sm font-semibold text-blue-600">
-                                                            {item.binId}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-6 align-middle">
-                                                        <span className="text-sm font-semibold text-foreground">{item.binName}</span>
-                                                    </td>
-                                                    <td className="px-6 py-6 text-center align-middle">
-                                                        <span className="text-sm font-semibold text-foreground">
-                                                            {item.binShortName}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-6 text-center align-middle">
-                                                        <span className={`text-sm font-semibold px-2 py-1 rounded ${
-                                                            item.binType === "Normal" ? "bg-blue-50 text-blue-600" : "bg-red-50 text-red-600"
-                                                        }`}>
-                                                            {item.binType}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-6 text-sm font-semibold text-foreground align-middle">
-                                                        {item.color}
-                                                    </td>
-                                                    <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
-                                                        {item.tareWeightKg}
-                                                    </td>
-                                                    <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
-                                                        {item.grossCapacityKg}
-                                                    </td>
-                                                    <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
-                                                        {item.lastModifiedUserId || "-"}
-                                                    </td>
-                                                    <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
-                                                        {item.lastModifiedDateTime || "-"}
-                                                    </td>
-                                                    <td className="px-6 py-6 text-left align-middle">
-                                                        {(() => {
-                                                            const isCancelled = cancelledBins.has(item.binId);
-                                                            const displayActive = !isCancelled && (item.active !== false);
-                                                            return (
-                                                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                                    displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                                }`}>
-                                                                    {displayActive ? "TRUE" : "FALSE"}
-                                                                </span>
-                                                            );
-                                                        })()}
-                                                    </td>
-                                                    <td className="px-6 py-6 text-center align-middle">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleEdit(item);
-                                                                }}
-                                                                disabled={!item.active}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            >
-                                                                <Pencil className="w-4 h-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCancel(item);
-                                                                }}
-                                                                disabled={!item.active}
+                                   <thead>
+  <tr className="bg-gray-100 border-b border-border">
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Bin Id
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Bin Name
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Bin Short Name
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Bin Type
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Color
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Tare Weight (Kg)
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Gross Capacity</span>
+        <span>Kg</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Last Modified</span>
+        <span>User Id</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Last Modified</span>
+        <span>Date & Time</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Active
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Actions
+    </th>
+  </tr>
+</thead>
+                                  <tbody className="divide-y divide-border">
+  {loading ? (
+    <tr>
+      <td colSpan={11} className="px-6 py-12 text-center text-muted-foreground">
+        Loading collection bins...
+      </td>
+    </tr>
+  ) : filteredRecords.length === 0 ? (
+    <tr>
+      <td colSpan={11} className="px-6 py-12 text-center text-muted-foreground">
+        No collection bins found
+      </td>
+    </tr>
+  ) : (
+    paginatedRecords.map((item, index) => (
+      <motion.tr
+        key={item.binId}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className="hover:bg-muted/30 transition-colors cursor-pointer"
+      >
+        {/* ID with pill style */}
+        <td className="px-6 py-6 text-sm align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {item.binId}
+          </span>
+        </td>
 
-                                                                className={`${cancelledBins.has(item.binId) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={cancelledBins.has(item.binId) ? "Restore collection bin" : "Cancel collection bin"}
-                                                            >
-                                                                <X className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </td>
-                                                </motion.tr>
-                                            ))
-                                        )}
-                                    </tbody>
+        {/* Name and Short Name */}
+        <td className="px-6 py-6 text-sm  text-foreground align-middle">
+          {item.binName}
+        </td>
+        <td className="px-6 py-6 text-sm text-foreground text-center align-middle">
+          {item.binShortName}
+        </td>
+
+        {/* Bin Type with colored pill */}
+        <td className="px-6 py-6 text-sm text-center align-middle">
+          <span
+            className={`inline-flex px-2 py-1 rounded text-xs font-semibold ${
+              item.binType === "Normal"
+                ? "bg-blue-50 text-blue-600"
+                : "bg-red-50 text-red-600"
+            }`}
+          >
+            {item.binType}
+          </span>
+        </td>
+
+        {/* Color, Tare, Gross */}
+        <td className="px-6 py-6 text-sm font-semibold text-foreground align-middle">
+          {item.color}
+        </td>
+        <td className="px-6 py-6 text-sm font-mono text-gray-700 text-center align-middle">
+          {item.tareWeightKg}
+        </td>
+        <td className="px-6 py-6 text-sm font-mono text-gray-700 text-center align-middle">
+          {item.grossCapacityKg}
+        </td>
+
+        {/* Last Modified */}
+        <td className="px-6 py-6 text-sm text-muted-foreground text-center align-middle">
+          {item.lastModifiedUserId || "-"}
+        </td>
+        <td className="px-6 py-6 text-sm text-muted-foreground text-center align-middle">
+          {item.lastModifiedDateTime || "-"}
+        </td>
+
+        {/* Active Status */}
+        <td className="px-6 py-6 text-left align-middle">
+          {(() => {
+            const isCancelled = cancelledBins.has(item.binId);
+            const displayActive = !isCancelled && (item.active !== false);
+            return (
+              <span
+                className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                  displayActive
+                    ? "bg-green-50 text-green-600"
+                    : "bg-red-50 text-red-600"
+                }`}
+              >
+                {displayActive ? "TRUE" : "FALSE"}
+              </span>
+            );
+          })()}
+        </td>
+
+        {/* Actions */}
+        <td className="px-6 py-6 text-center align-middle">
+          <div className="flex items-center justify-center gap-2">
+            {/* Edit */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(item);
+              }}
+              disabled={!item.active}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              title={item.active ? "Edit collection bin" : "Cannot edit inactive"}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+
+            {/* Cancel / Restore */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCancel(item);
+              }}
+              disabled={!item.active && !cancelledBins.has(item.binId)}
+              className={`${
+                item.active
+                  ? cancelledBins.has(item.binId)
+                    ? "text-green-600 hover:text-green-700 hover:bg-green-50"
+                    : "text-red-600 hover:text-red-700 hover:bg-red-50"
+                  : "text-gray-400 cursor-not-allowed"
+              }`}
+              title={
+                cancelledBins.has(item.binId)
+                  ? "Restore collection bin"
+                  : "Cancel collection bin"
+              }
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </td>
+      </motion.tr>
+    ))
+  )}
+</tbody>
                                 </table>
                             </div>
 

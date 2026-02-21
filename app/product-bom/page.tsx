@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { productBOMAPI } from "@/services/api";
+import { productAPI, productBOMAPI } from "@/services/api";
 import { safeNumber } from "@/utils/numberUtils";
 
 interface BOMRecord {
@@ -29,7 +29,31 @@ interface BOMRecord {
     lastModifiedDateTime?: string;
     active: boolean;
 }
-
+interface Product {
+    product_id: string;
+    product_name: string;
+    product_shortname: string;
+    uom: string;
+    product_category_id?: string;
+    product_spec?: string;
+    weight_per_piece?: number;
+    weight_uom?: string;
+    wipes_per_kg?: number;
+    shelf_life_in_months?: number;
+    storage_condition?: string;
+    safety_stock_qty?: number;
+    default_pack_size_id?: string;
+    batch_prefix?: string;
+    running_batch_sno?:number;
+    product_image?: string;
+    product_image_icon?: string;
+    qc_required?: boolean;
+    coa_checklist_id?: string;
+    sterilization_required?: boolean;
+    last_modified_user_id?: string;
+    last_modified_date_time?: Date;
+    active?: boolean;
+}
 export default function ProductBOMPage() {
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
@@ -43,6 +67,7 @@ export default function ProductBOMPage() {
     const [filterMaterial, setFilterMaterial] = useState<string>("all");
     const [records, setRecords] = useState<BOMRecord[]>([]);
     const [loading, setLoading] = useState(true);
+    const [products, setProducts] = useState<Product[]>([]);
     const [formData, setFormData] = useState({
         bomId: "",
         description: "",
@@ -111,7 +136,17 @@ export default function ProductBOMPage() {
     useEffect(() => {
         loadRecords();
     }, [loadRecords]);
-
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const data = await productAPI.getAll();
+            setProducts(data);
+        } catch (error) {
+            console.error("Failed to load products", error);
+        }
+    };
+    loadProducts();
+}, []);
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -130,98 +165,7 @@ export default function ProductBOMPage() {
         }
     }, [isAddModalOpen]);
 
-    const hardcodedRecords: BOMRecord[] = [
-        {
-            id: "1",
-            bomId: "BM01",
-            description: "DUVET",
-            subtitle: "",
-            productId: "P0001",
-            outputQty: 3000,
-            outputUom: "NOS",
-            materialId: "RM001",
-            inputQty: 1,
-            inputUom: "KGS",
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "2",
-            bomId: "BM01",
-            description: "DUVET",
-            subtitle: "",
-            productId: "P0001",
-            outputQty: 1200,
-            outputUom: "NOS",
-            materialId: "RM002",
-            inputQty: 1,
-            inputUom: "KGS",
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "3",
-            bomId: "BM02",
-            description: "DUVET XL",
-            subtitle: "",
-            productId: "P0002",
-            outputQty: null,
-            outputUom: "NOS",
-            materialId: "RM003",
-            inputQty: 1,
-            inputUom: "KGS",
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "4",
-            bomId: "BM02",
-            description: "DUVET XL",
-            subtitle: "",
-            productId: "P0002",
-            outputQty: null,
-            outputUom: "NOS",
-            materialId: "RM004",
-            inputQty: 1,
-            inputUom: "KGS",
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "5",
-            bomId: "BM03",
-            description: "DUVET Ultra",
-            subtitle: "",
-            productId: "P0003",
-            outputQty: null,
-            outputUom: "NOS",
-            materialId: "RM005",
-            inputQty: 1,
-            inputUom: "KGS",
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "6",
-            bomId: "BM03",
-            description: "DUVET Ultra",
-            subtitle: "",
-            productId: "P0003",
-            outputQty: null,
-            outputUom: "NOS",
-            materialId: "RM006",
-            inputQty: 1,
-            inputUom: "KGS",
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-    ];
+
 
     const filteredRecords = records.filter((item) => {
         const matchesSearch = item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -236,9 +180,20 @@ export default function ProductBOMPage() {
     const uniqueProducts = Array.from(new Set(records.map(r => r.productId)));
     const uniqueMaterials = Array.from(new Set(records.map(r => r.materialId)));
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+   const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+) => {
+    const { name, value, type } = e.target;
+    
+    // Handle checkbox inputs specifically
+    if (type === 'checkbox') {
+        const checked = (e.target as HTMLInputElement).checked;
+        setFormData({ ...formData, [name]: checked });
+    } else {
+        // For text inputs and select elements
+        setFormData({ ...formData, [name]: value });
+    }
+};
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -528,138 +483,161 @@ const confirmCancelItem = async () => {
                                     </div>
                                 ) : (
                                 <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Bom Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Bom Description</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Product Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Output Qty</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Output Uom</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Material Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Input Qty</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Input Uom</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>User Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>Date & Time</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
-                                        </tr>
-                                    </thead>
+                                <thead>
+  <tr className="bg-gray-100 border-b border-border">
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">BOM Id</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">BOM Description</th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Product Id</th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Output Qty</th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Output UOM</th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Material Id</th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Input Qty</th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Input UOM</th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Last Modified</span>
+        <span>User Id</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Last Modified</span>
+        <span>Date & Time</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
+  </tr>
+</thead>
                                     <tbody className="divide-y divide-border">
-                                        {filteredRecords.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={12} className="px-6 py-12 text-center text-muted-foreground">
-                                                    No product BOMs found
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                        filteredRecords.map((item, index) => (
-                                            <motion.tr
-                                                key={item.id}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors cursor-pointer"
-                                            >
-                                                <td className="px-6 py-6 align-top">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.bomId}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 align-top">
-                                                    <span className="text-sm font-semibold text-foreground">{item.description}</span>
-                                                </td>
-                                                <td className="px-6 py-6 align-top text-center">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.productId}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-top">
-                                                    {item.outputQty ? item.outputQty.toLocaleString() : ''}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-top">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.outputUom}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-top">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.materialId}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-top">
-                                                    {item.inputQty}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-top">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.inputUom}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-top">
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {item.lastModifiedUserId || "-"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-top">
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {item.lastModifiedDateTime || "-"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-left align-top">
-                                                    {(() => {
-                                                        const isCancelled = cancelledBOMs.has(item.id);
-                                                        const displayActive = !isCancelled && (item.active !== false);
-                                                        return (
-                                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                                displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                            }`}>
-                                                                {displayActive ? "TRUE" : "FALSE"}
-                                                            </span>
-                                                        );
-                                                    })()}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-top">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEdit(item);
-                                                            }}
-                                                            disabled={!item.active}
-                                                            className="text-foreground hover:text-foreground hover:bg-muted"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleCancel(item);
-                                                            }}
-                                                            disabled={!item.active}
-                                                            className={`${cancelledBOMs.has(item.id) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                            title={cancelledBOMs.has(item.id) ? "Restore product BOM" : "Cancel product BOM"}
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </motion.tr>
-                                        ))
-                                        )}
-                                    </tbody>
+  {filteredRecords.length === 0 ? (
+    <tr>
+      <td colSpan={12} className="px-6 py-12 text-center text-muted-foreground">
+        No product BOMs found
+      </td>
+    </tr>
+  ) : (
+    filteredRecords.map((item, index) => (
+      <motion.tr
+        key={item.id}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className="hover:bg-muted/30 transition-colors cursor-pointer"
+      >
+        {/* BOM Id with pill style */}
+        <td className="px-6 py-6 text-sm align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {item.bomId}
+          </span>
+        </td>
+
+        {/* BOM Description */}
+        <td className="px-6 py-6 text-sm  text-foreground align-middle">
+          {item.description}
+        </td>
+
+        {/* Product Id with pill style */}
+        <td className="px-6 py-6 text-sm text-center align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {item.productId}
+          </span>
+        </td>
+
+        {/* Output Qty */}
+        <td className="px-6 py-6 text-sm text-center font-mono text-gray-700 align-middle">
+          {item.outputQty ? item.outputQty.toLocaleString() : ''}
+        </td>
+
+        {/* Output UOM */}
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="text-sm font-semibold text-foreground">{item.outputUom}</span>
+        </td>
+
+        {/* Material Id with pill style */}
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {item.materialId}
+          </span>
+        </td>
+
+        {/* Input Qty */}
+        <td className="px-6 py-6 text-sm text-center font-mono text-gray-700 align-middle">
+          {item.inputQty}
+        </td>
+
+        {/* Input UOM */}
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="text-sm font-semibold text-foreground">{item.inputUom}</span>
+        </td>
+
+        {/* Last Modified User */}
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="text-sm text-muted-foreground">{item.lastModifiedUserId || '-'}</span>
+        </td>
+
+        {/* Last Modified Date */}
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="text-sm text-muted-foreground">{item.lastModifiedDateTime || '-'}</span>
+        </td>
+
+        {/* Active Status */}
+        <td className="px-6 py-6 text-left align-middle">
+          {(() => {
+            const isCancelled = cancelledBOMs.has(item.id);
+            const displayActive = !isCancelled && item.active !== false;
+            return (
+              <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+              }`}>
+                {displayActive ? "TRUE" : "FALSE"}
+              </span>
+            );
+          })()}
+        </td>
+
+        {/* Actions */}
+        <td className="px-6 py-6 text-center align-middle">
+          <div className="flex items-center justify-center gap-2">
+            {/* Edit Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(item);
+              }}
+              disabled={!item.active}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              title={item.active ? "Edit BOM" : "Cannot edit inactive BOM"}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+
+            {/* Cancel / Restore Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCancel(item);
+              }}
+              disabled={!item.active && !cancelledBOMs.has(item.id)}
+              className={`${item.active
+                ? cancelledBOMs.has(item.id)
+                  ? "text-green-600 hover:text-green-700 hover:bg-green-50"
+                  : "text-red-600 hover:text-red-700 hover:bg-red-50"
+                : "text-gray-400 cursor-not-allowed"}`}
+              title={cancelledBOMs.has(item.id) ? "Restore BOM" : "Cancel BOM"}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </td>
+      </motion.tr>
+    ))
+  )}
+</tbody>
                                 </table>
                                 )}
                             </div>
@@ -764,18 +742,25 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Product ID */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Product ID <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input 
-                                                name="productId" 
-                                                value={formData.productId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="PRD-XXX-XX" 
-                                                required
-                                            />
-                                        </div>
+                                                                          <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Product ID <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="productId"
+        value={formData.productId}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a product</option>
+        {products.map(product => (
+            <option key={product.product_id} value={product.product_id}>
+                {product.product_id}
+            </option>
+        ))}
+    </select>
+</div>
 
                                         {/* Output Qty */}
                                         <div>

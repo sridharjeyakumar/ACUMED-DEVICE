@@ -355,133 +355,155 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">machine_id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">machine name</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">machine short name</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">prod qty per minute</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">uom</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Avg Prod Hrs per day</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>user id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>last modified</span>
-                                                    <span>date & time</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {filteredMachines.map((machine, index) => {
-                                            const isCancelled = cancelledMachines.has(machine.id);
-                                            const displayActive = !isCancelled;
-                                            return (
-                                            <motion.tr
-                                                key={machine.id}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors cursor-pointer"
-                                            >
-                                                <td className="px-6 py-6 text-sm font-bold text-blue-600 align-middle">
-                                                    {machine.machineId}
-                                                </td>
-                                                <td className="px-6 py-6 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{machine.machineName}</span>
-                                                </td>
-                                                <td className="px-6 py-6 text-sm text-foreground align-middle">
-                                                    {machine.shortName}
-                                                </td>
-                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
-                                                    {machine.qtyPerMin}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm font-semibold">{machine.uom}</span>
-                                                </td>
-                                                <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
-                                                    {machine.avgHrsPerDay}
-                                                </td>
-                                                <td className="px-6 py-6 align-middle">
-                                                    <span className="text-sm text-foreground">{machine.lastModifiedUserId || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-6 align-middle">
-                                                    <span className="text-sm text-foreground">{machine.lastModifiedDateTime || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-6 text-left align-middle">
-                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                        machine.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                    }`}>
-                                                        {machine.active ? "TRUE" : "FALSE"}
-                                                    </span>
-                                                </td>
-<td className="px-6 py-6 text-center align-middle">
-  <div className="flex items-center justify-center gap-2">
+                                   <thead>
+  <tr className="bg-gray-100 border-b border-border">
+    <th className="px-6 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Machine ID
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Machine Name
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Machine Short Name
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center whitespace-nowrap">
+      Production Quantity per Minute
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center whitespace-nowrap">
+      UOM
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center whitespace-nowrap">
+      Average Production Hours per Day
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Last Modified User ID
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Last Modified Date & Time
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Active
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center whitespace-nowrap">
+      Actions
+    </th>
+  </tr>
+</thead>
+                                 <tbody className="divide-y divide-border">
+  {filteredMachines.map((machine, index) => {
+    const isActive = machine.active === true;
 
-    {/* EDIT BUTTON */}
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={!machine.active}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!machine.active) return;
-        handleEdit(machine);
-      }}
-      title={
-        !machine.active
-          ? "Already cancelled. Not able to edit"
-          : "Edit machine"
-      }
-      className={`${
-        machine.active
-          ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-          : "text-gray-400 cursor-not-allowed"
-      }`}
-    >
-      <Pencil className="w-4 h-4" />
-    </Button>
+    return (
+      <motion.tr
+        key={machine.machineId}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className="hover:bg-muted/30 transition-colors"
+      >
+        {/* MACHINE ID */}
+        <td className="px-6 py-4 text-sm">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {machine.machineId}
+          </span>
+        </td>
 
-    {/* CANCEL BUTTON */}
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={!machine.active}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!machine.active) return;
-        handleCancel(machine);
-      }}
-      title={
-        !machine.active
-          ? "Already cancelled"
-          : "Cancel machine"
-      }
-      className={`${
-        machine.active
-          ? "text-red-600 hover:text-red-700 hover:bg-red-50"
-          : "text-gray-400 cursor-not-allowed"
-      }`}
-    >
-      <X className="w-4 h-4" />
-    </Button>
+        {/* MACHINE NAME */}
+        <td className="px-6 py-4 text-sm ">
+          {machine.machineName ?? "-"}
+        </td>
 
-  </div>
-</td>
+        {/* SHORT NAME */}
+        <td className="px-6 py-4 text-sm">
+          {machine.shortName ?? "-"}
+        </td>
 
+        {/* PRODUCTION QTY PER MIN */}
+        <td className="px-6 py-4 text-sm text-center font-semibold">
+          {machine.qtyPerMin ?? "-"}
+        </td>
 
+        {/* UOM */}
+        <td className="px-6 py-4 text-sm text-center font-semibold">
+          {machine.uom ?? "-"}
+        </td>
 
-                                            </motion.tr>
-                                        );
-                                        })}
-                                    </tbody>
+        {/* AVG HOURS PER DAY */}
+        <td className="px-6 py-4 text-sm text-center font-semibold">
+          {machine.avgHrsPerDay ?? "-"}
+        </td>
+
+        {/* LAST MODIFIED USER */}
+        <td className="px-6 py-4 text-sm">
+          {machine.lastModifiedUserId ?? "-"}
+        </td>
+
+        {/* LAST MODIFIED DATE */}
+        <td className="px-6 py-4 text-sm">
+          {machine.lastModifiedDateTime
+            ? (machine.lastModifiedDateTime)
+            : "-"}
+        </td>
+
+        {/* ACTIVE STATUS */}
+        <td className="px-6 py-4">
+          <span
+            className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+              isActive
+                ? "bg-green-50 text-green-600"
+                : "bg-red-50 text-red-600"
+            }`}
+          >
+            {isActive ? "ACTIVE" : "CANCELLED"}
+          </span>
+        </td>
+
+        {/* ACTIONS */}
+        <td className="px-6 py-4 text-center">
+          <div className="flex items-center justify-center gap-2">
+
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!isActive}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isActive) return;
+                handleEdit(machine);
+              }}
+              className={`${
+                isActive
+                  ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  : "text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!isActive}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isActive) return;
+                handleCancel(machine);
+              }}
+              className={`${
+                isActive
+                  ? "text-red-600 hover:text-red-700 hover:bg-red-50"
+                  : "text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+
+          </div>
+        </td>
+      </motion.tr>
+    );
+  })}
+</tbody>
                                 </table>
                             </div>
 

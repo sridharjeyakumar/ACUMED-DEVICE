@@ -447,131 +447,169 @@ export default function CartonTypeMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Carton Type Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Carton Type</span>
-                                                    <span>Name</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Carton Type</span>
-                                                    <span>Shortname</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>User Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>Date & Time</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {loading ? (
-                                            <tr>
-                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
-                                                    Loading carton types...
-                                                </td>
-                                            </tr>
-                                        ) : filteredCartonTypes.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
-                                                    No carton types found
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            paginatedCartonTypes.map((item, index) => (
-                                                <motion.tr
-                                                    key={item.carton_type_id}
-                                                    initial={{ opacity: 0, x: -20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className="hover:bg-muted/30 transition-colors cursor-pointer"
-                                                >
-                                                    <td className="px-6 py-6 text-sm font-semibold text-blue-600 align-middle">
-                                                        {item.carton_type_id}
-                                                    </td>
-                                                    <td className="px-6 py-6 align-middle">
-                                                        <span className="text-sm font-semibold text-foreground">{item.carton_type_name}</span>
-                                                    </td>
-                                                    <td className="px-6 py-6 text-sm text-foreground align-middle">
-                                                        {item.carton_type_shortname}
-                                                    </td>
-                                                    <td className="px-6 py-6 text-sm text-foreground align-middle">
-                                                        {item.last_modified_user_id ? (
-                                                            <span className="text-sm font-mono text-foreground">{item.last_modified_user_id}</span>
-                                                        ) : (
-                                                            <span className="text-sm text-muted-foreground">-</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-6 text-sm text-foreground align-middle">
-                                                        {item.last_modified_date_time 
-                                                            ? formatDateTime(item.last_modified_date_time)
-                                                            : "-"}
-                                                    </td>
-<td className="px-6 py-6 text-left align-middle">
-    {(() => {
-        const isCancelled = cancelledCartonTypes.has(item.carton_type_id);
-        const displayActive = !isCancelled && item.active !== false;
-        return (
-            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                 <thead>
+  <tr className="bg-gray-100 border-b border-gray-300">
+    {/* Carton Type ID */}
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Carton Type Id
+    </th>
+
+    {/* Carton Type Name */}
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Carton Type</span>
+        <span>Name</span>
+      </div>
+    </th>
+
+    {/* Carton Type Shortname */}
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Carton Type</span>
+        <span>Shortname</span>
+      </div>
+    </th>
+
+    {/* Last Modified User */}
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Last Modified</span>
+        <span>User Id</span>
+      </div>
+    </th>
+
+    {/* Last Modified Date & Time */}
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Last Modified</span>
+        <span>Date & Time</span>
+      </div>
+    </th>
+
+    {/* Active */}
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Active
+    </th>
+
+    {/* Actions */}
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Actions
+    </th>
+  </tr>
+</thead>
+                                   <tbody className="divide-y divide-border">
+  {loading ? (
+    <tr>
+      <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
+        Loading carton types...
+      </td>
+    </tr>
+  ) : filteredCartonTypes.length === 0 ? (
+    <tr>
+      <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
+        No carton types found
+      </td>
+    </tr>
+  ) : (
+    paginatedCartonTypes.map((item, index) => {
+      const isCancelled = cancelledCartonTypes.has(item.carton_type_id);
+      const displayActive = !isCancelled && item.active !== false;
+
+      return (
+        <motion.tr
+          key={item.carton_type_id}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: index * 0.05 }}
+          className="hover:bg-muted/30 transition-colors cursor-pointer"
+        >
+          {/* Carton Type ID */}
+          <td className="px-6 py-6 text-sm align-middle">
+  <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+    {item.carton_type_id}
+  </span>
+</td>
+
+          {/* Carton Type Name */}
+          <td className="px-6 py-6 align-middle">
+            <span className="text-sm  text-foreground">{item.carton_type_name}</span>
+          </td>
+
+          {/* Carton Type Shortname */}
+          <td className="px-6 py-6 text-sm text-foreground align-middle">
+            {item.carton_type_shortname}
+          </td>
+
+          {/* Last Modified User */}
+          <td className="px-6 py-6 text-sm text-foreground align-middle">
+            {item.last_modified_user_id ? (
+              <span className="text-sm font-mono text-foreground">{item.last_modified_user_id}</span>
+            ) : (
+              <span className="text-sm text-muted-foreground">-</span>
+            )}
+          </td>
+
+          {/* Last Modified Date */}
+          <td className="px-6 py-6 text-sm text-foreground align-middle">
+            {item.last_modified_date_time ? formatDateTime(item.last_modified_date_time) : "-"}
+          </td>
+
+          {/* Active Status */}
+          <td className="px-6 py-6 text-left align-middle">
+            <span
+              className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
                 displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-            }`}>
-                {displayActive ? "TRUE" : "FALSE"}
+              }`}
+            >
+              {displayActive ? "TRUE" : "FALSE"}
             </span>
-        );
-    })()}
-</td>
+          </td>
 
-<td className="px-6 py-6 text-center align-middle">
-    <div className="flex items-center justify-center gap-2">
-        {/* Edit Button */}
-        <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-                e.stopPropagation();
-                handleEdit(item);
-            }}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            disabled={item.active === false} // DISABLED if active is false
-        >
-            <Pencil className="w-4 h-4" />
-        </Button>
+          {/* Actions */}
+          <td className="px-6 py-6 text-center align-middle">
+            <div className="flex items-center justify-center gap-2">
+              {/* Edit Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!displayActive) return;
+                  handleEdit(item);
+                }}
+                className={`${
+                  displayActive ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" : "text-gray-400 cursor-not-allowed"
+                }`}
+                title={displayActive ? "Edit carton type" : "Cannot edit inactive carton type"}
+                disabled={!displayActive}
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
 
-        {/* Cancel Button */}
-        <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-                e.stopPropagation();
-                handleCancel(item);
-            }}
-            className={`${item.active ? 'text-red-600 hover:text-red-700 hover:bg-red-50' : 'text-gray-400 cursor-not-allowed'}`}
-            title={item.active ? "Cancel carton type" : "Cannot cancel inactive carton type"}
-            disabled={item.active === false} // DISABLED if active is false
-        >
-            <X className="w-4 h-4" />
-        </Button>
-    </div>
-</td>
-
-                                                </motion.tr>
-                                            ))
-                                        )}
-                                    </tbody>
+              {/* Cancel Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!displayActive) return;
+                  handleCancel(item);
+                }}
+                className={`${
+                  displayActive ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "text-gray-400 cursor-not-allowed"
+                }`}
+                title={displayActive ? "Cancel carton type" : "Cannot cancel inactive carton type"}
+                disabled={!displayActive}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </td>
+        </motion.tr>
+      );
+    })
+  )}
+</tbody>
                                 </table>
                             </div>
 
