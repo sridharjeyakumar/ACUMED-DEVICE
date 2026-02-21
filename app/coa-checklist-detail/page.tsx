@@ -373,89 +373,123 @@ export default function COAChecklistDetailPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Coa</span>
-                                                    <span>Checklist Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Checklist Sno</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Checklist Parameter</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Expected Result</th>
-                                            {/* <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th> */}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {loading ? (
-                                            <tr>
-                                                <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                                                    Loading...
-                                                </td>
-                                            </tr>
-                                        ) : filteredRecords.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                                                    No checklist details found
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            filteredRecords.map((item, index) => (
-                                                <motion.tr
-                                                    key={item.id}
-                                                    initial={{ opacity: 0, x: -20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className="hover:bg-muted/30 transition-colors cursor-pointer"
-                                                >
-                                                    <td className="px-6 py-6 align-middle">
-                                                        <span className="text-sm font-semibold text-blue-600">
-                                                            {item.checklistId}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-6 text-center align-middle">
-                                                        <span className="text-sm font-semibold text-foreground">
-                                                            {item.checklistSno}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-6 align-middle">
-                                                        <span className="text-sm font-semibold text-foreground">{item.checklistParameter}</span>
-                                                    </td>
-                                                    <td className="px-6 py-6 align-middle">
-                                                        <span className="text-sm font-semibold text-foreground">{item.expectedResult}</span>
-                                                    </td>
-                                                    {/* <td className="px-6 py-6 text-center align-middle">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleEdit(item);
-                                                                }}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            >
-                                                                <Pencil className="w-4 h-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCancel(item);
-                                                                }}
-                                                                className={`${cancelledDetails.has(`${item.checklistId}-${item.checklistSno}`) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={cancelledDetails.has(`${item.checklistId}-${item.checklistSno}`) ? "Restore COA checklist detail" : "Cancel COA checklist detail"}
-                                                            >
-                                                                <X className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </td> */}
-                                                </motion.tr>
-                                            ))
-                                        )}
-                                    </tbody>
+                                   <thead>
+  <tr className="bg-gray-100 border-b border-border">
+    {/* Checklist ID with two-line label */}
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>COA</span>
+        <span>Checklist Id</span>
+      </div>
+    </th>
+
+    {/* Checklist Serial Number */}
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Checklist Sno
+    </th>
+
+    {/* Checklist Parameter */}
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Checklist Parameter
+    </th>
+
+    {/* Expected Result */}
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Expected Result
+    </th>
+
+    {/* Uncomment this if Actions column is needed */}
+    {/* <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th> */}
+  </tr>
+</thead>
+                                   <tbody className="divide-y divide-border">
+  {loading ? (
+    <tr>
+      <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+        Loading...
+      </td>
+    </tr>
+  ) : filteredRecords.length === 0 ? (
+    <tr>
+      <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+        No checklist details found
+      </td>
+    </tr>
+  ) : (
+    filteredRecords.map((item, index) => (
+      <motion.tr
+        key={`${item.checklistId}-${item.checklistSno}`}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className="hover:bg-muted/30 transition-colors cursor-pointer"
+      >
+        {/* Checklist ID with pill style */}
+        <td className="px-6 py-6 align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {item.checklistId}
+          </span>
+        </td>
+
+        {/* Checklist Serial Number */}
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="text-sm  text-foreground">
+            {item.checklistSno}
+          </span>
+        </td>
+
+        {/* Checklist Parameter */}
+        <td className="px-6 py-6 align-middle">
+          <span className="text-sm  text-foreground">
+            {item.checklistParameter}
+          </span>
+        </td>
+
+        {/* Expected Result */}
+        <td className="px-6 py-6 align-middle">
+          <span className="text-sm  text-foreground">
+            {item.expectedResult}
+          </span>
+        </td>
+
+        {/* Actions column (optional, commented out) */}
+        {/*
+        <td className="px-6 py-6 text-center align-middle">
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(item);
+              }}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCancel(item);
+              }}
+              className={`${cancelledDetails.has(`${item.checklistId}-${item.checklistSno}`)
+                ? 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+              title={cancelledDetails.has(`${item.checklistId}-${item.checklistSno}`)
+                ? "Restore COA checklist detail"
+                : "Cancel COA checklist detail"}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </td>
+        */}
+      </motion.tr>
+    ))
+  )}
+</tbody>
                                 </table>
                             </div>
                         </Card>
@@ -519,7 +553,7 @@ export default function COAChecklistDetailPage() {
                                             <option value="">Select Checklist ID</option>
                                             {checklists.map((checklist) => (
                                                 <option key={checklist.checklist_id} value={checklist.checklist_id}>
-                                                    {checklist.checklist_id} - {checklist.checklist_description}
+                                                    {checklist.checklist_id} 
                                                 </option>
                                             ))}
                                         </select>

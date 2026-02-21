@@ -426,114 +426,146 @@ export default function PackSizeMasterPage() {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Pack Size Id</th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Pack Size</span>
-                                                    <span>Name</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Pack Size</span>
-                                                    <span>Short Name</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Qty Per</span>
-                                                    <span>Carton</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Uom</th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>User Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>Date & Time</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
-                                        </tr>
-                                    </thead>
+                                  <thead>
+  <tr className="bg-gray-100 border-b border-border">
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Pack Size ID
+    </th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Pack Size Name
+    </th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Pack Size Short Name
+    </th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Quantity per Carton
+    </th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      UOM
+    </th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Last Modified User ID
+    </th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Last Modified Date & Time
+    </th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">
+      Active
+    </th>
+    <th className="px-4 py-3 text-sm font-semibold text-center whitespace-nowrap">
+      Actions
+    </th>
+  </tr>
+</thead>
                                     <tbody className="divide-y divide-border">
-                                        {paginatedPackSizes.map((packSize, index) => (
-                                            <motion.tr
-                                                key={packSize.pack_size_id}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors"
-                                            >
-                                                <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{packSize.pack_size_id}</td>
-                                                <td className="px-4 py-3 text-sm font-semibold">{packSize.pack_size_name}</td>
-                                                <td className="px-4 py-3 text-sm">{packSize.pack_size_short_name}</td>
-                                                <td className="px-4 py-3 text-sm">{packSize.qty_per_carton}</td>
-                                                <td className="px-4 py-3 text-sm">{packSize.uom}</td>
-                                                <td className="px-4 py-3 text-sm">
-                                                    {packSize.last_modified_user_id ? (
-                                                        <div className="flex flex-col">
-                                                            <span className="font-mono text-muted-foreground">{packSize.last_modified_user_id}</span>
-                                                            {userMap.get(packSize.last_modified_user_id) && (
-                                                                <span className="text-xs text-muted-foreground">{userMap.get(packSize.last_modified_user_id)}</span>
-                                                            )}
-                                                        </div>
-                                                    ) : "-"}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm">{formatDateTime(packSize.last_modified_date_time)}</td>
-                                                <td className="px-4 py-3 text-left">
-                                                    {(() => {
-                                                        const isCancelled = cancelledPackSizes.has(packSize.pack_size_id);
-                                                        const displayActive = !isCancelled && (packSize.active !== false);
-                                                        return (
-                                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                                packSize.active? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                            }`}>
-                                                                {packSize.active ? "TRUE" : "FALSE"}
-                                                            </span>
-                                                        );
-                                                    })()}
-                                                </td>
-                                               <td className="px-4 py-3">
-  <div className="flex items-center justify-center gap-2">
-    {/* Edit button */}
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={(e) => { e.stopPropagation(); handleEdit(packSize); }}
-      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-      disabled={!packSize.active} // <-- disabled when inactive
-    >
-      <Pencil className="w-4 h-4" />
-    </Button>
+  {paginatedPackSizes.map((packSize, index) => {
+    const isCancelled = cancelledPackSizes.has(packSize.pack_size_id);
+    const isActive = !isCancelled && packSize.active !== false;
 
-    {/* Cancel button */}
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={(e) => { e.stopPropagation(); handleCancel(packSize); }}
-      className={`${packSize.active
-        ? 'text-red-600 hover:text-red-700 hover:bg-red-50'
-        : 'text-gray-400 cursor-not-allowed'}`}
-      title={packSize.active ? "Cancel pack size" : "Inactive"}
-      disabled={!packSize.active} // <-- disabled when inactive
-    >
-      <X className="w-4 h-4" />
-    </Button>
-  </div>
-</td>
+    return (
+      <motion.tr 
+        key={packSize.pack_size_id}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className="hover:bg-muted/30 transition-colors"
+      >
+         <td className="px-4 py-3 text-sm">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {packSize.pack_size_id}
+          </span>
+        </td>
+ 
 
-                                            </motion.tr>
-                                        ))}
-                                    </tbody>
+        <td className="px-4 py-3 text-sm ">
+          {packSize.pack_size_name}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {packSize.pack_size_short_name}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {packSize.qty_per_carton}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {packSize.uom}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {packSize.last_modified_user_id ? (
+            <div className="flex flex-col">
+              <span className="font-mono text-muted-foreground">
+                {packSize.last_modified_user_id}
+              </span>
+              {userMap.get(packSize.last_modified_user_id) && (
+                <span className="text-xs text-muted-foreground">
+                  {userMap.get(packSize.last_modified_user_id)}
+                </span>
+              )}
+            </div>
+          ) : "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {formatDateTime(packSize.last_modified_date_time)}
+        </td>
+
+        {/* ✅ FIXED ACTIVE COLUMN */}
+        <td className="px-4 py-3 text-left">
+          <span
+            className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+              isActive
+                ? "bg-green-50 text-green-600"
+                : "bg-red-50 text-red-600"
+            }`}
+          >
+            {isActive ? "TRUE" : "FALSE"}
+          </span>
+        </td>
+
+        {/* ✅ FIXED ACTION COLUMN */}
+        <td className="px-4 py-3">
+          <div className="flex items-center justify-center gap-2">
+            {/* Edit */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(packSize);
+              }}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              disabled={!isActive}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+
+            {/* Cancel */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCancel(packSize);
+              }}
+              className={
+                isActive
+                  ? "text-red-600 hover:text-red-700 hover:bg-red-50"
+                  : "text-gray-400 cursor-not-allowed"
+              }
+              title={isActive ? "Cancel pack size" : "Inactive"}
+              disabled={!isActive}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </td>
+      </motion.tr>
+    );
+  })}
+</tbody>
                                 </table>
                             </div>
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">

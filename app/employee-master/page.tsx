@@ -546,149 +546,118 @@ const confirmDelete = async () => {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Emp Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Emp Name</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Location</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Dept Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Gender</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Grade Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Team</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Category</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">PF No.</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">ESI No.</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">DOJ</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">DOL</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Address</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Mobile No</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Email</th>
+                                   <thead>
+  <tr className="bg-gray-100 border-b border-border">
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Employee ID</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Employee Name</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Location</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Department ID</th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Gender</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Grade ID</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Team</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Category</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">PF Number</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">ESI Number</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Date of Joining</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Date of Leaving</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Address</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Mobile Number</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Email</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Date of Birth</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Age</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Marital Status</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Blood Group</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Education</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Employee Photo</th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Status</th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
+  </tr>
+</thead>
+                                  <tbody className="divide-y divide-border">
+  {paginatedRecords.length === 0 ? (
+    <tr>
+      <td colSpan={25} className="px-6 py-12 text-center text-muted-foreground">
+        No employees found
+      </td>
+    </tr>
+  ) : (
+    paginatedRecords.map((item, index) => (
+      <motion.tr
+        key={item.id}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className="hover:bg-muted/30 transition-colors cursor-pointer"
+      >
+        {/* Employee ID with pill */}
+        <td className="px-6 py-4 align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-blue-600 font-mono text-xs">
+            {item.empId}
+          </span>
+        </td>
 
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">DOB</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Age</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Married</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Blood Group</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Education</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Emp Photo</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Status</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {paginatedRecords.map((item, index) => (
-                                            <motion.tr
-                                                key={item.id}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors cursor-pointer"
-                                            >
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-blue-600">
-                                                        {item.empId}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.empName}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.location}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.deptId}</span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.gender}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.gradeId}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.team}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.category}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.pfNo || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.esiNo || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">{item.doj || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">{item.dol || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.remarks || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.address || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">{item.mobileNo || "-"}</span>
-                                                </td>
-                                                  <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">{item.email || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">{item.dob || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.age}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.married}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.bloodGroup || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.education || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-4 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.empPhoto || "-"}</span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center align-middle">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEdit(item);
-                                                            }}
-                                                            disabled={item.active !== true}
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.empName}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.location}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.deptId}</td>
+        <td className="px-6 py-4 text-center align-middle text-sm  text-foreground">{item.gender}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.gradeId}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.team}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.category}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.pfNo || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.esiNo || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.doj || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.dol || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.remarks || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.address || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.mobileNo || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.email || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.dob || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.age || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.married || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.bloodGroup || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.education || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.empPhoto || "-"}</td>
 
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDelete(item);
-                                                            }}
-                                                            disabled={item.active !== true}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </motion.tr>
-                                        ))}
-                                    </tbody>
+        {/* Status Badge */}
+        <td className="px-6 py-4 text-center align-middle">
+          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+            item.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+          }`}>
+            {item.active ? "ACTIVE" : "INACTIVE"}
+          </span>
+        </td>
+
+        {/* Actions */}
+        <td className="px-6 py-4 text-center align-middle">
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+              disabled={!item.active}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              title={item.active ? "Edit employee" : "Cannot edit inactive employee"}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
+              disabled={!item.active}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              title={item.active ? "Delete employee" : "Cannot delete inactive employee"}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </td>
+      </motion.tr>
+    ))
+  )}
+</tbody>
                                 </table>
                             </div>
 

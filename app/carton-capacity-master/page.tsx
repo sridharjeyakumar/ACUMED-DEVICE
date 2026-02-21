@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { cartonCapacityAPI } from "@/services/api";
+import { cartonCapacityAPI, cartonTypeAPI, packSizeAPI, productAPI } from "@/services/api";
 
 interface CartonCapacityRecord {
     id: string;
@@ -28,7 +28,49 @@ interface CartonCapacityRecord {
     lastModifiedDateTime?: string;
     active: boolean;
 }
-
+interface Product {
+    product_id: string;
+    product_name: string;
+    product_shortname: string;
+    uom: string;
+    product_category_id?: string;
+    product_spec?: string;
+    weight_per_piece?: number;
+    weight_uom?: string;
+    wipes_per_kg?: number;
+    shelf_life_in_months?: number;
+    storage_condition?: string;
+    safety_stock_qty?: number;
+    default_pack_size_id?: string;
+    batch_prefix?: string;
+    running_batch_sno?:number;
+    product_image?: string;
+    product_image_icon?: string;
+    qc_required?: boolean;
+    coa_checklist_id?: string;
+    sterilization_required?: boolean;
+    last_modified_user_id?: string;
+    last_modified_date_time?: Date;
+    active?: boolean;
+}
+interface CartonType {
+    carton_type_id: string; // Char(2) - PK
+    carton_type_name: string; // Char(100)
+    carton_type_shortname: string; // Char(50)
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date; // Date
+    active: boolean; // Boolean
+}
+interface PackSize {
+    pack_size_id: string;
+    pack_size_name: string;
+    pack_size_short_name: string;
+    qty_per_carton: number;
+    uom: string;
+    last_modified_user_id?: string;
+    last_modified_date_time?: Date;
+    active?: boolean;
+}
 export default function CartonCapacityMasterPage() {
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
@@ -42,6 +84,11 @@ export default function CartonCapacityMasterPage() {
     const [filterMaterial, setFilterMaterial] = useState<string>("all");
     const [records, setRecords] = useState<CartonCapacityRecord[]>([]);
     const [loading, setLoading] = useState(true);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [cartonTypes, setCartonTypes] = useState<CartonType[]>([]);
+    const [packSizes, setPackSizes] = useState<PackSize[]>([]);
+    
+    
     const [formData, setFormData] = useState({
         cartonCapacityId: "",
         cartonCapacityName: "",
@@ -110,7 +157,39 @@ export default function CartonCapacityMasterPage() {
     useEffect(() => {
         loadRecords();
     }, [loadRecords]);
-
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const data = await productAPI.getAll();
+            setProducts(data);
+        } catch (error) {
+            console.error("Failed to load products", error);
+        }
+    };
+    loadProducts();
+}, []);
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const cortonData = await cartonTypeAPI.getAll();
+            setCartonTypes(cortonData);
+        } catch (error) {
+            console.error("Failed to load carton", error);
+        }
+    };
+    loadProducts();
+}, []);
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const packData = await packSizeAPI.getAll();
+            setPackSizes(packData);
+        } catch (error) {
+            console.error("Failed to load carton", error);
+        }
+    };
+    loadProducts();
+}, []);
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -310,10 +389,23 @@ export default function CartonCapacityMasterPage() {
     const uniquePackSizes = Array.from(new Set(records.map(r => r.packSizeId)));
     const uniqueMaterials = Array.from(new Set(records.map(r => r.packMatlId)));
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
+    // const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    //     setFormData({ ...formData, [e.target.name]: e.target.value });
+    // };
+const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+) => {
+    const { name, value, type } = e.target;
+    
+    // Handle checkbox inputs specifically
+    if (type === 'checkbox') {
+        const checked = (e.target as HTMLInputElement).checked;
+        setFormData({ ...formData, [name]: checked });
+    } else {
+        // For text inputs and select elements
+        setFormData({ ...formData, [name]: value });
+    }
+};
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -607,166 +699,198 @@ const confirmCancelItem = async () => {
                                     </div>
                                 ) : (
                                 <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Carton</span>
-                                                    <span>Capacity Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Carton Capacity Name</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Carton Capacity Shortname</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Product Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Pack Size Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Pack Matl Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Carton Type Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Carton</span>
-                                                    <span>Material Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Packs Per</span>
-                                                    <span>Carton</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>User Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>Date & Time</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {filteredRecords.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={13} className="px-6 py-12 text-center text-muted-foreground">
-                                                    No carton capacities found
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                        filteredRecords.map((item, index) => (
-                                            <motion.tr
-                                                key={item.id}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors cursor-pointer"
-                                            >
-                                                <td className="px-6 py-6 text-sm font-semibold text-foreground align-middle">
-                                                    {item.cartonCapacityId}
-                                                </td>
-                                                <td className="px-6 py-6 align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">{item.cartonCapacityName}</span>
-                                                </td>
-                                                <td className="px-6 py-6 text-sm text-foreground align-middle">
-                                                    {item.cartonCapacityShortname}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.productId}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.packSizeId}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.packMatlId}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.cartonTypeId}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.cartonMaterialId}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {item.packsPerCarton}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {item.lastModifiedUserId || "-"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {item.lastModifiedDateTime || "-"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-6 text-left align-middle">
-                                                    {(() => {
-                                                        const isCancelled = cancelledCapacities.has(item.cartonCapacityId);
-                                                        const displayActive = !isCancelled && (item.active !== false);
-                                                        return (
-                                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                                displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                            }`}>
-                                                                {displayActive ? "TRUE" : "FALSE"}
-                                                            </span>
-                                                        );
-                                                    })()}
-                                                </td>
-                                                <td className="px-6 py-6 text-center align-middle">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEdit(item);
-                                                            }}
-                                                            className="text-foreground hover:text-foreground hover:bg-muted"
-                                                            disabled={!item.active}
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleCancel(item);
-                                                            }}
-                                                            disabled={!item.active}
+                                   <thead>
+  <tr className="bg-gray-100 border-b border-border">
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Carton</span>
+        <span>Capacity Id</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Carton Capacity Name
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Carton Capacity Shortname
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Product Id
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Pack Size Id
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Pack Material Id
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Carton Type Id
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Carton</span>
+        <span>Material Id</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Packs Per</span>
+        <span>Carton</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Last Modified</span>
+        <span>User Id</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Last Modified</span>
+        <span>Date & Time</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Active
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Actions
+    </th>
+  </tr>
+</thead>
+<tbody className="divide-y divide-border">
+  {loading ? (
+    <tr>
+      <td colSpan={13} className="px-6 py-12 text-center text-muted-foreground">
+        Loading carton capacities...
+      </td>
+    </tr>
+  ) : filteredRecords.length === 0 ? (
+    <tr>
+      <td colSpan={13} className="px-6 py-12 text-center text-muted-foreground">
+        No carton capacities found
+      </td>
+    </tr>
+  ) : (
+    filteredRecords.map((item, index) => (
+      <motion.tr
+        key={item.id}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className="hover:bg-muted/30 transition-colors cursor-pointer"
+      >
+        {/* Pill style IDs */}
+        <td className="px-6 py-6 text-sm align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {item.cartonCapacityId}
+          </span>
+        </td>
+        <td className="px-6 py-6 text-sm  text-foreground align-middle">
+          {item.cartonCapacityName}
+        </td>
+        <td className="px-6 py-6 text-sm text-foreground align-middle">
+          {item.cartonCapacityShortname}
+        </td>
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {item.productId}
+          </span>
+        </td>
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {item.packSizeId}
+          </span>
+        </td>
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {item.packMatlId}
+          </span>
+        </td>
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {item.cartonTypeId}
+          </span>
+        </td>
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {item.cartonMaterialId}
+          </span>
+        </td>
 
-                                                             className={`${
-        item.active
-            ? cancelledCapacities.has(item.cartonCapacityId)
-                ? 'text-green-600 hover:text-green-700 hover:bg-green-50'
-                : 'text-red-600 hover:text-red-700 hover:bg-red-50'
-            : 'text-gray-400 cursor-not-allowed'
-    }`}
-                                                            title={cancelledCapacities.has(item.cartonCapacityId) ? "Restore carton capacity" : "Cancel carton capacity"}
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </motion.tr>
-                                        ))
-                                        )}
-                                    </tbody>
+        {/* Other fields */}
+        <td className="px-6 py-6 text-center align-middle">
+          {item.packsPerCarton}
+        </td>
+        <td className="px-6 py-6 text-center align-middle text-muted-foreground">
+          {item.lastModifiedUserId || "-"}
+        </td>
+        <td className="px-6 py-6 text-center align-middle text-muted-foreground">
+          {item.lastModifiedDateTime || "-"}
+        </td>
+
+        {/* Active Status */}
+        <td className="px-6 py-6 text-left align-middle">
+          {(() => {
+            const isCancelled = cancelledCapacities.has(item.cartonCapacityId);
+            const displayActive = !isCancelled && item.active !== false;
+            return (
+              <span
+                className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                  displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                }`}
+              >
+                {displayActive ? "TRUE" : "FALSE"}
+              </span>
+            );
+          })()}
+        </td>
+
+        {/* Actions */}
+        <td className="px-6 py-6 text-center align-middle">
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(item);
+              }}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              disabled={!item.active}
+              title={item.active ? "Edit carton capacity" : "Cannot edit inactive"}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCancel(item);
+              }}
+              disabled={!item.active && !cancelledCapacities.has(item.cartonCapacityId)}
+              className={`${
+                item.active
+                  ? cancelledCapacities.has(item.cartonCapacityId)
+                    ? "text-green-600 hover:text-green-700 hover:bg-green-50"
+                    : "text-red-600 hover:text-red-700 hover:bg-red-50"
+                  : "text-gray-400 cursor-not-allowed"
+              }`}
+              title={
+                cancelledCapacities.has(item.cartonCapacityId)
+                  ? "Restore carton capacity"
+                  : "Cancel carton capacity"
+              }
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </td>
+      </motion.tr>
+    ))
+  )}
+</tbody>
                                 </table>
                                 )}
                             </div>
@@ -871,35 +995,52 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Product ID */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Product ID
-                                            </label>
-                                            <Input 
-                                                name="productId" 
-                                                value={formData.productId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="P0001" 
-                                            />
-                                        </div>
+                                    <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Product ID <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="productId"
+        value={formData.productId}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a product</option>
+        {products.map(product => (
+            <option key={product.product_id} value={product.product_id}>
+                {product.product_id}
+            </option>
+        ))}
+    </select>
+</div>
 
                                         {/* Pack Size ID */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Pack Size ID
+                                                Pack Size ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="packSizeId" 
-                                                value={formData.packSizeId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="PK24" 
-                                            />
+                     
+                                                                                                                                      <select
+        name="packSizeId"
+        value={formData.packSizeId}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a Pack Size</option>
+        {packSizes.map(product => (
+            <option key={product.pack_size_id} value={product.pack_size_id}>
+                {product.pack_size_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Pack Matl ID */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Pack Matl ID
+                                                Pack Matl ID <span className="text-red-500">*</span>
                                             </label>
                                             <Input 
                                                 name="packMatlId" 
@@ -907,21 +1048,32 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="PM001" 
                                             />
+
                                         </div>
 
                                         {/* Carton Type ID */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Carton Type ID
+                                                Carton Type ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="cartonTypeId" 
-                                                value={formData.cartonTypeId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="ST" 
-                                            />
+                                 
+                                              <select
+        name="cartonTypeId"
+        value={formData.cartonTypeId}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a Carton Type</option>
+        {cartonTypes.map(product => (
+            <option key={product.carton_type_id} value={product.carton_type_id}>
+                {product.carton_type_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
+  
                                         {/* Carton Material ID */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">

@@ -374,114 +374,142 @@ const confirmCancelItem = async () => {
                         <Card className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Coa</span>
-                                                    <span>Checklist Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Checklist Description</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>User Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>Date & Time</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Active</th>
+                                   <thead>
+  <tr className="bg-gray-100 border-b border-border">
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>COA</span>
+        <span>Checklist ID</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Checklist Description
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Last Modified</span>
+        <span>User ID</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      <div className="flex flex-col">
+        <span>Last Modified</span>
+        <span>Date & Time</span>
+      </div>
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Active
+    </th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Actions
+    </th>
+  </tr>
+</thead>
+                               <tbody className="divide-y divide-border">
+  {loading ? (
+    <tr>
+      <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+        Loading COA checklists...
+      </td>
+    </tr>
+  ) : filteredRecords.length === 0 ? (
+    <tr>
+      <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+        No COA checklists found
+      </td>
+    </tr>
+  ) : (
+    paginatedRecords.map((item, index) => (
+      <motion.tr
+        key={item.id}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className="hover:bg-muted/30 transition-colors cursor-pointer"
+      >
+        {/* Checklist ID with pill style */}
+        <td className="px-6 py-6 align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {item.checklistId}
+          </span>
+        </td>
 
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {loading ? (
-                                            <tr>
-                                                <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                                                    Loading...
-                                                </td>
-                                            </tr>
-                                        ) : filteredRecords.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                                                    No COA checklists found
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            paginatedRecords.map((item, index) => (
-                                                <motion.tr
-                                                    key={item.id}
-                                                    initial={{ opacity: 0, x: -20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className="hover:bg-muted/30 transition-colors cursor-pointer"
-                                                >
-                                                    <td className="px-6 py-6 align-middle">
-                                                        <span className="text-sm font-semibold text-blue-600">
-                                                            {item.checklistId}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-6 align-middle">
-                                                        <span className="text-sm font-semibold text-foreground">{item.checklistDescription}</span>
-                                                    </td>
-                                                    <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
-                                                        {item.lastModifiedUserId || "-"}
-                                                    </td>
-                                                    <td className="px-6 py-6 text-sm font-semibold text-foreground text-center align-middle">
-                                                        {item.lastModifiedDateTime || "-"}
-                                                    </td>
-                                                    <td className="px-6 py-6 text-left align-middle">
-    {(() => {
-      
-        return (
-            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                item.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-            }`}>
-                {item.active ? "TRUE" : "FALSE"}
-            </span>
-        );
-    })()}
-</td>
-                                                    <td className="px-6 py-6 text-center align-middle">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleEdit(item);
-                                                                }}
-                                                                disabled={!item.active}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            >
-                                                                <Pencil className="w-4 h-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCancel(item);
-                                                                }}
-                                                                disabled={!item.active}
+        {/* Checklist Description */}
+        <td className="px-6 py-6 align-middle">
+          <span className="text-sm  text-foreground">
+            {item.checklistDescription}
+          </span>
+        </td>
 
-                                                                className={`${cancelledChecklists.has(item.checklistId) ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={cancelledChecklists.has(item.checklistId) ? "Restore COA checklist" : "Cancel COA checklist"}
-                                                            >
-                                                                <X className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </td>
-                                                </motion.tr>
-                                            ))
-                                        )}
-                                    </tbody>
+        {/* Last Modified User ID */}
+        <td className="px-6 py-6 text-center text-sm font-mono text-gray-700 align-middle">
+          {item.lastModifiedUserId || "-"}
+        </td>
+
+        {/* Last Modified Date & Time */}
+        <td className="px-6 py-6 text-center text-sm text-foreground align-middle">
+          {item.lastModifiedDateTime || "-"}
+        </td>
+
+        {/* Active Status */}
+        <td className="px-6 py-6 text-left align-middle">
+          <span
+            className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+              item.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+            }`}
+          >
+            {item.active ? "TRUE" : "FALSE"}
+          </span>
+        </td>
+
+        {/* Actions */}
+        <td className="px-6 py-6 text-center align-middle">
+          <div className="flex items-center justify-center gap-2">
+            {/* Edit Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(item);
+              }}
+              disabled={!item.active}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              title={item.active ? "Edit COA checklist" : "Cannot edit inactive checklist"}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+
+            {/* Cancel / Restore Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCancel(item);
+              }}
+              disabled={!item.active && !cancelledChecklists.has(item.checklistId)}
+              className={`${
+                item.active
+                  ? cancelledChecklists.has(item.checklistId)
+                    ? "text-green-600 hover:text-green-700 hover:bg-green-50"
+                    : "text-red-600 hover:text-red-700 hover:bg-red-50"
+                  : "text-gray-400 cursor-not-allowed"
+              }`}
+              title={
+                cancelledChecklists.has(item.checklistId)
+                  ? "Restore COA checklist"
+                  : "Cancel COA checklist"
+              }
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </td>
+      </motion.tr>
+    ))
+  )}
+</tbody>
                                 </table>
                             </div>
 

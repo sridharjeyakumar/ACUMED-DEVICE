@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { materialAPI } from "@/services/api";
+import { coaChecklistAPI, materialAPI } from "@/services/api";
 
 interface Material {
     material_id: string;
@@ -70,6 +70,8 @@ export default function MaterialMasterPage() {
     const [materialCategoryMap, setMaterialCategoryMap] = useState<Map<string, string>>(new Map());
     const [coaChecklistMap, setCoaChecklistMap] = useState<Map<string, string>>(new Map());
     const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
+    const [checklists, setChecklists] = useState<any[]>([]);
+    
     const isSubmittingRef = useRef(false);
 
     const [formData, setFormData] = useState({
@@ -128,7 +130,17 @@ export default function MaterialMasterPage() {
     useEffect(() => {
         loadMaterials();
     }, []);
-
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const data = await coaChecklistAPI.getAll();
+            setChecklists(data);
+        } catch (error) {
+            console.error("Failed to load products", error);
+        }
+    };
+    loadProducts();
+}, []);
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -607,240 +619,221 @@ export default function MaterialMasterPage() {
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Material Id</th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Material</span>
-                                                    <span>Name</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Material</span>
-                                                    <span>Short Name</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Uom</th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Material</span>
-                                                    <span>Category Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Material</span>
-                                                    <span>Type</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Material</span>
-                                                    <span>Spec</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Safety Stock</span>
-                                                    <span>Qty</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Re-Order</span>
-                                                    <span>Qty</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Min Order</span>
-                                                    <span>Qty</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Lead Time</span>
-                                                    <span>Days Min</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Lead Time</span>
-                                                    <span>Days Max</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Shelf Life</span>
-                                                    <span>In Months</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Qc</span>
-                                                    <span>Required</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Coa</span>
-                                                    <span>Checklist Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Material</span>
-                                                    <span>Image</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Material Image</span>
-                                                    <span>Icon</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>User Id</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Last Modified</span>
-                                                    <span>Date & Time</span>
-                                                </div>
-                                            </th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
-                                            <th className="px-4 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {paginatedMaterials.map((material, index) => (
-                                            <motion.tr
-                                                key={material.material_id}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className="hover:bg-muted/30 transition-colors"
-                                            >
-                                                <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{material.material_id}</td>
-                                                <td className="px-4 py-3 text-sm font-semibold">{material.material_name}</td>
-                                                <td className="px-4 py-3 text-sm">{material.material_short_name}</td>
-                                                <td className="px-4 py-3 text-sm">{material.uom}</td>
-                                                <td className="px-4 py-3 text-sm">
-                                                    {material.material_category_id ? (
-                                                        <div className="flex flex-col">
-                                                            <span className="font-mono text-muted-foreground">{material.material_category_id}</span>
-                                                            {materialCategoryMap.get(material.material_category_id) && (
-                                                                <span className="text-xs text-muted-foreground">{materialCategoryMap.get(material.material_category_id)}</span>
-                                                            )}
-                                                        </div>
-                                                    ) : "-"}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm">{material.material_type}</td>
-                                                <td className="px-4 py-3 text-sm">{material.material_spec || "-"}</td>
-                                                <td className="px-4 py-3 text-sm">{material.safety_stock_qty || "-"}</td>
-                                                <td className="px-4 py-3 text-sm">{material.re_order_qty || "-"}</td>
-                                                <td className="px-4 py-3 text-sm">{material.min_order_qty || "-"}</td>
-                                                <td className="px-4 py-3 text-sm">{material.lead_time_days_min === null || material.lead_time_days_min === undefined ? "??" : material.lead_time_days_min}</td>
-                                                <td className="px-4 py-3 text-sm">{material.lead_time_days_max === null || material.lead_time_days_max === undefined ? "??" : material.lead_time_days_max}</td>
-                                                <td className="px-4 py-3 text-sm">{material.shelf_life_in_months || "-"}</td>
-                                                <td className="px-4 py-3 text-sm">{material.qc_required ? "TRUE" : "FALSE"}</td>
-                                                <td className="px-4 py-3 text-sm">
-                                                    {material.coa_checklist_id ? (
-                                                        <div className="flex flex-col">
-                                                            <span className="font-mono text-muted-foreground">{material.coa_checklist_id}</span>
-                                                            {coaChecklistMap.get(material.coa_checklist_id) && (
-                                                                <span className="text-xs text-muted-foreground">{coaChecklistMap.get(material.coa_checklist_id)}</span>
-                                                            )}
-                                                        </div>
-                                                    ) : "-"}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm">{material.material_image || "-"}</td>
-                                                <td className="px-4 py-3 text-sm">{material.material_image_icon || "-"}</td>
-                                                <td className="px-4 py-3 text-sm">
-                                                    {material.last_modified_user_id ? (
-                                                        <div className="flex flex-col">
-                                                            <span className="font-mono text-muted-foreground">{material.last_modified_user_id}</span>
-                                                            {userMap.get(material.last_modified_user_id) && (
-                                                                <span className="text-xs text-muted-foreground">{userMap.get(material.last_modified_user_id)}</span>
-                                                            )}
-                                                        </div>
-                                                    ) : "-"}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm">{formatDateTime(material.last_modified_date_time)}</td>
-                                                <td className="px-4 py-3 text-left">
-                                                    {(() => {
-                                                        const isCancelled = cancelledMaterials.has(material.material_id);
-                                                        const displayActive = !isCancelled && (material.active !== false);
-                                                        return (
-                                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                                displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                                            }`}>
-                                                                {displayActive ? "TRUE" : "FALSE"}
-                                                            </span>
-                                                        );
-                                                    })()}
-                                                </td>
-                                               <td className="px-4 py-3">
-  <div className="flex items-center justify-center gap-2">
-    
-    {/* EDIT BUTTON */}
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={!material.active}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!material.active) return;
-        handleEdit(material);
-      }}
-      title={
-        !material.active
-          ? "Already cancelled. Not able to edit"
-          : "Edit material"
-      }
-      className={`${
-        material.active
-          ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-          : "text-gray-400 cursor-not-allowed"
-      }`}
-    >
-      <Pencil className="w-4 h-4" />
-    </Button>
+  <tr className="bg-gray-100 border-b border-border">
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material ID</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Name</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Short Name</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">UOM</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Category ID</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Type</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Specification</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Safety Stock Quantity</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Reorder Quantity</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Minimum Order Quantity</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Lead Time (Min Days)</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Lead Time (Max Days)</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Shelf Life (Months)</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">QC Required</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">COA Checklist ID</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Image</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Image Icon</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Last Modified User ID</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Last Modified Date & Time</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Active</th>
+    <th className="px-4 py-3 text-sm font-semibold text-center whitespace-nowrap">Actions</th>
+  </tr>
+</thead>
+                                   <tbody className="divide-y divide-border">
+  {paginatedMaterials.map((material, index) => {
+    const isActive = material.active === true;
 
-    {/* CANCEL BUTTON */}
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={!material.active}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!material.active) return;
-        handleCancel(material);
-      }}
-      title={
-        !material.active
-          ? "Already cancelled. Not able to edit"
-          : "Cancel material"
-      }
-      className={`${
-        material.active
-          ? "text-red-600 hover:text-red-700 hover:bg-red-50"
-          : "text-gray-400 cursor-not-allowed"
-      }`}
-    >
-      <X className="w-4 h-4" />
-    </Button>
+    return (
+      <motion.tr
+        key={material.material_id}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className="hover:bg-muted/30 transition-colors"
+      >
+        {/* MATERIAL ID */}
+        <td className="px-4 py-3 text-sm">
+          <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+            {material.material_id}
+          </span>
+        </td>
 
-  </div>
-</td>
+        <td className="px-4 py-3 text-sm ">
+          {material.material_name || "-"}
+        </td>
 
-                                            </motion.tr>
-                                        ))}
-                                    </tbody>
+        <td className="px-4 py-3 text-sm">
+          {material.material_short_name || "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.uom || "-"}
+        </td>
+
+        {/* MATERIAL CATEGORY */}
+        <td className="px-4 py-3 text-sm">
+          {material.material_category_id ? (
+            <div className="flex flex-col gap-1">
+              <span className="inline-flex px-2 py-1 rounded-md bg-blue-50 text-blue-600 font-mono text-xs w-fit">
+                {material.material_category_id}
+              </span>
+              {materialCategoryMap.get(material.material_category_id) && (
+                <span className="text-xs text-muted-foreground">
+                  {materialCategoryMap.get(material.material_category_id)}
+                </span>
+              )}
+            </div>
+          ) : "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.material_type || "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.material_spec || "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.safety_stock_qty ?? "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.re_order_qty ?? "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.min_order_qty ?? "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.lead_time_days_min ?? "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.lead_time_days_max ?? "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.shelf_life_in_months ?? "-"}
+        </td>
+
+        {/* QC REQUIRED */}
+        <td className="px-4 py-3">
+          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+            material.qc_required
+              ? "bg-green-50 text-green-600"
+              : "bg-gray-100 text-gray-500"
+          }`}>
+            {material.qc_required ? "YES" : "NO"}
+          </span>
+        </td>
+
+        {/* COA CHECKLIST */}
+        <td className="px-4 py-3 text-sm">
+          {material.coa_checklist_id ? (
+            <div className="flex flex-col gap-1">
+              <span className="inline-flex px-2 py-1 rounded-md bg-yellow-50 text-yellow-600 font-mono text-xs w-fit">
+                {material.coa_checklist_id}
+              </span>
+              {coaChecklistMap.get(material.coa_checklist_id) && (
+                <span className="text-xs text-muted-foreground">
+                  {coaChecklistMap.get(material.coa_checklist_id)}
+                </span>
+              )}
+            </div>
+          ) : "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.material_image || "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.material_image_icon || "-"}
+        </td>
+
+        {/* LAST MODIFIED USER */}
+        <td className="px-4 py-3 text-sm">
+          {material.last_modified_user_id ? (
+            <div className="flex flex-col gap-1">
+              <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs w-fit">
+                {material.last_modified_user_id}
+              </span>
+              {userMap.get(material.last_modified_user_id) && (
+                <span className="text-xs text-muted-foreground">
+                  {userMap.get(material.last_modified_user_id)}
+                </span>
+              )}
+            </div>
+          ) : "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {formatDateTime(material.last_modified_date_time)}
+        </td>
+
+        {/* ACTIVE STATUS */}
+        <td className="px-4 py-3">
+          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+            isActive
+              ? "bg-green-50 text-green-600"
+              : "bg-red-50 text-red-600"
+          }`}>
+            {isActive ? "ACTIVE" : "CANCELLED"}
+          </span>
+        </td>
+
+        {/* ACTIONS */}
+        <td className="px-4 py-3">
+          <div className="flex items-center justify-center gap-2">
+
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!isActive}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isActive) return;
+                handleEdit(material);
+              }}
+              className={`${
+                isActive
+                  ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  : "text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!isActive}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isActive) return;
+                handleCancel(material);
+              }}
+              className={`${
+                isActive
+                  ? "text-red-600 hover:text-red-700 hover:bg-red-50"
+                  : "text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+
+          </div>
+        </td>
+      </motion.tr>
+    );
+  })}
+</tbody>
                                 </table>
                             </div>
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
@@ -1148,12 +1141,21 @@ export default function MaterialMasterPage() {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 COA Checklist ID
                                             </label>
-                                            <Input
-                                                name="coa_checklist_id"
-                                                value={formData.coa_checklist_id}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter COA checklist ID"
-                                            />
+                                 
+                                                                                                                                                                                                                              <select
+        name="coa_checklist_id"
+        value={formData.coa_checklist_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Enter COA checklist ID</option>
+        {checklists.map(product => (
+            <option key={product.checklist_id} value={product.checklist_id}>
+                {product.checklist_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Images Section */}
