@@ -53,7 +53,6 @@ const ProductMasterSchema: Schema = new Schema({
     required: true,
     maxlength: 10,
     trim: true,
-    enum: ['NOS', 'KG', 'GMS', 'PCS', 'BOX', 'CARTON'],
   },
   product_category_id: {
     type: String,

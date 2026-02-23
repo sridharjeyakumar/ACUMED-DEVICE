@@ -49,7 +49,6 @@ const MaterialMasterSchema: Schema = new Schema({
     required: true,
     maxlength: 10,
     trim: true,
-    enum: ['KGS', 'NOS', 'KG', 'GMS', 'PCS', 'BOX', 'CARTON'],
   },
   material_category_id: {
     type: String,

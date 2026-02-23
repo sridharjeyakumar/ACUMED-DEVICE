@@ -10,6 +10,7 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { uomAPI } from "@/services/api";
 
 interface MachineRecord {
     id: string;
@@ -24,7 +25,17 @@ interface MachineRecord {
     lastModifiedDateTime?: string;
     active: boolean;
 }
-
+interface UOM {
+    _id?: string; // MongoDB ID
+    uom_id: string; // Primary Key - max 10 chars
+    uom_desc: string; // Description - max 200 chars
+    uom_short_name: string; // Short name - max 200 chars
+    active: boolean;
+    last_modified_user_id?: string; // max 5 chars
+    last_modified_date_time?: Date;
+    createdAt?: string;
+    updatedAt?: string;
+}
 export default function ProductionCapacityPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -36,6 +47,8 @@ export default function ProductionCapacityPage() {
     const [filterUom, setFilterUom] = useState<string>("all");
     const [filterSection, setFilterSection] = useState<string>("all");
     const [machines, setMachines] = useState<MachineRecord[]>([]);
+    const [uoms, setUOMs] = useState<UOM[]>([]);
+    
     const [formData, setFormData] = useState({
         machineId: "",
         machineName: "",
@@ -64,6 +77,17 @@ export default function ProductionCapacityPage() {
     }, [isAddModalOpen]);
 useEffect(() => {
     fetchMachines();
+}, []);
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const data = await uomAPI.getAll();
+            setUOMs(data);
+        } catch (error) {
+            console.error("Failed to load products", error);
+        }
+    };
+    loadProducts();
 }, []);
 const fetchMachines = async () => {
     try {
@@ -651,17 +675,20 @@ const handleSubmit = async (e: React.FormEvent) => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 UOM
                                             </label>
-                                            <select
-                                                name="uom"
-                                                value={formData.uom}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                            >
-                                                <option value="UNITS">UNITS</option>
-                                                <option value="PACKS">PACKS</option>
-                                                <option value="CARTONS">CARTONS</option>
-                                                <option value="NOS">NOS</option>
-                                            </select>
+                                                                                      <select
+        name="uom"
+        value={formData.uom}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a uom</option>
+        {uoms.map(product => (
+            <option key={product.uom_id} value={product.uom_id}>
+                {product.uom_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Avg Prod Hrs/Day */}

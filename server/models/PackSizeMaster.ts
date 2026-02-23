@@ -41,7 +41,6 @@ const PackSizeMasterSchema: Schema = new Schema({
     required: true,
     maxlength: 10,
     trim: true,
-    enum: ['NOS', 'KG', 'GMS', 'PCS', 'BOX', 'CARTON'],
   },
   last_modified_user_id: {
     type: String,

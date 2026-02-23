@@ -33,6 +33,7 @@ import {
   Award,
   CalendarDays,
   CalendarOff,
+  Ruler,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -59,6 +60,7 @@ const navSections: NavSection[] = [
     items: [
       { icon: Package, label: "Product Master", href: "/product-master" },
       { icon: Layers, label: "Material Master", href: "/material-master" },
+      { icon: Ruler, label: "UOM Master", href: "/uom-master" },
       { icon: Factory, label: "Production Machinery Master", href: "/production-capacity" },
       { icon: Box, label: "Pack Size Master", href: "/pack-size-master" },
       { icon: Truck, label: "Carton Type Master", href: "/carton-type-master" },
