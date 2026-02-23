@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { coaChecklistAPI, materialAPI } from "@/services/api";
+import { coaChecklistAPI, materialAPI, uomAPI } from "@/services/api";
 
 interface Material {
     material_id: string;
@@ -36,7 +36,17 @@ interface Material {
     last_modified_date_time?: Date;
     active?: boolean;
 }
-
+interface UOM {
+    _id?: string; // MongoDB ID
+    uom_id: string; // Primary Key - max 10 chars
+    uom_desc: string; // Description - max 200 chars
+    uom_short_name: string; // Short name - max 200 chars
+    active: boolean;
+    last_modified_user_id?: string; // max 5 chars
+    last_modified_date_time?: Date;
+    createdAt?: string;
+    updatedAt?: string;
+}
 // Helper function to format dates consistently
 function formatDateTime(date: Date | string | undefined): string {
     if (!date) return "-";
@@ -71,6 +81,8 @@ export default function MaterialMasterPage() {
     const [coaChecklistMap, setCoaChecklistMap] = useState<Map<string, string>>(new Map());
     const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
     const [checklists, setChecklists] = useState<any[]>([]);
+        const [uoms, setUOMs] = useState<UOM[]>([]);
+    
     
     const isSubmittingRef = useRef(false);
 
@@ -135,6 +147,17 @@ useEffect(() => {
         try {
             const data = await coaChecklistAPI.getAll();
             setChecklists(data);
+        } catch (error) {
+            console.error("Failed to load products", error);
+        }
+    };
+    loadProducts();
+}, []);
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const data = await uomAPI.getAll();
+            setUOMs(data);
         } catch (error) {
             console.error("Failed to load products", error);
         }
@@ -350,47 +373,44 @@ useEffect(() => {
         setIsCancelItemDialogOpen(true);
     };
 
-    const confirmCancelItem = async () => {
-        if (!materialToCancel) return;
+   const confirmCancelItem = async () => {
+    if (!materialToCancel) return;
+    
+    // Get the current active status from the material object
+    const newActiveStatus = !materialToCancel.active;
+    const action = newActiveStatus ? 'restore' : 'cancel';
+    
+    try {
+        await materialAPI.update(materialToCancel.material_id, {
+            active: newActiveStatus,
+            last_modified_user_id: "ADMIN",
+        });
         
-        const isCancelled = cancelledMaterials.has(materialToCancel.material_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        // Update the local materials list
+        setMaterials(prev =>
+            prev.map(item =>
+                item.material_id === materialToCancel.material_id
+                    ? { ...item, active: newActiveStatus }
+                    : item
+            )
+        );
         
-        try {
-            await materialAPI.update(materialToCancel.material_id, {
-                active: newActiveStatus,
-                last_modified_user_id: "ADMIN",
-            });
-            
-            setCancelledMaterials(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(materialToCancel.material_id);
-                    toast({
-                        title: "Restored",
-                        description: `Material ${materialToCancel.material_name} has been restored`,
-                    });
-                } else {
-                    newSet.add(materialToCancel.material_id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Material ${materialToCancel.material_name} has been cancelled`,
-                    });
-                }
-                return newSet;
-            });
-            
-            loadMaterials(); // Reload data from API
-            setIsCancelItemDialogOpen(false);
-            setMaterialToCancel(null);
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} material`,
-                variant: "destructive",
-            });
-        }
-    };
+        toast({
+            title: action === 'restore' ? "Restored" : "Cancelled",
+            description: `Material ${materialToCancel.material_name} has been ${action === 'restore' ? 'restored' : 'cancelled'}`,
+        });
+        
+        setIsCancelItemDialogOpen(false);
+        setMaterialToCancel(null);
+        
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || `Failed to ${action} material`,
+            variant: "destructive",
+        });
+    }
+};
 
     if (loading) {
         return (
@@ -949,21 +969,20 @@ useEffect(() => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 UOM <span className="text-red-500">*</span>
                                             </label>
-                                            <select
-                                                name="uom"
-                                                value={formData.uom}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                                required
-                                            >
-                                                <option value="KGS">KGS</option>
-                                                <option value="NOS">NOS</option>
-                                                <option value="KG">KG</option>
-                                                <option value="GMS">GMS</option>
-                                                <option value="PCS">PCS</option>
-                                                <option value="BOX">BOX</option>
-                                                <option value="CARTON">CARTON</option>
-                                            </select>
+                                                                                           <select
+        name="uom"
+        value={formData.uom}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a uom</option>
+        {uoms.map(product => (
+            <option key={product.uom_id} value={product.uom_id}>
+                {product.uom_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Material Category ID */}

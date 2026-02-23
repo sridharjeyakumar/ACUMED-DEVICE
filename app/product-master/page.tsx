@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { coaChecklistAPI, productAPI } from "@/services/api";
+import { coaChecklistAPI, productAPI, productCategoryAPI, uomAPI } from "@/services/api";
 
 interface Product {
     product_id: string;
@@ -39,7 +39,23 @@ interface Product {
     last_modified_date_time?: Date;
     active?: boolean;
 }
-
+interface UOM {
+    _id?: string; // MongoDB ID
+    uom_id: string; // Primary Key - max 10 chars
+    uom_desc: string; // Description - max 200 chars
+    uom_short_name: string; // Short name - max 200 chars
+    active: boolean;
+    last_modified_user_id?: string; // max 5 chars
+    last_modified_date_time?: Date;
+    createdAt?: string;
+    updatedAt?: string;
+}
+interface ProductCategory {
+    product_category_id: string; // Char(3) - PK
+    product_category_name: string; // Char(100)
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date; // Date
+}
 // Helper function to format dates consistently
 function formatDateTime(date: Date | string | undefined): string {
     if (!date) return "-";
@@ -74,6 +90,9 @@ export default function ProductMasterPage() {
     const [coaChecklistMap, setCoaChecklistMap] = useState<Map<string, string>>(new Map());
     const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
     const [checklists, setChecklists] = useState<any[]>([]);
+    const [uoms, setUOMs] = useState<UOM[]>([]);
+    const [categories, setCategories] = useState<ProductCategory[]>([]);
+    
     
     const isSubmittingRef = useRef(false);
 
@@ -146,6 +165,28 @@ useEffect(() => {
     };
     loadProducts();
 }, []);
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const data = await uomAPI.getAll();
+            setUOMs(data);
+        } catch (error) {
+            console.error("Failed to load products", error);
+        }
+    };
+    loadProducts();
+}, []);
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const data = await productCategoryAPI.getAll();
+            setCategories(data);
+        } catch (error) {
+            console.error("Failed to load products", error);
+        }
+    };
+    loadProducts();
+}, []);
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -176,9 +217,9 @@ useEffect(() => {
     }, [isAddModalOpen]);
 
     const filteredProducts = products.filter((product) => {
-        const matchesSearch = product.product_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            product.product_shortname.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = product.product_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            product.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            product.product_shortname?.toLowerCase().includes(searchQuery.toLowerCase());
         
         const matchesActive = filterActive === "all" || 
             (filterActive === "true" && product.active === true) ||
@@ -1040,20 +1081,21 @@ const confirmCancelItem = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 UOM <span className="text-red-500">*</span>
                                             </label>
-                                            <select
-                                                name="uom"
-                                                value={formData.uom}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                                required
-                                            >
-                                                <option value="NOS">NOS</option>
-                                                <option value="KG">KG</option>
-                                                <option value="GMS">GMS</option>
-                                                <option value="PCS">PCS</option>
-                                                <option value="BOX">BOX</option>
-                                                <option value="CARTON">CARTON</option>
-                                            </select>
+                                      
+                                                <select
+        name="uom"
+        value={formData.uom}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a uom</option>
+        {uoms.map(product => (
+            <option key={product.uom_id} value={product.uom_id}>
+                {product.uom_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Product Category ID */}
@@ -1061,12 +1103,21 @@ const confirmCancelItem = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Product Category ID
                                             </label>
-                                            <Input
-                                                name="product_category_id"
-                                                value={formData.product_category_id}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter category ID"
-                                            />
+                             
+                                                                                            <select
+        name="product_category_id"
+        value={formData.product_category_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a category ID</option>
+        {categories.map(product => (
+            <option key={product.product_category_id} value={product.product_category_id}>
+                {product.product_category_id}-{product.product_category_name}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Specifications Section */}

@@ -307,3 +307,41 @@ export const coaChecklistDetailAPI = {
   deleteAll: () => fetchAPI('/coa-checklist-details', { method: 'DELETE' }),
 };
 
+// Update the cartonTypeAPI to uomAPI
+export const uomAPI = {
+    getAll: async () => {
+        const response = await fetch('/api/uom');
+        if (!response.ok) throw new Error('Failed to fetch UOMs');
+        return response.json();
+    },
+    getById: async (id: string) => {
+        const response = await fetch(`/api/uom/${id}`);
+        if (!response.ok) throw new Error('Failed to fetch UOM');
+        return response.json();
+    },
+    create: async (data: any) => {
+        const response = await fetch('/api/uom', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to create UOM');
+        return response.json();
+    },
+    update: async (id: string, data: any) => {
+        const response = await fetch(`/api/uom/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to update UOM');
+        return response.json();
+    },
+    delete: async (id: string) => {
+        const response = await fetch(`/api/uom/${id}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete UOM');
+        return response.json();
+    },
+};

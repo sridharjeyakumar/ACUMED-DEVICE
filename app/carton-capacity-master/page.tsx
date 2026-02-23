@@ -1031,7 +1031,7 @@ const confirmCancelItem = async () => {
         <option value="">Select a Pack Size</option>
         {packSizes.map(product => (
             <option key={product.pack_size_id} value={product.pack_size_id}>
-                {product.pack_size_id}
+                {product.pack_size_id}-{product.pack_size_name}
             </option>
         ))}
     </select>

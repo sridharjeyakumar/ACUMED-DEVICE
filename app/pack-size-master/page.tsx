@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { packSizeAPI, userAPI } from "@/services/api";
+import { packSizeAPI, uomAPI, userAPI } from "@/services/api";
 
 interface PackSize {
     pack_size_id: string;
@@ -24,7 +24,17 @@ interface PackSize {
     last_modified_date_time?: Date;
     active?: boolean;
 }
-
+interface UOM {
+    _id?: string; // MongoDB ID
+    uom_id: string; // Primary Key - max 10 chars
+    uom_desc: string; // Description - max 200 chars
+    uom_short_name: string; // Short name - max 200 chars
+    active: boolean;
+    last_modified_user_id?: string; // max 5 chars
+    last_modified_date_time?: Date;
+    createdAt?: string;
+    updatedAt?: string;
+}
 // Helper function to format dates consistently
 function formatDateTime(date: Date | string | undefined): string {
     if (!date) return "-";
@@ -55,7 +65,8 @@ export default function PackSizeMasterPage() {
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
     const isSubmittingRef = useRef(false);
-
+         const [uoms, setUOMs] = useState<UOM[]>([]);
+     
     const [formData, setFormData] = useState({
         pack_size_id: "",
         pack_size_name: "",
@@ -99,7 +110,17 @@ export default function PackSizeMasterPage() {
     useEffect(() => {
         loadPackSizes();
     }, [loadPackSizes]);
-
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const data = await uomAPI.getAll();
+            setUOMs(data);
+        } catch (error) {
+            console.error("Failed to load products", error);
+        }
+    };
+    loadProducts();
+}, []);
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -695,17 +716,20 @@ export default function PackSizeMasterPage() {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 UOM <span className="text-red-500">*</span>
                                             </label>
-                                            <select
-                                                name="uom"
-                                                value={formData.uom}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                                required
-                                            >
-                                                <option value="NOS">NOS</option>
-                                                <option value="KG">KG</option>
-                                                <option value="GMS">GMS</option>
-                                            </select>
+                                                                       <select
+        name="uom"
+        value={formData.uom}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a uom</option>
+        {uoms.map(product => (
+            <option key={product.uom_id} value={product.uom_id}>
+                {product.uom_id}
+            </option>
+        ))}
+    </select>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
