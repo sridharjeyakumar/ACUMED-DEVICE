@@ -475,7 +475,31 @@ const handleEditSubmit = async (e: React.FormEvent) => {
         isSubmittingRef.current = false;
     }
 };
+const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const name = e.target.name; // product_image or product_image_icon
 
+    if (file) {
+        // Limit size (e.g., 2MB) to prevent MongoDB document size errors
+        if (file.size > 2 * 1024 * 1024) {
+            toast({
+                title: "File too large",
+                description: "Please upload an image smaller than 2MB",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setFormData(prev => ({
+                ...prev,
+                [name]: reader.result as string // This is the Base64 string
+            }));
+        };
+        reader.readAsDataURL(file);
+    }
+};
     const handleCancel = (product: Product) => {
         setProductToCancel(product);
         setIsCancelItemDialogOpen(true);
@@ -848,8 +872,9 @@ const confirmCancelItem = async () => {
 
         <td className="px-4 py-3 text-sm">{product.batch_prefix || "-"}</td>
         <td className="px-4 py-3 text-sm">{product.running_batch_sno ?? "-"}</td>
-        <td className="px-4 py-3 text-sm">{product.product_image || "-"}</td>
-        <td className="px-4 py-3 text-sm">{product.product_image_icon || "-"}</td>
+        <td className="px-4 py-3 text-sm">{<img src={product.product_image} className="w-8 h-8 rounded-full" />}</td>
+        <td className="px-4 py-3 text-sm">{<img src={product.product_image_icon} className="w-8 h-8 rounded-full" />}</td>
+
 
         {/* QC REQUIRED BADGE */}
         <td className="px-4 py-3">
@@ -1338,30 +1363,53 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Product Image */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Product Image
-                                            </label>
-                                            <Input
-                                                name="product_image"
-                                                value={formData.product_image}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter image URL or path"
-                                            />
-                                        </div>
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {/* Product Image */}
+    <div className="space-y-2">
+        <label className="block text-sm font-semibold text-foreground">
+            Product Image
+        </label>
+        <div className="flex items-center gap-4">
+            {formData.product_image && (
+                <img 
+                    src={formData.product_image} 
+                    alt="Preview" 
+                    className="w-12 h-12 rounded object-cover border" 
+                />
+            )}
+            <Input
+                type="file"
+                name="product_image"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="cursor-pointer"
+            />
+        </div>
+    </div>
 
-                                        {/* Product Image Icon */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Product Image Icon
-                                            </label>
-                                            <Input
-                                                name="product_image_icon"
-                                                value={formData.product_image_icon}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter icon URL or path"
-                                            />
-                                        </div>
+    {/* Product Image Icon */}
+    <div className="space-y-2">
+        <label className="block text-sm font-semibold text-foreground">
+            Product Image Icon
+        </label>
+        <div className="flex items-center gap-4">
+            {formData.product_image_icon && (
+                <img 
+                    src={formData.product_image_icon} 
+                    alt="Icon Preview" 
+                    className="w-10 h-10 rounded-full object-cover border" 
+                />
+            )}
+            <Input
+                type="file"
+                name="product_image_icon"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="cursor-pointer"
+            />
+        </div>
+    </div>
+</div>
 
                                         {/* Status Section */}
                                         <div className="col-span-2 mt-4">
