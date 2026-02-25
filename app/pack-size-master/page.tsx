@@ -65,7 +65,8 @@ export default function PackSizeMasterPage() {
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
     const isSubmittingRef = useRef(false);
-         const [uoms, setUOMs] = useState<UOM[]>([]);
+    const [uoms, setUOMs] = useState<UOM[]>([]);
+    const [isDuplicateId, setIsDuplicateId] = useState(false);
      
     const [formData, setFormData] = useState({
         pack_size_id: "",
@@ -158,18 +159,42 @@ useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery, filterActive, rowsPerPage]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value, type } = e.target;
-        if (type === 'checkbox') {
-            const checked = (e.target as HTMLInputElement).checked;
-            setFormData({ ...formData, [name]: checked });
-        } else {
-            setFormData({ ...formData, [name]: value });
-        }
-    };
+const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    
+    // 1. Handle Checkboxes and exit early
+    if (type === 'checkbox') {
+        const checked = (e.target as HTMLInputElement).checked;
+        setFormData(prev => ({ ...prev, [name]: checked }));
+        return; 
+    }
+
+    // 2. RUN VALIDATION (Does not block typing)
+    if (name === "pack_size_id") {
+        const exists = packSizes.some(p => 
+            p.pack_size_id?.toLowerCase() === value.trim().toLowerCase() && 
+            p.pack_size_id !== selectedPackSize?.pack_size_id // Allow current ID during Edit
+        );
+        setIsDuplicateId(exists);
+    }
+
+    // 3. UPDATE STATE (This makes typing work!)
+    setFormData(prev => ({
+        ...prev,
+        [name]: value 
+    }));
+};
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+                if (isDuplicateId) {
+        toast({
+            title: "ID Conflict",
+            description: "Please enter a unique Pack Size ID before submitting.",
+            variant: "destructive",
+        });
+        return;
+    }
         e.stopPropagation();
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
@@ -655,7 +680,8 @@ useEffect(() => {
                                             </h3>
                                         </div>
 
-                                        <div>
+                              
+                                                                     <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Pack Size ID <span className="text-red-500">*</span>
                                             </label>
@@ -663,9 +689,16 @@ useEffect(() => {
                                                 name="pack_size_id"
                                                 value={formData.pack_size_id}
                                                 onChange={handleInputChange}
-                                                placeholder="PK06"
-                                                required
+                                                placeholder="Enter Pack Size ID"
+                                                // In Edit mode, we usually disable the ID field to maintain data integrity
+                                                disabled={isEditModalOpen} 
+                                                className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
                                             />
+                                            {isDuplicateId && (
+                                                <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+                                                    <X className="w-3 h-3" /> Already exists in the table
+                                                </p>
+                                            )}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">

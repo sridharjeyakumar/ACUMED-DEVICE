@@ -61,7 +61,8 @@ export default function UOMMasterPage() {
     });
     const isSubmittingRef = useRef(false);
     const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: UOM } | null>(null);
-
+    const [isDuplicateId, setIsDuplicateId] = useState(false);
+    
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -118,16 +119,42 @@ export default function UOMMasterPage() {
         setCurrentPage(1);
     }, [searchQuery, filterActive, rowsPerPage]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type, checked } = e.target;
-        setFormData({ 
-            ...formData, 
-            [name]: type === 'checkbox' ? checked : value 
-        });
-    };
+const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    
+    // 1. Handle Checkboxes and exit early
+    if (type === 'checkbox') {
+        const checked = (e.target as HTMLInputElement).checked;
+        setFormData(prev => ({ ...prev, [name]: checked }));
+        return; 
+    }
+
+    // 2. RUN VALIDATION (Does not block typing)
+    if (name === "uom_id") {
+        const exists = uoms.some(p => 
+            p.uom_id?.toLowerCase() === value.trim().toLowerCase() && 
+            p.uom_id !== selectedUOM?.uom_id // Allow current ID during Edit
+        );
+        setIsDuplicateId(exists);
+    }
+
+    // 3. UPDATE STATE (This makes typing work!)
+    setFormData(prev => ({
+        ...prev,
+        [name]: value 
+    }));
+};
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+                if (isDuplicateId) {
+        toast({
+            title: "ID Conflict",
+            description: "Please enter a unique Uom ID before submitting.",
+            variant: "destructive",
+        });
+        return;
+    }
         e.stopPropagation();
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
@@ -659,22 +686,25 @@ export default function UOMMasterPage() {
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6">
                                         {/* UOM ID */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                UOM ID <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input 
-                                                name="uom_id" 
-                                                value={formData.uom_id} 
-                                                onChange={handleInputChange} 
-                                                placeholder="e.g., KG, LTR, PCS" 
-                                                required 
-                                                maxLength={10}
-                                                className="uppercase"
-                                            />
-                                            <p className="text-xs text-muted-foreground mt-1">Maximum 10 characters</p>
-                                        </div>
-
+                             <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        UOM ID <span className="text-red-500">*</span>
+    </label>
+    <Input
+        name="uom_id"
+        value={formData.uom_id}
+        onChange={handleInputChange}
+        placeholder="Enter UOM ID"
+        // In Edit mode, we usually disable the ID field to maintain data integrity
+        disabled={isEditModalOpen} 
+        className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
+    />
+    {isDuplicateId && (
+        <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+            <X className="w-3 h-3" /> Already exists in the table
+        </p>
+    )}
+</div>
                                         {/* UOM Description */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">

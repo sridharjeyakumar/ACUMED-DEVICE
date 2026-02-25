@@ -87,6 +87,7 @@ export default function CartonCapacityMasterPage() {
     const [products, setProducts] = useState<Product[]>([]);
     const [cartonTypes, setCartonTypes] = useState<CartonType[]>([]);
     const [packSizes, setPackSizes] = useState<PackSize[]>([]);
+    const [isDuplicateId, setIsDuplicateId] = useState(false);
     
     
     const [formData, setFormData] = useState({
@@ -208,173 +209,7 @@ useEffect(() => {
         }
     }, [isAddModalOpen]);
 
-    const hardcodedRecords: CartonCapacityRecord[] = [
-        {
-            id: "1",
-            cartonCapacityId: "SDU24",
-            cartonCapacityName: "DUVET Sterilization Carton - 24s",
-            cartonCapacityShortname: "Sterilization Carton",
-            productId: "P0001",
-            packSizeId: "PK24",
-            packMatlId: "PM001",
-            cartonTypeId: "ST",
-            cartonMaterialId: "PM004",
-            packsPerCarton: 206,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "2",
-            cartonCapacityId: "SDU12",
-            cartonCapacityName: "DUVET Sterilization Carton - 12s",
-            cartonCapacityShortname: "Sterilization Carton",
-            productId: "P0001",
-            packSizeId: "PK12",
-            packMatlId: "PM002",
-            cartonTypeId: "ST",
-            cartonMaterialId: "PM004",
-            packsPerCarton: 412,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "3",
-            cartonCapacityId: "SDU06",
-            cartonCapacityName: "DUVET Sterilization Carton - 6s",
-            cartonCapacityShortname: "Sterilization Carton",
-            productId: "P0001",
-            packSizeId: "PK06",
-            packMatlId: "PM003",
-            cartonTypeId: "ST",
-            cartonMaterialId: "PM004",
-            packsPerCarton: 824,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "4",
-            cartonCapacityId: "DDU24",
-            cartonCapacityName: "DUVET Shipper Carton - 24s",
-            cartonCapacityShortname: "Shipper Carton",
-            productId: "P0001",
-            packSizeId: "PK24",
-            packMatlId: "PM001",
-            cartonTypeId: "SH",
-            cartonMaterialId: "PM005",
-            packsPerCarton: 60,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "5",
-            cartonCapacityId: "DDU12",
-            cartonCapacityName: "DUVET Shipper Carton - 12s",
-            cartonCapacityShortname: "Shipper Carton",
-            productId: "P0001",
-            packSizeId: "PK12",
-            packMatlId: "PM002",
-            cartonTypeId: "SH",
-            cartonMaterialId: "PM005",
-            packsPerCarton: 120,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "6",
-            cartonCapacityId: "DDU06",
-            cartonCapacityName: "DUVET Shipper Carton - 6s",
-            cartonCapacityShortname: "Shipper Carton",
-            productId: "P0001",
-            packSizeId: "PK06",
-            packMatlId: "PM003",
-            cartonTypeId: "SH",
-            cartonMaterialId: "PM005",
-            packsPerCarton: 240,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "7",
-            cartonCapacityId: "SXL24",
-            cartonCapacityName: "DUVET XL Sterilization Carton - 24s",
-            cartonCapacityShortname: "Sterilization Carton",
-            productId: "P0002",
-            packSizeId: "PK24",
-            packMatlId: "PM006",
-            cartonTypeId: "ST",
-            cartonMaterialId: "PM007",
-            packsPerCarton: 206,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "8",
-            cartonCapacityId: "DXL24",
-            cartonCapacityName: "DUVET XL Shipper Carton - 24s",
-            cartonCapacityShortname: "Shipper Carton",
-            productId: "P0002",
-            packSizeId: "PK24",
-            packMatlId: "PM006",
-            cartonTypeId: "SH",
-            cartonMaterialId: "PM008",
-            packsPerCarton: 412,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "9",
-            cartonCapacityId: "SUL06",
-            cartonCapacityName: "DUVET Ultra Sterilization Carton - 6s",
-            cartonCapacityShortname: "Sterilization Carton",
-            productId: "P0003",
-            packSizeId: "PK06",
-            packMatlId: "PM009",
-            cartonTypeId: "ST",
-            cartonMaterialId: "PM010",
-            packsPerCarton: 206,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "10",
-            cartonCapacityId: "DUL06",
-            cartonCapacityName: "DUVET Ultra Shipper Carton - 6s",
-            cartonCapacityShortname: "Shipper Carton",
-            productId: "P0003",
-            packSizeId: "PK06",
-            packMatlId: "PM009",
-            cartonTypeId: "SH",
-            cartonMaterialId: "PM011",
-            packsPerCarton: 412,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-        {
-            id: "11",
-            cartonCapacityId: "DNA24",
-            cartonCapacityName: "Nanai Shipper Carton - 24s",
-            cartonCapacityShortname: "Shipper Carton",
-            productId: "P0004",
-            packSizeId: "PK24",
-            packMatlId: "PM012",
-            cartonTypeId: "SH",
-            cartonMaterialId: "PM013",
-            packsPerCarton: 412,
-            lastModifiedUserId: "",
-            lastModifiedDateTime: "",
-            active: true,
-        },
-    ];
+
 
     const filteredRecords = records.filter((item) => {
         const matchesSearch = item.cartonCapacityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -392,22 +227,41 @@ useEffect(() => {
     // const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     //     setFormData({ ...formData, [e.target.name]: e.target.value });
     // };
-const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-) => {
+const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     
-    // Handle checkbox inputs specifically
+    // 1. Handle Checkboxes and exit early
     if (type === 'checkbox') {
         const checked = (e.target as HTMLInputElement).checked;
-        setFormData({ ...formData, [name]: checked });
-    } else {
-        // For text inputs and select elements
-        setFormData({ ...formData, [name]: value });
+        setFormData(prev => ({ ...prev, [name]: checked }));
+        return; 
     }
+
+    // 2. RUN VALIDATION (Does not block typing)
+    if (name === "cartonCapacityId") {
+        const exists = records.some(p => 
+            p.cartonCapacityId?.toLowerCase() === value.trim().toLowerCase() && 
+            p.cartonCapacityId !== selectedCapacity?.cartonCapacityId // Allow current ID during Edit
+        );
+        setIsDuplicateId(exists);
+    }
+
+    // 3. UPDATE STATE (This makes typing work!)
+    setFormData(prev => ({
+        ...prev,
+        [name]: value 
+    }));
 };
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+                if (isDuplicateId) {
+        toast({
+            title: "ID Conflict",
+            description: "Please enter a unique Carton Capacity ID before submitting.",
+            variant: "destructive",
+        });
+        return;
+    }
         try {
             const dataToSend = toSnakeCase(formData);
             await cartonCapacityAPI.create(dataToSend);
@@ -955,19 +809,26 @@ const confirmCancelItem = async () => {
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6">
                                         {/* Carton Capacity ID */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Carton Capacity ID <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input 
-                                                name="cartonCapacityId" 
-                                                value={formData.cartonCapacityId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="SDU24" 
-                                                required 
-                                            />
-                                        </div>
-
+                         
+                             <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Carton Capacity ID  <span className="text-red-500">*</span>
+    </label>
+    <Input
+        name="cartonCapacityId"
+        value={formData.cartonCapacityId}
+        onChange={handleInputChange}
+        placeholder="Enter Carton Capacity ID"
+        // In Edit mode, we usually disable the ID field to maintain data integrity
+        disabled={isEditModalOpen} 
+        className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
+    />
+    {isDuplicateId && (
+        <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+            <X className="w-3 h-3" /> Already exists in the table
+        </p>
+    )}
+</div>
                                         {/* Carton Capacity Name */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
