@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { productAPI, productBOMAPI } from "@/services/api";
+import { materialAPI, productAPI, productBOMAPI } from "@/services/api";
 import { safeNumber } from "@/utils/numberUtils";
 
 interface BOMRecord {
@@ -54,6 +54,28 @@ interface Product {
     last_modified_date_time?: Date;
     active?: boolean;
 }
+interface Material {
+    material_id: string;
+    material_name: string;
+    material_short_name: string;
+    uom: string;
+    material_category_id?: string;
+    material_type: string; // "RM" or "PM"
+    material_spec?: string;
+    safety_stock_qty?: number;
+    re_order_qty?: number;
+    min_order_qty?: number;
+    lead_time_days_min?: number | string; // Can be number or "??"
+    lead_time_days_max?: number | string; // Can be number or "??"
+    shelf_life_in_months?: number;
+    qc_required?: boolean;
+    coa_checklist_id?: string;
+    material_image?: string;
+    material_image_icon?: string;
+    last_modified_user_id?: string;
+    last_modified_date_time?: Date;
+    active?: boolean;
+}
 export default function ProductBOMPage() {
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
@@ -68,6 +90,9 @@ export default function ProductBOMPage() {
     const [records, setRecords] = useState<BOMRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [products, setProducts] = useState<Product[]>([]);
+        const [materials, setMaterials] = useState<Material[]>([]);
+    
+    const [isDuplicateId, setIsDuplicateId] = useState(false);
     const [formData, setFormData] = useState({
         bomId: "",
         description: "",
@@ -147,6 +172,17 @@ useEffect(() => {
     };
     loadProducts();
 }, []);
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const data = await materialAPI.getAll();
+            setMaterials(data);
+        } catch (error) {
+            console.error("Failed to load materials", error);
+        }
+    };
+    loadProducts();
+}, []);
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -180,23 +216,42 @@ useEffect(() => {
     const uniqueProducts = Array.from(new Set(records.map(r => r.productId)));
     const uniqueMaterials = Array.from(new Set(records.map(r => r.materialId)));
 
-   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-) => {
+const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     
-    // Handle checkbox inputs specifically
+    // 1. Handle Checkboxes and exit early
     if (type === 'checkbox') {
         const checked = (e.target as HTMLInputElement).checked;
-        setFormData({ ...formData, [name]: checked });
-    } else {
-        // For text inputs and select elements
-        setFormData({ ...formData, [name]: value });
+        setFormData(prev => ({ ...prev, [name]: checked }));
+        return; 
     }
+
+    // 2. RUN VALIDATION (Does not block typing)
+    if (name === "bomId") {
+        const exists = records.some(p => 
+            p.bomId?.toLowerCase() === value.trim().toLowerCase() && 
+            p.id !== selectedBOM?.id // Allow current ID during Edit
+        );
+        setIsDuplicateId(exists);
+    }
+
+    // 3. UPDATE STATE (This makes typing work!)
+    setFormData(prev => ({
+        ...prev,
+        [name]: value 
+    }));
 };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+                if (isDuplicateId) {
+        toast({
+            title: "ID Conflict",
+            description: "Please enter a unique Product ID before submitting.",
+            variant: "destructive",
+        });
+        return;
+    }
         try {
             const dataToSend = toSnakeCase(formData);
             await productBOMAPI.create(dataToSend);
@@ -702,17 +757,25 @@ const confirmCancelItem = async () => {
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6">
                                         {/* BOM ID */}
-                                        <div>
+
+                                                                     <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 BOM ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="bomId" 
-                                                value={formData.bomId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="BOM-XXX-XX" 
-                                                required 
+                                            <Input
+                                                name="bomId"
+                                                value={formData.bomId}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter BOM ID"
+                                                // In Edit mode, we usually disable the ID field to maintain data integrity
+                                                disabled={isEditModalOpen} 
+                                                className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
                                             />
+                                            {isDuplicateId && (
+                                                <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+                                                    <X className="w-3 h-3" /> Already exists in the table
+                                                </p>
+                                            )}
                                         </div>
 
                                         {/* Description */}
@@ -791,18 +854,26 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Material ID */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Material ID <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input 
-                                                name="materialId" 
-                                                value={formData.materialId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="MAT-XXX-XX" 
-                                                required
-                                            />
-                                        </div>
+
+                                                                                                                  <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Material ID <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="materialId"
+        value={formData.materialId}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a material</option>
+        {materials.map(material => (
+            <option key={material.material_id} value={material.material_id}>
+                {material.material_id}
+            </option>
+        ))}
+    </select>
+</div>
 
                                         {/* Input Qty */}
                                         <div>

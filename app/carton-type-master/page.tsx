@@ -56,6 +56,8 @@ export default function CartonTypeMasterPage() {
         carton_type_shortname: "",
         active: true,
     });
+    const [isDuplicateId, setIsDuplicateId] = useState(false);
+    
     const isSubmittingRef = useRef(false);
     const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: CartonType } | null>(null);
 
@@ -114,13 +116,31 @@ export default function CartonTypeMasterPage() {
         setCurrentPage(1);
     }, [searchQuery, filterActive, rowsPerPage]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type, checked } = e.target;
-        setFormData({ 
-            ...formData, 
-            [name]: type === 'checkbox' ? checked : value 
-        });
-    };
+ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    
+    // 1. Handle Checkboxes and exit early
+    if (type === 'checkbox') {
+        const checked = (e.target as HTMLInputElement).checked;
+        setFormData(prev => ({ ...prev, [name]: checked }));
+        return; 
+    }
+
+    // 2. RUN VALIDATION (Does not block typing)
+    if (name === "carton_type_id") {
+        const exists = cartonTypes.some(p => 
+            p.carton_type_id?.toLowerCase() === value.trim().toLowerCase() && 
+            p.carton_type_id !== selectedCartonType?.carton_type_id // Allow current ID during Edit
+        );
+        setIsDuplicateId(exists);
+    }
+
+    // 3. UPDATE STATE (This makes typing work!)
+    setFormData(prev => ({
+        ...prev,
+        [name]: value 
+    }));
+};
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -687,20 +707,27 @@ export default function CartonTypeMasterPage() {
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6">
                                         {/* Carton Type ID */}
-                                        <div>
+                                       
+                                                                     <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Carton Type ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="carton_type_id" 
-                                                value={formData.carton_type_id} 
-                                                onChange={handleInputChange} 
-                                                placeholder="e.g., PK, ST, SH" 
-                                                required 
-                                                maxLength={2}
-                                                className="uppercase"
+                                            <Input
+                                                name="carton_type_id"
+                                                value={formData.carton_type_id}
+                                                onChange={handleInputChange}
+                                                placeholder="e.g., PK, ST, SH"
+                                                // In Edit mode, we usually disable the ID field to maintain data integrity
+                                                disabled={isEditModalOpen} 
+                                                className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
                                             />
                                             <p className="text-xs text-muted-foreground mt-1">Maximum 2 characters</p>
+
+                                            {isDuplicateId && (
+                                                <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+                                                    <X className="w-3 h-3" /> Already exists in the table
+                                                </p>
+                                            )}
                                         </div>
 
                                         {/* Carton Type Name */}

@@ -43,6 +43,8 @@ export default function CollectionBinMasterPage() {
     const [loading, setLoading] = useState(true);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
+    const [isDuplicateId, setIsDuplicateId] = useState(false);
+    
     const [formData, setFormData] = useState({
         binId: "",
         binName: "",
@@ -53,7 +55,7 @@ export default function CollectionBinMasterPage() {
         grossCapacityKg: "",
         active: true,
     });
-
+    
     // Helper function to convert snake_case to camelCase
     const toCamelCase = (data: any): BinRecord => {
         return {
@@ -147,12 +149,42 @@ export default function CollectionBinMasterPage() {
         setCurrentPage(1);
     }, [searchQuery, filterBinType, filterActive, rowsPerPage]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    
+    // 1. Handle Checkboxes and exit early
+    if (type === 'checkbox') {
+        const checked = (e.target as HTMLInputElement).checked;
+        setFormData(prev => ({ ...prev, [name]: checked }));
+        return; 
+    }
+
+    // 2. RUN VALIDATION (Does not block typing)
+    if (name === "binId") {
+        const exists = records.some(p => 
+            p.binId?.toLowerCase() === value.trim().toLowerCase() && 
+            p.binId !== selectedBin?.binId // Allow current ID during Edit
+        );
+        setIsDuplicateId(exists);
+    }
+
+    // 3. UPDATE STATE (This makes typing work!)
+    setFormData(prev => ({
+        ...prev,
+        [name]: value 
+    }));
+};
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+                if (isDuplicateId) {
+        toast({
+            title: "ID Conflict",
+            description: "Please enter a unique Bin ID before submitting.",
+            variant: "destructive",
+        });
+        return;
+    }
         try {
             const dataToSend = toSnakeCase(formData);
             await collectionBinAPI.create(dataToSend);
@@ -716,17 +748,25 @@ const confirmCancelItem = async () => {
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6">
                                         {/* Bin ID */}
-                                        <div>
+                                
+                                                                     <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Bin ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="binId" 
-                                                value={formData.binId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="e.g., 1, 2, 91" 
-                                                required 
+                                            <Input
+                                                name="binId"
+                                                value={formData.binId}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter Product ID"
+                                                // In Edit mode, we usually disable the ID field to maintain data integrity
+                                                disabled={isEditModalOpen} 
+                                                className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
                                             />
+                                            {isDuplicateId && (
+                                                <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+                                                    <X className="w-3 h-3" /> Already exists in the table
+                                                </p>
+                                            )}
                                         </div>
 
                                         {/* Bin Name */}

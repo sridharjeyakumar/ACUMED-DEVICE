@@ -81,8 +81,8 @@ export default function MaterialMasterPage() {
     const [coaChecklistMap, setCoaChecklistMap] = useState<Map<string, string>>(new Map());
     const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
     const [checklists, setChecklists] = useState<any[]>([]);
-        const [uoms, setUOMs] = useState<UOM[]>([]);
-    
+    const [uoms, setUOMs] = useState<UOM[]>([]);
+    const [isDuplicateId, setIsDuplicateId] = useState(false);
     
     const isSubmittingRef = useRef(false);
 
@@ -219,18 +219,51 @@ useEffect(() => {
 
     const uniqueCategories = Array.from(new Set(materials.map(m => m.material_category_id).filter(c => c)));
 
+    // const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    //     const { name, value, type } = e.target;
+    //     if (type === 'checkbox') {
+    //         const checked = (e.target as HTMLInputElement).checked;
+    //         setFormData({ ...formData, [name]: checked });
+    //     } else {
+    //         setFormData({ ...formData, [name]: value });
+    //     }
+    // };
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value, type } = e.target;
-        if (type === 'checkbox') {
-            const checked = (e.target as HTMLInputElement).checked;
-            setFormData({ ...formData, [name]: checked });
-        } else {
-            setFormData({ ...formData, [name]: value });
-        }
-    };
+    const { name, value, type } = e.target;
+    
+    // 1. Handle Checkboxes and exit early
+    if (type === 'checkbox') {
+        const checked = (e.target as HTMLInputElement).checked;
+        setFormData(prev => ({ ...prev, [name]: checked }));
+        return; 
+    }
+
+    // 2. RUN VALIDATION (Does not block typing)
+    if (name === "material_id") {
+        const exists = materials.some(m => 
+            m.material_id?.toLowerCase() === value.trim().toLowerCase() && 
+            m.material_id !== selectedMaterial?.material_id // Allow current ID during Edit
+        );
+        setIsDuplicateId(exists);
+    }
+
+    // 3. UPDATE STATE (This makes typing work!)
+    setFormData(prev => ({
+        ...prev,
+        [name]: value 
+    }));
+};
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+               if (isDuplicateId) {
+        toast({
+            title: "ID Conflict",
+            description: "Please enter a unique Material ID before submitting.",
+            variant: "destructive",
+        });
+        return;
+    }
         e.stopPropagation();
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
@@ -942,19 +975,26 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                         </div>
 
                                         {/* Material ID */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Material ID <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input
-                                                name="material_id"
-                                                value={formData.material_id}
-                                                onChange={handleInputChange}
-                                                placeholder="RM001"
-                                                required
-                                            />
-                                        </div>
-
+                                        
+                             <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Material<span className="text-red-500">*</span>
+    </label>
+    <Input
+        name="material_id"
+        value={formData.material_id}
+        onChange={handleInputChange}
+        placeholder="Enter Material ID"
+        // In Edit mode, we usually disable the ID field to maintain data integrity
+        disabled={isEditModalOpen} 
+        className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
+    />
+    {isDuplicateId && (
+        <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+            <X className="w-3 h-3" /> Already exists in the table
+        </p>
+    )}
+</div>
                                         {/* Material Name */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">

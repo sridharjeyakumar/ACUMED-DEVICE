@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { uomAPI } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface MachineRecord {
     id: string;
@@ -37,6 +38,8 @@ interface UOM {
     updatedAt?: string;
 }
 export default function ProductionCapacityPage() {
+        const { toast } = useToast();
+    
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -48,7 +51,8 @@ export default function ProductionCapacityPage() {
     const [filterSection, setFilterSection] = useState<string>("all");
     const [machines, setMachines] = useState<MachineRecord[]>([]);
     const [uoms, setUOMs] = useState<UOM[]>([]);
-    
+    const [isDuplicateId, setIsDuplicateId] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         machineId: "",
         machineName: "",
@@ -127,32 +131,62 @@ const fetchMachines = async () => {
     const uniqueUoms = Array.from(new Set(machines.map(m => m.uom)));
     const uniqueSections = Array.from(new Set(machines.map(m => m.section).filter(s => s)));
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value, type } = e.target;
-        if (type === 'checkbox') {
-            const checked = (e.target as HTMLInputElement).checked;
-            setFormData({ ...formData, [name]: checked });
-        } else {
-            setFormData({ ...formData, [name]: value });
-        }
-    };
+   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    
+    // 1. Determine the value based on input type
+    const inputValue = type === 'checkbox' 
+        ? (e.target as HTMLInputElement).checked 
+        : value;
+
+    // 2. Check for Duplicate Machine ID specifically
+    if (name === "machineId") {
+        const exists = machines.some(m => 
+            m.machineId?.toLowerCase() === value.trim().toLowerCase() && 
+            m.machineId !== selectedMachine?.machineId // Ignore its own ID during Edit
+        );
+        setIsDuplicateId(exists);
+    }
+
+    // 3. Update the form state (This makes typing work!)
+    setFormData(prev => ({ 
+        ...prev, 
+        [name]: inputValue 
+    }));
+};
 
 const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Prevent submission if duplicate exists
+    if (isDuplicateId) {
+        toast({
+            title: "Validation Error",
+            description: "This Machine ID already exists in the table.",
+            variant: "destructive",
+        });
+        return;
+    }
+
     try {
-        await fetch("/api/machinery", {
+        setLoading(true); // Ensure you have [loading, setLoading] = useState(false)
+        const response = await fetch("/api/machinery", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(formData),
         });
 
-        await fetchMachines(); // refresh table
+        if (!response.ok) throw new Error("Failed to save machine");
+
+        await fetchMachines(); 
         setIsAddModalOpen(false);
+        setIsDuplicateId(false); // Reset for next time
+        
+        toast({ title: "Success", description: "Machine added successfully" });
     } catch (error) {
         console.error("Error saving machine:", error);
+    } finally {
+        setLoading(false);
     }
 };
 
@@ -596,18 +630,24 @@ const handleSubmit = async (e: React.FormEvent) => {
                                         </div>
 
                                         {/* Machine ID */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Machine ID <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input 
-                                                name="machineId" 
-                                                value={formData.machineId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="MAC-XXX" 
-                                                required 
-                                            />
-                                        </div>
+                           <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Machine ID <span className="text-red-500">*</span>
+    </label>
+    <Input 
+        name="machineId" 
+        value={formData.machineId} 
+        onChange={handleInputChange} 
+        placeholder="MAC-XXX" 
+        required 
+        className={isDuplicateId ? "border-red-500 bg-red-50/50" : ""}
+    />
+    {isDuplicateId && (
+        <p className="text-red-500 text-xs mt-1 font-medium">
+            This ID already exists. Please choose another.
+        </p>
+    )}
+</div>
 
                                         {/* Machine Name */}
                                         <div>
