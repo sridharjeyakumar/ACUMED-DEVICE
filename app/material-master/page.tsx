@@ -367,7 +367,31 @@ useEffect(() => {
             isSubmittingRef.current = false;
         }
     };
+const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const name = e.target.name; // material_image or material_image_icon
 
+    if (file) {
+        // Size validation (e.g., 2MB limit for MongoDB performance)
+        if (file.size > 2 * 1024 * 1024) {
+            toast({
+                title: "File too large",
+                description: "Please upload an image smaller than 2MB",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setFormData(prev => ({
+                ...prev,
+                [name]: reader.result as string // This saves the Base64 string
+            }));
+        };
+        reader.readAsDataURL(file);
+    }
+};
     const handleCancel = (material: Material) => {
         setMaterialToCancel(material);
         setIsCancelItemDialogOpen(true);
@@ -768,14 +792,9 @@ useEffect(() => {
             </div>
           ) : "-"}
         </td>
-
-        <td className="px-4 py-3 text-sm">
-          {material.material_image || "-"}
-        </td>
-
-        <td className="px-4 py-3 text-sm">
-          {material.material_image_icon || "-"}
-        </td>
+        <td className="px-4 py-3 text-sm">{<img src={material.material_image} className="w-8 h-8 rounded-full" />}</td>
+        <td className="px-4 py-3 text-sm">{<img src={material.material_image_icon } className="w-8 h-8 rounded-full" />}</td>
+ 
 
         {/* LAST MODIFIED USER */}
         <td className="px-4 py-3 text-sm">
@@ -1184,31 +1203,69 @@ useEffect(() => {
                                             </h3>
                                         </div>
 
-                                        {/* Material Image */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Material Image
-                                            </label>
-                                            <Input
-                                                name="material_image"
-                                                value={formData.material_image}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter image URL or path"
-                                            />
-                                        </div>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+    {/* Material Image */}
+    <div className="space-y-2">
+        <label className="block text-sm font-semibold text-foreground">
+            Material Image
+        </label>
+        <div className="flex flex-col gap-3">
+            {formData.material_image && (
+                <div className="relative w-24 h-24 border rounded-md overflow-hidden group">
+                    <img 
+                        src={formData.material_image} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover" 
+                    />
+                    <button 
+                        onClick={() => setFormData({...formData, material_image: ""})}
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <X className="w-3 h-3" />
+                    </button>
+                </div>
+            )}
+            <Input
+                type="file"
+                name="material_image"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="cursor-pointer"
+            />
+        </div>
+    </div>
 
-                                        {/* Material Image Icon */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Material Image Icon
-                                            </label>
-                                            <Input
-                                                name="material_image_icon"
-                                                value={formData.material_image_icon}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter icon URL or path"
-                                            />
-                                        </div>
+    {/* Material Image Icon */}
+    <div className="space-y-2">
+        <label className="block text-sm font-semibold text-foreground">
+            Material Image Icon
+        </label>
+        <div className="flex flex-col gap-3">
+            {formData.material_image_icon && (
+                <div className="relative w-12 h-12 border rounded-full overflow-hidden group">
+                    <img 
+                        src={formData.material_image_icon} 
+                        alt="Icon Preview" 
+                        className="w-full h-full object-cover" 
+                    />
+                    <button 
+                        onClick={() => setFormData({...formData, material_image_icon: ""})}
+                        className="absolute inset-0 bg-black/40 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <X className="w-3 h-3" />
+                    </button>
+                </div>
+            )}
+            <Input
+                type="file"
+                name="material_image_icon"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="cursor-pointer"
+            />
+        </div>
+    </div>
+</div>
 
                                         {/* Status Section */}
                                         <div className="col-span-2 mt-4">
