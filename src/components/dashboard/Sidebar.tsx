@@ -15,18 +15,10 @@ import {
   Truck,
   Archive,
   FileText,
-  List,
   Settings,
   ChevronDown,
   Trash2,
-  Shield,
-  ShieldCheck,
   UserCircle,
-  Target,
-  Upload,
-  AlertCircle,
-  FileBarChart,
-  TrendingUp,
   PackageOpen,
   Menu as MenuIcon,
   Clock,
@@ -34,6 +26,8 @@ import {
   CalendarDays,
   CalendarOff,
   Ruler,
+  TableProperties,
+  ClipboardList
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -94,6 +88,13 @@ const navSections: NavSection[] = [
       { icon: Key, label: "Menu Access Master", href: "/menu-access-master" },
       { icon: UserCircle, label: "User Master", href: "/user-master" },
       { icon: Clock, label: "User Login History", href: "/user-login-history" },
+    ],
+  },
+    {
+    title: "TRANSACTIONS",
+    items: [
+      { icon: TableProperties, label: "Transaction Table", href: "/transaction-table" },
+      { icon: ClipboardList, label: "Production Plan Details", href: "/production-plan-details" },
     ],
   },
 ];
