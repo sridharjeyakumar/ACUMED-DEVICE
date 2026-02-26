@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { coaChecklistAPI, materialAPI, uomAPI } from "@/services/api";
+import { coaChecklistAPI, materialAPI, materialCategoryAPI, uomAPI } from "@/services/api";
 
 interface Material {
     material_id: string;
@@ -46,6 +46,12 @@ interface UOM {
     last_modified_date_time?: Date;
     createdAt?: string;
     updatedAt?: string;
+}
+interface MaterialCategory {
+    material_category_id: string; // Char(3) - PK
+    material_category_name: string; // Char(25)
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date; // Date
 }
 // Helper function to format dates consistently
 function formatDateTime(date: Date | string | undefined): string {
@@ -82,6 +88,8 @@ export default function MaterialMasterPage() {
     const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
     const [checklists, setChecklists] = useState<any[]>([]);
     const [uoms, setUOMs] = useState<UOM[]>([]);
+    const [categories, setCategories] = useState<MaterialCategory[]>([]);
+    
     const [isDuplicateId, setIsDuplicateId] = useState(false);
     
     const isSubmittingRef = useRef(false);
@@ -119,13 +127,13 @@ export default function MaterialMasterPage() {
             
             // Initialize maps for ID lookups (in real app, fetch from APIs)
             const categoryMap = new Map<string, string>();
-            categoryMap.set("M01", "Raw Material Category");
-            categoryMap.set("M02", "Packing Material Category");
-            categoryMap.set("M03", "Carton Category");
+            // categoryMap.set("M01", "Raw Material Category");
+            // categoryMap.set("M02", "Packing Material Category");
+            // categoryMap.set("M03", "Carton Category");
             setMaterialCategoryMap(categoryMap);
 
             const coaMap = new Map<string, string>();
-            coaMap.set("CL02", "COA Checklist 2");
+            // coaMap.set("CL02", "COA Checklist 2");
             setCoaChecklistMap(coaMap);
         } catch (error: any) {
             toast({
@@ -147,6 +155,17 @@ useEffect(() => {
         try {
             const data = await coaChecklistAPI.getAll();
             setChecklists(data);
+        } catch (error) {
+            console.error("Failed to load products", error);
+        }
+    };
+    loadProducts();
+}, []);
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const data = await materialCategoryAPI.getAll();
+            setCategories(data);
         } catch (error) {
             console.error("Failed to load products", error);
         }
@@ -1044,19 +1063,26 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     </select>
                                         </div>
 
-                                        {/* Material Category ID */}
-                                        <div>
+                             
+                                <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Material Category ID
+                                                Material Category ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input
-                                                name="material_category_id"
-                                                value={formData.material_category_id}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter category ID"
-                                            />
+                                                                                           <select
+        name="material_category_id"
+        value={formData.material_category_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a category</option>
+        {categories.map(category => (
+            <option key={category.material_category_id} value={category.material_category_id}>
+            {category.material_category_id}
+            </option>
+        ))}
+    </select>
                                         </div>
-
                                         {/* Material Type */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
