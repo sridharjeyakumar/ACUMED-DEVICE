@@ -345,3 +345,80 @@ export const uomAPI = {
         return response.json();
     },
 };
+
+export const transactionAPI = {
+    getAll: async () => {
+        const response = await fetch('/api/transactions');
+        if (!response.ok) throw new Error('Failed to fetch transactions');
+        return response.json();
+    },
+    
+    getById: async (batchNo: string) => {
+        const response = await fetch(`/api/transactions/${batchNo}`);
+        if (!response.ok) throw new Error('Failed to fetch transaction');
+        return response.json();
+    },
+    
+    create: async (data: any) => {
+        const response = await fetch('/api/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create transaction');
+        }
+        return response.json();
+    },
+    
+    update: async (batchNo: string, data: any) => {
+        const response = await fetch(`/api/transactions/${batchNo}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to update transaction');
+        }
+        return response.json();
+    },
+    
+    patch: async (batchNo: string, data: any) => {
+        const response = await fetch(`/api/transactions/${batchNo}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to update transaction');
+        }
+        return response.json();
+    },
+    
+    delete: async (batchNo: string) => {
+        const response = await fetch(`/api/transactions/${batchNo}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete transaction');
+        }
+        return response.json();
+    },
+    
+    updateStatus: async (batchNo: string, status: 'P' | 'R' | 'W' | 'C') => {
+        const response = await fetch(`/api/transactions/${batchNo}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_batch_status_id: status }),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to update status');
+        }
+        return response.json();
+    }
+};

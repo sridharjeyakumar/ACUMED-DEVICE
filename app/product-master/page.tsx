@@ -520,47 +520,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         setIsCancelItemDialogOpen(true);
     };
 
-    // const confirmCancelItem = async () => {
-    //     if (!productToCancel) return;
-        
-    //     const isCancelled = cancelledProducts.has(productToCancel.product_id);
-    //     const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
-    //     try {
-    //         await productAPI.update(productToCancel.product_id, {
-    //             active: newActiveStatus,
-    //             last_modified_user_id: "ADMIN",
-    //         });
-            
-    //         setCancelledProducts(prev => {
-    //             const newSet = new Set(prev);
-    //             if (isCancelled) {
-    //                 newSet.delete(productToCancel.product_id);
-    //                 toast({
-    //                     title: "Restored",
-    //                     description: `Product ${productToCancel.product_name} has been restored`,
-    //                 });
-    //             } else {
-    //                 newSet.add(productToCancel.product_id);
-    //                 toast({
-    //                     title: "Cancelled",
-    //                     description: `Product ${productToCancel.product_name} has been cancelled`,
-    //                 });
-    //             }
-    //             return newSet;
-    //         });
-            
-    //         loadProducts(); // Reload data from API
-    //         setIsCancelItemDialogOpen(false);
-    //         setProductToCancel(null);
-    //     } catch (error: any) {
-    //         toast({
-    //             title: "Error",
-    //             description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} product`,
-    //             variant: "destructive",
-    //         });
-    //     }
-    // };
+
 const confirmCancelItem = async () => {
     if (!productToCancel) return;
     
