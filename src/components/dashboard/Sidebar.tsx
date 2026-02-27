@@ -94,7 +94,6 @@ const navSections: NavSection[] = [
     title: "TRANSACTIONS",
     items: [
       { icon: TableProperties, label: "Transaction Table", href: "/transaction-table" },
-      { icon: ClipboardList, label: "Production Plan Details", href: "/production-plan-details" },
     ],
   },
 ];

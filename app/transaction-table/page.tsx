@@ -243,24 +243,50 @@ export default function TransactionTablePage() {
         }));
     };
 
-    const generateMonthYearOptions = () => {
-        const options = [];
-        const currentDate = new Date();
-        const currentYear = currentDate.getFullYear();
-        const currentMonth = currentDate.getMonth();
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    // Function to generate only current month and next two months
+const generateMonthYearOptions = () => {
+    const options = [];
+    const currentDate = new Date();
+    
+    // Generate for current month and next 2 months (total 3 months)
+    for (let i = 0; i < 3; i++) {
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1; // JavaScript months are 0-based
         
-        for (let i = 0; i < 24; i++) {
-            const date = new Date(currentYear, currentMonth + i, 1);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const value = `${year}${month}`;
-            const label = `${monthNames[date.getMonth()]} ${year}`;
-            options.push({ value, label });
-        }
+        // Format: YYYYMM for value, MMM-YYYY for display (e.g., Feb-2026)
+        const value = `${year}${month.toString().padStart(2, '0')}`;
         
-        return options;
-    };
+        // Format month name
+        const monthName = date.toLocaleString('default', { month: 'short' });
+        const label = `${monthName}-${year}`;
+        
+        options.push({ value, label });
+    }
+    
+    return options;
+};
+
+// In your form, the Month-Year dropdown remains the same:
+<div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Month-Year <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="month_year"
+        value={formData.month_year}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        required
+    >
+        <option value="">Select Month-Year</option>
+        {generateMonthYearOptions().map((option) => (
+            <option key={option.value} value={option.value}>
+                {option.label}
+            </option>
+        ))}
+    </select>
+</div>
 
     const handleProductChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const productId = e.target.value;
@@ -908,283 +934,285 @@ export default function TransactionTablePage() {
 
             {/* Add Batch Modal */}
             <AnimatePresence>
-                {isAddModalOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsAddModalOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
-                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Create New Transaction</h2>
-                                    <button
-                                        onClick={() => setIsAddModalOpen(false)}
-                                        className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
-                                    >
-                                        <X className="w-6 h-6" />
-                                    </button>
-                                </div>
+              {isAddModalOpen && (
+    <>
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50"
+            onClick={() => setIsAddModalOpen(false)}
+        />
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
+                {/* Header */}
+                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
+                    <h2 className="text-2xl font-bold">Create New Transaction</h2>
+                    <button
+                        onClick={() => setIsAddModalOpen(false)}
+                        className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
 
-                                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-3 gap-6">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Product Name <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                name="product_name"
-                                                value={formData.product_id}
-                                                onChange={handleProductChange}
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                required
-                                            >
-                                                <option value="">Select a product</option>
-                                                {products.map((product) => (
-                                                    <option key={product.product_id} value={product.product_id}>
-                                                        {product.product_name} ({product.product_id})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
+                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                    {/* Product Details */}
+                    <div className="grid grid-cols-3 gap-6 mb-8">
+                        <div>
+                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                Product <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                name="product_name"
+                                value={formData.product_id}
+                                onChange={handleProductChange}
+                                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                required
+                            >
+                                <option value="">Select a product</option>
+                                {products.map((product) => (
+                                    <option key={product.product_id} value={product.product_id}>
+                                        {product.product_name} ({product.product_id})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Product ID
-                                            </label>
-                                            <Input
-                                                name="product_id_display"
-                                                value={formData.product_id}
-                                                readOnly
-                                                disabled
-                                                className="bg-gray-50 text-gray-600"
-                                                placeholder="Auto-filled from selection"
-                                            />
-                                            <input 
-                                                type="hidden" 
-                                                name="product_id" 
-                                                value={formData.product_id} 
-                                            />
-                                        </div>
 
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Batch No <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input
-                                                name="batch_no"
-                                                value={formData.batch_no}
-                                                onChange={handleBatchNoChange}
-                                                readOnly
-                                                disabled
-                                                placeholder="Auto-generated from product"
-                                                className={`bg-gray-50 ${!formData.batch_no ? 'text-gray-400' : 'text-gray-700'}`}
-                                            />
-                                            {isDuplicateBatch && (
-                                                <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
-                                                    <X className="w-3 h-3" /> {duplicateMessage}
-                                                </p>
-                                            )}
-                                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                Batch No. <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                name="batch_no"
+                                value={formData.batch_no}
+                                onChange={handleBatchNoChange}
+                                readOnly
+                                disabled
+                                placeholder="Auto-generated from product"
+                                className={`w-full px-3 py-2 border border-border rounded-md bg-gray-50 text-sm ${!formData.batch_no ? 'text-gray-400' : 'text-gray-700'}`}
+                            />
+                            {isDuplicateBatch && (
+                                <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+                                    <X className="w-3 h-3" /> {duplicateMessage}
+                                </p>
+                            )}
+                        </div>
+                    </div>
 
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Month-Year <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                name="month_year"
-                                                value={formData.month_year}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                required
-                                            >
-                                                <option value="">Select Month-Year</option>
-                                                {generateMonthYearOptions().map((option) => (
-                                                    <option key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
+                    {/* Month-Year and Status */}
+                    <div className="grid grid-cols-3 gap-6 mb-8">
+                        <div>
+                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                Month-Year <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                name="month_year"
+                                value={formData.month_year}
+                                onChange={handleInputChange}
+                                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                required
+                            >
+                                <option value="">Select Month-Year</option>
+                                {generateMonthYearOptions().map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Planned Start Date
-                                            </label>
-                                            <Input
-                                                type="date"
-                                                name="planned_start_date"
-                                                value={formData.planned_start_date}
-                                                onChange={handleInputChange}
-                                                min={todayDate}
-                                            />
-                                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                Current batch event type id
+                            </label>
+                            <input
+                                name="current_batch_event_type_id"
+                                value="NB"
+                                readOnly
+                                disabled
+                                className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm cursor-not-allowed"
+                            />
+                        </div>
 
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Planned End Date
-                                            </label>
-                                            <Input
-                                                type="date"
-                                                name="planned_end_date"
-                                                value={formData.planned_end_date}
-                                                onChange={handleInputChange}
-                                                min={getMinDateForEndDate(formData.planned_start_date)}
-                                            />
-                                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                Current batch status id <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                name="current_batch_status_id"
+                                value="P"
+                                readOnly
+                                disabled
+                                className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm cursor-not-allowed"
+                            />
+                        </div>
+                    </div>
 
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Actual Start Date
-                                            </label>
-                                            <Input
-                                                type="date"
-                                                name="actual_start_date"
-                                                value={formData.actual_start_date}
-                                                onChange={handleInputChange}
-                                                min={todayDate}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Actual End Date
-                                            </label>
-                                            <Input
-                                                type="date"
-                                                name="actual_end_date"
-                                                value={formData.actual_end_date}
-                                                onChange={handleInputChange}
-                                                min={getMinDateForEndDate(formData.actual_start_date)}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Total Sachets
-                                            </label>
-                                            <Input
-                                                type="number"
-                                                name="total_sachets"
-                                                value={formData.total_sachets}
-                                                onChange={handleInputChange}
-                                                placeholder="Max: 99,999,999"
-                                                max={99999999}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Sterilization Cartons
-                                            </label>
-                                            <Input
-                                                type="number"
-                                                name="total_sterilization_cartons"
-                                                value={formData.total_sterilization_cartons}
-                                                onChange={handleInputChange}
-                                                placeholder="Max: 99,999"
-                                                max={99999}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Shipper Cartons
-                                            </label>
-                                            <Input
-                                                type="number"
-                                                name="total_shipper_cartons"
-                                                value={formData.total_shipper_cartons}
-                                                onChange={handleInputChange}
-                                                placeholder="Max: 99,999"
-                                                max={99999}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Rejected Qty (KG)
-                                            </label>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                name="total_rejected_qty_kg"
-                                                value={formData.total_rejected_qty_kg}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter quantity in KG"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Event Type ID
-                                            </label>
-                                            <Input
-        name="current_batch_event_type_id"
-        value={formData.current_batch_event_type_id}
-        onChange={() => {}} // Empty function since it's read-only
-        placeholder="Event Type (max 2 chars)"
-        maxLength={2}
-        readOnly
-        disabled
-        className="bg-gray-100 text-gray-600 cursor-not-allowed"
-    />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Status <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                name="current_batch_status_id"
-                                                value={formData.current_batch_status_id}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                required
-                                            >
-                                                <option value="P">Planned</option>
-                                                <option value="R">Running</option>
-                                                <option value="W">Waiting</option>
-                                                <option value="C">Completed</option>
-                                            </select>
-                                        </div>
-
-                                        <div className="col-span-3">
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Remarks
-                                            </label>
-                                            <Input
-                                                name="remarks"
-                                                value={formData.remarks}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter remarks (max 100 chars)"
-                                                maxLength={100}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button 
-                                            type="submit" 
-                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6" 
-                                            disabled={isSubmittingRef.current || isDuplicateBatch}
-                                        >
-                                            Create Transaction
-                                        </Button>
-                                    </div>
-                                </form>
+                    {/* Planned Section */}
+                    <div className="mb-8">
+                        <h3 className="text-md font-semibold text-foreground mb-3 pb-1 border-b border-border">Planned</h3>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                    Planned Start Date
+                                </label>
+                                <input
+                                    type="date"
+                                    name="planned_start_date"
+                                    value={formData.planned_start_date}
+                                    onChange={handleInputChange}
+                                    min={todayDate}
+                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
                             </div>
-                        </motion.div>
-                    </>
-                )}
+                            <div>
+                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                    Planned End Date
+                                </label>
+                                <input
+                                    type="date"
+                                    name="planned_end_date"
+                                    value={formData.planned_end_date}
+                                    onChange={handleInputChange}
+                                    min={getMinDateForEndDate(formData.planned_start_date)}
+                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Actuals Section - All Display Only */}
+                    <div className="mb-8">
+                        <h3 className="text-md font-semibold text-foreground mb-3 pb-1 border-b border-border">
+                            Actuals <span className="text-sm font-normal text-gray-400 ml-2">(Display only)</span>
+                        </h3>
+                        <div className="grid grid-cols-2 gap-6 mb-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                    Actual Start Date
+                                </label>
+                                <input
+                                    type="date"
+                                    name="actual_start_date"
+                                    value={formData.actual_start_date}
+                                    readOnly
+                                    className="w-full px-3 py-2 border border-border rounded-md bg-gray-50 text-gray-600 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                    Actual End Date
+                                </label>
+                                <input
+                                    type="date"
+                                    name="actual_end_date"
+                                    value={formData.actual_end_date}
+                                    readOnly
+                                    className="w-full px-3 py-2 border border-border rounded-md bg-gray-50 text-gray-600 text-sm"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-4 gap-6">
+                            <div>
+                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                    Total no. of sachets
+                                </label>
+                                <input
+                                    type="number"
+                                    name="total_sachets_display"
+                                    value={formData.total_sachets || ''}
+                                    readOnly
+                                    placeholder="0"
+                                    className="w-full px-3 py-2 border border-border rounded-md bg-gray-50 text-gray-600 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                    Total no. of sterilization cartons
+                                </label>
+                                <input
+                                    type="number"
+                                    name="total_sterilization_cartons_display"
+                                    value={formData.total_sterilization_cartons || ''}
+                                    readOnly
+                                    placeholder="0"
+                                    className="w-full px-3 py-2 border border-border rounded-md bg-gray-50 text-gray-600 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                    Total no. of shipper cartons
+                                </label>
+                                <input
+                                    type="number"
+                                    name="total_shipper_cartons_display"
+                                    value={formData.total_shipper_cartons || ''}
+                                    readOnly
+                                    placeholder="0"
+                                    className="w-full px-3 py-2 border border-border rounded-md bg-gray-50 text-gray-600 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                    Total rejected qty in KGs
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    name="total_rejected_qty_kg_display"
+                                    value={formData.total_rejected_qty_kg || ''}
+                                    readOnly
+                                    placeholder="0.00"
+                                    className="w-full px-3 py-2 border border-border rounded-md bg-gray-50 text-gray-600 text-sm"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Remarks */}
+                    <div className="mb-8">
+                        <label className="block text-sm font-semibold text-foreground mb-2">
+                            Remarks
+                        </label>
+                        <input
+                            name="remarks"
+                            value={formData.remarks}
+                            onChange={handleInputChange}
+                            placeholder="Accept Remarks"
+                            maxLength={100}
+                            className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
+                        <button
+                            type="button"
+                            onClick={() => setIsAddModalOpen(false)}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-border rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isSubmittingRef.current || isDuplicateBatch}
+                        >
+                            {isSubmittingRef.current ? 'Creating...' : 'Create Transaction'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </motion.div>
+    </>
+)}
             </AnimatePresence>
 
             {/* Edit Batch Modal */}
