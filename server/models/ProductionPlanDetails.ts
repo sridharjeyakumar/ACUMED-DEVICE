@@ -1,26 +1,28 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface IProductionPlanDetail extends Document {
-  batch_no: string;              // Auto-fill from Header
-  sno: number;                   // Batchwise Sno (1, 2, 3...)
+export interface IProductionPlanDetail {
+  batch_no: string;
+  sno: number;
   product_id: string;
   packsize_id: string;
-  no_of_packs: number;           // User Entry
-  no_of_sachets: number;         // Auto-calc: (no_of_packs * pack_size_numeric)
-  packs_per_steri_carton: number; // Lookup from Capacity Master (Type 'ST')
-  no_of_sterilization_cartons: number; // Auto-calc: (no_of_packs / packs_per_steri_carton)
-  packs_per_shipper_carton: number;    // Lookup from Capacity Master (Type 'SH')
-  no_of_shipper_cartons: number;       // Auto-calc: (no_of_packs / packs_per_shipper_carton)
+  no_of_packs: number;
+  no_of_sachets?: number;
+  packs_per_steri_carton?: number;
+  no_of_sterilization_cartons?: number;
+  packs_per_shipper_carton?: number;
+  no_of_shipper_cartons?: number;
   remarks?: string;
   last_modified_user_id: string;
   last_modified_date_time: Date;
 }
 
-const ProductionPlanDetailSchema = new Schema({
-    batch_no: {
+// Use Document from mongoose but with your interface
+export interface IProductionPlanDetailDocument extends Document, IProductionPlanDetail {}
+
+const ProductionPlanDetailSchema = new Schema<IProductionPlanDetailDocument>({
+  batch_no: {
     type: String,
     required: true,
-    unique: true,
     maxlength: 6,
     trim: true,
     uppercase: true
@@ -37,6 +39,15 @@ const ProductionPlanDetailSchema = new Schema({
   remarks: { type: String, maxlength: 100 },
   last_modified_user_id: { type: String, maxlength: 5 },
   last_modified_date_time: { type: Date, default: Date.now }
+}, {
+  timestamps: true
 });
 
-export const ProductionPlanDetail = mongoose.model<IProductionPlanDetail>('ProductionPlanDetail', ProductionPlanDetailSchema);
+// Create compound unique index on batch_no and sno
+ProductionPlanDetailSchema.index({ batch_no: 1, sno: 1 }, { unique: true });
+
+// Check if model already exists to prevent overwrite
+const ProductionPlanDetail = mongoose.models.ProductionPlanDetail as mongoose.Model<IProductionPlanDetailDocument> || 
+  mongoose.model<IProductionPlanDetailDocument>('ProductionPlanDetail', ProductionPlanDetailSchema);
+
+export default ProductionPlanDetail;
