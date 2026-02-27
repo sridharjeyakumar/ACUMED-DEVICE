@@ -422,3 +422,79 @@ export const transactionAPI = {
         return response.json();
     }
 };
+// services/api.ts - Add this to your existing api.ts file
+
+export const productionPlanDetailAPI = {
+    getAll: async () => {
+        const response = await fetch('/api/production-plan-details');
+        if (!response.ok) throw new Error('Failed to fetch production plan details');
+        return response.json();
+    },
+    
+    getByBatchNo: async (batchNo: string) => {
+        const response = await fetch(`/api/production-plan-details?batch_no=${batchNo}`);
+        if (!response.ok) throw new Error('Failed to fetch production plan details');
+        return response.json();
+    },
+    
+    create: async (data: any) => {
+        const response = await fetch('/api/production-plan-details', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create production plan detail');
+        }
+        return response.json();
+    },
+    
+    createMany: async (data: any[]) => {
+        const response = await fetch('/api/production-plan-details/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create production plan details');
+        }
+        return response.json();
+    },
+    
+    update: async (batchNo: string, sno: number, data: any) => {
+        const response = await fetch(`/api/production-plan-details/${batchNo}/${sno}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to update production plan detail');
+        }
+        return response.json();
+    },
+    
+    delete: async (batchNo: string, sno: number) => {
+        const response = await fetch(`/api/production-plan-details/${batchNo}/${sno}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete production plan detail');
+        }
+        return response.json();
+    },
+    
+    deleteByBatchNo: async (batchNo: string) => {
+        const response = await fetch(`/api/production-plan-details/batch/${batchNo}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete production plan details');
+        }
+        return response.json();
+    }
+};
