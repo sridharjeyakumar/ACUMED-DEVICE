@@ -310,25 +310,25 @@ export default function TransactionTablePage() {
         setCurrentPage(1);
     }, [searchQuery, filterStatus, rowsPerPage]);
 
-    // Check for duplicate batch in the SAME month only
-    useEffect(() => {
-        if (formData.batch_no && formData.month_year) {
-            const exists = transactions.some(t => 
-                t.month_year === formData.month_year && t.product_id === formData.product_id && 
-                (selectedTransaction ? t._id !== selectedTransaction._id : true)
-            );
-            
-            setIsDuplicateBatch(exists);
-            if (exists) {
-                setDuplicateMessage(`Batch ${formData.batch_no} already exists for ${formatMonthYear(formData.month_year)}`);
-            } else {
-                setDuplicateMessage("");
-            }
+// Check for duplicate batch in the SAME month only
+useEffect(() => {
+    if (formData.batch_no && formData.month_year) {
+        const exists = transactions.some(t => 
+            t.month_year === formData.month_year && t.product_id === formData.product_id && 
+            (selectedTransaction ? t._id !== selectedTransaction._id : true)
+        );
+        
+        setIsDuplicateBatch(exists);
+        if (exists) {
+            setDuplicateMessage(`Batch ${formData.batch_no} already exists for ${formatMonthYear(formData.month_year)}`);
         } else {
-            setIsDuplicateBatch(false);
             setDuplicateMessage("");
         }
-    }, [formData.batch_no, formData.month_year, transactions, selectedTransaction]);
+    } else {
+        setIsDuplicateBatch(false);
+        setDuplicateMessage("");
+    }
+}, [formData.batch_no, formData.month_year, formData.product_id, transactions, selectedTransaction]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -560,22 +560,35 @@ export default function TransactionTablePage() {
     };
 
     // Edit detail handler - FIXED
-    const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
-        setSelectedDetail(detail);
-        setEditingBatchNo(batchNo);
-        
-        // Find the product for this batch
-        const batch = transactions.find(t => t.batch_no === batchNo);
-        const product = products.find(p => p.product_id === batch?.product_id);
-        setSelectedProduct(product || null);
-        
-        setCurrentProductDetail({
-            packsize_id: detail.packsize_id,
-            no_of_packs: detail.no_of_packs.toString(),
-            remarks: detail.remarks || ''
+// Edit detail handler - WITH STATUS CHECK
+const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
+    // Find the batch to check its status
+    const batch = transactions.find(t => t.batch_no === batchNo);
+    
+    // Prevent editing if status is not 'P'
+    if (batch && batch.current_batch_status_id !== 'P') {
+        toast({
+            title: "Editing Disabled",
+            description: `Cannot edit production details for batches with status "${statusConfig[batch.current_batch_status_id].label}"`,
+            variant: "destructive",
         });
-        setIsEditDetailModalOpen(true);
-    };
+        return;
+    }
+    
+    setSelectedDetail(detail);
+    setEditingBatchNo(batchNo);
+    
+    // Find the product for this batch
+    const product = products.find(p => p.product_id === batch?.product_id);
+    setSelectedProduct(product || null);
+    
+    setCurrentProductDetail({
+        packsize_id: detail.packsize_id,
+        no_of_packs: detail.no_of_packs.toString(),
+        remarks: detail.remarks || ''
+    });
+    setIsEditDetailModalOpen(true);
+};
 
     // Update detail handler - FIXED
     const handleUpdateDetail = async (e: React.FormEvent) => {
@@ -1285,7 +1298,7 @@ export default function TransactionTablePage() {
                             </span>
                             {item.current_batch_status_id !== 'P' && (
                                 <span className="ml-2 text-amber-600">
-                                    ⚠️ Editing is only allowed when status is "Planned"
+                                    ⚠️ Editing is only allowed when status is Planned
                                 </span>
                             )}
                         </div>
