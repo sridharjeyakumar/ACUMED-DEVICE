@@ -822,6 +822,8 @@ const confirmCancelItem = async () => {
         // In Edit mode, we usually disable the ID field to maintain data integrity
         disabled={isEditModalOpen} 
         className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
+        maxLength={6}
+
     />
     {isDuplicateId && (
         <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
@@ -839,6 +841,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.cartonCapacityName} 
                                                 onChange={handleInputChange} 
                                                 required 
+                                                maxLength={30}
                                             />
                                         </div>
 
@@ -852,6 +855,8 @@ const confirmCancelItem = async () => {
                                                 value={formData.cartonCapacityShortname} 
                                                 onChange={handleInputChange} 
                                                 placeholder="Sterilization Carton" 
+                                                maxLength={30}
+
                                             />
                                         </div>
 
@@ -908,6 +913,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.packMatlId} 
                                                 onChange={handleInputChange} 
                                                 placeholder="PM001" 
+                                                maxLength={5}
                                             />
 
                                         </div>
@@ -945,6 +951,8 @@ const confirmCancelItem = async () => {
                                                 value={formData.cartonMaterialId} 
                                                 onChange={handleInputChange} 
                                                 placeholder="PM004" 
+                                                maxLength={5}
+
                                             />
                                         </div>
 
@@ -1030,6 +1038,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.cartonCapacityId} 
                                                 onChange={handleInputChange} 
                                                 disabled
+                                                maxLength={6}
                                             />
                                         </div>
 
@@ -1043,6 +1052,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.cartonCapacityName} 
                                                 onChange={handleInputChange} 
                                                 required 
+                                                maxLength={30}
                                             />
                                         </div>
 
@@ -1056,6 +1066,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.cartonCapacityShortname} 
                                                 onChange={handleInputChange} 
                                                 placeholder="Sterilization Carton" 
+                                                maxLength={30}
                                             />
                                         </div>
 
@@ -1095,6 +1106,8 @@ const confirmCancelItem = async () => {
                                                 value={formData.packMatlId} 
                                                 onChange={handleInputChange} 
                                                 placeholder="PM001" 
+                                                maxLength={5}
+
                                             />
                                         </div>
 
@@ -1121,6 +1134,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.cartonMaterialId} 
                                                 onChange={handleInputChange} 
                                                 placeholder="PM004" 
+                                                maxLength={5}
                                             />
                                         </div>
 

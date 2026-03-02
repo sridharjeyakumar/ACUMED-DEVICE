@@ -1047,6 +1047,7 @@ const confirmCancelItem = async () => {
         // In Edit mode, we usually disable the ID field to maintain data integrity
         disabled={isEditModalOpen} 
         className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
+        maxLength={5}
     />
     {isDuplicateId && (
         <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
@@ -1080,6 +1081,7 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange}
                                                 placeholder="Enter shortname"
                                                 required
+                                                maxLength={3}
                                             />
                                         </div>
 
@@ -1252,6 +1254,8 @@ const confirmCancelItem = async () => {
                                                 value={formData.default_pack_size_id}
                                                 onChange={handleInputChange}
                                                 placeholder="Enter pack size ID"
+                                                maxLength={4}
+
                                             />
                                         </div>
 
@@ -1265,6 +1269,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.batch_prefix}
                                                 onChange={handleInputChange}
                                                 placeholder="Enter batch prefix"
+                                                maxLength={3}
                                             />
                                         </div>
                                           <div>
@@ -1276,6 +1281,8 @@ const confirmCancelItem = async () => {
                                                 value={formData.running_batch_sno}
                                                 onChange={handleInputChange}
                                                 placeholder="Enter running batch sno"
+                                                maxLength={3}
+
                                             />
                                         </div>
 
@@ -1476,6 +1483,8 @@ const confirmCancelItem = async () => {
                                                 value={formData.product_id}
                                                 onChange={handleInputChange}
                                                 disabled
+                                                maxLength={5}
+
                                             />
                                         </div>
 
@@ -1666,6 +1675,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.default_pack_size_id}
                                                 onChange={handleInputChange}
                                                 placeholder="Enter pack size ID"
+                                                maxLength={4}
                                             />
                                         </div>
 
@@ -1679,6 +1689,8 @@ const confirmCancelItem = async () => {
                                                 value={formData.batch_prefix}
                                                 onChange={handleInputChange}
                                                 placeholder="Enter batch prefix"
+                                                maxLength={3}
+
                                             />
                                         </div>
                                             <div>
@@ -1690,6 +1702,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.running_batch_sno}
                                                 onChange={handleInputChange}
                                                 placeholder="Running Batch Sno"
+                                                maxLength={3}
                                             />
                                         </div>
                                         {/* Quality Control Section */}

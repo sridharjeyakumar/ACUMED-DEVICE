@@ -561,17 +561,17 @@ export default function COAChecklistDetailPage() {
 
                                     <div className="mb-4">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Checklist Sno <span className="text-red-500">*</span></label>
-                                        <Input type="number" name="checklistSno" value={formData.checklistSno} onChange={handleInputChange} placeholder="e.g., 1, 2, 3" min="1" required />
+                                        <Input type="number" name="checklistSno" value={formData.checklistSno} onChange={handleInputChange} placeholder="e.g., 1, 2, 3" min="1" required maxLength={2}/>
                                     </div>
 
                                     <div className="mb-4">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Checklist Parameter <span className="text-red-500">*</span></label>
-                                        <Input name="checklistParameter" value={formData.checklistParameter} onChange={handleInputChange} placeholder="e.g., Perforation, Color, Weight" required />
+                                        <Input name="checklistParameter" value={formData.checklistParameter} onChange={handleInputChange} placeholder="e.g., Perforation, Color, Weight" required  maxLength={50}/>
                                     </div>
 
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Expected Result <span className="text-red-500">*</span></label>
-                                        <Input name="expectedResult" value={formData.expectedResult} onChange={handleInputChange} placeholder="e.g., Ok, Pass" required />
+                                        <Input name="expectedResult" value={formData.expectedResult} onChange={handleInputChange} placeholder="e.g., Ok, Pass" required maxLength={25} />
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
@@ -620,17 +620,17 @@ export default function COAChecklistDetailPage() {
 
                                     <div className="mb-4">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Checklist Sno <span className="text-red-500">*</span></label>
-                                        <Input type="number" name="checklistSno" value={formData.checklistSno} onChange={handleInputChange} disabled />
+                                        <Input type="number" name="checklistSno" value={formData.checklistSno} onChange={handleInputChange} disabled  maxLength={2}/>
                                     </div>
 
                                     <div className="mb-4">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Checklist Parameter <span className="text-red-500">*</span></label>
-                                        <Input name="checklistParameter" value={formData.checklistParameter} onChange={handleInputChange} required />
+                                        <Input name="checklistParameter" value={formData.checklistParameter} onChange={handleInputChange} required maxLength={50}/>
                                     </div>
 
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Expected Result <span className="text-red-500">*</span></label>
-                                        <Input name="expectedResult" value={formData.expectedResult} onChange={handleInputChange} required />
+                                        <Input name="expectedResult" value={formData.expectedResult} onChange={handleInputChange} required maxLength={25}/>
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
