@@ -693,6 +693,8 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                                 // In Edit mode, we usually disable the ID field to maintain data integrity
                                                 disabled={isEditModalOpen} 
                                                 className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
+                                                maxLength={4}
+
                                             />
                                             {isDuplicateId && (
                                                 <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
@@ -710,6 +712,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                                 onChange={handleInputChange}
                                                 placeholder="6s pack"
                                                 required
+                                                maxLength={25}
                                             />
                                         </div>
                                         <div>
@@ -722,6 +725,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                                 onChange={handleInputChange}
                                                 placeholder="6s pack"
                                                 required
+                                                maxLength={25}
                                             />
                                         </div>
 
@@ -825,6 +829,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                                 value={formData.pack_size_id}
                                                 onChange={handleInputChange}
                                                 disabled
+                                                maxLength={4}
                                             />
                                         </div>
                                         <div>
@@ -836,6 +841,8 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                                 value={formData.pack_size_name}
                                                 onChange={handleInputChange}
                                                 required
+                                                maxLength={25}
+
                                             />
                                         </div>
                                         <div>
@@ -847,6 +854,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                                 value={formData.pack_size_short_name}
                                                 onChange={handleInputChange}
                                                 required
+                                                maxLength={25}
                                             />
                                         </div>
 

@@ -1007,6 +1007,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         // In Edit mode, we usually disable the ID field to maintain data integrity
         disabled={isEditModalOpen} 
         className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
+        maxLength={5}
     />
     {isDuplicateId && (
         <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
@@ -1416,6 +1417,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                                 value={formData.material_id}
                                                 onChange={handleInputChange}
                                                 disabled
+                                                maxLength={5}
                                             />
                                         </div>
 

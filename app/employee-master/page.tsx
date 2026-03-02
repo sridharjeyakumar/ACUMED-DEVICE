@@ -752,7 +752,8 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="E1001" 
                                                 required 
-                                                maxLength={10}
+                                                maxLength={5}
+
                                             />
                                         </div>
 
@@ -766,7 +767,7 @@ const confirmDelete = async () => {
                                                 value={formData.emp_name} 
                                                 onChange={handleInputChange} 
                                                 required 
-                                                maxLength={200}
+                                                maxLength={50}
                                             />
                                         </div>
 
@@ -810,8 +811,8 @@ const confirmDelete = async () => {
                                                 name="age" 
                                                 value={formData.age} 
                                                 onChange={handleInputChange} 
-                                                min="0"
-                                                max="150"
+                                                                                               maxLength={2}
+
                                             />
                                         </div>
 
@@ -825,7 +826,7 @@ const confirmDelete = async () => {
                                                 value={formData.blood_group} 
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. O+"
-                                                maxLength={10}
+                                                maxLength={4}
                                             />
                                         </div>
 
@@ -853,7 +854,7 @@ const confirmDelete = async () => {
                                                 name="education" 
                                                 value={formData.education} 
                                                 onChange={handleInputChange} 
-                                                maxLength={200}
+                                                maxLength={50}
                                             />
                                         </div>
 
@@ -888,7 +889,7 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. Corporate, Factory"
                                                 required
-                                                maxLength={50}
+                                                maxLength={6}
                                             />
                                         </div>
 
@@ -903,7 +904,7 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. MGT, ADM, PR1"
                                                 required
-                                                maxLength={10}
+                                                maxLength={3}
                                             />
                                         </div>
 
@@ -918,7 +919,7 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. DIR, MGR, OPR"
                                                 required
-                                                maxLength={10}
+                                                maxLength={3}
                                             />
                                         </div>
 
@@ -933,7 +934,7 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. EX, T2, T1"
                                                 required
-                                                maxLength={10}
+                                                maxLength={2}
                                             />
                                         </div>
 
@@ -1048,7 +1049,7 @@ const confirmDelete = async () => {
                                                 name="pf_no" 
                                                 value={formData.pf_no} 
                                                 onChange={handleInputChange} 
-                                                maxLength={50}
+                                                maxLength={10}
                                             />
                                         </div>
 
@@ -1061,7 +1062,7 @@ const confirmDelete = async () => {
                                                 name="esi_no" 
                                                 value={formData.esi_no} 
                                                 onChange={handleInputChange} 
-                                                maxLength={50}
+                                                maxLength={10}
                                             />
                                         </div>
 
@@ -1076,7 +1077,7 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange}
                                                 rows={3}
                                                 className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
-                                                maxLength={500}
+                                                maxLength={100}
                                             />
                                         </div>
 
@@ -1165,6 +1166,7 @@ const confirmDelete = async () => {
                                                 value={formData.emp_id} 
                                                 onChange={handleInputChange} 
                                                 disabled
+                                                maxLength={5}
                                             />
                                         </div>
 
@@ -1178,7 +1180,7 @@ const confirmDelete = async () => {
                                                 value={formData.emp_name} 
                                                 onChange={handleInputChange} 
                                                 required 
-                                                maxLength={200}
+                                                maxLength={50}
                                             />
                                         </div>
 
@@ -1222,8 +1224,7 @@ const confirmDelete = async () => {
                                                 name="age" 
                                                 value={formData.age} 
                                                 onChange={handleInputChange} 
-                                                min="0"
-                                                max="150"
+                                                maxLength={2}
                                             />
                                         </div>
 
@@ -1237,7 +1238,7 @@ const confirmDelete = async () => {
                                                 value={formData.blood_group} 
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. O+"
-                                                maxLength={10}
+                                                maxLength={4}
                                             />
                                         </div>
 
@@ -1265,7 +1266,7 @@ const confirmDelete = async () => {
                                                 name="education" 
                                                 value={formData.education} 
                                                 onChange={handleInputChange} 
-                                                maxLength={200}
+                                                maxLength={50}
                                             />
                                         </div>
 
@@ -1300,7 +1301,7 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. Corporate, Factory"
                                                 required
-                                                maxLength={50}
+                                                maxLength={6}
                                             />
                                         </div>
 
@@ -1315,7 +1316,7 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. MGT, ADM, PR1"
                                                 required
-                                                maxLength={10}
+                                                maxLength={3}
                                             />
                                         </div>
 
@@ -1330,7 +1331,7 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. DIR, MGR, OPR"
                                                 required
-                                                maxLength={10}
+                                                maxLength={3}
                                             />
                                         </div>
 
@@ -1345,7 +1346,7 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. EX, T2, T1"
                                                 required
-                                                maxLength={10}
+                                                maxLength={2}
                                             />
                                         </div>
 
@@ -1360,7 +1361,7 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. Regular, Contract"
                                                 required
-                                                maxLength={20}
+                                                maxLength={10}
                                             />
                                         </div>
 
@@ -1460,7 +1461,7 @@ const confirmDelete = async () => {
                                                 name="pf_no" 
                                                 value={formData.pf_no} 
                                                 onChange={handleInputChange} 
-                                                maxLength={50}
+                                                maxLength={10}
                                             />
                                         </div>
 
@@ -1473,7 +1474,7 @@ const confirmDelete = async () => {
                                                 name="esi_no" 
                                                 value={formData.esi_no} 
                                                 onChange={handleInputChange} 
-                                                maxLength={50}
+                                                maxLength={10}
                                             />
                                         </div>
 

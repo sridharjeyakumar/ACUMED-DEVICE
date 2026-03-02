@@ -761,6 +761,7 @@ const confirmCancelItem = async () => {
                                                 // In Edit mode, we usually disable the ID field to maintain data integrity
                                                 disabled={isEditModalOpen} 
                                                 className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
+                                                maxLength={2}
                                             />
                                             {isDuplicateId && (
                                                 <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
@@ -780,6 +781,8 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g., Product collection Bin 1" 
                                                 required 
+                                                maxLength={50}
+
                                             />
                                         </div>
 
@@ -794,6 +797,7 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g., Bin 1" 
                                                 required 
+                                                maxLength={25}
                                             />
                                         </div>
 
@@ -808,6 +812,7 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange}
                                                 className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                 required
+                                                
                                             >
                                                 <option value="Normal">Normal</option>
                                                 <option value="Rejected">Rejected</option>
@@ -830,6 +835,8 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g., Blue, Red" 
                                                 required 
+                                                maxLength={10}
+
                                             />
                                         </div>
 
@@ -931,6 +938,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.binId} 
                                                 onChange={handleInputChange} 
                                                 disabled 
+                                                maxLength={2}
                                             />
                                         </div>
 
@@ -944,6 +952,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.binName} 
                                                 onChange={handleInputChange} 
                                                 required 
+                                                maxLength={50}
                                             />
                                         </div>
 
@@ -957,6 +966,8 @@ const confirmCancelItem = async () => {
                                                 value={formData.binShortName} 
                                                 onChange={handleInputChange} 
                                                 required 
+                                                maxLength={25}
+
                                             />
                                         </div>
 
@@ -971,6 +982,7 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange}
                                                 className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                 required
+
                                             >
                                                 <option value="Normal">Normal</option>
                                                 <option value="Rejected">Rejected</option>
@@ -992,6 +1004,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.color} 
                                                 onChange={handleInputChange} 
                                                 required 
+                                                maxLength={10}
                                             />
                                         </div>
 

@@ -597,6 +597,8 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g., CL01, CL02" 
                                                 required 
+                                                maxLength={4}
+
                                             />
                                         </div>
 
@@ -611,6 +613,7 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g., DUVET - QC - Checklist" 
                                                 required 
+                                                maxLength={50}
                                             />
                                         </div>
 
@@ -682,6 +685,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.checklistId} 
                                                 onChange={handleInputChange} 
                                                 disabled 
+                                                maxLength={4}
                                             />
                                         </div>
 
@@ -695,6 +699,8 @@ const confirmCancelItem = async () => {
                                                 value={formData.checklistDescription} 
                                                 onChange={handleInputChange} 
                                                 required 
+                                                maxLength={50}
+
                                             />
                                         </div>
 

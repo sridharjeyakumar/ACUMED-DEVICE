@@ -995,7 +995,6 @@ export default function CompanyMasterPage() {
                                             </label>
                                             <Input
                                                 name="pincode"
-                                                type="number"
                                                 value={formData.pincode}
                                                 onChange={handleInputChange}
                                                 placeholder="Enter pincode"
@@ -1109,7 +1108,6 @@ export default function CompanyMasterPage() {
                                             </label>
                                             <Input
                                                 name="contact_no"
-                                                type="number"
                                                 value={formData.contact_no}
                                                 onChange={handleInputChange}
                                                 placeholder="Enter contact number"
@@ -1305,7 +1303,6 @@ export default function CompanyMasterPage() {
                                             </label>
                                             <Input
                                                 name="pincode"
-                                                type="number"
                                                 value={formData.pincode}
                                                 onChange={handleInputChange}
                                                 maxLength={6}
@@ -1412,7 +1409,6 @@ export default function CompanyMasterPage() {
                                             </label>
                                             <Input
                                                 name="contact_no"
-                                                type="number"
                                                 value={formData.contact_no}
                                                 onChange={handleInputChange}
                                                 maxLength={10}

@@ -720,6 +720,7 @@ export default function CartonTypeMasterPage() {
                                                 // In Edit mode, we usually disable the ID field to maintain data integrity
                                                 disabled={isEditModalOpen} 
                                                 className={isDuplicateId ? "border-red-500 focus-visible:ring-red-500 bg-red-50/50" : ""}
+                                                maxLength={2}
                                             />
                                             <p className="text-xs text-muted-foreground mt-1">Maximum 2 characters</p>
 
@@ -741,7 +742,7 @@ export default function CartonTypeMasterPage() {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g., Packing Carton" 
                                                 required 
-                                                maxLength={100}
+                                                maxLength={25}
                                             />
                                         </div>
 
@@ -756,7 +757,7 @@ export default function CartonTypeMasterPage() {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g., Packing" 
                                                 required 
-                                                maxLength={50}
+                                                maxLength={25}
                                             />
                                         </div>
 
@@ -830,6 +831,8 @@ export default function CartonTypeMasterPage() {
                                                 required 
                                                 disabled
                                                 className="uppercase"
+                                                maxLength={2}
+
                                             />
                                         </div>
 
@@ -843,7 +846,7 @@ export default function CartonTypeMasterPage() {
                                                 value={formData.carton_type_name} 
                                                 onChange={handleInputChange} 
                                                 required 
-                                                maxLength={100}
+                                                maxLength={25}
                                             />
                                         </div>
 
@@ -857,7 +860,7 @@ export default function CartonTypeMasterPage() {
                                                 value={formData.carton_type_shortname} 
                                                 onChange={handleInputChange} 
                                                 required 
-                                                maxLength={50}
+                                                maxLength={25}
                                             />
                                         </div>
 

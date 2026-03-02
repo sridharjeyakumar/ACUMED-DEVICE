@@ -641,6 +641,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         placeholder="MAC-XXX" 
         required 
         className={isDuplicateId ? "border-red-500 bg-red-50/50" : ""}
+        maxLength={2}
     />
     {isDuplicateId && (
         <p className="text-red-500 text-xs mt-1 font-medium">
@@ -660,6 +661,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                                                 onChange={handleInputChange} 
                                                 placeholder="Enter machine name"
                                                 required 
+                                                maxLength={25}
                                             />
                                         </div>
 
@@ -686,6 +688,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                                                 value={formData.shortName} 
                                                 onChange={handleInputChange} 
                                                 placeholder="SHORT-CODE" 
+                                                maxLength={25}
                                             />
                                         </div>
 
@@ -828,6 +831,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                                                 value={formData.machineId} 
                                                 onChange={handleInputChange} 
                                                 disabled
+                                                maxLength={2}
                                             />
                                         </div>
 
@@ -841,6 +845,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                                                 value={formData.machineName} 
                                                 onChange={handleInputChange} 
                                                 required 
+                                                maxLength={25}
                                             />
                                         </div>
 
@@ -867,6 +872,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                                                 value={formData.shortName} 
                                                 onChange={handleInputChange} 
                                                 placeholder="SHORT-CODE" 
+                                                maxLength={25}
                                             />
                                         </div>
 
