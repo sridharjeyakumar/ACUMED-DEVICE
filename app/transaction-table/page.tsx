@@ -558,7 +558,19 @@ useEffect(() => {
             }
         }
     };
-
+// Helper function to get packs per carton for a specific product and pack size
+const getPacksPerCartonByTypeForProduct = (packsize_id: string, cartonType: string) => {
+    if (!selectedProduct || !packsize_id) return 0;
+    
+    const capacityRecord = records.find(r => 
+        r.product_id === selectedProduct.product_id && 
+        r.pack_size_id === packsize_id && 
+        r.carton_type_id === cartonType &&
+        r.active === true
+    );
+    
+    return capacityRecord ? capacityRecord.packs_per_carton : 0;
+};
     // Edit detail handler - FIXED
 // Edit detail handler - WITH STATUS CHECK
 const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
@@ -1359,499 +1371,463 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                 </div>
             </main>
 
-            {/* Add Batch Modal */}
             <AnimatePresence>
-                {isAddModalOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsAddModalOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
-                                {/* Header */}
-                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Create New Transaction</h2>
-                                    <button
-                                        onClick={() => setIsAddModalOpen(false)}
-                                        className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
-                                    >
-                                        <X className="w-6 h-6" />
-                                    </button>
+    {isAddModalOpen && (
+        <>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 z-50"
+                onClick={() => setIsAddModalOpen(false)}
+            />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+            >
+                <div className="bg-[#f8fafc] rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden">
+                    {/* Header */}
+                    <div className="flex justify-between items-center p-6 border-b border-slate-200 bg-white">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-[#3b82f6] p-2 rounded-lg text-white shadow-lg">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-[#1e293b]">Production Plan Entry</h1>
+                                <p className="text-sm text-slate-400 font-medium">Manufacturing Execution System</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <button 
+                                type="button" 
+                                onClick={() => setIsAddModalOpen(false)} 
+                                className="text-sm font-semibold text-slate-500 hover:text-slate-800 px-4 py-2"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                type="submit" 
+                                onClick={handleSubmit}
+                                className="bg-[#3b82f6] hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 text-sm font-bold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={isSubmittingRef.current || isDuplicateBatch}
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                </svg>
+                                {isSubmittingRef.current ? 'Creating...' : 'Save Plan'}
+                            </button>
+                          
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                        {/* MAIN CARDS GRID */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            
+                            {/* 1. PLAN INFORMATION */}
+                            <div className="lg:col-span-3 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                <div className="flex items-center gap-2 mb-6">
+                                    <span className="bg-blue-50 text-blue-500 rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">i</span>
+                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Plan Information</h2>
                                 </div>
-
-                                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    {/* Product Details */}
-                                    <div className="grid grid-cols-3 gap-6 mb-8">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Product <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                name="product_name"
-                                                value={formData.product_id}
-                                                onChange={handleProductChange}
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                required
-                                            >
-                                                <option value="">Select a product</option>
-                                                {products.map((product) => (
-                                                    <option key={product.product_id} value={product.product_id}>
-                                                        {product.product_name} ({product.product_id})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Batch No. <span className="text-red-500">*</span>
-                                            </label>
+                                <div className="space-y-5">
+                                    <div>
+                                        <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Product <span className="text-red-500">*</span></label>
+                                        <select
+                                            name="product_id"
+                                            value={formData.product_id}
+                                            onChange={handleProductChange}
+                                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                                            required
+                                        >
+                                            <option value="">Select Product Master</option>
+                                            {products.map((p) => (
+                                                <option key={p.product_id} value={p.product_id}>{p.product_name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Batch No. <span className="text-red-500">*</span></label>
+                                        <div className="relative">
                                             <input
-                                                name="batch_no"
-                                                value={formData.batch_no}
-                                                onChange={handleBatchNoChange}
+                                                type="text"
+                                                value={formData.batch_no || ''}
                                                 readOnly
-                                                disabled
-                                                placeholder="Auto-generated from product"
-                                                className={`w-full px-3 py-2 border border-border rounded-md bg-gray-50 text-sm ${!formData.batch_no ? 'text-gray-400' : 'text-gray-700'}`}
+                                                placeholder="Auto-generated"
+                                                className="w-full bg-[#f1f5f9] border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 cursor-not-allowed"
                                             />
-                                            {isDuplicateBatch && (
-                                                <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
-                                                    <X className="w-3 h-3" /> {duplicateMessage}
-                                                </p>
-                                            )}
+                                            <svg className="w-4 h-4 absolute right-4 top-3 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                            </svg>
                                         </div>
+                                        {isDuplicateBatch && (
+                                            <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+                                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                                                {duplicateMessage}
+                                            </p>
+                                        )}
                                     </div>
-
-                                    {/* Month-Year and Status */}
-                                    <div className="grid grid-cols-3 gap-6 mb-8">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Month-Year <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                name="month_year"
-                                                value={formData.month_year}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                required
-                                            >
-                                                <option value="">Select Month-Year</option>
-                                                {generateMonthYearOptions().map((option) => (
-                                                    <option key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Current batch event type id
-                                            </label>
-                                            <input
-                                                name="current_batch_event_type_id"
-                                                value="NB (New Batch)"
-                                                readOnly
-                                                disabled
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm cursor-not-allowed"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Current batch status id <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                name="current_batch_status_id"
-                                                value="P (Planned)"
-                                                readOnly
-                                                disabled
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm cursor-not-allowed"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Planned Section */}
-                                    {/* Planned and Actual Dates Side by Side */}
-                                    <div className="grid grid-cols-2 gap-6 mb-8">
-                                        {/* Planned Dates Column */}
-                                        <div>
-                                            <h3 className="text-md font-semibold text-foreground mb-3 pb-1 border-b border-border">Planned Dates</h3>
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <label className="block text-sm font-semibold text-foreground mb-2">
-                                                        Planned Start Date
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        name="planned_start_date"
-                                                        value={formData.planned_start_date}
-                                                        onChange={handleInputChange}
-                                                        min={todayDate}
-                                                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-semibold text-foreground mb-2">
-                                                        Planned End Date
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        name="planned_end_date"
-                                                        value={formData.planned_end_date}
-                                                        onChange={handleInputChange}
-                                                        min={getMinDateForEndDate(formData.planned_start_date)}
-                                                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Actual Dates Column - Now Read Only */}
-                                        <div>
-                                            <h3 className="text-md font-semibold text-foreground mb-3 pb-1 border-b border-border">Actual Dates</h3>
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <label className="block text-sm font-semibold text-foreground mb-2">
-                                                        Actual Start Date
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        name="actual_start_date"
-                                                        value={formData.actual_start_date}
-                                                        readOnly
-                                                        disabled
-                                                        className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm cursor-not-allowed"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-semibold text-foreground mb-2">
-                                                        Actual End Date
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        name="actual_end_date"
-                                                        value={formData.actual_end_date}
-                                                        readOnly
-                                                        disabled
-                                                        className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm cursor-not-allowed"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Planned Totals Section - Fixed Alignment */}
-                                    <div className="mb-8">
-                                        <h3 className="text-md font-semibold text-foreground mb-3 pb-1 border-b border-border">
-                                            Planned Totals <span className="text-sm font-normal text-gray-400 ml-2">(Based on Product Details)</span>
-                                        </h3>
-                                        <div className="grid grid-cols-4 gap-6">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Total no. of sachets
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    value={formData.planned_total_sachets || ''}
-                                                    readOnly
-                                                    placeholder="0"
-                                                    className="w-full px-3 py-2 border border-border rounded-md bg-gray-50 text-gray-600 text-sm"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Total no. of sterilization cartons
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    value={formData.planned_total_sterilization_cartons || ''}
-                                                    readOnly
-                                                    placeholder="0"
-                                                    className="w-full px-3 py-2 border border-border rounded-md bg-gray-50 text-gray-600 text-sm"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Total no. of shipper cartons
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    value={formData.planned_total_shipper_cartons || ''}
-                                                    readOnly
-                                                    placeholder="0"
-                                                    className="w-full px-3 py-2 border border-border rounded-md bg-gray-50 text-gray-600 text-sm"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                                    Total rejected qty in KGs
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    name="total_rejected_qty_kg"
-                                                    value={formData.total_rejected_qty_kg || ''}
-                                                    onChange={handleInputChange}
-                                                    placeholder="0.00"
-                                                    className="w-full px-3 py-2 border border-border rounded-md bg-white text-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Remarks */}
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Remarks
-                                        </label>
-                                        <input
-                                            name="remarks"
-                                            value={formData.remarks}
+                                    <div>
+                                        <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Month Year <span className="text-red-500">*</span></label>
+                                        <select
+                                            name="month_year"
+                                            value={formData.month_year}
                                             onChange={handleInputChange}
-                                            placeholder="Enter remarks"
-                                            maxLength={100}
-                                            className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                                            required
+                                        >
+                                            <option value="">Select Month-Year</option>
+                                            {generateMonthYearOptions().map((opt) => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 2. SCHEDULE */}
+                            <div className="lg:col-span-3 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                <div className="flex items-center gap-2 mb-6">
+                                    <span className="text-blue-500">📅</span>
+                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Schedule</h2>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Planned Start</label>
+                                        <input
+                                            type="date"
+                                            name="planned_start_date"
+                                            value={formData.planned_start_date}
+                                            onChange={handleInputChange}
+                                            min={todayDate}
+                                            className="w-full border border-slate-200 rounded-xl px-2 py-2 text-xs text-center outline-none focus:ring-2 focus:ring-blue-100"
                                         />
                                     </div>
-
-                                    {/* Product Plan Details Section - Now Inline */}
-                                    <div className="mb-8 border border-gray-200 rounded-lg p-6 bg-gray-50">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-lg font-semibold text-foreground">Product Plan Details</h3>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowProductDetails(!showProductDetails)}
-                                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100"
-                                            >
-                                                <Plus className="w-4 h-4" />
-                                                {showProductDetails ? 'Hide' : 'Add Product Detail'}
-                                            </button>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Planned End</label>
+                                        <input
+                                            type="date"
+                                            name="planned_end_date"
+                                            value={formData.planned_end_date}
+                                            onChange={handleInputChange}
+                                            min={getMinDateForEndDate(formData.planned_start_date)}
+                                            className="w-full border border-slate-200 rounded-xl px-2 py-2 text-xs text-center outline-none focus:ring-2 focus:ring-blue-100"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 mb-4 text-center">
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Actual Start</label>
+                                        <div className="bg-[#f1f5f9] border border-slate-200 rounded-xl py-2 text-sm text-slate-400">
+                                            {formData.actual_start_date || '--'}
                                         </div>
-
-                                        {showProductDetails && (
-                                            <div className="space-y-4">
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    {/* Sno - Autofill */}
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                                            Sno <span className="text-gray-400 text-xs">(Auto-filled)</span>
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            value={productDetails.length + 1}
-                                                            readOnly
-                                                            disabled
-                                                            className="w-full px-3 py-2 border border-border rounded-md bg-white text-gray-600 text-sm"
-                                                        />
-                                                    </div>
-
-                                                    {/* packsize_id Selection */}
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                                            Pack Size <span className="text-red-500">*</span>
-                                                        </label>
-                                                        <select
-                                                            value={currentProductDetail.packsize_id}
-                                                            onChange={(e) => handleProductDetailChange('packsize_id', e.target.value)}
-                                                            className="w-full px-3 py-2 border border-border rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                        >
-                                                            <option value="">Select Pack Size</option>
-                                                            {packSizes.map((size) => (
-                                                                <option key={size.pack_size_id} value={size.pack_size_id}>
-                                                                    {size.pack_size_name} ({size.qty_per_carton} {size.uom})
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-
-                                                    {/* no. of packs - Entry */}
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                                            No. of Packs <span className="text-red-500">*</span>
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            value={currentProductDetail.no_of_packs}
-                                                            onChange={(e) => handleProductDetailChange('no_of_packs', e.target.value)}
-                                                            className="w-full px-3 py-2 border border-border rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                        />
-                                                    </div>
-
-                                                    {/* no. of sachets - Display only */}
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                                            No. of Sachets <span className="text-gray-400 text-xs">(Display only)</span>
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            value={calculateSachets(currentProductDetail)}
-                                                            readOnly
-                                                            className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                                        />
-                                                    </div>
-
-                                                    {/* no. of packs per steri. carton - Display only */}
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                                            No. of Packs per Steri. Carton <span className="text-gray-400 text-xs">(Display only)</span>
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            value={getPacksPerCartonByType('ST')}
-                                                            readOnly
-                                                            className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                                        />
-                                                    </div>
-
-                                                    {/* no. of sterilization cartons - Display only */}
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                                            No. of Sterilization Cartons <span className="text-gray-400 text-xs">(Display only)</span>
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            value={calculateCartons('ST')}
-                                                            readOnly
-                                                            className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                                        />
-                                                    </div>
-
-                                                    {/* no. of packs per shipper carton - Display only */}
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                                            No. of Packs per Shipper Carton <span className="text-gray-400 text-xs">(Display only)</span>
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            value={getPacksPerCartonByType('SH')}
-                                                            readOnly
-                                                            className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                                        />
-                                                    </div>
-
-                                                    {/* no. of shipper cartons - Display only */}
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                                            No. of Shipper Cartons <span className="text-gray-400 text-xs">(Display only)</span>
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            value={calculateCartons('SH')}
-                                                            readOnly
-                                                            className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                                        />
-                                                    </div>
-
-                                                    {/* Remarks - Entry */}
-                                                    <div className="col-span-2">
-                                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                                            Remarks
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={currentProductDetail.remarks}
-                                                            onChange={(e) => handleProductDetailChange('remarks', e.target.value)}
-                                                            placeholder="Enter remarks"
-                                                            maxLength={100}
-                                                            className="w-full px-3 py-2 border border-border rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Add Button */}
-                                                <div className="flex justify-end">
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleAddProductDetail}
-                                                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium text-sm"
-                                                    >
-                                                        Add to List
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Product Details List */}
-                                        {productDetails.length > 0 && (
-                                            <div className="mt-6">
-                                                <h4 className="text-md font-semibold text-foreground mb-3">Added Product Details</h4>
-                                                <div className="overflow-x-auto">
-                                                    <table className="min-w-full divide-y divide-border">
-                                                        <thead className="bg-gray-100">
-                                                            <tr>
-                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Sno</th>
-                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Pack Size</th>
-                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Packs</th>
-                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Sachets</th>
-                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Steri. Cartons</th>
-                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Shipper Cartons</th>
-                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Remarks</th>
-                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Action</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="bg-white divide-y divide-border">
-                                                            {productDetails.map((detail, index) => (
-                                                                <tr key={index} className="hover:bg-gray-50">
-                                                                    <td className="px-4 py-2 text-sm">{index + 1}</td>
-                                                                    <td className="px-4 py-2 text-sm">{getPackSizeName(detail.packsize_id)}</td>
-                                                                    <td className="px-4 py-2 text-sm">{detail.no_of_packs}</td>
-                                                                    <td className="px-4 py-2 text-sm">{detail.no_of_sachets}</td>
-                                                                    <td className="px-4 py-2 text-sm">{detail.sterilization_cartons}</td>
-                                                                    <td className="px-4 py-2 text-sm">{detail.shipper_cartons}</td>
-                                                                    <td className="px-4 py-2 text-sm">{detail.remarks || '-'}</td>
-                                                                    <td className="px-4 py-2 text-sm">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => removeProductDetail(index)}
-                                                                            className="text-red-600 hover:text-red-800"
-                                                                        >
-                                                                            <Trash2 className="w-4 h-4" />
-                                                                        </button>
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
-
-                                    {/* Actions */}
-                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsAddModalOpen(false)}
-                                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-border rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            disabled={isSubmittingRef.current || isDuplicateBatch}
-                                        >
-                                            {isSubmittingRef.current ? 'Creating...' : 'Create Transaction'}
-                                        </button>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Actual End</label>
+                                        <div className="bg-[#f1f5f9] border border-slate-200 rounded-xl py-2 text-sm text-slate-400">
+                                            {formData.actual_end_date || '--'}
+                                        </div>
                                     </div>
-                                </form>
+                                </div>
+                                <div>
+                                    <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Remarks</label>
+                                    <textarea
+                                        name="remarks"
+                                        value={formData.remarks}
+                                        onChange={handleInputChange}
+                                        placeholder="Enter remarks..."
+                                        className="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm min-h-[80px] resize-none outline-none focus:ring-2 focus:ring-blue-100"
+                                    />
+                                </div>
                             </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+
+                            {/* 3. PRODUCTION SUMMARY */}
+                            <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                <div className="flex justify-between items-center mb-6">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-blue-500">📊</span>
+                                        <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Production Summary</h2>
+                                    </div>
+                                    <span className="text-[9px] font-black text-blue-500 bg-blue-50 px-3 py-1 rounded-full uppercase border border-blue-100">
+                                        Real-time Auto-calculated
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-4 gap-4 mb-6">
+                                    <div className="bg-[#f8fafc] p-4 rounded-xl">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Total Sachets</span>
+                                        <span className="text-2xl font-black text-slate-800 ">
+                                            {/* {productDetails.reduce((sum, d) => sum + (d.no_of_sachets || 0), 0)} */}0
+                                        </span>
+                                    </div>
+                                    <div className="bg-[#f8fafc] p-4 rounded-xl">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Steriliz. Cartons</span>
+                                        <span className="text-2xl font-black text-slate-800">
+                                            {/* {productDetails.reduce((sum, d) => sum + (d.sterilization_cartons || 0), 0)} */}0
+                                        </span>
+                                    </div>
+                                    <div className="bg-[#f8fafc] p-4 rounded-xl">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Shipper Cartons</span>
+                                        <span className="text-2xl font-black text-slate-800">
+                                            {/* {productDetails.reduce((sum, d) => sum + (d.shipper_cartons || 0), 0)} */}0
+                                        </span>
+                                    </div>
+                                    <div className="bg-[#fffbeb] p-4 rounded-xl border border-amber-100">
+                                        <span className="text-[10px] font-bold text-amber-600 uppercase block mb-1">Rejected Qty (KG)</span>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            name="total_rejected_qty_kg"
+                                            value={formData.total_rejected_qty_kg}
+                                            onChange={handleInputChange}
+                                            className="text-2xl font-black text-amber-700 bg-transparent w-full outline-none"
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block">Current Event Type ID</label>
+                                        <div className="bg-[#f8fafc] border border-slate-200 rounded-xl px-4 py-2 text-sm font-medium text-slate-500">
+                                            {formData.current_batch_event_type_id || 'NB (New Batch)'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block">Batch Status ID</label>
+                                        <div className="bg-[#f8fafc] border border-slate-200 rounded-xl px-4 py-2 text-sm font-medium flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                            <span className="text-slate-500 uppercase">P - PLANNED</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Product Plan Details Section */}
+                        <div className="mt-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-blue-500">📋</span>
+                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Product Plan Details</h2>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const newDetail: ProductDetail = {
+                                            packsize_id: '',
+                                            no_of_packs: 0,
+                                            remarks: '',
+                                            no_of_sachets: 0,
+                                            packs_per_steri_carton: 0,
+                                            sterilization_cartons: 0,
+                                            packs_per_shipper_carton: 0,
+                                            shipper_cartons: 0,
+                                            no_of_shipper_cartons: 0,
+                                            no_of_sterilization_cartons: 0,
+                                            last_modified_user_id: "ADMIN",
+                                            last_modified_date_time: new Date()
+                                        };
+                                        setProductDetails([...productDetails, newDetail]);
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Add New Row
+                                </button>
+                            </div>
+
+                            {/* Inline Editable Table */}
+                            {productDetails.length > 0 ? (
+                                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                    <table className="min-w-full divide-y divide-slate-200">
+                                        <thead className="bg-slate-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sno</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Pack Size *</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Packs *</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sachets</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Steri/Pack</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Steri Cartons</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Shipper/Pack</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Shipper Cartons</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Remarks</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-slate-200">
+                                            {productDetails.map((detail, index) => {
+                                                const selectedPackSize = packSizes.find(ps => ps.pack_size_id === detail.packsize_id);
+                                                
+                                                return (
+                                                    <tr key={index} className="hover:bg-slate-50">
+                                                        <td className="px-4 py-3 text-sm font-mono">{index + 1}</td>
+                                                        
+                                                        {/* Pack Size */}
+                                                        <td className="px-4 py-3">
+                                                            {detail.packsize_id ? (
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-sm font-medium text-slate-700">
+                                                                        {selectedPackSize?.pack_size_name || detail.packsize_id}
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const newDetails = [...productDetails];
+                                                                            newDetails[index] = {
+                                                                                ...detail,
+                                                                                packsize_id: '',
+                                                                                packs_per_steri_carton: 0,
+                                                                                packs_per_shipper_carton: 0,
+                                                                                no_of_sachets: 0,
+                                                                                sterilization_cartons: 0,
+                                                                                shipper_cartons: 0
+                                                                            };
+                                                                            setProductDetails(newDetails);
+                                                                            updatePlannedTotals(newDetails);
+                                                                        }}
+                                                                        className="ml-2 text-blue-600 hover:text-blue-800"
+                                                                        title="Change pack size"
+                                                                    >
+                                                                        <Pencil className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <select
+                                                                    value={detail.packsize_id || ''}
+                                                                    onChange={(e) => {
+                                                                        const newDetails = [...productDetails];
+                                                                        const newPackSizeId = e.target.value;
+                                                                        const newSelectedPackSize = packSizes.find(ps => ps.pack_size_id === newPackSizeId);
+                                                                        
+                                                                        const steriPerPack = getPacksPerCartonByTypeForProduct(newPackSizeId, 'ST');
+                                                                        const shipperPerPack = getPacksPerCartonByTypeForProduct(newPackSizeId, 'SH');
+                                                                        
+                                                                        const packs = detail.no_of_packs || 0;
+                                                                        const sachets = newSelectedPackSize ? packs * newSelectedPackSize.qty_per_carton : 0;
+                                                                        const steriCartons = steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0;
+                                                                        const shipperCartons = shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0;
+                                                                        
+                                                                        newDetails[index] = {
+                                                                            ...detail,
+                                                                            packsize_id: newPackSizeId,
+                                                                            packs_per_steri_carton: steriPerPack,
+                                                                            packs_per_shipper_carton: shipperPerPack,
+                                                                            no_of_sachets: sachets,
+                                                                            sterilization_cartons: steriCartons,
+                                                                            shipper_cartons: shipperCartons
+                                                                        };
+                                                                        
+                                                                        setProductDetails(newDetails);
+                                                                        updatePlannedTotals(newDetails);
+                                                                    }}
+                                                                    className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
+                                                                >
+                                                                    <option value="">Select Pack Size</option>
+                                                                    {packSizes.map((size) => (
+                                                                        <option key={size.pack_size_id} value={size.pack_size_id}>
+                                                                            {size.pack_size_name} ({size.qty_per_carton} {size.uom})
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            )}
+                                                        </td>
+                                                        
+                                                        {/* No. of Packs */}
+                                                        <td className="px-4 py-3">
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                value={detail.no_of_packs || ''}
+                                                                onChange={(e) => {
+                                                                    const newDetails = [...productDetails];
+                                                                    const packs = parseInt(e.target.value) || 0;
+                                                                    
+                                                                    const sachets = selectedPackSize ? packs * selectedPackSize.qty_per_carton : 0;
+                                                                    const steriCartons = detail.packs_per_steri_carton > 0 ? 
+                                                                        Math.ceil(packs / detail.packs_per_steri_carton) : 0;
+                                                                    const shipperCartons = detail.packs_per_shipper_carton > 0 ? 
+                                                                        Math.ceil(packs / detail.packs_per_shipper_carton) : 0;
+                                                                    
+                                                                    newDetails[index] = {
+                                                                        ...detail,
+                                                                        no_of_packs: packs,
+                                                                        no_of_sachets: sachets,
+                                                                        sterilization_cartons: steriCartons,
+                                                                        shipper_cartons: shipperCartons
+                                                                    };
+                                                                    setProductDetails(newDetails);
+                                                                    updatePlannedTotals(newDetails);
+                                                                }}
+                                                                className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                                placeholder="0"
+                                                            />
+                                                        </td>
+                                                        
+                                                        {/* Calculated fields */}
+                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_sachets || 0}</td>
+                                                        <td className="px-4 py-3 text-sm bg-slate-50">{detail.packs_per_steri_carton || 0}</td>
+                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.sterilization_cartons || 0}</td>
+                                                        <td className="px-4 py-3 text-sm bg-slate-50">{detail.packs_per_shipper_carton || 0}</td>
+                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.shipper_cartons || 0}</td>
+                                                        
+                                                        {/* Remarks */}
+                                                        <td className="px-4 py-3">
+                                                            <input
+                                                                type="text"
+                                                                value={detail.remarks || ''}
+                                                                onChange={(e) => {
+                                                                    const newDetails = [...productDetails];
+                                                                    newDetails[index] = {
+                                                                        ...detail,
+                                                                        remarks: e.target.value
+                                                                    };
+                                                                    setProductDetails(newDetails);
+                                                                }}
+                                                                placeholder="Remarks"
+                                                                maxLength={100}
+                                                                className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                            />
+                                                        </td>
+                                                        
+                                                        {/* Delete Action */}
+                                                        <td className="px-4 py-3 text-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const newDetails = productDetails.filter((_, i) => i !== index);
+                                                                    setProductDetails(newDetails);
+                                                                    updatePlannedTotals(newDetails);
+                                                                }}
+                                                                className="text-red-600 hover:text-red-800 transition-colors"
+                                                                title="Delete row"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                                    <p className="text-slate-500 mb-3">No product details added yet</p>
+                         
+                                </div>
+                            )}
+                        </div>
+                    </form>
+                </div>
+            </motion.div>
+        </>
+    )}
+</AnimatePresence>
 
             {/* Edit Batch Modal */}
             <AnimatePresence>
