@@ -19,6 +19,7 @@ export interface ICompanyMaster extends Document {
   logo?: string; // Image
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
+  factory_license_no?: string; // Char(20)
 }
 
 const CompanyMasterSchema: Schema = new Schema({
@@ -126,6 +127,12 @@ const CompanyMasterSchema: Schema = new Schema({
   last_modified_date_time: {
     type: Date,
     required: false,
+  },
+  factory_license_no: {
+    type: String,
+    required: false,
+    maxlength: 20,
+    trim: true,
   },
 }, {
   timestamps: true,

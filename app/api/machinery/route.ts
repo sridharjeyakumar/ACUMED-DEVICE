@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       uom: body.uom,
       avg_prod_hrs_per_day: Number(body.avgHrsPerDay),
       active: body.active ?? true,
+      remarks: body.remarks ?? "",
     });
 
     return NextResponse.json(machine, { status: 201 });
