@@ -80,6 +80,7 @@ export default function EmployeeMasterPage() {
         emp_photo: "",
         status: "Active",
         active: true,
+        email: "",
     });
 
     const loadEmployees = useCallback(async () => {
@@ -112,6 +113,7 @@ export default function EmployeeMasterPage() {
                 empPhoto: emp.emp_photo || "",
                 status: emp.active !== false ? "Active" : "Exited",
                 active: emp.active !== false,
+                email: emp.email || "",
             }));
             setRecords(mappedRecords);
         } catch (error: any) {
@@ -180,6 +182,8 @@ export default function EmployeeMasterPage() {
                 emp_photo: "",
                 status: "Active",
                 active: true,
+                email: "",
+
             });
         }
     }, [isAddModalOpen]);
@@ -223,6 +227,7 @@ export default function EmployeeMasterPage() {
                 status: formData.status,
                 active: Boolean(formData.active),
                 last_modified_user_id: "ADMIN",
+                email: formData.email || undefined,
             };
 
             await employeeAPI.create(formattedData);
@@ -270,6 +275,7 @@ export default function EmployeeMasterPage() {
                 emp_photo: empData.emp_photo || "",
                 status: empData.status || "Active",
                 active: empData.active !== undefined ? empData.active : true,
+                email: empData.email || "",
             });
             setIsEditModalOpen(true);
         } catch (error: any) {
@@ -312,6 +318,7 @@ export default function EmployeeMasterPage() {
                 status: formData.status,
                 active: Boolean(formData.active),
                 last_modified_user_id: "ADMIN",
+                email: formData.email || undefined,
             };
 
             await employeeAPI.update(selectedEmployee.empId, formattedData);
@@ -1032,6 +1039,18 @@ const confirmDelete = async () => {
                                                 maxLength={15}
                                             />
                                         </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Email
+                                            </label>
+                                            <Input 
+                                                name="email" 
+                                                value={formData.email} 
+                                                onChange={handleInputChange} 
+                                                placeholder="employee@example.com"
+                                                maxLength={100}
+                                            />
+                                        </div>
 
                                         {/* Additional Information Section */}
                                         <div className="col-span-2 mt-4">
@@ -1442,6 +1461,18 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="+91 XXXXX XXXXX"
                                                 maxLength={15}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Email
+                                            </label>
+                                            <Input 
+                                                name="email" 
+                                                value={formData.email} 
+                                                onChange={handleInputChange} 
+                                                placeholder="employee@example.com"
+                                                maxLength={100}
                                             />
                                         </div>
 

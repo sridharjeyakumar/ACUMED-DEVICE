@@ -26,6 +26,7 @@ export interface IEmployeeMaster extends Document {
   active: boolean; // Boolean
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
+  email?: string; // Char(100) - Employee Email
 }
 
 const EmployeeMasterSchema: Schema = new Schema({
@@ -173,6 +174,13 @@ const EmployeeMasterSchema: Schema = new Schema({
   last_modified_date_time: {
     type: Date,
     required: false,
+  },
+  email: {
+    type: String,
+    required: false,
+    maxlength: 100,
+    trim: true,
+    unique: true,
   },
 }, {
   timestamps: true,

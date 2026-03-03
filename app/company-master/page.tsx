@@ -36,6 +36,7 @@ interface Company {
     gst_no?: string; // Char(15)
     cin_no?: string; // Char(21)
     pan_no?: string; // Char(15)
+    factory_license_no?: string; // Char(20)
     email_id?: string; // Char(50)
     website?: string; // Char(50)
     contact_person?: string; // Char(50)
@@ -79,6 +80,7 @@ export default function CompanyMasterPage() {
         contact_person: "",
         contact_no: "",
         logo: "",
+        factory_license_no: "",
     });
     const fileInputRef = useRef<HTMLInputElement>(null);
     const isSubmittingRef = useRef(false);
@@ -109,6 +111,7 @@ export default function CompanyMasterPage() {
                 contact_person: "",
                 contact_no: "",
                 logo: "",
+                factory_license_no: "",
             });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
@@ -130,6 +133,7 @@ export default function CompanyMasterPage() {
                 contact_person: "",
                 contact_no: "",
                 logo: "",
+                factory_license_no: "",
             });
         }
         setIsCancelDialogOpen(false);
@@ -156,6 +160,7 @@ export default function CompanyMasterPage() {
                 contact_person: "",
                 contact_no: "",
                 logo: "",
+                factory_license_no: "",
             });
         }
     }, [isAddModalOpen]);
@@ -246,6 +251,7 @@ export default function CompanyMasterPage() {
                 contact_no: formData.contact_no ? parseInt(formData.contact_no) : undefined,
                 logo: formData.logo || undefined,
                 last_modified_user_id: "ADMIN",
+                factory_license_no: formData.factory_license_no || undefined,
             });
             toast({
                 title: "Success",
@@ -269,6 +275,7 @@ export default function CompanyMasterPage() {
                 contact_person: "",
                 contact_no: "",
                 logo: "",
+                factory_license_no: "",
             });
             loadCompanies();
         } catch (error: any) {
@@ -301,6 +308,7 @@ export default function CompanyMasterPage() {
             contact_person: company.contact_person || "",
             contact_no: company.contact_no?.toString() || "",
             logo: company.logo || "",
+            factory_license_no: company.factory_license_no || "",
         });
         setIsEditModalOpen(true);
     };
@@ -333,6 +341,7 @@ export default function CompanyMasterPage() {
                 contact_no: formData.contact_no ? parseInt(formData.contact_no) : undefined,
                 logo: formData.logo || undefined,
                 last_modified_user_id: "ADMIN",
+                factory_license_no: formData.factory_license_no || undefined,
             });
             
             // Store last action for undo
@@ -366,6 +375,7 @@ export default function CompanyMasterPage() {
                 contact_person: "",
                 contact_no: "",
                 logo: "",
+                factory_license_no: "",
             });
             loadCompanies();
         } catch (error: any) {
@@ -401,6 +411,7 @@ export default function CompanyMasterPage() {
                 contact_no: lastAction.data.contact_no || undefined,
                 logo: lastAction.data.logo || undefined,
                 last_modified_user_id: "ADMIN",
+                factory_license_no: lastAction.data.factory_license_no || undefined,
             });
             toast({
                 title: "Undone",
@@ -642,6 +653,8 @@ export default function CompanyMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Gst No.</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Cin No.</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Pan No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Factory License No.</th>
+
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Email Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Website</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
@@ -725,8 +738,12 @@ export default function CompanyMasterPage() {
                                                         <span className="text-sm text-foreground font-mono">{company.pan_no || "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{company.factory_license_no || "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{company.email_id || "-"}</span>
                                                     </td>
+                                                    
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{company.website || "-"}</span>
                                                     </td>
@@ -1047,6 +1064,18 @@ export default function CompanyMasterPage() {
                                                 value={formData.pan_no}
                                                 onChange={handleInputChange}
                                                 placeholder="Enter PAN number"
+                                                maxLength={20}
+                                            />
+                                        </div>
+                                         <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Factory License No.
+                                            </label>
+                                            <Input
+                                                name="factory_license_no"
+                                                value={formData.factory_license_no}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter Factory License number"
                                                 maxLength={15}
                                             />
                                         </div>
@@ -1352,6 +1381,18 @@ export default function CompanyMasterPage() {
                                                 value={formData.pan_no}
                                                 onChange={handleInputChange}
                                                 maxLength={15}
+                                            />
+                                        </div>
+                                           <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Factory License No.
+                                            </label>
+                                            <Input
+                                                name="factory_license_no"
+                                                value={formData.factory_license_no}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter Factory License number"
+                                                maxLength={20}
                                             />
                                         </div>
 

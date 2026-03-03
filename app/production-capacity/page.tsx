@@ -25,6 +25,7 @@ interface MachineRecord {
     lastModifiedUserId?: string;
     lastModifiedDateTime?: string;
     active: boolean;
+    remarks:string;
 }
 interface UOM {
     _id?: string; // MongoDB ID
@@ -62,6 +63,7 @@ export default function ProductionCapacityPage() {
         uom: "UNITS",
         avgHrsPerDay: "",
         active: true,
+        remarks:"",
     });
 
     // Reset form data when Add modal opens
@@ -76,6 +78,7 @@ export default function ProductionCapacityPage() {
                 uom: "UNITS",
                 avgHrsPerDay: "",
                 active: true,
+                remarks:"",
             });
         }
     }, [isAddModalOpen]);
@@ -110,6 +113,7 @@ const fetchMachines = async () => {
             lastModifiedUserId: m.last_modified_user_id,
             lastModifiedDateTime: m.last_modified_date_time,
             active: m.active,
+            remarks:m.remarks,
         }));
 
         setMachines(formatted);
@@ -203,6 +207,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             uom: machine.uom,
             avgHrsPerDay: machine.avgHrsPerDay.toString(),
             active: machine.active !== undefined ? machine.active : true,
+            remarks:machine.remarks,
         });
         setIsEditModalOpen(true);
     };
@@ -220,6 +225,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             uom: "UNITS",
             avgHrsPerDay: "",
             active: true,
+            remarks:"",
         });
     };
    const handleCancel = (machine: MachineRecord) => {
@@ -433,6 +439,9 @@ const handleSubmit = async (e: React.FormEvent) => {
     <th className="px-6 py-3 text-sm font-semibold text-center whitespace-nowrap">
       Average Production Hours per Day
     </th>
+     <th className="px-6 py-3 text-sm font-semibold text-center whitespace-nowrap">
+      Remarks
+    </th>
     <th className="px-6 py-3 text-sm font-semibold text-left whitespace-nowrap">
       Last Modified User ID
     </th>
@@ -490,7 +499,9 @@ const handleSubmit = async (e: React.FormEvent) => {
         <td className="px-6 py-4 text-sm text-center font-semibold">
           {machine.avgHrsPerDay ?? "-"}
         </td>
-
+ <td className="px-6 py-4 text-sm text-center font-semibold">
+          {machine.remarks ?? "-"}
+        </td>
         {/* LAST MODIFIED USER */}
         <td className="px-6 py-4 text-sm">
           {machine.lastModifiedUserId ?? "-"}
@@ -677,6 +688,17 @@ const handleSubmit = async (e: React.FormEvent) => {
                                                 placeholder="e.g. SECTION A - PLASTIC COMPONENT" 
                                             />
                                         </div>
+                                           <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Remark
+                                            </label>
+                                            <Input 
+                                                name="remarks" 
+                                                value={formData.remarks} 
+                                                onChange={handleInputChange} 
+                                                placeholder="remarks" 
+                                            />
+                                        </div>
 
                                         {/* Short Name */}
                                         <div>
@@ -857,6 +879,17 @@ const handleSubmit = async (e: React.FormEvent) => {
                                             <Input 
                                                 name="section" 
                                                 value={formData.section} 
+                                                onChange={handleInputChange} 
+                                                placeholder="e.g. SECTION A - PLASTIC COMPONENT" 
+                                            />
+                                        </div>
+                                         <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Remark
+                                            </label>
+                                            <Input 
+                                                name="remarks" 
+                                                value={formData.remarks} 
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. SECTION A - PLASTIC COMPONENT" 
                                             />
