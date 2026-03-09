@@ -96,6 +96,12 @@ const navSections: NavSection[] = [
       { icon: TableProperties, label: "Transaction Table", href: "/transaction-table" },
     ],
   },
+      {
+    title: "GOODS RECEIPT",
+    items: [
+      { icon: TableProperties, label: "Goods Receipt", href: "/goods-receipt" },
+    ],
+  },
 ];
 
 interface SidebarProps {
