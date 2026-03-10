@@ -76,7 +76,6 @@ export default function MaterialCategoryMasterPage() {
         try {
             setLoading(true);
             const data = await materialCategoryAPI.getAll();
-            // Ensure each category has the active field (default to true if not present)
             const categoriesWithActive = data.map((cat: any) => ({
                 ...cat,
                 active: cat.active !== undefined ? cat.active : true
@@ -747,7 +746,7 @@ export default function MaterialCategoryMasterPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to cancel material category "{categoryToCancel?.material_category_name}"? 
+                            Are you sure you want to cancel material category {categoryToCancel?.material_category_name}? 
                             This will make it inactive and it cannot be edited or used in the future.
                         </AlertDialogDescription>
                     </AlertDialogHeader>

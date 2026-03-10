@@ -753,7 +753,7 @@ export default function ProductCategoryMasterPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to cancel product category "{categoryToCancel?.product_category_name}"? 
+                            Are you sure you want to cancel product category {categoryToCancel?.product_category_name}? 
                             This will make it inactive and it cannot be edited or used in the future.
                         </AlertDialogDescription>
                     </AlertDialogHeader>

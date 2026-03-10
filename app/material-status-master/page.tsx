@@ -1036,7 +1036,7 @@ export default function MaterialStatusMasterPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to cancel material status "{statusToCancel?.material_status}"? 
+                            Are you sure you want to cancel material status {statusToCancel?.material_status}? 
                             This will make it inactive and it cannot be edited or used in the future.
                         </AlertDialogDescription>
                     </AlertDialogHeader>

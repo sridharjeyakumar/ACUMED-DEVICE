@@ -1033,7 +1033,7 @@ export default function ProductStatusMasterPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to cancel product status "{statusToCancel?.product_status}"? 
+                            Are you sure you want to cancel product status {statusToCancel?.product_status}? 
                             This will make it inactive and it cannot be edited or used in the future.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
