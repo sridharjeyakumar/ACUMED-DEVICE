@@ -7,6 +7,7 @@ export interface IProductStatusMaster extends Document {
   effect_in_stock?: string; // Char(1) - + or - dropdown
   seq_no: number; // N(2)
   active: boolean;
+  location_id?: string; // Char(2)
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
 }
@@ -44,6 +45,12 @@ const ProductStatusMasterSchema: Schema = new Schema({
     required: true,
     min: 1,
     max: 99,
+  },
+  location_id: {
+    type: String,
+    required: false,
+    maxlength: 2,
+    trim: true,
   },
   active: {
     type: Boolean,

@@ -29,6 +29,7 @@ interface ProductCategory {
     product_category_name: string; // Char(100)
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
+    active: boolean; // Add this field
 }
 
 // Helper function to format dates consistently (prevents hydration errors)
@@ -54,25 +55,26 @@ export default function ProductCategoryMasterPage() {
     const [categories, setCategories] = useState<ProductCategory[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: ProductCategory } | null>(null);
-    const [cancelledCategories, setCancelledCategories] = useState<Set<string>>(new Set());
     const [filterActive, setFilterActive] = useState<string>("all");
-    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
     const [categoryToCancel, setCategoryToCancel] = useState<ProductCategory | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
-
-    // Reset form data when Add modal opens
-    useEffect(() => {
-        if (isAddModalOpen) {
-            setFormData({ product_category_id: "", product_category_name: "" });
-        }
-    }, [isAddModalOpen]);
+    const [formData, setFormData] = useState({
+        product_category_id: "",
+        product_category_name: "",
+    });
 
     const loadCategories = useCallback(async () => {
         try {
             setLoading(true);
             const data = await productCategoryAPI.getAll();
-            setCategories(data);
+            // Ensure each category has the active field (default to true if not present)
+            const categoriesWithActive = data.map((cat: any) => ({
+                ...cat,
+                active: cat.active !== undefined ? cat.active : true
+            }));
+            setCategories(categoriesWithActive);
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -87,18 +89,21 @@ export default function ProductCategoryMasterPage() {
     useEffect(() => {
         loadCategories();
     }, [loadCategories]);
-    const [formData, setFormData] = useState({
-        product_category_id: "",
-        product_category_name: "",
-    });
+
+    // Reset form when Add modal opens
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({ product_category_id: "", product_category_name: "" });
+        }
+    }, [isAddModalOpen]);
 
     const filteredCategories = categories.filter((category) => {
         const matchesSearch = category.product_category_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             category.product_category_name.toLowerCase().includes(searchQuery.toLowerCase());
         
         const matchesActive = filterActive === "all" || 
-            (filterActive === "active" && !cancelledCategories.has(category.product_category_id)) ||
-            (filterActive === "inactive" && cancelledCategories.has(category.product_category_id));
+            (filterActive === "active" && category.active) ||
+            (filterActive === "inactive" && !category.active);
         
         return matchesSearch && matchesActive;
     });
@@ -129,6 +134,7 @@ export default function ProductCategoryMasterPage() {
                 product_category_id: formData.product_category_id,
                 product_category_name: formData.product_category_name,
                 last_modified_user_id: "ADMIN",
+                active: true, // Set active to true by default for new categories
             });
             toast({
                 title: "Success",
@@ -152,6 +158,16 @@ export default function ProductCategoryMasterPage() {
     };
 
     const handleEdit = (category: ProductCategory) => {
+        // Only allow editing if category is active
+        if (!category.active) {
+            toast({
+                title: "Cannot Edit",
+                description: "Cancelled categories cannot be edited",
+                variant: "destructive",
+            });
+            return;
+        }
+        
         setSelectedCategory(category);
         setFormData({
             product_category_id: category.product_category_id,
@@ -165,6 +181,18 @@ export default function ProductCategoryMasterPage() {
         e.stopPropagation();
         if (isSubmittingRef.current) return;
         if (!selectedCategory) return;
+        
+        // Double-check if category is still active
+        if (!selectedCategory.active) {
+            toast({
+                title: "Cannot Edit",
+                description: "This category has been cancelled and cannot be edited",
+                variant: "destructive",
+            });
+            setIsEditModalOpen(false);
+            return;
+        }
+        
         isSubmittingRef.current = true;
         
         // Store previous state for undo
@@ -174,6 +202,7 @@ export default function ProductCategoryMasterPage() {
             await productCategoryAPI.update(selectedCategory.product_category_id, {
                 product_category_name: formData.product_category_name,
                 last_modified_user_id: "ADMIN",
+                active: selectedCategory.active,
             });
             
             // Store last action for undo
@@ -215,6 +244,7 @@ export default function ProductCategoryMasterPage() {
                 await productCategoryAPI.update(lastAction.data.product_category_id, {
                     product_category_name: lastAction.data.product_category_name,
                     last_modified_user_id: "ADMIN",
+                    active: lastAction.data.active,
                 });
                 toast({
                     title: "Undone",
@@ -233,47 +263,45 @@ export default function ProductCategoryMasterPage() {
     };
 
     const handleCancel = (category: ProductCategory) => {
+        // Only allow cancelling if category is active
+        if (!category.active) {
+            toast({
+                title: "Already Cancelled",
+                description: "This category is already cancelled",
+                variant: "destructive",
+            });
+            return;
+        }
+        
         setCategoryToCancel(category);
-        setIsCancelItemDialogOpen(true);
+        setIsCancelDialogOpen(true);
     };
 
-    const confirmCancelItem = async () => {
+    const confirmCancel = async () => {
         if (!categoryToCancel) return;
-        
-        const isCancelled = cancelledCategories.has(categoryToCancel.product_category_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
         
         try {
             await productCategoryAPI.update(categoryToCancel.product_category_id, {
-                active: newActiveStatus,
+                product_category_name: categoryToCancel.product_category_name,
                 last_modified_user_id: "ADMIN",
+                active: false, // Set to inactive
             });
             
-            setCancelledCategories(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(categoryToCancel.product_category_id);
-                    toast({
-                        title: "Restored",
-                        description: `Product category ${categoryToCancel.product_category_name} has been restored`,
-                    });
-                } else {
-                    newSet.add(categoryToCancel.product_category_id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Product category ${categoryToCancel.product_category_name} has been cancelled`,
-                    });
-                }
-                return newSet;
+            // Update local state by reloading from API
+            await loadCategories();
+            
+            toast({
+                title: "Cancelled",
+                description: `Product category ${categoryToCancel.product_category_name} has been cancelled`,
+                variant: "default",
             });
             
-            loadCategories(); // Reload data from API
-            setIsCancelItemDialogOpen(false);
+            setIsCancelDialogOpen(false);
             setCategoryToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} product category`,
+                description: error.message || "Failed to cancel product category",
                 variant: "destructive",
             });
         }
@@ -374,7 +402,7 @@ export default function ProductCategoryMasterPage() {
                                                             onChange={() => setFilterActive("inactive")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="pc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
+                                                        <Label htmlFor="pc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Cancelled</Label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -434,6 +462,7 @@ export default function ProductCategoryMasterPage() {
                                                     <span>Name</span>
                                                 </div>
                                             </th>
+                                          
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
                                                     <span>Last Modified</span>
@@ -446,32 +475,35 @@ export default function ProductCategoryMasterPage() {
                                                     <span>Date & Time</span>
                                                 </div>
                                             </th>
+                                              <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Status</span>
+                                                </div>
+                                            </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading product categories...
                                                 </td>
                                             </tr>
                                         ) : filteredCategories.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
                                                     No categories found
                                                 </td>
                                             </tr>
                                         ) : (
-                                            paginatedCategories.map((category, index) => {
-                                                const isCancelled = cancelledCategories.has(category.product_category_id);
-                                                return (
+                                            paginatedCategories.map((category, index) => (
                                                 <motion.tr
                                                     key={category.product_category_id}
                                                     initial={{ opacity: 0, x: -20 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
+                                                    className={`hover:bg-muted/30 transition-colors ${!category.active ? 'opacity-50 bg-gray-50' : ''}`}
                                                 >
                                                     <td className="px-6 py-4">
                                                         <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
@@ -481,12 +513,10 @@ export default function ProductCategoryMasterPage() {
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{category.product_category_name}</span>
                                                     </td>
+                                                
                                                     <td className="px-6 py-4">
                                                         {category.last_modified_user_id ? (
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm font-mono text-foreground">{category.last_modified_user_id}</span>
-                                                                <span className="text-xs text-muted-foreground">{category.last_modified_user_id}</span>
-                                                            </div>
+                                                            <span className="text-sm font-mono text-foreground">{category.last_modified_user_id}</span>
                                                         ) : (
                                                             <span className="text-sm text-foreground">-</span>
                                                         )}
@@ -498,6 +528,15 @@ export default function ProductCategoryMasterPage() {
                                                                 : "-"}
                                                         </span>
                                                     </td>
+                                                        <td className="px-6 py-4">
+                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                                            category.active 
+                                                                ? 'bg-green-100 text-green-800' 
+                                                                : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                            {category.active ? 'Active' : 'Cancelled'}
+                                                        </span>
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <Button
@@ -507,8 +546,11 @@ export default function ProductCategoryMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleEdit(category);
                                                                 }}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                                disabled={isCancelled}
+                                                                className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${
+                                                                    !category.active ? 'opacity-50 cursor-not-allowed' : ''
+                                                                }`}
+                                                                disabled={!category.active}
+                                                                title={!category.active ? "Cannot edit cancelled categories" : "Edit category"}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -519,16 +561,20 @@ export default function ProductCategoryMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleCancel(category);
                                                                 }}
-                                                                className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={isCancelled ? "Restore category" : "Cancel category"}
+                                                                className={`${
+                                                                    category.active 
+                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
+                                                                        : 'opacity-50 cursor-not-allowed'
+                                                                }`}
+                                                                disabled={!category.active}
+                                                                title={category.active ? "Cancel category" : "Already cancelled"}
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
                                                         </div>
                                                     </td>
                                                 </motion.tr>
-                                                );
-                                            })
+                                            ))
                                         )}
                                     </tbody>
                                 </table>
@@ -701,41 +747,32 @@ export default function ProductCategoryMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Cancel Item Confirmation Dialog (for table actions) */}
-            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+            {/* Cancel Category Confirmation Dialog */}
+            <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {categoryToCancel && cancelledCategories.has(categoryToCancel.product_category_id) 
-                                ? "Confirm Restore" 
-                                : "Confirm Cancel"}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {categoryToCancel && cancelledCategories.has(categoryToCancel.product_category_id)
-                                ? `Are you sure you want to restore product category "${categoryToCancel.product_category_name}"?`
-                                : `Are you sure you want to cancel product category "${categoryToCancel?.product_category_name}"? This action can be undone.`}
+                            Are you sure you want to cancel product category "{categoryToCancel?.product_category_name}"? 
+                            This will make it inactive and it cannot be edited or used in the future.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => {
-                            setIsCancelItemDialogOpen(false);
+                            setIsCancelDialogOpen(false);
                             setCategoryToCancel(null);
                         }}>
-                            No, Keep Current Status
+                            No, Keep Active
                         </AlertDialogCancel>
                         <AlertDialogAction 
-                            onClick={confirmCancelItem} 
-                            className={categoryToCancel && cancelledCategories.has(categoryToCancel.product_category_id) 
-                                ? "bg-green-600 hover:bg-green-700" 
-                                : "bg-red-600 hover:bg-red-700"}
+                            onClick={confirmCancel} 
+                            className="bg-red-600 hover:bg-red-700"
                         >
-                            Yes, {categoryToCancel && cancelledCategories.has(categoryToCancel.product_category_id) ? "Restore" : "Cancel"}
+                            Yes, Cancel Category
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-
         </div>
     );
 }
-

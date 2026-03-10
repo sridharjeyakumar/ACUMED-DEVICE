@@ -29,6 +29,7 @@ interface MaterialCategory {
     material_category_name: string; // Char(25)
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
+    active: boolean; // ADD THIS LINE
 }
 
 // Helper function to format dates consistently (prevents hydration errors)
@@ -54,12 +55,15 @@ export default function MaterialCategoryMasterPage() {
     const [categories, setCategories] = useState<MaterialCategory[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: MaterialCategory } | null>(null);
-    const [cancelledCategories, setCancelledCategories] = useState<Set<string>>(new Set());
     const [filterActive, setFilterActive] = useState<string>("all");
-    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
     const [categoryToCancel, setCategoryToCancel] = useState<MaterialCategory | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
+    const [formData, setFormData] = useState({
+        material_category_id: "",
+        material_category_name: "",
+    });
 
     // Reset form data when Add modal opens
     useEffect(() => {
@@ -72,7 +76,12 @@ export default function MaterialCategoryMasterPage() {
         try {
             setLoading(true);
             const data = await materialCategoryAPI.getAll();
-            setCategories(data);
+            // Ensure each category has the active field (default to true if not present)
+            const categoriesWithActive = data.map((cat: any) => ({
+                ...cat,
+                active: cat.active !== undefined ? cat.active : true
+            }));
+            setCategories(categoriesWithActive);
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -87,18 +96,14 @@ export default function MaterialCategoryMasterPage() {
     useEffect(() => {
         loadCategories();
     }, [loadCategories]);
-    const [formData, setFormData] = useState({
-        material_category_id: "",
-        material_category_name: "",
-    });
 
     const filteredCategories = categories.filter((category) => {
         const matchesSearch = category.material_category_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             category.material_category_name.toLowerCase().includes(searchQuery.toLowerCase());
         
         const matchesActive = filterActive === "all" || 
-            (filterActive === "active" && !cancelledCategories.has(category.material_category_id)) ||
-            (filterActive === "inactive" && cancelledCategories.has(category.material_category_id));
+            (filterActive === "active" && category.active) ||
+            (filterActive === "inactive" && !category.active);
         
         return matchesSearch && matchesActive;
     });
@@ -129,6 +134,7 @@ export default function MaterialCategoryMasterPage() {
                 material_category_id: formData.material_category_id,
                 material_category_name: formData.material_category_name,
                 last_modified_user_id: "ADMIN",
+                active: true, // ADD THIS LINE
             });
             toast({
                 title: "Success",
@@ -152,6 +158,16 @@ export default function MaterialCategoryMasterPage() {
     };
 
     const handleEdit = (category: MaterialCategory) => {
+        // Only allow editing if category is active
+        if (!category.active) {
+            toast({
+                title: "Cannot Edit",
+                description: "Cancelled categories cannot be edited",
+                variant: "destructive",
+            });
+            return;
+        }
+        
         setSelectedCategory(category);
         setFormData({
             material_category_id: category.material_category_id,
@@ -165,6 +181,18 @@ export default function MaterialCategoryMasterPage() {
         e.stopPropagation();
         if (isSubmittingRef.current) return;
         if (!selectedCategory) return;
+        
+        // Double-check if category is still active
+        if (!selectedCategory.active) {
+            toast({
+                title: "Cannot Edit",
+                description: "This category has been cancelled and cannot be edited",
+                variant: "destructive",
+            });
+            setIsEditModalOpen(false);
+            return;
+        }
+        
         isSubmittingRef.current = true;
         
         // Store previous state for undo
@@ -174,6 +202,7 @@ export default function MaterialCategoryMasterPage() {
             await materialCategoryAPI.update(selectedCategory.material_category_id, {
                 material_category_name: formData.material_category_name,
                 last_modified_user_id: "ADMIN",
+                active: selectedCategory.active, // ADD THIS LINE
             });
             
             // Store last action for undo
@@ -215,6 +244,7 @@ export default function MaterialCategoryMasterPage() {
                 await materialCategoryAPI.update(lastAction.data.material_category_id, {
                     material_category_name: lastAction.data.material_category_name,
                     last_modified_user_id: "ADMIN",
+                    active: lastAction.data.active, // ADD THIS LINE
                 });
                 toast({
                     title: "Undone",
@@ -233,47 +263,45 @@ export default function MaterialCategoryMasterPage() {
     };
 
     const handleCancel = (category: MaterialCategory) => {
+        // Only allow cancelling if category is active
+        if (!category.active) {
+            toast({
+                title: "Already Cancelled",
+                description: "This category is already cancelled",
+                variant: "destructive",
+            });
+            return;
+        }
+        
         setCategoryToCancel(category);
-        setIsCancelItemDialogOpen(true);
+        setIsCancelDialogOpen(true);
     };
 
-    const confirmCancelItem = async () => {
+    const confirmCancel = async () => {
         if (!categoryToCancel) return;
-        
-        const isCancelled = cancelledCategories.has(categoryToCancel.material_category_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
         
         try {
             await materialCategoryAPI.update(categoryToCancel.material_category_id, {
-                active: newActiveStatus,
+                material_category_name: categoryToCancel.material_category_name,
                 last_modified_user_id: "ADMIN",
+                active: false, // Set to inactive
             });
             
-            setCancelledCategories(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(categoryToCancel.material_category_id);
-                    toast({
-                        title: "Restored",
-                        description: `Material category ${categoryToCancel.material_category_name} has been restored`,
-                    });
-                } else {
-                    newSet.add(categoryToCancel.material_category_id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Material category ${categoryToCancel.material_category_name} has been cancelled`,
-                    });
-                }
-                return newSet;
+            // Update local state by reloading from API
+            await loadCategories();
+            
+            toast({
+                title: "Cancelled",
+                description: `Material category ${categoryToCancel.material_category_name} has been cancelled`,
+                variant: "default",
             });
             
-            loadCategories(); // Reload data from API
-            setIsCancelItemDialogOpen(false);
+            setIsCancelDialogOpen(false);
             setCategoryToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} material category`,
+                description: error.message || "Failed to cancel material category",
                 variant: "destructive",
             });
         }
@@ -374,7 +402,7 @@ export default function MaterialCategoryMasterPage() {
                                                             onChange={() => setFilterActive("inactive")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="mc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
+                                                        <Label htmlFor="mc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Cancelled</Label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -428,6 +456,7 @@ export default function MaterialCategoryMasterPage() {
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Material Category Name</th>
+                                          
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
                                                     <span>Last Modified</span>
@@ -440,32 +469,35 @@ export default function MaterialCategoryMasterPage() {
                                                     <span>Date & Time</span>
                                                 </div>
                                             </th>
+                                              <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Status</span>
+                                                </div>
+                                            </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading material categories...
                                                 </td>
                                             </tr>
                                         ) : filteredCategories.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
                                                     No categories found
                                                 </td>
                                             </tr>
                                         ) : (
-                                            paginatedCategories.map((category, index) => {
-                                                const isCancelled = cancelledCategories.has(category.material_category_id);
-                                                return (
+                                            paginatedCategories.map((category, index) => (
                                                 <motion.tr
                                                     key={category.material_category_id}
                                                     initial={{ opacity: 0, x: -20 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
+                                                    className={`hover:bg-muted/30 transition-colors ${!category.active ? 'opacity-50 bg-gray-50' : ''}`}
                                                 >
                                                     <td className="px-6 py-4">
                                                         <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
@@ -475,12 +507,10 @@ export default function MaterialCategoryMasterPage() {
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{category.material_category_name}</span>
                                                     </td>
+                                                  
                                                     <td className="px-6 py-4">
                                                         {category.last_modified_user_id ? (
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm font-mono text-foreground">{category.last_modified_user_id}</span>
-                                                                <span className="text-xs text-muted-foreground">{category.last_modified_user_id}</span>
-                                                            </div>
+                                                            <span className="text-sm font-mono text-foreground">{category.last_modified_user_id}</span>
                                                         ) : (
                                                             <span className="text-sm text-foreground">-</span>
                                                         )}
@@ -492,6 +522,15 @@ export default function MaterialCategoryMasterPage() {
                                                                 : "-"}
                                                         </span>
                                                     </td>
+                                                      <td className="px-6 py-4">
+                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                                            category.active 
+                                                                ? 'bg-green-100 text-green-800' 
+                                                                : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                            {category.active ? 'Active' : 'Cancelled'}
+                                                        </span>
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <Button
@@ -501,8 +540,11 @@ export default function MaterialCategoryMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleEdit(category);
                                                                 }}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                                disabled={isCancelled}
+                                                                className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${
+                                                                    !category.active ? 'opacity-50 cursor-not-allowed' : ''
+                                                                }`}
+                                                                disabled={!category.active}
+                                                                title={!category.active ? "Cannot edit cancelled categories" : "Edit category"}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -513,16 +555,20 @@ export default function MaterialCategoryMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleCancel(category);
                                                                 }}
-                                                                className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={isCancelled ? "Restore category" : "Cancel category"}
+                                                                className={`${
+                                                                    category.active 
+                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
+                                                                        : 'opacity-50 cursor-not-allowed'
+                                                                }`}
+                                                                disabled={!category.active}
+                                                                title={category.active ? "Cancel category" : "Already cancelled"}
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
                                                         </div>
                                                     </td>
                                                 </motion.tr>
-                                                );
-                                            })
+                                            ))
                                         )}
                                     </tbody>
                                 </table>
@@ -695,41 +741,32 @@ export default function MaterialCategoryMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Cancel Item Confirmation Dialog (for table actions) */}
-            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+            {/* Cancel Category Confirmation Dialog */}
+            <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {categoryToCancel && cancelledCategories.has(categoryToCancel.material_category_id) 
-                                ? "Confirm Restore" 
-                                : "Confirm Cancel"}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {categoryToCancel && cancelledCategories.has(categoryToCancel.material_category_id)
-                                ? `Are you sure you want to restore material category "${categoryToCancel.material_category_name}"?`
-                                : `Are you sure you want to cancel material category "${categoryToCancel?.material_category_name}"? This action can be undone.`}
+                            Are you sure you want to cancel material category "{categoryToCancel?.material_category_name}"? 
+                            This will make it inactive and it cannot be edited or used in the future.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => {
-                            setIsCancelItemDialogOpen(false);
+                            setIsCancelDialogOpen(false);
                             setCategoryToCancel(null);
                         }}>
-                            No, Keep Current Status
+                            No, Keep Active
                         </AlertDialogCancel>
                         <AlertDialogAction 
-                            onClick={confirmCancelItem} 
-                            className={categoryToCancel && cancelledCategories.has(categoryToCancel.material_category_id) 
-                                ? "bg-green-600 hover:bg-green-700" 
-                                : "bg-red-600 hover:bg-red-700"}
+                            onClick={confirmCancel} 
+                            className="bg-red-600 hover:bg-red-700"
                         >
-                            Yes, {categoryToCancel && cancelledCategories.has(categoryToCancel.material_category_id) ? "Restore" : "Cancel"}
+                            Yes, Cancel Category
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-
         </div>
     );
 }
-

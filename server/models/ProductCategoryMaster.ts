@@ -5,6 +5,8 @@ export interface IProductCategoryMaster extends Document {
   product_category_name: string; // Char(25)
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
+  active: boolean; // Boolean
+
 }
 
 const ProductCategoryMasterSchema: Schema = new Schema({
@@ -30,6 +32,12 @@ const ProductCategoryMasterSchema: Schema = new Schema({
   last_modified_date_time: {
     type: Date,
     required: false,
+  },
+    active: {
+    type: Boolean,
+    required: true,
+    default: true,
+    index: true,
   },
 }, {
   timestamps: true,
