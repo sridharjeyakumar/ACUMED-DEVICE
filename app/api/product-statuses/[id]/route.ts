@@ -73,6 +73,7 @@ export async function PUT(
     if (body.active !== undefined) updateData.active = body.active !== false;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
+    updateData.location_id = body.location_id || '';
     
     const status = await ProductStatusMaster.findOneAndUpdate(
       { prod_status_id: id },

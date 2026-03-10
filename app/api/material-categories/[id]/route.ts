@@ -69,6 +69,8 @@ export async function PUT(
     if (body.material_category_name !== undefined) updateData.material_category_name = body.material_category_name;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
+    updateData.active = body.active !== undefined ? body.active : true;
+
     
     const category = await MaterialCategoryMaster.findOneAndUpdate(
       { material_category_id: id },

@@ -69,6 +69,7 @@ export async function PUT(
     if (body.product_category_name !== undefined) updateData.product_category_name = body.product_category_name;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
+    updateData.active = body.active !== undefined ? body.active : true;
     
     const category = await ProductCategoryMaster.findOneAndUpdate(
       { product_category_id: id },

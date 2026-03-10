@@ -31,6 +31,7 @@ interface MaterialStatus {
     effect_in_stock?: string; // Char(1) - dropdown (+ / -) - can be empty
     seq_no: number; // N(2)
     active: boolean;
+    location_id?: string; // Char(5) - can be empty
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
 }
@@ -58,13 +59,12 @@ export default function MaterialStatusMasterPage() {
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [statusToCancel, setStatusToCancel] = useState<MaterialStatus | null>(null);
     const [selectedStatus, setSelectedStatus] = useState<MaterialStatus | null>(null);
-    const [cancelledStatuses, setCancelledStatuses] = useState<Set<string>>(new Set());
     const isSubmittingRef = useRef(false);
     const [filterActive, setFilterActive] = useState<string>("all");
     const [filterStockMovement, setFilterStockMovement] = useState<string>("all");
     const [statuses, setStatuses] = useState<MaterialStatus[]>([]);
     const [loading, setLoading] = useState(true);
-    const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: MaterialStatus } | null>(null);
+    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: MaterialStatus } | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
@@ -74,6 +74,7 @@ export default function MaterialStatusMasterPage() {
         effect_in_stock: "",
         seq_no: "",
         active: true,
+        location_id: "",
     });
 
     // Reset form data when Add modal opens
@@ -86,6 +87,7 @@ export default function MaterialStatusMasterPage() {
                 effect_in_stock: "",
                 seq_no: "",
                 active: true,
+                location_id: "",
             });
         }
     }, [isAddModalOpen]);
@@ -94,7 +96,12 @@ export default function MaterialStatusMasterPage() {
         try {
             setLoading(true);
             const data = await materialStatusAPI.getAll();
-            setStatuses(data);
+            // Ensure each status has the active field (default to true if not present)
+            const statusesWithActive = data.map((status: any) => ({
+                ...status,
+                active: status.active !== undefined ? status.active : true
+            }));
+            setStatuses(statusesWithActive);
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -159,8 +166,9 @@ export default function MaterialStatusMasterPage() {
                 stock_movement: formData.stock_movement || '',
                 effect_in_stock: formData.effect_in_stock || '',
                 seq_no: parseInt(formData.seq_no) || 0,
-                active: formData.active,
+                active: true, // Always set to true for new statuses
                 last_modified_user_id: "ADMIN",
+                location_id: formData.location_id || '',
             });
             toast({
                 title: "Success",
@@ -174,6 +182,7 @@ export default function MaterialStatusMasterPage() {
                 effect_in_stock: "",
                 seq_no: "",
                 active: true,
+                location_id: "",
             });
             loadStatuses();
         } catch (error: any) {
@@ -188,6 +197,16 @@ export default function MaterialStatusMasterPage() {
     };
 
     const handleEdit = (status: MaterialStatus) => {
+        // Only allow editing if status is active
+        if (!status.active) {
+            toast({
+                title: "Cannot Edit",
+                description: "Cancelled statuses cannot be edited",
+                variant: "destructive",
+            });
+            return;
+        }
+        
         setSelectedStatus(status);
         setFormData({
             matl_status_id: status.matl_status_id,
@@ -196,6 +215,7 @@ export default function MaterialStatusMasterPage() {
             effect_in_stock: status.effect_in_stock || "",
             seq_no: status.seq_no.toString(),
             active: status.active,
+            location_id: status.location_id || "",
         });
         setIsEditModalOpen(true);
     };
@@ -205,6 +225,18 @@ export default function MaterialStatusMasterPage() {
         e.stopPropagation();
         if (isSubmittingRef.current) return;
         if (!selectedStatus) return;
+        
+        // Double-check if status is still active
+        if (!selectedStatus.active) {
+            toast({
+                title: "Cannot Edit",
+                description: "This status has been cancelled and cannot be edited",
+                variant: "destructive",
+            });
+            setIsEditModalOpen(false);
+            return;
+        }
+        
         isSubmittingRef.current = true;
         
         // Store previous state for undo
@@ -218,6 +250,7 @@ export default function MaterialStatusMasterPage() {
                 seq_no: parseInt(formData.seq_no) || 0,
                 active: formData.active,
                 last_modified_user_id: "ADMIN",
+                location_id: formData.location_id || '',
             });
             
             // Store last action for undo
@@ -241,6 +274,7 @@ export default function MaterialStatusMasterPage() {
                 effect_in_stock: "",
                 seq_no: "",
                 active: true,
+                location_id: "",
             });
             loadStatuses();
         } catch (error: any) {
@@ -267,25 +301,11 @@ export default function MaterialStatusMasterPage() {
                     seq_no: lastAction.data.seq_no,
                     active: lastAction.data.active,
                     last_modified_user_id: "ADMIN",
+                    location_id: lastAction.data.location_id || '',
                 });
                 toast({
                     title: "Undone",
                     description: "Changes have been reverted",
-                });
-            } else if (lastAction.type === 'delete') {
-                // Restore deleted status
-                await materialStatusAPI.create({
-                    matl_status_id: lastAction.data.matl_status_id,
-                    material_status: lastAction.data.material_status,
-                    stock_movement: lastAction.data.stock_movement || '',
-                    effect_in_stock: lastAction.data.effect_in_stock || '',
-                    seq_no: lastAction.data.seq_no,
-                    active: lastAction.data.active,
-                    last_modified_user_id: "ADMIN",
-                });
-                toast({
-                    title: "Undone",
-                    description: "Material status has been restored",
                 });
             }
             setLastAction(null);
@@ -300,6 +320,16 @@ export default function MaterialStatusMasterPage() {
     };
 
     const handleCancel = (status: MaterialStatus) => {
+        // Only allow cancelling if status is active
+        if (!status.active) {
+            toast({
+                title: "Already Cancelled",
+                description: "This status is already cancelled",
+                variant: "destructive",
+            });
+            return;
+        }
+        
         setStatusToCancel(status);
         setIsCancelItemDialogOpen(true);
     };
@@ -307,40 +337,32 @@ export default function MaterialStatusMasterPage() {
     const confirmCancelItem = async () => {
         if (!statusToCancel) return;
         
-        const isCancelled = cancelledStatuses.has(statusToCancel.matl_status_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
         try {
             await materialStatusAPI.update(statusToCancel.matl_status_id, {
-                active: newActiveStatus,
+                material_status: statusToCancel.material_status,
+                stock_movement: statusToCancel.stock_movement || '',
+                effect_in_stock: statusToCancel.effect_in_stock || '',
+                seq_no: statusToCancel.seq_no,
+                active: false, // Set to inactive
                 last_modified_user_id: "ADMIN",
+                location_id: statusToCancel.location_id || '',
             });
             
-            setCancelledStatuses(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(statusToCancel.matl_status_id);
-                    toast({
-                        title: "Restored",
-                        description: `Material status ${statusToCancel.material_status} has been restored`,
-                    });
-                } else {
-                    newSet.add(statusToCancel.matl_status_id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Material status ${statusToCancel.material_status} has been cancelled`,
-                    });
-                }
-                return newSet;
+            // Update local state by reloading from API
+            await loadStatuses();
+            
+            toast({
+                title: "Cancelled",
+                description: `Material status ${statusToCancel.material_status} has been cancelled`,
+                variant: "default",
             });
             
-            loadStatuses(); // Reload data from API
             setIsCancelItemDialogOpen(false);
             setStatusToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} material status`,
+                description: error.message || "Failed to cancel material status",
                 variant: "destructive",
             });
         }
@@ -354,11 +376,11 @@ export default function MaterialStatusMasterPage() {
     const confirmCancel = () => {
         if (cancelModalType === 'add') {
             setIsAddModalOpen(false);
-            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true });
+            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true, location_id: "" });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
             setSelectedStatus(null);
-            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true });
+            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true, location_id: "" });
         }
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
@@ -459,7 +481,7 @@ export default function MaterialStatusMasterPage() {
                                                             onChange={() => setFilterActive("inactive")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="ms-active-false" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
+                                                        <Label htmlFor="ms-active-false" className="text-sm font-normal cursor-pointer text-foreground">Cancelled</Label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -553,8 +575,9 @@ export default function MaterialStatusMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Material Status</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Stock Movement</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Effect In Stock</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Location Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Seq No.</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
                                                     <span>Last Modified</span>
@@ -573,26 +596,24 @@ export default function MaterialStatusMasterPage() {
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={9} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading material statuses...
                                                 </td>
                                             </tr>
                                         ) : filteredStatuses.length === 0 ? (
                                             <tr>
-                                                <td colSpan={9} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
                                                     No material statuses found
                                                 </td>
                                             </tr>
                                         ) : (
-                                            paginatedStatuses.map((status, index) => {
-                                                const isCancelled = cancelledStatuses.has(status.matl_status_id);
-                                                return (
+                                            paginatedStatuses.map((status, index) => (
                                                 <motion.tr
                                                     key={status.matl_status_id}
                                                     initial={{ opacity: 0, x: -20 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
+                                                    className={`hover:bg-muted/30 transition-colors ${!status.active ? 'opacity-50 bg-gray-50' : ''}`}
                                                 >
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-muted-foreground font-mono">{status.matl_status_id}</span>
@@ -607,21 +628,23 @@ export default function MaterialStatusMasterPage() {
                                                         <span className="text-sm text-foreground font-semibold">{status.effect_in_stock || "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.location_id || "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{status.seq_no}</span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-left">
+                                                    <td className="px-6 py-4">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                            status.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                            status.active 
+                                                                ? "bg-green-100 text-green-800" 
+                                                                : "bg-red-100 text-red-800"
                                                         }`}>
-                                                            {status.active ? "TRUE" : "FALSE"}
+                                                            {status.active ? "Active" : "Cancelled"}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         {status.last_modified_user_id ? (
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm font-mono text-foreground">{status.last_modified_user_id}</span>
-                                                                <span className="text-xs text-muted-foreground">{status.last_modified_user_id}</span>
-                                                            </div>
+                                                            <span className="text-sm font-mono text-foreground">{status.last_modified_user_id}</span>
                                                         ) : (
                                                             <span className="text-sm text-foreground">-</span>
                                                         )}
@@ -642,8 +665,11 @@ export default function MaterialStatusMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleEdit(status);
                                                                 }}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                                disabled={isCancelled}
+                                                                className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${
+                                                                    !status.active ? 'opacity-50 cursor-not-allowed' : ''
+                                                                }`}
+                                                                disabled={!status.active}
+                                                                title={!status.active ? "Cannot edit cancelled statuses" : "Edit status"}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -654,16 +680,20 @@ export default function MaterialStatusMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleCancel(status);
                                                                 }}
-                                                                className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={isCancelled ? "Restore status" : "Cancel status"}
+                                                                className={`${
+                                                                    status.active 
+                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
+                                                                        : 'opacity-50 cursor-not-allowed'
+                                                                }`}
+                                                                disabled={!status.active}
+                                                                title={status.active ? "Cancel status" : "Already cancelled"}
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
                                                         </div>
                                                     </td>
                                                 </motion.tr>
-                                                );
-                                            })
+                                            ))
                                         )}
                                     </tbody>
                                 </table>
@@ -704,7 +734,7 @@ export default function MaterialStatusMasterPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsAddModalOpen(false)}
+                            onClick={() => handleCancelClick('add')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -716,7 +746,7 @@ export default function MaterialStatusMasterPage() {
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Add Material Status</h2>
                                     <button
-                                        onClick={() => setIsAddModalOpen(false)}
+                                        onClick={() => handleCancelClick('add')}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-6 h-6" />
@@ -782,6 +812,19 @@ export default function MaterialStatusMasterPage() {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Location Id <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="location_id"
+                                                value={formData.location_id}
+                                                onChange={handleInputChange}
+                                                required
+                                                maxLength={2}
+                                                placeholder="e.g. 01"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Seq No. <span className="text-red-500">*</span>
                                             </label>
                                             <Input
@@ -805,18 +848,9 @@ export default function MaterialStatusMasterPage() {
                                                         checked={formData.active === true}
                                                         onChange={() => setFormData({ ...formData, active: true })}
                                                         className="text-blue-600"
+                                                        disabled // Disable in add modal since it will always be active
                                                     />
-                                                    <span className="text-sm">Yes</span>
-                                                </label>
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input
-                                                        type="radio"
-                                                        name="active"
-                                                        checked={formData.active === false}
-                                                        onChange={() => setFormData({ ...formData, active: false })}
-                                                        className="text-blue-600"
-                                                    />
-                                                    <span className="text-sm">No</span>
+                                                    <span className="text-sm">Yes (default)</span>
                                                 </label>
                                             </div>
                                         </div>
@@ -832,14 +866,14 @@ export default function MaterialStatusMasterPage() {
             </AnimatePresence>
 
             <AnimatePresence>
-                {isEditModalOpen && (
+                {isEditModalOpen && selectedStatus?.active && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => setIsEditModalOpen(false)}
+                            onClick={() => handleCancelClick('edit')}
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -851,7 +885,7 @@ export default function MaterialStatusMasterPage() {
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Material Status</h2>
                                     <button
-                                        onClick={() => setIsEditModalOpen(false)}
+                                        onClick={() => handleCancelClick('edit')}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
                                     >
                                         <X className="w-6 h-6" />
@@ -915,6 +949,19 @@ export default function MaterialStatusMasterPage() {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Location Id <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="location_id"
+                                                value={formData.location_id}
+                                                onChange={handleInputChange}
+                                                required
+                                                maxLength={2}
+                                                disabled
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Seq No. <span className="text-red-500">*</span>
                                             </label>
                                             <Input
@@ -963,19 +1010,34 @@ export default function MaterialStatusMasterPage() {
                 )}
             </AnimatePresence>
 
+            {/* Cancel Confirmation Dialog (for modals) */}
+            <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to cancel? Any unsaved changes will be lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsCancelDialogOpen(false)}>
+                            No, Continue Editing
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Cancel Item Confirmation Dialog (for table actions) */}
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {statusToCancel && cancelledStatuses.has(statusToCancel.matl_status_id) 
-                                ? "Confirm Restore" 
-                                : "Confirm Cancel"}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {statusToCancel && cancelledStatuses.has(statusToCancel.matl_status_id)
-                                ? `Are you sure you want to restore material status "${statusToCancel.material_status}"?`
-                                : `Are you sure you want to cancel material status "${statusToCancel?.material_status}"? This action can be undone.`}
+                            Are you sure you want to cancel material status {statusToCancel?.material_status}? 
+                            This will make it inactive and it cannot be edited or used in the future.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -983,20 +1045,17 @@ export default function MaterialStatusMasterPage() {
                             setIsCancelItemDialogOpen(false);
                             setStatusToCancel(null);
                         }}>
-                            No, Keep Current Status
+                            No, Keep Active
                         </AlertDialogCancel>
                         <AlertDialogAction 
                             onClick={confirmCancelItem} 
-                            className={statusToCancel && cancelledStatuses.has(statusToCancel.matl_status_id) 
-                                ? "bg-green-600 hover:bg-green-700" 
-                                : "bg-red-600 hover:bg-red-700"}
+                            className="bg-red-600 hover:bg-red-700"
                         >
-                            Yes, {statusToCancel && cancelledStatuses.has(statusToCancel.matl_status_id) ? "Restore" : "Cancel"}
+                            Yes, Cancel Status
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-
         </div>
     );
 }

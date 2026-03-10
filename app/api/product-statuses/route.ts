@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
       active: body.active !== false,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
+      location_id: body.location_id || '',
     });
     await status.save();
     return NextResponse.json(status, { status: 201 });
