@@ -15,6 +15,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { coaChecklistAPI, materialAPI, materialCategoryAPI, uomAPI } from "@/services/api";
 
 interface Material {
+    gr_tolerance_percent?: number; 
     material_id: string;
     material_name: string;
     material_short_name: string;
@@ -108,6 +109,7 @@ export default function MaterialMasterPage() {
         lead_time_days_min: "",
         lead_time_days_max: "",
         shelf_life_in_months: "",
+        gr_tolerance_percent: "",
         qc_required: false,
         coa_checklist_id: "",
         material_image: "",
@@ -200,6 +202,7 @@ useEffect(() => {
                 lead_time_days_min: "",
                 lead_time_days_max: "",
                 shelf_life_in_months: "",
+                gr_tolerance_percent: "",
                 qc_required: false,
                 coa_checklist_id: "",
                 material_image: "",
@@ -302,6 +305,7 @@ useEffect(() => {
                 lead_time_days_min: formData.lead_time_days_min ? Number(formData.lead_time_days_min) : undefined,
                 lead_time_days_max: formData.lead_time_days_max ? Number(formData.lead_time_days_max) : undefined,
                 shelf_life_in_months: formData.shelf_life_in_months ? Number(formData.shelf_life_in_months) : undefined,
+                gr_tolerance_percent: formData.gr_tolerance_percent ? Number(formData.gr_tolerance_percent) : undefined,
                 qc_required: formData.qc_required,
                 coa_checklist_id: formData.coa_checklist_id || undefined,
                 material_image: formData.material_image || undefined,
@@ -330,6 +334,7 @@ useEffect(() => {
                 lead_time_days_min: "",
                 lead_time_days_max: "",
                 shelf_life_in_months: "",
+                gr_tolerance_percent: "",
                 qc_required: false,
                 coa_checklist_id: "",
                 material_image: "",
@@ -364,6 +369,7 @@ useEffect(() => {
             lead_time_days_min: material.lead_time_days_min?.toString() || "",
             lead_time_days_max: material.lead_time_days_max?.toString() || "",
             shelf_life_in_months: material.shelf_life_in_months?.toString() || "",
+            gr_tolerance_percent: material.gr_tolerance_percent?.toString() || "",
             qc_required: material.qc_required || false,
             coa_checklist_id: material.coa_checklist_id || "",
             material_image: material.material_image || "",
@@ -393,6 +399,7 @@ useEffect(() => {
                 lead_time_days_min: formData.lead_time_days_min ? Number(formData.lead_time_days_min) : undefined,
                 lead_time_days_max: formData.lead_time_days_max ? Number(formData.lead_time_days_max) : undefined,
                 shelf_life_in_months: formData.shelf_life_in_months ? Number(formData.shelf_life_in_months) : undefined,
+                gr_tolerance_percent: formData.gr_tolerance_percent ? Number(formData.gr_tolerance_percent) : undefined,
                 qc_required: formData.qc_required,
                 coa_checklist_id: formData.coa_checklist_id || undefined,
                 material_image: formData.material_image || undefined,
@@ -729,6 +736,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Lead Time (Min Days)</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Lead Time (Max Days)</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Shelf Life (Months)</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">GR Tolerance per %</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">QC Required</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">COA Checklist ID</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Image</th>
@@ -816,6 +824,9 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
 
         <td className="px-4 py-3 text-sm">
           {material.shelf_life_in_months ?? "-"}
+        </td>
+          <td className="px-4 py-3 text-sm">
+          {material.gr_tolerance_percent ?? "-"}
         </td>
 
         {/* QC REQUIRED */}
@@ -1179,6 +1190,20 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                                 type="number"
                                                 name="shelf_life_in_months"
                                                 value={formData.shelf_life_in_months}
+                                                onChange={handleInputChange}
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* GR Tolerance per % */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                GR Tolerance per %
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="gr_tolerance_percent"
+                                                value={formData.gr_tolerance_percent}
                                                 onChange={handleInputChange}
                                                 placeholder="0"
                                             />
@@ -1579,6 +1604,19 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                                 type="number"
                                                 name="shelf_life_in_months"
                                                 value={formData.shelf_life_in_months}
+                                                onChange={handleInputChange}
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                        {/* GR Tolerance per % */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                GR Tolerance per %
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="gr_tolerance_percent"
+                                                value={formData.gr_tolerance_percent}
                                                 onChange={handleInputChange}
                                                 placeholder="0"
                                             />

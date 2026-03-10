@@ -14,6 +14,7 @@ export interface IMaterialMaster extends Document {
   lead_time_days_min?: number; // N(3) - can be null for "??"
   lead_time_days_max?: number; // N(3) - can be null for "??"
   shelf_life_in_months?: number; // N(3)
+  gr_tolerance_percent?: number; // N(3) - Goods Receipt tolerance percentage
   qc_required?: boolean; // Boolean
   coa_checklist_id?: string; // Char(10)
   material_image?: string; // Image URL or base64
@@ -99,6 +100,12 @@ const MaterialMasterSchema: Schema = new Schema({
     max: 999,
   },
   shelf_life_in_months: {
+    type: Number,
+    required: false,
+    min: 0,
+    max: 999,
+  },
+    gr_tolerance_percent: {
     type: Number,
     required: false,
     min: 0,
