@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import {
     Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X,
-    Truck, FileText, Settings, LayoutList, ChevronDown, ChevronUp, Trash2
+    Truck, FileText, Settings, LayoutList, ChevronDown, ChevronUp, Trash2, MessageSquare
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -300,10 +300,11 @@ export default function GoodsReceiptHeaderPage() {
         return matchSearch && matchStatus;
     });
 
-    const totalPages     = Math.ceil(filteredItems.length / rowsPerPage);
+    const sortedItems    = [...filteredItems].sort((a, b) => new Date(b.material_doc_date).getTime() - new Date(a.material_doc_date).getTime());
+    const totalPages     = Math.ceil(sortedItems.length / rowsPerPage);
     const startIndex     = (currentPage - 1) * rowsPerPage;
     const endIndex       = startIndex + rowsPerPage;
-    const paginatedItems = filteredItems.slice(startIndex, endIndex);
+    const paginatedItems = sortedItems.slice(startIndex, endIndex);
 
     // ── Validation ───────────────────────────────────────────────────────────
     const validateForm = (data: typeof emptyForm, isEdit = false): Record<string, string> => {
@@ -737,8 +738,18 @@ export default function GoodsReceiptHeaderPage() {
 
                     {/* 1. DOCUMENT DETAILS */}
                     <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm">
-                        <div className="flex items-center gap-2 text-blue-700 font-bold text-[11px] mb-4 tracking-widest uppercase">
-                            <FileText size={14} /><span>Document Details</span>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2 text-blue-700 font-bold text-[11px] tracking-widest uppercase">
+                                <FileText size={14} /><span>Document Details</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">Doc No.:</span>
+                                <span className="text-[10px] font-mono text-slate-600">
+                                    {disabled && formData.material_doc_no
+                                        ? formData.material_doc_no
+                                        : <span className="italic opacity-50">M{String(new Date().getFullYear()).slice(-2)}XXXXX</span>}
+                                </span>
+                            </div>
                         </div>
                         <div className="space-y-3">
                             <div>
@@ -746,30 +757,23 @@ export default function GoodsReceiptHeaderPage() {
                                 <select name="material_status_id" value={formData.material_status_id} onChange={handleInputChange}
                                     className="w-full h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none">
                                     <option value="">Select</option>
-                                    {statuses.map(r => <option key={r.matl_status_id} value={r.matl_status_id}>{r.matl_status_id}</option>)}
+                                    {statuses.map(r => <option key={r.matl_status_id} value={r.matl_status_id}>{r.matl_status_id} -{ r.material_status}</option>)}
                                 </select>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Doc No.</label>
-                                    <div className="h-9 px-2 flex items-center border border-slate-200 rounded-md bg-slate-50 text-[10px] font-mono text-slate-500 truncate">
-                                        {disabled && formData.material_doc_no
-                                            ? formData.material_doc_no
-                                            : <span className="italic opacity-50">M{String(new Date().getFullYear()).slice(-2)}XXXXX</span>}
-                                    </div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Date *</label>
+                                    <Input type="date" name="material_doc_date" value={formData.material_doc_date as string}
+                                        onChange={handleInputChange} min={minDate} max={today}
+                                        className={`h-9 text-xs border-slate-200 ${fieldErrors.material_doc_date ? "border-red-500 bg-red-50" : ""}`} />
+                                    {fieldErrors.material_doc_date && <p className="text-red-500 text-[10px] mt-0.5">{fieldErrors.material_doc_date}</p>}
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Date / Time *</label>
-                                    <div className="space-y-1">
-                                        <Input type="date" name="material_doc_date" value={formData.material_doc_date as string}
-                                            onChange={handleInputChange} min={minDate} max={today}
-                                            className={`h-9 text-xs border-slate-200 ${fieldErrors.material_doc_date ? "border-red-500 bg-red-50" : ""}`} />
-                                        <Input type="time" name="material_doc_time" value={formData.material_doc_time}
-                                            onChange={handleInputChange}
-                                            max={formData.material_doc_date === today ? nowTimeStr() : undefined}
-                                            className={`h-9 text-xs border-slate-200 ${fieldErrors.material_doc_time ? "border-red-500 bg-red-50" : ""}`} />
-                                    </div>
-                                    {fieldErrors.material_doc_date && <p className="text-red-500 text-[10px] mt-0.5">{fieldErrors.material_doc_date}</p>}
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Time *</label>
+                                    <Input type="time" name="material_doc_time" value={formData.material_doc_time}
+                                        onChange={handleInputChange}
+                                        max={formData.material_doc_date === today ? nowTimeStr() : undefined}
+                                        className={`h-9 text-xs border-slate-200 ${fieldErrors.material_doc_time ? "border-red-500 bg-red-50" : ""}`} />
                                     {fieldErrors.material_doc_time && <p className="text-red-500 text-[10px] mt-0.5">{fieldErrors.material_doc_time}</p>}
                                 </div>
                             </div>
@@ -821,7 +825,7 @@ export default function GoodsReceiptHeaderPage() {
                                     <select name="received_by_emp_id" value={formData.received_by_emp_id} onChange={handleInputChange}
                                         className="w-full h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none">
                                         <option value="">Select</option>
-                                        {records.map(r => <option key={r.id} value={r.empId}>{r.empId} ({r.emp_name})</option>)}
+                                        {records.map(r => <option key={r.id} value={r.empId}>{r.empId} {r.emp_name}</option>)}
                                     </select>
                                 </div>
                                 <div>
@@ -829,7 +833,7 @@ export default function GoodsReceiptHeaderPage() {
                                     <select name="checked_by_emp_id" value={formData.checked_by_emp_id} onChange={handleInputChange}
                                         className="w-full h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none">
                                         <option value="">Select</option>
-                                        {records.map(r => <option key={r.id} value={r.empId}>{r.empId} ({r.emp_name})</option>)}
+                                        {records.map(r => <option key={r.id} value={r.empId}>{r.empId} {r.emp_name}</option>)}
                                     </select>
                                 </div>
                             </div>
@@ -839,23 +843,22 @@ export default function GoodsReceiptHeaderPage() {
                                     <span className="w-2 h-2 rounded-full bg-current" />
                                     {formData.status === "A" ? "ACTIVE" : "DRAFT MODE"}
                                 </div>
-                                <select name="status" value={formData.status} onChange={handleInputChange}
-                                    className="mt-1 w-full h-8 px-2 border border-slate-200 rounded text-xs bg-white focus:ring-1 focus:ring-blue-500 outline-none">
-                                    <option value="D">D — Draft</option>
-                                    <option value="A">A — Active</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Remarks *</label>
-                                <textarea name="remarks" value={formData.remarks} onChange={handleInputChange}
-                                    placeholder="Enter remarks..." maxLength={100} rows={2}
-                                    className={`w-full px-2 py-1.5 border rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none ${fieldErrors.remarks ? "border-red-500 bg-red-50" : "border-slate-200"}`} />
-                                <div className="flex items-center justify-between mt-0.5">
-                                    {fieldErrors.remarks ? <p className="text-red-500 text-[10px]">{fieldErrors.remarks}</p> : <span />}
-                                    <span className="text-[10px] text-slate-400 ml-auto">{formData.remarks.length}/100</span>
-                                </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* ── REMARKS ── */}
+                <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm">
+                    <div className="flex items-center gap-2 text-blue-700 font-bold text-[11px] mb-3 tracking-widest uppercase">
+                        <MessageSquare size={14} /><span>Remarks</span>
+                    </div>
+                    <textarea name="remarks" value={formData.remarks} onChange={handleInputChange}
+                        placeholder="Enter remarks..." maxLength={100} rows={2}
+                        className={`w-full px-2 py-1.5 border rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none ${fieldErrors.remarks ? "border-red-500 bg-red-50" : "border-slate-200"}`} />
+                    <div className="flex items-center justify-between mt-0.5">
+                        {fieldErrors.remarks ? <p className="text-red-500 text-[10px]">{fieldErrors.remarks}</p> : <span />}
+                        <span className="text-[10px] text-slate-400 ml-auto">{formData.remarks.length}/100</span>
                     </div>
                 </div>
 
@@ -870,7 +873,7 @@ export default function GoodsReceiptHeaderPage() {
                             className="flex items-center gap-1 text-blue-600 text-xs font-bold hover:text-blue-800 transition-colors">
                             <Plus size={13} /> Add Material Row
                         </button>
-                    </div>
+                    </div> 
 
                     {/* Material column headers */}
                     <div className="grid items-center px-4 py-2 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider"
@@ -881,8 +884,8 @@ export default function GoodsReceiptHeaderPage() {
                         <div className="text-center">UOM</div>
                         <div className="text-center">Pockets</div>
                         <div className="text-center">Rolls</div>
-                        <div className="text-center text-violet-500">Exist. Stock Qty</div>
-                        <div className="text-center text-violet-500">Exist. Tot Rolls</div>
+                        <div className="text-center ">Exist. Stock Qty</div>
+                        <div className="text-center ">Exist. Tot Rolls</div>
                         <div className="text-center">Del</div>
                     </div>
 
@@ -905,7 +908,7 @@ export default function GoodsReceiptHeaderPage() {
                                         onChange={e => handleMaterialSelect(row.id, e.target.value)}
                                         className="w-full h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none">
                                         <option value="">Select Material</option>
-                                        {materials.map(r => <option key={r.material_id} value={r.material_id}>{r.material_id}</option>)}
+                                        {materials.map(r => <option key={r.material_id} value={r.material_id}>{r.material_id} - {r.material_name}</option>)}
                                     </select>
                                     {row.material_id && (
                                         <p className="text-[9px] text-slate-400 truncate mt-0.5 px-1">
@@ -914,8 +917,12 @@ export default function GoodsReceiptHeaderPage() {
                                     )}
                                 </div>
                                 <Input value={row.invoice_total_nett_qty}
-                                    onChange={e => updateMaterialField(row.id, "invoice_total_nett_qty", e.target.value)}
-                                    placeholder="0.000" type="number" step="0.001" min="0"
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        if (/^\d{0,3}(\.\d{0,3})?$/.test(val) && (val === "" || parseFloat(val) <= 999.999))
+                                            updateMaterialField(row.id, "invoice_total_nett_qty", val);
+                                    }}
+                                    placeholder="0.000" type="text" inputMode="decimal"
                                     className="h-9 text-xs border-slate-200 text-right" />
                                 <select name="uom" value={row.uom}
                                     onChange={e => updateMaterialField(row.id, "uom", e.target.value)}
@@ -924,17 +931,25 @@ export default function GoodsReceiptHeaderPage() {
                                     {materials.map(u => <option key={u.uom} value={u.uom}>{u.uom}</option>)}
                                 </select>
                                 <Input value={row.total_pockets}
-                                    onChange={e => updateMaterialField(row.id, "total_pockets", e.target.value)}
-                                    placeholder="0" type="number" min="0"
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        if (/^\d{0,3}$/.test(val) && (val === "" || parseInt(val) <= 999))
+                                            updateMaterialField(row.id, "total_pockets", val);
+                                    }}
+                                    placeholder="0" type="text" inputMode="numeric"
                                     className="h-9 text-xs border-slate-200 text-center" />
                                 <Input value={row.total_rolls}
-                                    onChange={e => updateMaterialField(row.id, "total_rolls", e.target.value)}
-                                    placeholder="0" type="number" min="0"
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        if (/^\d{0,3}$/.test(val) && (val === "" || parseInt(val) <= 999))
+                                            updateMaterialField(row.id, "total_rolls", val);
+                                    }}
+                                    placeholder="0" type="text" inputMode="numeric"
                                     className="h-9 text-xs border-slate-200 text-center" />
-                                <div className="h-9 flex items-center justify-center border border-violet-100 rounded-md bg-violet-50 text-xs text-violet-500 font-semibold select-none">
+                                <div className="h-9 flex items-center justify-center border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-400 select-none">
                                     {row.existing_stock_qty || "—"}
                                 </div>
-                                <div className="h-9 flex items-center justify-center border border-violet-100 rounded-md bg-violet-50 text-xs text-violet-500 font-semibold select-none">
+                                <div className="h-9 flex items-center justify-center border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-400 select-none">
                                     {row.existing_total_rolls || "—"}
                                 </div>
                                 <button type="button" onClick={() => removeMaterialRow(row.id)}
@@ -978,8 +993,13 @@ export default function GoodsReceiptHeaderPage() {
                                                 placeholder="PKT-001" maxLength={10} className="h-8 text-xs border-slate-200 px-2" />
                                             <Input value={unit.roll_no} onChange={e => updateUnit(row.id, unit.sno, "roll_no", e.target.value)}
                                                 placeholder="ROLL-01" maxLength={10} className="h-8 text-xs border-slate-200 px-2" />
-                                            <Input value={unit.nett_qty} onChange={e => updateUnit(row.id, unit.sno, "nett_qty", e.target.value)}
-                                                placeholder="0.000" type="number" step="0.001" min="0"
+                                            <Input value={unit.nett_qty}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    if (/^\d{0,3}(\.\d{0,3})?$/.test(val) && (val === "" || parseFloat(val) <= 999.999))
+                                                        updateUnit(row.id, unit.sno, "nett_qty", val);
+                                                }}
+                                                placeholder="0.000" type="text" inputMode="decimal"
                                                 className="h-8 text-xs border-slate-200 px-2 text-right font-semibold text-blue-600" />
                                             <select name="uom" value={unit.uom}
                                                 onChange={e => updateUnit(row.id, unit.sno, "uom", e.target.value.toUpperCase())}
@@ -987,8 +1007,13 @@ export default function GoodsReceiptHeaderPage() {
                                                 <option value="">—</option>
                                                 {materials.map(u => <option key={u.uom} value={u.uom}>{u.uom}</option>)}
                                             </select>
-                                            <Input value={unit.actual_qty} onChange={e => updateUnit(row.id, unit.sno, "actual_qty", e.target.value)}
-                                                placeholder="0.000" type="number" step="0.001" min="0"
+                                            <Input value={unit.actual_qty}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    if (/^\d{0,3}(\.\d{0,3})?$/.test(val) && (val === "" || parseFloat(val) <= 999.999))
+                                                        updateUnit(row.id, unit.sno, "actual_qty", val);
+                                                }}
+                                                placeholder="0.000" type="text" inputMode="decimal"
                                                 className="h-8 text-xs border-slate-200 px-2 text-right" />
                                             <div className="h-8 flex items-center justify-end pr-2 border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-400 select-none">
                                                 {unit.consumed_qty}
@@ -1061,9 +1086,7 @@ export default function GoodsReceiptHeaderPage() {
                             <Button type="button"
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-5 flex items-center gap-2"
                                 disabled={isSubmittingRef.current}
-                                // onClick={(e) => isEdit ? handleEditSubmit(e as any) : submitWithStatus("A", e)}>
-                                   onClick={(e) => isEdit ? handleEditSubmit(e as any) : submitWithStatus(formData.status as "D" | "A", e)}>
-
+                                onClick={(e) => isEdit ? handleEditSubmit(e as any) : submitWithStatus("A", e)}>
                                 {isEdit ? "Update GR Header" : (
                                     <><span className="w-4 h-4 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold">✓</span> Submit for Review</>
                                 )}
@@ -1084,12 +1107,12 @@ export default function GoodsReceiptHeaderPage() {
                     <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mb-8">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h1 className="text-3xl font-bold text-foreground mb-2">Goods Receipt Header</h1>
-                                <p className="text-muted-foreground">Manage Goods Receipt Header records</p>
+                                <h1 className="text-3xl font-bold text-foreground mb-2">Goods Receipt</h1>
+                                <p className="text-muted-foreground">Manage Goods Receipt records</p>
                             </div>
                             <Button onClick={() => setIsAddModalOpen(true)}
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all">
-                                <Plus className="w-5 h-5" /> Add New GR Header
+                                <Plus className="w-5 h-5" /> Add New GR
                             </Button>
                         </div>
                     </motion.div>
