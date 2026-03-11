@@ -8,8 +8,9 @@ export const dynamic = 'force-dynamic';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/goods-receipt-units
-//   ?material_doc_no=M2500001              → all units for a header
-//   ?material_doc_no=M2500001&material_id=MAT01  → units for one detail row
+//   ?material_doc_no=M2500001                        → all units for a header
+//   ?material_doc_no=M2500001&material_id=MAT01      → units for one detail row
+//   ?material_id=MAT01&available=true                → status=A, balance_qty>0, sorted roll_no DESC
 // ─────────────────────────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
     try {
@@ -17,14 +18,21 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const docNo      = searchParams.get('material_doc_no');
         const materialId = searchParams.get('material_id');
+        const available  = searchParams.get('available');
 
-        const filter: Record<string, string> = {};
+        const filter: Record<string, any> = {};
         if (docNo)      filter.material_doc_no = docNo.toUpperCase();
         if (materialId) filter.material_id     = materialId.toUpperCase();
+        if (available === 'true') {
+            filter.status      = 'A';
+            filter.balance_qty = { $gt: 0 };
+        }
 
-        const units = await GoodsReceiptUnits.find(filter)
-            .lean()
-            .sort({ material_doc_no: 1, material_id: 1, sno: 1 });
+        const sortOrder = available === 'true'
+            ? { roll_no: -1 }
+            : { material_doc_no: 1, material_id: 1, sno: 1 };
+
+        const units = await GoodsReceiptUnits.find(filter).lean().sort(sortOrder as any);
 
         return NextResponse.json(units);
     } catch (error: any) {

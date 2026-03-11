@@ -5,17 +5,21 @@ import TransactionTable from '@/server/models/TransactionTable';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// GET /api/transactions - Get all transactions
-export async function GET() {
+// GET /api/transactions - Get all transactions (optionally filter by current_batch_status_id)
+export async function GET(request: NextRequest) {
   try {
     await ensureConnection();
-    const transactions = await TransactionTable.find()
+    const { searchParams } = new URL(request.url);
+    const statusId = searchParams.get('current_batch_status_id');
+
+    const query = statusId ? { current_batch_status_id: statusId } : {};
+    const transactions = await TransactionTable.find(query)
       .lean()
       .sort({ batch_no: 1 });
-    
+
     return NextResponse.json(transactions, {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        'Cache-Control': 'no-store',
       },
     });
   } catch (error: any) {

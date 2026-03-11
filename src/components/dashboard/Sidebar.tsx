@@ -27,7 +27,8 @@ import {
   CalendarOff,
   Ruler,
   TableProperties,
-  ClipboardList
+  ClipboardList,
+  Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -55,7 +56,7 @@ const navSections: NavSection[] = [
       { icon: Package, label: "Product Master", href: "/product-master" },
       { icon: Layers, label: "Material Master", href: "/material-master" },
       { icon: Ruler, label: "UOM Master", href: "/uom-master" },
-      { icon: Factory, label: "Production Capacity Master", href: "/production-capacity" },
+      { icon: Factory, label: "Machine Master", href: "/production-capacity" },
       { icon: Box, label: "Pack Size Master", href: "/pack-size-master" },
       { icon: Truck, label: "Carton Type Master", href: "/carton-type-master" },
       { icon: Archive, label: "Carton Capacity Master", href: "/carton-capacity-master" },
@@ -78,6 +79,11 @@ const navSections: NavSection[] = [
       { icon: Award, label: "Employee Grade Master", href: "/employee-grade-master" },
       { icon: CalendarDays, label: "Holidays Master", href: "/holidays-master" },
       { icon: CalendarOff, label: "Weekly Off Master", href: "/weekly-off-master" },
+      { icon: CheckCircle2, label: "Batch Status Master", href: "/batch-status-master" },
+      { icon: ClipboardList, label: "Machine Stop Reason Master", href: "/machine-stop-reason-master" },
+      { icon: ClipboardList, label: "Machine Event Type Master", href: "/machine-event-type-master" },
+
+
     ],
   },
   {
@@ -94,6 +100,7 @@ const navSections: NavSection[] = [
     title: "TRANSACTIONS",
     items: [
       { icon: TableProperties, label: "Transaction Table", href: "/transaction-table" },
+      { icon: Activity, label: "Machine Event", href: "/machine-event" },
     ],
   },
       {
