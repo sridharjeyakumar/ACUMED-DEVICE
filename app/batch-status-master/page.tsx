@@ -825,7 +825,7 @@ export default function BatchStatusMasterPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to cancel batch status "{statusToCancel?.batch_status_name}"?
+                            Are you sure you want to cancel batch status {statusToCancel?.batch_status_name}?
                             This will make it inactive and it cannot be edited or used in the future.
                         </AlertDialogDescription>
                     </AlertDialogHeader>

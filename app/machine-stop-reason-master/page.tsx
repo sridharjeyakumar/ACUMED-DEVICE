@@ -812,7 +812,7 @@ export default function MachineStopReasonMasterPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to cancel machine stop reason "{reasonToCancel?.reason_name}"?
+                            Are you sure you want to cancel machine stop reason {reasonToCancel?.reason_name}?
                             This will make it inactive and it cannot be edited or used in the future.
                         </AlertDialogDescription>
                     </AlertDialogHeader>

@@ -766,7 +766,7 @@ export default function MachineEventTypeMasterPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to cancel machine event type "{typeToCancel?.machine_event_type_name}"?
+                            Are you sure you want to cancel machine event type {typeToCancel?.machine_event_type_name}?
                             This will make it inactive and it cannot be edited or used in the future.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
