@@ -135,6 +135,80 @@ export const productStatusAPI = {
   delete: (id: string) => fetchAPI(`/product-statuses/${id}`, { method: 'DELETE' }),
 };
 
+// Machine Event API
+export const machineEventAPI = {
+  getAll: (params?: { machine_id?: string; batch_no?: string }) => {
+    const qs = params
+      ? Object.entries(params)
+          .filter(([, v]) => v)
+          .map(([k, v]) => `${k}=${encodeURIComponent(v!)}`)
+          .join('&')
+      : '';
+    return fetchAPI(`/machine-events${qs ? `?${qs}` : ''}`);
+  },
+  getById: (id: number) => fetchAPI(`/machine-events/${id}`),
+  create: (data: any) => fetchAPI('/machine-events', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => fetchAPI(`/machine-events/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => fetchAPI(`/machine-events/${id}`, { method: 'DELETE' }),
+};
+
+// Product BOM materials by product_id
+export const productBomAPI = {
+  getByProductId: (productId: string) =>
+    fetchAPI(`/product-bom?product_id=${encodeURIComponent(productId)}`),
+};
+
+// Available rolls from GoodsReceiptUnits (status=A, balance_qty>0, sorted roll_no DESC)
+export const availableRollsAPI = {
+  getByMaterialId: (materialId: string) =>
+    fetchAPI(`/goods-receipt-units?material_id=${encodeURIComponent(materialId)}&available=true`),
+};
+
+// MachineEventMaterial by machine_event_id
+export const machineEventMaterialAPI = {
+  getByEventId: (machineEventId: number) =>
+    fetchAPI(`/machine-event-materials?machine_event_id=${machineEventId}`),
+  getOpenRecord: (machineId: string, openEventTypeId: string) =>
+    fetchAPI(`/machine-event-materials?machine_id=${encodeURIComponent(machineId)}&open_event_type_id=${encodeURIComponent(openEventTypeId)}`),
+};
+
+// BatchMaterialSummary by batch_no + optional material_id
+export const batchMaterialSummaryAPI = {
+  getByBatchAndMaterial: (batchNo: string, materialId?: string) => {
+    const params = new URLSearchParams({ batch_no: batchNo });
+    if (materialId) params.set('material_id', materialId);
+    return fetchAPI(`/batch-material-summary?${params.toString()}`);
+  },
+};
+
+
+// Machine Event Type Master API
+export const machineEventTypeAPI = {
+  getAll: () => fetchAPI('/machine-event-types'),
+  getById: (id: string) => fetchAPI(`/machine-event-types/${id}`),
+  create: (data: any) => fetchAPI('/machine-event-types', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/machine-event-types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/machine-event-types/${id}`, { method: 'DELETE' }),
+};
+
+// Machine Stop Reason Master API
+export const machineStopReasonAPI = {
+  getAll: () => fetchAPI('/machine-stop-reasons'),
+  getById: (id: string) => fetchAPI(`/machine-stop-reasons/${id}`),
+  create: (data: any) => fetchAPI('/machine-stop-reasons', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/machine-stop-reasons/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/machine-stop-reasons/${id}`, { method: 'DELETE' }),
+};
+
+// Batch Status Master API
+export const batchStatusAPI = {
+  getAll: () => fetchAPI('/batch-statuses'),
+  getById: (id: string) => fetchAPI(`/batch-statuses/${id}`),
+  create: (data: any) => fetchAPI('/batch-statuses', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/batch-statuses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/batch-statuses/${id}`, { method: 'DELETE' }),
+};
+
 // Material Status Master API
 export const materialStatusAPI = {
   getAll: () => fetchAPI('/material-statuses'),

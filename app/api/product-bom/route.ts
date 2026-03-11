@@ -6,12 +6,15 @@ import { safeNumber } from '@/utils/numberUtils';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// GET /api/product-bom - Get all product BOMs
-export async function GET() {
+// GET /api/product-bom - Get all product BOMs, or filter by ?product_id=xxx
+export async function GET(request: NextRequest) {
   try {
     await ensureConnection();
-    // Use lean() for faster queries
-    const productBOMs = await ProductBOMMaster.find().lean().sort({ bom_id: 1, material_id: 1 });
+    const { searchParams } = new URL(request.url);
+    const productId = searchParams.get('product_id');
+    const filter: Record<string, any> = { active: true };
+    if (productId) filter.product_id = productId.toUpperCase();
+    const productBOMs = await ProductBOMMaster.find(filter).lean().sort({ bom_id: 1, material_id: 1 });
     return NextResponse.json(productBOMs, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
