@@ -28,7 +28,8 @@ import {
   Ruler,
   TableProperties,
   ClipboardList,
-  Activity
+  Activity,
+  MapPin
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -73,6 +74,7 @@ const navSections: NavSection[] = [
       { icon: Building2, label: "Company Master", href: "/company-master" },
       { icon: PackageOpen, label: "Product Category Master", href: "/product-category-master" },
       { icon: Layers, label: "Material Category Master", href: "/material-category-master" },
+      { icon: MapPin, label: "Location Master", href: "/location-master" },
       { icon: CheckCircle2, label: "Product Status Master", href: "/product-status-master" },
       { icon: Package, label: "Material Status Master", href: "/material-status-master" },
       { icon: Factory, label: "Department Master", href: "/department-master" },
@@ -101,12 +103,8 @@ const navSections: NavSection[] = [
     items: [
       { icon: TableProperties, label: "Transaction Table", href: "/transaction-table" },
       { icon: Activity, label: "Machine Event", href: "/machine-event" },
-    ],
-  },
-      {
-    title: "GOODS RECEIPT",
-    items: [
       { icon: TableProperties, label: "Goods Receipt", href: "/goods-receipt" },
+
     ],
   },
 ];

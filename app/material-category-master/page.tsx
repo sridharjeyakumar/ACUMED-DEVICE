@@ -29,7 +29,8 @@ interface MaterialCategory {
     material_category_name: string; // Char(25)
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
-    active: boolean; // ADD THIS LINE
+    unit_split: boolean;
+    active: boolean;
 }
 
 // Helper function to format dates consistently (prevents hydration errors)
@@ -63,12 +64,13 @@ export default function MaterialCategoryMasterPage() {
     const [formData, setFormData] = useState({
         material_category_id: "",
         material_category_name: "",
+        unit_split: false,
     });
 
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({ material_category_id: "", material_category_name: "" });
+            setFormData({ material_category_id: "", material_category_name: "", unit_split: false });
         }
     }, [isAddModalOpen]);
 
@@ -132,8 +134,9 @@ export default function MaterialCategoryMasterPage() {
             await materialCategoryAPI.create({
                 material_category_id: formData.material_category_id,
                 material_category_name: formData.material_category_name,
+                unit_split: formData.unit_split,
                 last_modified_user_id: "ADMIN",
-                active: true, // ADD THIS LINE
+                active: true,
             });
             toast({
                 title: "Success",
@@ -143,6 +146,7 @@ export default function MaterialCategoryMasterPage() {
             setFormData({
                 material_category_id: "",
                 material_category_name: "",
+                unit_split: false,
             });
             loadCategories();
         } catch (error: any) {
@@ -171,6 +175,7 @@ export default function MaterialCategoryMasterPage() {
         setFormData({
             material_category_id: category.material_category_id,
             material_category_name: category.material_category_name,
+            unit_split: category.unit_split ?? false,
         });
         setIsEditModalOpen(true);
     };
@@ -200,8 +205,9 @@ export default function MaterialCategoryMasterPage() {
         try {
             await materialCategoryAPI.update(selectedCategory.material_category_id, {
                 material_category_name: formData.material_category_name,
+                unit_split: formData.unit_split,
                 last_modified_user_id: "ADMIN",
-                active: selectedCategory.active, // ADD THIS LINE
+                active: selectedCategory.active,
             });
             
             // Store last action for undo
@@ -221,6 +227,7 @@ export default function MaterialCategoryMasterPage() {
             setFormData({
                 material_category_id: "",
                 material_category_name: "",
+                unit_split: false,
             });
             loadCategories();
         } catch (error: any) {
@@ -242,8 +249,9 @@ export default function MaterialCategoryMasterPage() {
                 // Restore previous data
                 await materialCategoryAPI.update(lastAction.data.material_category_id, {
                     material_category_name: lastAction.data.material_category_name,
+                    unit_split: lastAction.data.unit_split,
                     last_modified_user_id: "ADMIN",
-                    active: lastAction.data.active, // ADD THIS LINE
+                    active: lastAction.data.active,
                 });
                 toast({
                     title: "Undone",
@@ -455,7 +463,7 @@ export default function MaterialCategoryMasterPage() {
                                                 </div>
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Material Category Name</th>
-                                          
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Unit Split</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
                                                     <span>Last Modified</span>
@@ -479,13 +487,13 @@ export default function MaterialCategoryMasterPage() {
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading material categories...
                                                 </td>
                                             </tr>
                                         ) : filteredCategories.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
                                                     No categories found
                                                 </td>
                                             </tr>
@@ -506,7 +514,13 @@ export default function MaterialCategoryMasterPage() {
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{category.material_category_name}</span>
                                                     </td>
-                                                  
+                                                    <td className="px-6 py-4">
+                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                                            category.unit_split ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+                                                        }`}>
+                                                            {category.unit_split ? 'True' : 'False'}
+                                                        </span>
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         {category.last_modified_user_id ? (
                                                             <span className="text-sm font-mono text-foreground">{category.last_modified_user_id}</span>
@@ -655,6 +669,18 @@ export default function MaterialCategoryMasterPage() {
                                             maxLength={25}
                                         />
                                     </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="add-unit-split"
+                                            checked={formData.unit_split}
+                                            onChange={(e) => setFormData({ ...formData, unit_split: e.target.checked })}
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="add-unit-split" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Unit Split
+                                        </label>
+                                    </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -723,6 +749,18 @@ export default function MaterialCategoryMasterPage() {
                                             required
                                             maxLength={25}
                                         />
+                                    </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="edit-unit-split"
+                                            checked={formData.unit_split}
+                                            onChange={(e) => setFormData({ ...formData, unit_split: e.target.checked })}
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="edit-unit-split" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Unit Split
+                                        </label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button

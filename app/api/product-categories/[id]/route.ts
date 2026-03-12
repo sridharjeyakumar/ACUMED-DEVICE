@@ -70,6 +70,7 @@ export async function PUT(
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
     updateData.active = body.active !== undefined ? body.active : true;
+    updateData.unit_split = body.unit_split !== undefined ? body.unit_split : false;
     
     const category = await ProductCategoryMaster.findOneAndUpdate(
       { product_category_id: id },

@@ -5,14 +5,14 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Package } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Upload, ImageIcon } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { productCategoryAPI } from "@/services/api";
+import { locationAPI } from "@/services/api";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -24,16 +24,15 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface ProductCategory {
-    product_category_id: string; // Char(3) - PK
-    product_category_name: string; // Char(100)
-    unit_split: boolean;
+interface Location {
+    location_id: string; // Char(2) - PK
+    location_name: string; // Char(25)
     last_modified_user_id?: string; // Char(5)
+    location_icon?: string; // image
     last_modified_date_time?: Date; // Date
-    active: boolean; // Add this field
+    active: boolean;
 }
 
-// Helper function to format dates consistently (prevents hydration errors)
 function formatDateTime(date: Date | string): string {
     const d = typeof date === 'string' ? new Date(date) : date;
     if (isNaN(d.getTime())) return "-";
@@ -46,42 +45,49 @@ function formatDateTime(date: Date | string): string {
     return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
-export default function ProductCategoryMasterPage() {
+export default function LocationMasterPage() {
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState<ProductCategory | null>(null);
+    const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
     const isSubmittingRef = useRef(false);
-    const [categories, setCategories] = useState<ProductCategory[]>([]);
+    const addIconInputRef = useRef<HTMLInputElement>(null);
+    const editIconInputRef = useRef<HTMLInputElement>(null);
+    const [locations, setLocations] = useState<Location[]>([]);
     const [loading, setLoading] = useState(true);
-    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: ProductCategory } | null>(null);
+    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Location } | null>(null);
     const [filterActive, setFilterActive] = useState<string>("all");
     const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-    const [categoryToCancel, setCategoryToCancel] = useState<ProductCategory | null>(null);
+    const [locationToCancel, setLocationToCancel] = useState<Location | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
-        product_category_id: "",
-        product_category_name: "",
-        unit_split: false,
+        location_id: "",
+        location_name: "",
+        location_icon: "",
     });
 
-    const loadCategories = useCallback(async () => {
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setFormData({ location_id: "", location_name: "", location_icon: "" });
+            if (addIconInputRef.current) addIconInputRef.current.value = "";
+        }
+    }, [isAddModalOpen]);
+
+    const loadLocations = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await productCategoryAPI.getAll();
-            // Ensure each category has the active field (default to true if not present)
-            const categoriesWithActive = data.map((cat: any) => ({
-                ...cat,
-                active: cat.active !== undefined ? cat.active : true,
-                unit_split: cat.unit_split !== undefined ? cat.unit_split : false,
+            const data = await locationAPI.getAll();
+            const locationsWithActive = data.map((loc: any) => ({
+                ...loc,
+                active: loc.active !== undefined ? loc.active : true,
             }));
-            setCategories(categoriesWithActive);
+            setLocations(locationsWithActive);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to load product categories",
+                description: error.message || "Failed to load locations",
                 variant: "destructive",
             });
         } finally {
@@ -90,41 +96,44 @@ export default function ProductCategoryMasterPage() {
     }, [toast]);
 
     useEffect(() => {
-        loadCategories();
-    }, [loadCategories]);
+        loadLocations();
+    }, [loadLocations]);
 
-    // Reset form when Add modal opens
-    useEffect(() => {
-        if (isAddModalOpen) {
-            setFormData({ product_category_id: "", product_category_name: "", unit_split: false });
-        }
-    }, [isAddModalOpen]);
+    const filteredLocations = locations.filter((location) => {
+        const matchesSearch =
+            location.location_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            location.location_name.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const filteredCategories = categories.filter((category) => {
-        const matchesSearch = category.product_category_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            category.product_category_name.toLowerCase().includes(searchQuery.toLowerCase());
-        
-        const matchesActive = filterActive === "all" || 
-            (filterActive === "active" && category.active) ||
-            (filterActive === "inactive" && !category.active);
-        
+        const matchesActive =
+            filterActive === "all" ||
+            (filterActive === "active" && location.active) ||
+            (filterActive === "inactive" && !location.active);
+
         return matchesSearch && matchesActive;
     });
 
-    // Pagination logic
-    const totalPages = Math.ceil(filteredCategories.length / rowsPerPage);
+    const totalPages = Math.ceil(filteredLocations.length / rowsPerPage);
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    const paginatedCategories = filteredCategories.slice(startIndex, endIndex);
+    const paginatedLocations = filteredLocations.slice(startIndex, endIndex);
 
-    // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery, filterActive, rowsPerPage]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type, checked } = e.target;
-        setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+    };
+
+    const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            setFormData(prev => ({ ...prev, location_icon: reader.result as string }));
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -133,28 +142,24 @@ export default function ProductCategoryMasterPage() {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
-            await productCategoryAPI.create({
-                product_category_id: formData.product_category_id,
-                product_category_name: formData.product_category_name,
-                unit_split: formData.unit_split,
+            await locationAPI.create({
+                location_id: formData.location_id,
+                location_name: formData.location_name,
+                location_icon: formData.location_icon || undefined,
                 last_modified_user_id: "ADMIN",
                 active: true,
             });
             toast({
                 title: "Success",
-                description: "Product category created successfully",
+                description: "Location created successfully",
             });
             setIsAddModalOpen(false);
-            setFormData({
-                product_category_id: "",
-                product_category_name: "",
-                unit_split: false,
-            });
-            loadCategories();
+            setFormData({ location_id: "", location_name: "", location_icon: "" });
+            loadLocations();
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to create product category",
+                description: error.message || "Failed to create location",
                 variant: "destructive",
             });
         } finally {
@@ -162,22 +167,20 @@ export default function ProductCategoryMasterPage() {
         }
     };
 
-    const handleEdit = (category: ProductCategory) => {
-        // Only allow editing if category is active
-        if (!category.active) {
+    const handleEdit = (location: Location) => {
+        if (!location.active) {
             toast({
                 title: "Cannot Edit",
-                description: "Cancelled categories cannot be edited",
+                description: "Cancelled locations cannot be edited",
                 variant: "destructive",
             });
             return;
         }
-        
-        setSelectedCategory(category);
+        setSelectedLocation(location);
         setFormData({
-            product_category_id: category.product_category_id,
-            product_category_name: category.product_category_name,
-            unit_split: category.unit_split,
+            location_id: location.location_id,
+            location_name: location.location_name,
+            location_icon: location.location_icon || "",
         });
         setIsEditModalOpen(true);
     };
@@ -186,38 +189,34 @@ export default function ProductCategoryMasterPage() {
         e.preventDefault();
         e.stopPropagation();
         if (isSubmittingRef.current) return;
-        if (!selectedCategory) return;
-        
-        // Double-check if category is still active
-        if (!selectedCategory.active) {
+        if (!selectedLocation) return;
+
+        if (!selectedLocation.active) {
             toast({
                 title: "Cannot Edit",
-                description: "This category has been cancelled and cannot be edited",
+                description: "This location has been cancelled and cannot be edited",
                 variant: "destructive",
             });
             setIsEditModalOpen(false);
             return;
         }
-        
+
         isSubmittingRef.current = true;
-        
-        // Store previous state for undo
-        const previousData = { ...selectedCategory };
-        
+        const previousData = { ...selectedLocation };
+
         try {
-            await productCategoryAPI.update(selectedCategory.product_category_id, {
-                product_category_name: formData.product_category_name,
-                unit_split: formData.unit_split,
+            await locationAPI.update(selectedLocation.location_id, {
+                location_name: formData.location_name,
+                location_icon: formData.location_icon || undefined,
                 last_modified_user_id: "ADMIN",
-                active: selectedCategory.active,
+                active: selectedLocation.active,
             });
-            
-            // Store last action for undo
+
             setLastAction({ type: 'edit', data: previousData });
-            
+
             toast({
                 title: "Success",
-                description: "Product category updated successfully",
+                description: "Location updated successfully",
                 action: (
                     <ToastAction altText="Undo" onClick={handleUndo}>
                         Undo
@@ -225,43 +224,34 @@ export default function ProductCategoryMasterPage() {
                 ),
             });
             setIsEditModalOpen(false);
-            setSelectedCategory(null);
-            setFormData({
-                product_category_id: "",
-                product_category_name: "",
-                unit_split: false,
-            });
-            loadCategories();
+            setSelectedLocation(null);
+            setFormData({ location_id: "", location_name: "", location_icon: "" });
+            loadLocations();
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to update product category",
+                description: error.message || "Failed to update location",
                 variant: "destructive",
             });
         } finally {
             isSubmittingRef.current = false;
         }
     };
-    
+
     const handleUndo = async () => {
         if (!lastAction) return;
-        
         try {
             if (lastAction.type === 'edit') {
-                // Restore previous data
-                await productCategoryAPI.update(lastAction.data.product_category_id, {
-                    product_category_name: lastAction.data.product_category_name,
-                    unit_split: lastAction.data.unit_split,
+                await locationAPI.update(lastAction.data.location_id, {
+                    location_name: lastAction.data.location_name,
+                    location_icon: lastAction.data.location_icon || undefined,
                     last_modified_user_id: "ADMIN",
                     active: lastAction.data.active,
                 });
-                toast({
-                    title: "Undone",
-                    description: "Changes have been reverted",
-                });
+                toast({ title: "Undone", description: "Changes have been reverted" });
             }
             setLastAction(null);
-            loadCategories();
+            loadLocations();
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -271,46 +261,38 @@ export default function ProductCategoryMasterPage() {
         }
     };
 
-    const handleCancel = (category: ProductCategory) => {
-        // Only allow cancelling if category is active
-        if (!category.active) {
+    const handleCancel = (location: Location) => {
+        if (!location.active) {
             toast({
                 title: "Already Cancelled",
-                description: "This category is already cancelled",
+                description: "This location is already cancelled",
                 variant: "destructive",
             });
             return;
         }
-        
-        setCategoryToCancel(category);
+        setLocationToCancel(location);
         setIsCancelDialogOpen(true);
     };
 
     const confirmCancel = async () => {
-        if (!categoryToCancel) return;
-        
+        if (!locationToCancel) return;
         try {
-            await productCategoryAPI.update(categoryToCancel.product_category_id, {
-                product_category_name: categoryToCancel.product_category_name,
+            await locationAPI.update(locationToCancel.location_id, {
+                location_name: locationToCancel.location_name,
                 last_modified_user_id: "ADMIN",
-                active: false, // Set to inactive
+                active: false,
             });
-            
-            // Update local state by reloading from API
-            await loadCategories();
-            
+            await loadLocations();
             toast({
                 title: "Cancelled",
-                description: `Product category ${categoryToCancel.product_category_name} has been cancelled`,
-                variant: "default",
+                description: `Location ${locationToCancel.location_name} has been cancelled`,
             });
-            
             setIsCancelDialogOpen(false);
-            setCategoryToCancel(null);
+            setLocationToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || "Failed to cancel product category",
+                description: error.message || "Failed to cancel location",
                 variant: "destructive",
             });
         }
@@ -330,15 +312,15 @@ export default function ProductCategoryMasterPage() {
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <h1 className="text-3xl font-bold text-foreground mb-2">Product Category Master</h1>
-                                <p className="text-muted-foreground">Manage product category information and details</p>
+                                <h1 className="text-3xl font-bold text-foreground mb-2">Location Master</h1>
+                                <p className="text-muted-foreground">Manage location information and details</p>
                             </div>
                             <Button
                                 onClick={() => setIsAddModalOpen(true)}
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                             >
                                 <Plus className="w-5 h-5" />
-                                Add New Category
+                                Add New Location
                             </Button>
                         </div>
                     </motion.div>
@@ -357,14 +339,14 @@ export default function ProductCategoryMasterPage() {
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="text"
-                                        placeholder="Search categories..."
+                                        placeholder="Search locations..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-10 pr-4 py-2 w-full"
                                     />
                                 </div>
                                 <span className="text-sm text-muted-foreground whitespace-nowrap">
-                                    SHOWING {filteredCategories.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredCategories.length)} OF {filteredCategories.length}
+                                    SHOWING {filteredLocations.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredLocations.length)} OF {filteredLocations.length}
                                 </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -381,37 +363,37 @@ export default function ProductCategoryMasterPage() {
                                                 <Label className="text-sm font-semibold text-foreground">Status</Label>
                                                 <div className="space-y-2">
                                                     <div className="flex items-center space-x-2">
-                                                        <input 
-                                                            type="radio" 
-                                                            id="pc-status-all" 
-                                                            name="pcStatusFilter"
+                                                        <input
+                                                            type="radio"
+                                                            id="loc-status-all"
+                                                            name="locStatusFilter"
                                                             checked={filterActive === "all"}
                                                             onChange={() => setFilterActive("all")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="pc-status-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
+                                                        <Label htmlFor="loc-status-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
-                                                        <input 
-                                                            type="radio" 
-                                                            id="pc-status-active" 
-                                                            name="pcStatusFilter"
+                                                        <input
+                                                            type="radio"
+                                                            id="loc-status-active"
+                                                            name="locStatusFilter"
                                                             checked={filterActive === "active"}
                                                             onChange={() => setFilterActive("active")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="pc-status-active" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
+                                                        <Label htmlFor="loc-status-active" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
-                                                        <input 
-                                                            type="radio" 
-                                                            id="pc-status-inactive" 
-                                                            name="pcStatusFilter"
+                                                        <input
+                                                            type="radio"
+                                                            id="loc-status-inactive"
+                                                            name="locStatusFilter"
                                                             checked={filterActive === "inactive"}
                                                             onChange={() => setFilterActive("inactive")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="pc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Cancelled</Label>
+                                                        <Label htmlFor="loc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Cancelled</Label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -431,13 +413,11 @@ export default function ProductCategoryMasterPage() {
                                             </div>
                                         </div>
                                         <div className="p-4 border-t border-border bg-muted/30">
-                                            <Button 
-                                                variant="outline" 
-                                                size="sm" 
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
                                                 className="w-full"
-                                                onClick={() => {
-                                                    setFilterActive("all");
-                                                }}
+                                                onClick={() => setFilterActive("all")}
                                             >
                                                 Clear Filters
                                             </Button>
@@ -460,24 +440,12 @@ export default function ProductCategoryMasterPage() {
                                         <tr className="bg-gray-100 border-b border-border">
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>Product</span>
-                                                    <span>Category Id</span>
+                                                    <span>Location</span>
+                                                    <span>Id</span>
                                                 </div>
                                             </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Product</span>
-                                                    <span>Category</span>
-                                                    <span>Name</span>
-                                                </div>
-                                            </th>
-                                          
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col items-center">
-                                                    <span>Unit</span>
-                                                    <span>Split</span>
-                                                </div>
-                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Location Name</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Location Icon</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
                                                     <span>Last Modified</span>
@@ -490,11 +458,7 @@ export default function ProductCategoryMasterPage() {
                                                     <span>Date & Time</span>
                                                 </div>
                                             </th>
-                                              <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span>Status</span>
-                                                </div>
-                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
@@ -502,62 +466,67 @@ export default function ProductCategoryMasterPage() {
                                         {loading ? (
                                             <tr>
                                                 <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
-                                                    Loading product categories...
+                                                    Loading locations...
                                                 </td>
                                             </tr>
-                                        ) : filteredCategories.length === 0 ? (
+                                        ) : filteredLocations.length === 0 ? (
                                             <tr>
                                                 <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
-                                                    No categories found
+                                                    No locations found
                                                 </td>
                                             </tr>
                                         ) : (
-                                            paginatedCategories.map((category, index) => (
+                                            paginatedLocations.map((location, index) => (
                                                 <motion.tr
-                                                    key={category.product_category_id}
+                                                    key={location.location_id}
                                                     initial={{ opacity: 0, x: -20 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className={`hover:bg-muted/30 transition-colors ${!category.active ? 'opacity-50 bg-gray-50' : ''}`}
+                                                    className={`hover:bg-muted/30 transition-colors ${!location.active ? 'opacity-50 bg-gray-50' : ''}`}
                                                 >
                                                     <td className="px-6 py-4">
                                                         <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
-                                                            {category.product_category_id}
+                                                            {location.location_id}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground">{category.product_category_name}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                                            category.unit_split
-                                                                ? 'bg-blue-100 text-blue-800'
-                                                                : 'bg-gray-100 text-gray-600'
-                                                        }`}>
-                                                            {category.unit_split ? 'True' : 'False'}
-                                                        </span>
+                                                        <span className="text-sm text-foreground">{location.location_name}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        {category.last_modified_user_id ? (
-                                                            <span className="text-sm font-mono text-foreground">{category.last_modified_user_id}</span>
+                                                        {location.location_icon ? (
+                                                            <img
+                                                                src={location.location_icon}
+                                                                alt={location.location_name}
+                                                                className="w-8 h-8 object-cover rounded-full"
+                                                                onError={(e) => {
+                                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <span className="text-sm text-muted-foreground">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {location.last_modified_user_id ? (
+                                                            <span className="text-sm font-mono text-foreground">{location.last_modified_user_id}</span>
                                                         ) : (
                                                             <span className="text-sm text-foreground">-</span>
                                                         )}
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">
-                                                            {category.last_modified_date_time 
-                                                                ? formatDateTime(category.last_modified_date_time)
+                                                            {location.last_modified_date_time
+                                                                ? formatDateTime(location.last_modified_date_time)
                                                                 : "-"}
                                                         </span>
                                                     </td>
-                                                        <td className="px-6 py-4">
+                                                    <td className="px-6 py-4">
                                                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                                            category.active 
-                                                                ? 'bg-green-100 text-green-800' 
+                                                            location.active
+                                                                ? 'bg-green-100 text-green-800'
                                                                 : 'bg-red-100 text-red-800'
                                                         }`}>
-                                                            {category.active ? 'Active' : 'Cancelled'}
+                                                            {location.active ? 'Active' : 'Cancelled'}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
@@ -567,13 +536,13 @@ export default function ProductCategoryMasterPage() {
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleEdit(category);
+                                                                    handleEdit(location);
                                                                 }}
                                                                 className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${
-                                                                    !category.active ? 'opacity-50 cursor-not-allowed' : ''
+                                                                    !location.active ? 'opacity-50 cursor-not-allowed' : ''
                                                                 }`}
-                                                                disabled={!category.active}
-                                                                title={!category.active ? "Cannot edit cancelled categories" : "Edit category"}
+                                                                disabled={!location.active}
+                                                                title={!location.active ? "Cannot edit cancelled locations" : "Edit location"}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -582,15 +551,15 @@ export default function ProductCategoryMasterPage() {
                                                                 size="icon"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleCancel(category);
+                                                                    handleCancel(location);
                                                                 }}
                                                                 className={`${
-                                                                    category.active 
-                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
+                                                                    location.active
+                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50'
                                                                         : 'opacity-50 cursor-not-allowed'
                                                                 }`}
-                                                                disabled={!category.active}
-                                                                title={category.active ? "Cancel category" : "Already cancelled"}
+                                                                disabled={!location.active}
+                                                                title={location.active ? "Cancel location" : "Already cancelled"}
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
@@ -606,18 +575,18 @@ export default function ProductCategoryMasterPage() {
                             <div className="border-t border-border px-6 py-4 flex items-center justify-between bg-muted/20">
                                 <span className="text-sm text-muted-foreground">PAGE {currentPage} OF {totalPages || 1}</span>
                                 <div className="flex items-center gap-2">
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
                                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                         disabled={currentPage === 1}
                                     >
                                         <ChevronLeft className="w-4 h-4 mr-1" />
                                         Previous
                                     </Button>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
                                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                         disabled={currentPage >= totalPages}
                                     >
@@ -631,7 +600,7 @@ export default function ProductCategoryMasterPage() {
                 </div>
             </main>
 
-            {/* Add Category Modal */}
+            {/* Add Location Modal */}
             <AnimatePresence>
                 {isAddModalOpen && (
                     <>
@@ -650,7 +619,7 @@ export default function ProductCategoryMasterPage() {
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Add New Product Category</h2>
+                                    <h2 className="text-2xl font-bold">Add New Location</h2>
                                     <button
                                         onClick={() => setIsAddModalOpen(false)}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
@@ -661,41 +630,77 @@ export default function ProductCategoryMasterPage() {
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Product Category ID <span className="text-red-500">*</span>
+                                            Location ID <span className="text-red-500">*</span>
                                         </label>
                                         <Input
-                                            name="product_category_id"
-                                            value={formData.product_category_id}
+                                            name="location_id"
+                                            value={formData.location_id}
                                             onChange={handleInputChange}
-                                            placeholder="e.g., P01, P02"
+                                            placeholder="e.g., PP, QC"
                                             required
-                                            maxLength={3}
+                                            maxLength={2}
                                         />
                                     </div>
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Product Category Name <span className="text-red-500">*</span>
+                                            Location Name <span className="text-red-500">*</span>
                                         </label>
                                         <Input
-                                            name="product_category_name"
-                                            value={formData.product_category_name}
+                                            name="location_name"
+                                            value={formData.location_name}
                                             onChange={handleInputChange}
-                                            placeholder="Enter product category name"
+                                            placeholder="Enter location name"
                                             required
                                             maxLength={25}
                                         />
                                     </div>
                                     <div className="mb-6">
-                                        <label className="flex items-center gap-3 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                name="unit_split"
-                                                checked={formData.unit_split}
-                                                onChange={handleInputChange}
-                                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                            />
-                                            <span className="text-sm font-semibold text-foreground">Unit Split</span>
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Location Icon
                                         </label>
+                                        <div className="flex items-center gap-4">
+                                            <div
+                                                className="w-16 h-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden cursor-pointer hover:border-blue-400 transition-colors"
+                                                onClick={() => addIconInputRef.current?.click()}
+                                            >
+                                                {formData.location_icon ? (
+                                                    <img src={formData.location_icon} alt="icon preview" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <ImageIcon className="w-6 h-6 text-gray-400" />
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex items-center gap-2"
+                                                    onClick={() => addIconInputRef.current?.click()}
+                                                >
+                                                    <Upload className="w-4 h-4" />
+                                                    Upload Icon
+                                                </Button>
+                                                {formData.location_icon && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-red-500 hover:text-red-600 text-xs"
+                                                        onClick={() => setFormData(prev => ({ ...prev, location_icon: "" }))}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <input
+                                                ref={addIconInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleIconUpload}
+                                            />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1">PNG, JPG, SVG up to 2MB</p>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
@@ -703,7 +708,7 @@ export default function ProductCategoryMasterPage() {
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                             disabled={isSubmittingRef.current}
                                         >
-                                            Save Category
+                                            Save Location
                                         </Button>
                                     </div>
                                 </form>
@@ -713,7 +718,7 @@ export default function ProductCategoryMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Edit Category Modal */}
+            {/* Edit Location Modal */}
             <AnimatePresence>
                 {isEditModalOpen && (
                     <>
@@ -732,7 +737,7 @@ export default function ProductCategoryMasterPage() {
                         >
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Edit Product Category</h2>
+                                    <h2 className="text-2xl font-bold">Edit Location</h2>
                                     <button
                                         onClick={() => setIsEditModalOpen(false)}
                                         className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
@@ -743,40 +748,75 @@ export default function ProductCategoryMasterPage() {
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Product Category ID <span className="text-red-500">*</span>
+                                            Location ID <span className="text-red-500">*</span>
                                         </label>
                                         <Input
-                                            name="product_category_id"
-                                            value={formData.product_category_id}
-                                            onChange={handleInputChange}
+                                            name="location_id"
+                                            value={formData.location_id}
                                             required
                                             disabled
                                         />
                                     </div>
                                     <div className="mb-6">
                                         <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Product Category Name <span className="text-red-500">*</span>
+                                            Location Name <span className="text-red-500">*</span>
                                         </label>
                                         <Input
-                                            name="product_category_name"
-                                            value={formData.product_category_name}
+                                            name="location_name"
+                                            value={formData.location_name}
                                             onChange={handleInputChange}
-                                            placeholder="Enter product category name"
+                                            placeholder="Enter location name"
                                             required
                                             maxLength={25}
                                         />
                                     </div>
                                     <div className="mb-6">
-                                        <label className="flex items-center gap-3 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                name="unit_split"
-                                                checked={formData.unit_split}
-                                                onChange={handleInputChange}
-                                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                            />
-                                            <span className="text-sm font-semibold text-foreground">Unit Split</span>
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Location Icon
                                         </label>
+                                        <div className="flex items-center gap-4">
+                                            <div
+                                                className="w-16 h-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden cursor-pointer hover:border-blue-400 transition-colors"
+                                                onClick={() => editIconInputRef.current?.click()}
+                                            >
+                                                {formData.location_icon ? (
+                                                    <img src={formData.location_icon} alt="icon preview" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <ImageIcon className="w-6 h-6 text-gray-400" />
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex items-center gap-2"
+                                                    onClick={() => editIconInputRef.current?.click()}
+                                                >
+                                                    <Upload className="w-4 h-4" />
+                                                    Upload Icon
+                                                </Button>
+                                                {formData.location_icon && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-red-500 hover:text-red-600 text-xs"
+                                                        onClick={() => setFormData(prev => ({ ...prev, location_icon: "" }))}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <input
+                                                ref={editIconInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleIconUpload}
+                                            />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1">PNG, JPG, SVG up to 2MB</p>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
@@ -784,7 +824,7 @@ export default function ProductCategoryMasterPage() {
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                             disabled={isSubmittingRef.current}
                                         >
-                                            Update Category
+                                            Update Location
                                         </Button>
                                     </div>
                                 </form>
@@ -794,28 +834,28 @@ export default function ProductCategoryMasterPage() {
                 )}
             </AnimatePresence>
 
-            {/* Cancel Category Confirmation Dialog */}
+            {/* Cancel Location Confirmation Dialog */}
             <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to cancel product category {categoryToCancel?.product_category_name}? 
+                            Are you sure you want to cancel location {locationToCancel?.location_name}?
                             This will make it inactive and it cannot be edited or used in the future.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => {
                             setIsCancelDialogOpen(false);
-                            setCategoryToCancel(null);
+                            setLocationToCancel(null);
                         }}>
                             No, Keep Active
                         </AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={confirmCancel} 
+                        <AlertDialogAction
+                            onClick={confirmCancel}
                             className="bg-red-600 hover:bg-red-700"
                         >
-                            Yes, Cancel Category
+                            Yes, Cancel Location
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

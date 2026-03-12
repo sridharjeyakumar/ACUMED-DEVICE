@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/server/db/connection';
-import MaterialCategoryMaster from '@/server/models/MaterialCategoryMaster';
+import LocationMaster from '@/server/models/LocationMaster';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,7 @@ async function ensureDbConnection() {
     dbConnected = true;
     return;
   }
-  
+
   if (!dbConnected) {
     try {
       await connectDB();
@@ -33,7 +33,7 @@ async function ensureDbConnection() {
   }
 }
 
-// GET /api/material-categories/[id] - Get material category by ID
+// GET /api/locations/[id] - Get location by ID
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -41,21 +41,21 @@ export async function GET(
   try {
     const { id } = await params;
     await ensureDbConnection();
-    const category = await MaterialCategoryMaster.findOne({ material_category_id: id });
-    if (!category) {
-      return NextResponse.json({ error: 'Material category not found' }, { status: 404 });
+    const location = await LocationMaster.findOne({ location_id: id });
+    if (!location) {
+      return NextResponse.json({ error: 'Location not found' }, { status: 404 });
     }
-    return NextResponse.json(category);
+    return NextResponse.json(location);
   } catch (error: any) {
-    console.error('Error fetching material category:', error);
+    console.error('Error fetching location:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch material category' },
+      { error: error.message || 'Failed to fetch location' },
       { status: 500 }
     );
   }
 }
 
-// PUT /api/material-categories/[id] - Update material category
+// PUT /api/locations/[id] - Update location
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -64,26 +64,25 @@ export async function PUT(
     const { id } = await params;
     await ensureDbConnection();
     const body = await request.json();
-    
+
     const updateData: any = {};
-    if (body.material_category_name !== undefined) updateData.material_category_name = body.material_category_name;
+    if (body.location_name !== undefined) updateData.location_name = body.location_name;
+    if (body.location_icon !== undefined) updateData.location_icon = body.location_icon;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
     updateData.active = body.active !== undefined ? body.active : true;
-    if (body.unit_split !== undefined) updateData.unit_split = body.unit_split;
 
-    
-    const category = await MaterialCategoryMaster.findOneAndUpdate(
-      { material_category_id: id },
+    const location = await LocationMaster.findOneAndUpdate(
+      { location_id: id },
       updateData,
       { new: true, runValidators: true }
     );
-    if (!category) {
-      return NextResponse.json({ error: 'Material category not found' }, { status: 404 });
+    if (!location) {
+      return NextResponse.json({ error: 'Location not found' }, { status: 404 });
     }
-    return NextResponse.json(category);
+    return NextResponse.json(location);
   } catch (error: any) {
-    console.error('Error updating material category:', error);
+    console.error('Error updating location:', error);
     if (error.name === 'ValidationError') {
       return NextResponse.json(
         { error: 'Validation failed', details: error.message },
@@ -91,13 +90,13 @@ export async function PUT(
       );
     }
     return NextResponse.json(
-      { error: error.message || 'Failed to update material category' },
+      { error: error.message || 'Failed to update location' },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/material-categories/[id] - Delete material category
+// DELETE /api/locations/[id] - Delete location
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -105,32 +104,16 @@ export async function DELETE(
   try {
     const { id } = await params;
     await ensureDbConnection();
-    const category = await MaterialCategoryMaster.findOneAndDelete({ material_category_id: id });
-    if (!category) {
-      return NextResponse.json({ error: 'Material category not found' }, { status: 404 });
+    const location = await LocationMaster.findOneAndDelete({ location_id: id });
+    if (!location) {
+      return NextResponse.json({ error: 'Location not found' }, { status: 404 });
     }
-    return NextResponse.json({ message: 'Material category deleted successfully' });
+    return NextResponse.json({ message: 'Location deleted successfully' });
   } catch (error: any) {
-    console.error('Error deleting material category:', error);
+    console.error('Error deleting location:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to delete material category' },
+      { error: error.message || 'Failed to delete location' },
       { status: 500 }
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

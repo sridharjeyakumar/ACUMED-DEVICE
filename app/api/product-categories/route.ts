@@ -30,9 +30,10 @@ export async function POST(request: NextRequest) {
   try {
     await ensureConnection();
     const body = await request.json();
-    const category = new ProductCategoryMaster({ 
+    const category = new ProductCategoryMaster({
       product_category_id: body.product_category_id,
       product_category_name: body.product_category_name,
+      unit_split: body.unit_split !== undefined ? body.unit_split : false,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
     });

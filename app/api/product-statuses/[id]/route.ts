@@ -69,6 +69,10 @@ export async function PUT(
     if (body.product_status !== undefined) updateData.product_status = body.product_status;
     if (body.stock_movement !== undefined) updateData.stock_movement = body.stock_movement || '';
     if (body.effect_in_stock !== undefined) updateData.effect_in_stock = body.effect_in_stock || '';
+    if (body.movement_type !== undefined) updateData.movement_type = body.movement_type || '';
+    if (body.stock_origin !== undefined) updateData.stock_origin = body.stock_origin || '';
+    if (body.from_prod_status_id !== undefined) updateData.from_prod_status_id = body.from_prod_status_id || '';
+    if (body.prod_status_icon !== undefined) updateData.prod_status_icon = body.prod_status_icon || '';
     if (body.seq_no !== undefined) updateData.seq_no = body.seq_no;
     if (body.active !== undefined) updateData.active = body.active !== false;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
