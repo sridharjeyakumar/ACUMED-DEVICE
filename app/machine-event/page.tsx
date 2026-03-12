@@ -329,7 +329,7 @@ export default function MachineEventPage() {
     // ── Selected METM for derived flags ──────────────────────────────────────
 
     const selectedMetm = eventTypes.find(t => t.machine_event_type_id === addForm.machine_event_type_id);
-    const requiresStopReason = selectedMetm?.accept_reason === "Y";
+    const requiresStopReason = selectedMetm?.machine_event_type_name === "Machine Stop";
     const acceptMaterial = selectedMetm?.accept_material === "Y";
     const acceptOpenQty = selectedMetm?.accept_open_qty === "Y";
     const acceptCloseQty = selectedMetm?.accept_close_qty === "Y";
@@ -512,43 +512,108 @@ export default function MachineEventPage() {
 
     // ── Edit form fields ──────────────────────────────────────────────────────
 
+    const editEventTypeName = eventTypes.find(t => t.machine_event_type_id === selectedEvent?.machine_event_type_id)?.machine_event_type_name;
+    const editRequiresStopReason = editEventTypeName === "Machine Stop";
+
     const renderEditFields = () => (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Machine ID</label>
-                <div className="px-3 py-2 border border-border rounded-lg bg-muted/40 text-sm text-muted-foreground">{selectedEvent?.machine_id}</div>
-            </div>
-            <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Event Type</label>
-                <div className="px-3 py-2 border border-border rounded-lg bg-muted/40 text-sm text-muted-foreground">{selectedEvent?.machine_event_type_id}</div>
-            </div>
-            <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Batch No</label>
-                <div className="px-3 py-2 border border-border rounded-lg bg-muted/40 text-sm text-muted-foreground">{selectedEvent?.batch_no}</div>
-            </div>
-            <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Event Time <span className="text-red-500">*</span></label>
-                <Input type="time" value={editForm.event_time} onChange={e => setEditForm(prev => ({ ...prev, event_time: e.target.value }))} required />
-            </div>
-            <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Stop Reason</label>
-                <select value={editForm.machine_stop_reason_id} onChange={e => setEditForm(prev => ({ ...prev, machine_stop_reason_id: e.target.value }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">-- Select --</option>
-                    {stopReasons.map(r => <option key={r.reason_id} value={r.reason_id}>{r.reason_id} - {r.reason_name}</option>)}
-                </select>
-            </div>
-            <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Done By <span className="text-red-500">*</span></label>
-                <select value={editForm.done_by_emp_id} onChange={e => setEditForm(prev => ({ ...prev, done_by_emp_id: e.target.value }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">-- Select Employee --</option>
-                    {employees.map(emp => <option key={emp.emp_id} value={emp.emp_id}>{emp.emp_id} - {emp.emp_name}</option>)}
-                </select>
-            </div>
-            <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-foreground mb-2">Remarks</label>
-                <Input value={editForm.remarks} onChange={e => setEditForm(prev => ({ ...prev, remarks: e.target.value }))} maxLength={100} placeholder="Optional remarks..." />
+        <div className="p-6 space-y-5">
+            {/* Header Information card */}
+            <div className="bg-white rounded-lg border border-border p-5">
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                        <Info className="w-3.5 h-3.5 text-blue-600" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground">Header Information</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    {/* Machine Event ID */}
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Machine Event ID</label>
+                        <Input value={selectedEvent?.machine_event_id ?? ""} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                    </div>
+                    {/* Machine ID */}
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Machine ID</label>
+                        <Input value={selectedEvent?.machine_id ?? ""} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                    </div>
+                    {/* Event Type */}
+                    <div className="col-span-2">
+                        <label className="block text-sm font-medium text-foreground mb-2">Event Type</label>
+                        <div className="flex flex-wrap gap-2">
+                            <span className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border bg-blue-600 text-white border-blue-600 shadow-sm">
+                                <span className="w-2 h-2 rounded-full bg-current opacity-60" />
+                                {editEventTypeName ?? selectedEvent?.machine_event_type_id}
+                            </span>
+                        </div>
+                    </div>
+                    {/* Batch No */}
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Batch Number</label>
+                        <Input value={selectedEvent?.batch_no ?? ""} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                    </div>
+                    {/* Product ID */}
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Product ID</label>
+                        <Input value={selectedEvent?.product_id ?? ""} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                    </div>
+                    {/* Event Date */}
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Event Date</label>
+                        <Input value={selectedEvent?.event_date ?? ""} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                    </div>
+                    {/* Batch Status */}
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Batch Status</label>
+                        <Input value={selectedEvent?.batch_status_id ?? ""} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                    </div>
+                    {/* Event Time */}
+                    <div>
+                        <label className="block text-sm font-medium text-foreground mb-1.5">
+                            <Clock className="w-3.5 h-3.5 inline mr-1 text-muted-foreground" />
+                            Event Time <span className="text-red-500">*</span>
+                        </label>
+                        <Input type="time" value={editForm.event_time}
+                            onChange={e => setEditForm(prev => ({ ...prev, event_time: e.target.value }))} required />
+                        <p className="text-xs text-muted-foreground mt-1">Within last 60 minutes</p>
+                    </div>
+                    {/* Done By */}
+                    <div>
+                        <label className="block text-sm font-medium text-foreground mb-1.5">
+                            <User className="w-3.5 h-3.5 inline mr-1 text-muted-foreground" />
+                            Done By <span className="text-red-500">*</span>
+                        </label>
+                        <select value={editForm.done_by_emp_id}
+                            onChange={e => setEditForm(prev => ({ ...prev, done_by_emp_id: e.target.value }))}
+                            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">-- Select Employee --</option>
+                            {employees.map(emp => <option key={emp.emp_id} value={emp.emp_id}>{emp.emp_id} - {emp.emp_name}</option>)}
+                        </select>
+                    </div>
+                    {/* Stop Reason (conditional) */}
+                    {editRequiresStopReason && (
+                        <div>
+                            <label className="block text-sm font-medium text-foreground mb-1.5">
+                                Stop Reason <span className="text-red-500">*</span>
+                            </label>
+                            <select value={editForm.machine_stop_reason_id}
+                                onChange={e => setEditForm(prev => ({ ...prev, machine_stop_reason_id: e.target.value }))}
+                                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">-- Select Reason --</option>
+                                {stopReasons.map(r => <option key={r.reason_id} value={r.reason_id}>{r.reason_id} - {r.reason_name}</option>)}
+                            </select>
+                        </div>
+                    )}
+                    {/* Remarks */}
+                    <div className={editRequiresStopReason ? "" : "col-span-2"}>
+                        <label className="block text-sm font-medium text-foreground mb-1.5">
+                            <FileText className="w-3.5 h-3.5 inline mr-1 text-muted-foreground" />
+                            Remarks
+                        </label>
+                        <Input value={editForm.remarks}
+                            onChange={e => setEditForm(prev => ({ ...prev, remarks: e.target.value }))}
+                            maxLength={100} placeholder="Optional remarks..." />
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -1202,21 +1267,30 @@ export default function MachineEventPage() {
             <AnimatePresence>
                 {isEditModalOpen && selectedEvent && (
                     <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => handleCancelClick("edit")} />
-                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/60 z-50" onClick={() => handleCancelClick("edit")} />
+                        <motion.div initial={{ opacity: 0, scale: 0.97, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.97, y: 20 }} transition={{ duration: 0.2 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Edit Machine Event</h2>
-                                    <button onClick={() => handleCancelClick("edit")} className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors">
-                                        <X className="w-6 h-6" />
-                                    </button>
-                                </div>
-                                <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    {renderEditFields()}
-                                    <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update Event</Button>
+                            <div className="bg-background rounded-xl shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col overflow-hidden">
+                                {/* Header */}
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-white">
+                                    <div>
+                                        <h2 className="text-xl font-bold text-foreground">Edit Machine Event</h2>
+                                        <p className="text-sm text-muted-foreground">Update event details for event #{selectedEvent.machine_event_id}.</p>
                                     </div>
+                                    <div className="flex items-center gap-3">
+                                        <Button form="edit-event-form" type="submit" className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
+                                            <Save className="w-4 h-4" />Update Event
+                                        </Button>
+                                        <button onClick={() => handleCancelClick("edit")} className="p-2 rounded-lg hover:bg-muted transition-colors">
+                                            <X className="w-5 h-5 text-muted-foreground" />
+                                        </button>
+                                    </div>
+                                </div>
+                                {/* Body */}
+                                <form id="edit-event-form" onSubmit={handleEditSubmit} className="flex-1 overflow-y-auto">
+                                    {renderEditFields()}
                                 </form>
                             </div>
                         </motion.div>
