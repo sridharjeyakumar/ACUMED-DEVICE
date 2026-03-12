@@ -796,3 +796,12 @@ export const materialStockAPI = {
             method: 'DELETE',
         }),
 };
+
+// Production API
+export const productionAPI = {
+  getAll: () => fetchAPI('/productions'),
+  getById: (id: string) => fetchAPI(`/productions/${id}`),
+  create: (data: any) => fetchAPI('/productions', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/productions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/productions/${id}`, { method: 'DELETE' }),
+};

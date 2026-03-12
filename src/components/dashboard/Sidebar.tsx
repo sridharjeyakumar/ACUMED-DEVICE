@@ -104,6 +104,7 @@ const navSections: NavSection[] = [
       { icon: TableProperties, label: "Transaction Table", href: "/transaction-table" },
       { icon: Activity, label: "Machine Event", href: "/machine-event" },
       { icon: TableProperties, label: "Goods Receipt", href: "/goods-receipt" },
+      { icon: Factory, label: "Production", href: "/production" },
 
     ],
   },
