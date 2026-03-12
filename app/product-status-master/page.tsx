@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Upload, ImageIcon } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -28,7 +28,10 @@ interface ProductStatus {
     prod_status_id: string; // Char(3) - PK
     product_status: string; // Char(30)
     stock_movement?: string; // Char(3) - dropdown (IN / OUT) - can be empty
-    effect_in_stock?: string; // Char(1) - dropdown (+ / -) - can be empty
+    movement_type?: string; // Char(1) - N (Normal) / S (Special)
+    stock_origin?: string; // Char(1) - Y / N
+    from_prod_status_id?: string; // Char(2) - FK
+    prod_status_icon?: string; // image (base64 or URL)
     seq_no: number; // N(2)
     active: boolean;
     location_id?: string; // Char(2)
@@ -62,6 +65,8 @@ export default function ProductStatusMasterPage() {
     const [filterActive, setFilterActive] = useState<string>("all");
     const [filterStockMovement, setFilterStockMovement] = useState<string>("all");
     const isSubmittingRef = useRef(false);
+    const addIconInputRef = useRef<HTMLInputElement>(null);
+    const editIconInputRef = useRef<HTMLInputElement>(null);
     const [statuses, setStatuses] = useState<ProductStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: ProductStatus } | null>(null);
@@ -71,24 +76,33 @@ export default function ProductStatusMasterPage() {
         prod_status_id: "",
         product_status: "",
         stock_movement: "",
-        effect_in_stock: "",
+        movement_type: "",
+        stock_origin: "",
+        from_prod_status_id: "",
+        prod_status_icon: "",
         seq_no: "",
         active: true,
         location_id: "",
     });
 
+    const emptyForm = {
+        prod_status_id: "",
+        product_status: "",
+        stock_movement: "",
+        movement_type: "",
+        stock_origin: "",
+        from_prod_status_id: "",
+        prod_status_icon: "",
+        seq_no: "",
+        active: true,
+        location_id: "",
+    };
+
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({
-                prod_status_id: "",
-                product_status: "",
-                stock_movement: "",
-                effect_in_stock: "",
-                seq_no: "",
-                active: true,
-                location_id: "",
-            });
+            setFormData(emptyForm);
+            if (addIconInputRef.current) addIconInputRef.current.value = "";
         }
     }, [isAddModalOpen]);
 
@@ -145,6 +159,16 @@ export default function ProductStatusMasterPage() {
 
     const uniqueStockMovements = Array.from(new Set(statuses.map(s => s.stock_movement).filter(s => s)));
 
+    const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            setFormData(prev => ({ ...prev, prod_status_icon: reader.result as string }));
+        };
+        reader.readAsDataURL(file);
+    };
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
         if (type === "checkbox") {
@@ -164,9 +188,12 @@ export default function ProductStatusMasterPage() {
                 prod_status_id: formData.prod_status_id,
                 product_status: formData.product_status,
                 stock_movement: formData.stock_movement || '',
-                effect_in_stock: formData.effect_in_stock || '',
+                movement_type: formData.movement_type || '',
+                stock_origin: formData.stock_origin || '',
+                from_prod_status_id: formData.from_prod_status_id || '',
+                prod_status_icon: formData.prod_status_icon || '',
                 seq_no: parseInt(formData.seq_no) || 0,
-                active: true, // Always set to true for new statuses
+                active: true,
                 last_modified_user_id: "ADMIN",
                 location_id: formData.location_id || '',
             });
@@ -175,15 +202,7 @@ export default function ProductStatusMasterPage() {
                 description: "Product status created successfully",
             });
             setIsAddModalOpen(false);
-            setFormData({
-                prod_status_id: "",
-                product_status: "",
-                stock_movement: "",
-                effect_in_stock: "",
-                seq_no: "",
-                active: true,
-                location_id: "",
-            });
+            setFormData(emptyForm);
             loadStatuses();
         } catch (error: any) {
             toast({
@@ -212,7 +231,10 @@ export default function ProductStatusMasterPage() {
             prod_status_id: status.prod_status_id,
             product_status: status.product_status,
             stock_movement: status.stock_movement || "",
-            effect_in_stock: status.effect_in_stock || "",
+            movement_type: status.movement_type || "",
+            stock_origin: status.stock_origin || "",
+            from_prod_status_id: status.from_prod_status_id || "",
+            prod_status_icon: status.prod_status_icon || "",
             seq_no: status.seq_no.toString(),
             active: status.active,
             location_id: status.location_id || "",
@@ -246,7 +268,10 @@ export default function ProductStatusMasterPage() {
             await productStatusAPI.update(selectedStatus.prod_status_id, {
                 product_status: formData.product_status,
                 stock_movement: formData.stock_movement || '',
-                effect_in_stock: formData.effect_in_stock || '',
+                movement_type: formData.movement_type || '',
+                stock_origin: formData.stock_origin || '',
+                from_prod_status_id: formData.from_prod_status_id || '',
+                prod_status_icon: formData.prod_status_icon || '',
                 seq_no: parseInt(formData.seq_no) || 0,
                 active: formData.active,
                 last_modified_user_id: "ADMIN",
@@ -267,15 +292,7 @@ export default function ProductStatusMasterPage() {
             });
             setIsEditModalOpen(false);
             setSelectedStatus(null);
-            setFormData({
-                prod_status_id: "",
-                product_status: "",
-                stock_movement: "",
-                effect_in_stock: "",
-                seq_no: "",
-                active: true,
-                location_id: "",
-            });
+            setFormData(emptyForm);
             loadStatuses();
         } catch (error: any) {
             toast({
@@ -297,7 +314,10 @@ export default function ProductStatusMasterPage() {
                 await productStatusAPI.update(lastAction.data.prod_status_id, {
                     product_status: lastAction.data.product_status,
                     stock_movement: lastAction.data.stock_movement || '',
-                    effect_in_stock: lastAction.data.effect_in_stock || '',
+                    movement_type: lastAction.data.movement_type || '',
+                    stock_origin: lastAction.data.stock_origin || '',
+                    from_prod_status_id: lastAction.data.from_prod_status_id || '',
+                    prod_status_icon: lastAction.data.prod_status_icon || '',
                     seq_no: lastAction.data.seq_no,
                     active: lastAction.data.active,
                     last_modified_user_id: "ADMIN",
@@ -341,9 +361,12 @@ export default function ProductStatusMasterPage() {
             await productStatusAPI.update(statusToCancel.prod_status_id, {
                 product_status: statusToCancel.product_status,
                 stock_movement: statusToCancel.stock_movement || '',
-                effect_in_stock: statusToCancel.effect_in_stock || '',
+                movement_type: statusToCancel.movement_type || '',
+                stock_origin: statusToCancel.stock_origin || '',
+                from_prod_status_id: statusToCancel.from_prod_status_id || '',
+                prod_status_icon: statusToCancel.prod_status_icon || '',
                 seq_no: statusToCancel.seq_no,
-                active: false, // Set to inactive
+                active: false,
                 last_modified_user_id: "ADMIN",
                 location_id: statusToCancel.location_id || '',
             });
@@ -376,11 +399,11 @@ export default function ProductStatusMasterPage() {
     const confirmCancel = () => {
         if (cancelModalType === 'add') {
             setIsAddModalOpen(false);
-            setFormData({ prod_status_id: "", product_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true, location_id: "" });
+            setFormData(emptyForm);
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
             setSelectedStatus(null);
-            setFormData({ prod_status_id: "", product_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true, location_id: "" });
+            setFormData(emptyForm);
         }
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
@@ -562,8 +585,11 @@ export default function ProductStatusMasterPage() {
                                         <tr className="bg-gray-100 border-b border-border">
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Prod Status Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Product Status</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Icon</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Stock Movement</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Effect In Stock</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Movement Type</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Stock Origin</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap"><div className="flex flex-col"><span>From Prod</span><span>Status Id</span></div></th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Location Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Seq No.</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
@@ -585,13 +611,13 @@ export default function ProductStatusMasterPage() {
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={14} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading product statuses...
                                                 </td>
                                             </tr>
                                         ) : filteredStatuses.length === 0 ? (
                                             <tr>
-                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={14} className="px-6 py-4 text-center text-muted-foreground">
                                                     No product statuses found
                                                 </td>
                                             </tr>
@@ -611,11 +637,38 @@ export default function ProductStatusMasterPage() {
                                                         <span className="text-sm text-foreground">{status.product_status}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
+                                                        {status.prod_status_icon ? (
+                                                            <img
+                                                                src={status.prod_status_icon}
+                                                                alt={status.product_status}
+                                                                className="w-8 h-8 object-cover rounded-full"
+                                                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                                            />
+                                                        ) : (
+                                                            <span className="text-sm text-muted-foreground">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{status.stock_movement || "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground font-semibold">{status.effect_in_stock || "-"}</span>
+                                                        {status.movement_type ? (
+                                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.movement_type === 'N' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
+                                                                {status.movement_type === 'N' ? 'Normal' : 'Special'}
+                                                            </span>
+                                                        ) : <span className="text-sm text-muted-foreground">-</span>}
                                                     </td>
+                                                    <td className="px-6 py-4">
+                                                        {status.stock_origin ? (
+                                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.stock_origin === 'Y' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                                                                {status.stock_origin}
+                                                            </span>
+                                                        ) : <span className="text-sm text-muted-foreground">-</span>}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm font-mono text-foreground">{status.from_prod_status_id || "-"}</span>
+                                                    </td>
+                                                   
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground font-semibold">{status.location_id || "-"}</span>
                                                     </td>
@@ -786,20 +839,48 @@ export default function ProductStatusMasterPage() {
                                                 <option value="OUT">OUT</option>
                                             </select>
                                         </div>
+                                   
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Effect in Stock
+                                                Movement Type
                                             </label>
                                             <select
-                                                name="effect_in_stock"
-                                                value={formData.effect_in_stock}
+                                                name="movement_type"
+                                                value={formData.movement_type}
                                                 onChange={handleInputChange}
                                                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                             >
                                                 <option value="">Select...</option>
-                                                <option value="+">+</option>
-                                                <option value="-">-</option>
+                                                <option value="N">N - Normal</option>
+                                                <option value="S">S - Special</option>
                                             </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Stock Origin
+                                            </label>
+                                            <select
+                                                name="stock_origin"
+                                                value={formData.stock_origin}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="">Select...</option>
+                                                <option value="Y">Y</option>
+                                                <option value="N">N</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                From Prod Status Id
+                                            </label>
+                                            <Input
+                                                name="from_prod_status_id"
+                                                value={formData.from_prod_status_id}
+                                                onChange={handleInputChange}
+                                                placeholder="e.g. PP"
+                                                maxLength={2}
+                                            />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
@@ -841,12 +922,60 @@ export default function ProductStatusMasterPage() {
                                                         checked={formData.active}
                                                         onChange={handleInputChange}
                                                         className="w-4 h-4 text-blue-600"
-                                                        disabled // Disable this in add modal since it will always be active
+                                                        disabled
                                                     />
                                                     <span className="text-sm">Active (default)</span>
                                                 </label>
                                             </div>
                                         </div>
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Product Status Icon
+                                        </label>
+                                        <div className="flex items-center gap-4">
+                                            <div
+                                                className="w-16 h-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden cursor-pointer hover:border-blue-400 transition-colors"
+                                                onClick={() => addIconInputRef.current?.click()}
+                                            >
+                                                {formData.prod_status_icon ? (
+                                                    <img src={formData.prod_status_icon} alt="icon preview" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <ImageIcon className="w-6 h-6 text-gray-400" />
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex items-center gap-2"
+                                                    onClick={() => addIconInputRef.current?.click()}
+                                                >
+                                                    <Upload className="w-4 h-4" />
+                                                    Upload Icon
+                                                </Button>
+                                                {formData.prod_status_icon && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-red-500 hover:text-red-600 text-xs"
+                                                        onClick={() => setFormData(prev => ({ ...prev, prod_status_icon: "" }))}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <input
+                                                ref={addIconInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleIconUpload}
+                                            />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1">PNG, JPG, SVG up to 2MB</p>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
@@ -932,20 +1061,48 @@ export default function ProductStatusMasterPage() {
                                                 <option value="OUT">OUT</option>
                                             </select>
                                         </div>
+                                  
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Effect in Stock
+                                                Movement Type
                                             </label>
                                             <select
-                                                name="effect_in_stock"
-                                                value={formData.effect_in_stock}
+                                                name="movement_type"
+                                                value={formData.movement_type}
                                                 onChange={handleInputChange}
                                                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                             >
                                                 <option value="">Select...</option>
-                                                <option value="+">+</option>
-                                                <option value="-">-</option>
+                                                <option value="N">N - Normal</option>
+                                                <option value="S">S - Special</option>
                                             </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Stock Origin
+                                            </label>
+                                            <select
+                                                name="stock_origin"
+                                                value={formData.stock_origin}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="">Select...</option>
+                                                <option value="Y">Y</option>
+                                                <option value="N">N</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                From Prod Status Id
+                                            </label>
+                                            <Input
+                                                name="from_prod_status_id"
+                                                value={formData.from_prod_status_id}
+                                                onChange={handleInputChange}
+                                                placeholder="e.g. PP"
+                                                maxLength={2}
+                                            />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
@@ -990,6 +1147,54 @@ export default function ProductStatusMasterPage() {
                                                 </label>
                                             </div>
                                         </div>
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Product Status Icon
+                                        </label>
+                                        <div className="flex items-center gap-4">
+                                            <div
+                                                className="w-16 h-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden cursor-pointer hover:border-blue-400 transition-colors"
+                                                onClick={() => editIconInputRef.current?.click()}
+                                            >
+                                                {formData.prod_status_icon ? (
+                                                    <img src={formData.prod_status_icon} alt="icon preview" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <ImageIcon className="w-6 h-6 text-gray-400" />
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex items-center gap-2"
+                                                    onClick={() => editIconInputRef.current?.click()}
+                                                >
+                                                    <Upload className="w-4 h-4" />
+                                                    Upload Icon
+                                                </Button>
+                                                {formData.prod_status_icon && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-red-500 hover:text-red-600 text-xs"
+                                                        onClick={() => setFormData(prev => ({ ...prev, prod_status_icon: "" }))}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <input
+                                                ref={editIconInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleIconUpload}
+                                            />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1">PNG, JPG, SVG up to 2MB</p>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button

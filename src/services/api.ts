@@ -245,6 +245,15 @@ export const productCategoryAPI = {
   delete: (id: string) => fetchAPI(`/product-categories/${id}`, { method: 'DELETE' }),
 };
 
+// Location Master API
+export const locationAPI = {
+  getAll: () => fetchAPI('/locations'),
+  getById: (id: string) => fetchAPI(`/locations/${id}`),
+  create: (data: any) => fetchAPI('/locations', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/locations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/locations/${id}`, { method: 'DELETE' }),
+};
+
 // Material Category Master API
 export const materialCategoryAPI = {
   getAll: () => fetchAPI('/material-categories'),

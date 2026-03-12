@@ -5,6 +5,7 @@ export interface IMaterialCategoryMaster extends Document {
   material_category_name: string; // Char(25)
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
+  unit_split?: boolean; // Boolean
   active: boolean; // Boolean
 
 }
@@ -33,6 +34,11 @@ const MaterialCategoryMasterSchema: Schema = new Schema({
     type: Date,
     required: false,
   },
+  unit_split: {
+    type: Boolean,
+    required: true,
+    default: false,
+  },
       active: {
     type: Boolean,
     required: true,
@@ -43,7 +49,11 @@ const MaterialCategoryMasterSchema: Schema = new Schema({
   timestamps: true,
 });
 
-const MaterialCategoryMaster = (mongoose.models.MaterialCategoryMaster as mongoose.Model<IMaterialCategoryMaster>) || mongoose.model<IMaterialCategoryMaster>('MaterialCategoryMaster', MaterialCategoryMasterSchema);
+// Delete cached model to ensure schema changes (e.g. unit_split) are always applied
+if (mongoose.models.MaterialCategoryMaster) {
+  delete (mongoose.models as any).MaterialCategoryMaster;
+}
+const MaterialCategoryMaster = mongoose.model<IMaterialCategoryMaster>('MaterialCategoryMaster', MaterialCategoryMasterSchema);
 
 export default MaterialCategoryMaster;
 

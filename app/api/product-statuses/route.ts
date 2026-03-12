@@ -30,11 +30,15 @@ export async function POST(request: NextRequest) {
   try {
     await ensureConnection();
     const body = await request.json();
-    const status = new ProductStatusMaster({ 
+    const status = new ProductStatusMaster({
       prod_status_id: body.prod_status_id,
       product_status: body.product_status,
       stock_movement: body.stock_movement || '',
       effect_in_stock: body.effect_in_stock || '',
+      movement_type: body.movement_type || '',
+      stock_origin: body.stock_origin || '',
+      from_prod_status_id: body.from_prod_status_id || '',
+      prod_status_icon: body.prod_status_icon || '',
       seq_no: body.seq_no,
       active: body.active !== false,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',

@@ -5,6 +5,7 @@ export interface IProductCategoryMaster extends Document {
   product_category_name: string; // Char(25)
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
+  unit_split: boolean; // Boolean
   active: boolean; // Boolean
 
 }
@@ -33,6 +34,11 @@ const ProductCategoryMasterSchema: Schema = new Schema({
     type: Date,
     required: false,
   },
+  unit_split: {
+    type: Boolean,
+    required: true,
+    default: false,
+  },
     active: {
     type: Boolean,
     required: true,
@@ -43,7 +49,11 @@ const ProductCategoryMasterSchema: Schema = new Schema({
   timestamps: true,
 });
 
-const ProductCategoryMaster = (mongoose.models.ProductCategoryMaster as mongoose.Model<IProductCategoryMaster>) || mongoose.model<IProductCategoryMaster>('ProductCategoryMaster', ProductCategoryMasterSchema);
+// Delete cached model to ensure schema changes (e.g. unit_split) are always applied
+if (mongoose.models.ProductCategoryMaster) {
+  delete (mongoose.models as any).ProductCategoryMaster;
+}
+const ProductCategoryMaster = mongoose.model<IProductCategoryMaster>('ProductCategoryMaster', ProductCategoryMasterSchema);
 
 export default ProductCategoryMaster;
 
