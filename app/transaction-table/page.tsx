@@ -23,9 +23,9 @@ interface Transaction {
     planned_end_date?: Date;
     actual_start_date?: Date;
     actual_end_date?: Date;
-    planned_total_sachets?: number;
-    planned_total_sterilization_cartons?: number;
-    planned_total_shipper_cartons?: number;
+    total_sachets?: number;
+    total_sterilization_cartons?: number;
+    total_shipper_cartons?: number;
     actual_total_sachets?: number;
     actual_total_sterilization_cartons?: number;
     actual_total_shipper_cartons?: number;
@@ -170,9 +170,9 @@ export default function TransactionTablePage() {
         actual_start_date: "",
         actual_end_date: "",
         // Planned totals (from product details)
-        planned_total_sachets: "",
-        planned_total_sterilization_cartons: "",
-        planned_total_shipper_cartons: "",
+        total_sachets: "",
+        total_sterilization_cartons: "",
+        total_shipper_cartons: "",
         // Actual totals (user entry)
         actual_total_sachets: "",
         actual_total_sterilization_cartons: "",
@@ -210,9 +210,9 @@ export default function TransactionTablePage() {
                 planned_end_date: "",
                 actual_start_date: "",
                 actual_end_date: "",
-                planned_total_sachets: "",
-                planned_total_sterilization_cartons: "",
-                planned_total_shipper_cartons: "",
+                total_sachets: "",
+                total_sterilization_cartons: "",
+                total_shipper_cartons: "",
                 actual_total_sachets: "",
                 actual_total_sterilization_cartons: "",
                 actual_total_shipper_cartons: "",
@@ -505,20 +505,20 @@ useEffect(() => {
 
     const updatePlannedTotals = (details: ProductDetail[]) => {
         const totals = details.reduce((acc, detail) => ({
-            planned_total_sachets: (acc.planned_total_sachets || 0) + (detail.no_of_sachets || 0),
-            planned_total_sterilization_cartons: (acc.planned_total_sterilization_cartons || 0) + (detail.sterilization_cartons || 0),
-            planned_total_shipper_cartons: (acc.planned_total_shipper_cartons || 0) + (detail.shipper_cartons || 0)
+            total_sachets: (acc.total_sachets || 0) + (detail.no_of_sachets || 0),
+            total_sterilization_cartons: (acc.total_sterilization_cartons || 0) + (detail.sterilization_cartons || 0),
+            total_shipper_cartons: (acc.total_shipper_cartons || 0) + (detail.shipper_cartons || 0)
         }), { 
-            planned_total_sachets: 0, 
-            planned_total_sterilization_cartons: 0, 
-            planned_total_shipper_cartons: 0 
+            total_sachets: 0, 
+            total_sterilization_cartons: 0, 
+            total_shipper_cartons: 0 
         });
 
         setFormData(prev => ({
             ...prev,
-            planned_total_sachets: totals.planned_total_sachets.toString(),
-            planned_total_sterilization_cartons: totals.planned_total_sterilization_cartons.toString(),
-            planned_total_shipper_cartons: totals.planned_total_shipper_cartons.toString()
+            total_sachets: totals.total_sachets.toString(),
+            total_sterilization_cartons: totals.total_sterilization_cartons.toString(),
+            total_shipper_cartons: totals.total_shipper_cartons.toString()
         }));
     };
 
@@ -693,9 +693,9 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                 actual_start_date: formData.actual_start_date ? new Date(formData.actual_start_date) : undefined,
                 actual_end_date: formData.actual_end_date ? new Date(formData.actual_end_date) : undefined,
                 // Planned totals (from product details)
-                planned_total_sachets: formData.planned_total_sachets ? parseInt(formData.planned_total_sachets) : undefined,
-                planned_total_sterilization_cartons: formData.planned_total_sterilization_cartons ? parseInt(formData.planned_total_sterilization_cartons) : undefined,
-                planned_total_shipper_cartons: formData.planned_total_shipper_cartons ? parseInt(formData.planned_total_shipper_cartons) : undefined,
+                total_sachets: formData.total_sachets ? parseInt(formData.total_sachets) : undefined,
+                total_sterilization_cartons: formData.total_sterilization_cartons ? parseInt(formData.total_sterilization_cartons) : undefined,
+                total_shipper_cartons: formData.total_shipper_cartons ? parseInt(formData.total_shipper_cartons) : undefined,
                 // Actual totals (user entry)
                 actual_total_sachets: formData.actual_total_sachets ? parseInt(formData.actual_total_sachets) : undefined,
                 actual_total_sterilization_cartons: formData.actual_total_sterilization_cartons ? parseInt(formData.actual_total_sterilization_cartons) : undefined,
@@ -795,9 +795,9 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
             planned_end_date: transaction.planned_end_date ? new Date(transaction.planned_end_date).toISOString().split('T')[0] : "",
             actual_start_date: transaction.actual_start_date ? new Date(transaction.actual_start_date).toISOString().split('T')[0] : "",
             actual_end_date: transaction.actual_end_date ? new Date(transaction.actual_end_date).toISOString().split('T')[0] : "",
-            planned_total_sachets: transaction.planned_total_sachets?.toString() || "",
-            planned_total_sterilization_cartons: transaction.planned_total_sterilization_cartons?.toString() || "",
-            planned_total_shipper_cartons: transaction.planned_total_shipper_cartons?.toString() || "",
+            total_sachets: transaction.total_sachets?.toString() || "",
+            total_sterilization_cartons: transaction.total_sterilization_cartons?.toString() || "",
+            total_shipper_cartons: transaction.total_shipper_cartons?.toString() || "",
             actual_total_sachets: transaction.actual_total_sachets?.toString() || "",
             actual_total_sterilization_cartons: transaction.actual_total_sterilization_cartons?.toString() || "",
             actual_total_shipper_cartons: transaction.actual_total_shipper_cartons?.toString() || "",
@@ -848,9 +848,9 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                 planned_end_date: formData.planned_end_date ? new Date(formData.planned_end_date) : undefined,
                 actual_start_date: formData.actual_start_date ? new Date(formData.actual_start_date) : undefined,
                 actual_end_date: formData.actual_end_date ? new Date(formData.actual_end_date) : undefined,
-                planned_total_sachets: formData.planned_total_sachets ? parseInt(formData.planned_total_sachets) : undefined,
-                planned_total_sterilization_cartons: formData.planned_total_sterilization_cartons ? parseInt(formData.planned_total_sterilization_cartons) : undefined,
-                planned_total_shipper_cartons: formData.planned_total_shipper_cartons ? parseInt(formData.planned_total_shipper_cartons) : undefined,
+                total_sachets: formData.total_sachets ? parseInt(formData.total_sachets) : undefined,
+                total_sterilization_cartons: formData.total_sterilization_cartons ? parseInt(formData.total_sterilization_cartons) : undefined,
+                total_shipper_cartons: formData.total_shipper_cartons ? parseInt(formData.total_shipper_cartons) : undefined,
                 actual_total_sachets: formData.actual_total_sachets ? parseInt(formData.actual_total_sachets) : undefined,
                 actual_total_sterilization_cartons: formData.actual_total_sterilization_cartons ? parseInt(formData.actual_total_sterilization_cartons) : undefined,
                 actual_total_shipper_cartons: formData.actual_total_shipper_cartons ? parseInt(formData.actual_total_shipper_cartons) : undefined,
@@ -898,9 +898,9 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                 planned_end_date: lastAction.data.planned_end_date,
                 actual_start_date: lastAction.data.actual_start_date,
                 actual_end_date: lastAction.data.actual_end_date,
-                planned_total_sachets: lastAction.data.planned_total_sachets,
-                planned_total_sterilization_cartons: lastAction.data.planned_total_sterilization_cartons,
-                planned_total_shipper_cartons: lastAction.data.planned_total_shipper_cartons,
+                total_sachets: lastAction.data.total_sachets,
+                total_sterilization_cartons: lastAction.data.total_sterilization_cartons,
+                total_shipper_cartons: lastAction.data.total_shipper_cartons,
                 actual_total_sachets: lastAction.data.actual_total_sachets,
                 actual_total_sterilization_cartons: lastAction.data.actual_total_sterilization_cartons,
                 actual_total_shipper_cartons: lastAction.data.actual_total_shipper_cartons,
@@ -1086,23 +1086,15 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                                 Actual End Date
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                Planned Sachets
+                                                Total no. of Sachets
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                Planned Steri.
+                                                Total no. of Sterilization Cartons
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                Planned Shipper
+                                                Total no. of Shipper Cartons
                                             </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                Actual Sachets
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                Actual Steri.
-                                            </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
-                                                Actual Shipper
-                                            </th>
+                                        
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 Rejected (KG)
                                             </th>
@@ -1190,22 +1182,13 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                                                 {formatDateTime(item.actual_end_date)}
                                                             </td>
                                                             <td className="px-6 py-4 align-middle text-xs font-mono">
-                                                                {item.planned_total_sachets || '-'}
+                                                                {item.total_sachets || '-'}
                                                             </td>
                                                             <td className="px-6 py-4 align-middle text-xs font-mono">
-                                                                {item.planned_total_sterilization_cartons || '-'}
+                                                                {item.total_sterilization_cartons || '-'}
                                                             </td>
                                                             <td className="px-6 py-4 align-middle text-xs font-mono">
-                                                                {item.planned_total_shipper_cartons || '-'}
-                                                            </td>
-                                                            <td className="px-6 py-4 align-middle text-xs font-mono">
-                                                                {item.actual_total_sachets || '-'}
-                                                            </td>
-                                                            <td className="px-6 py-4 align-middle text-xs font-mono">
-                                                                {item.actual_total_sterilization_cartons || '-'}
-                                                            </td>
-                                                            <td className="px-6 py-4 align-middle text-xs font-mono">
-                                                                {item.actual_total_shipper_cartons || '-'}
+                                                                {item.total_shipper_cartons || '-'}
                                                             </td>
                                                             <td className="px-6 py-4 align-middle text-xs font-mono">
                                                                 {item.total_rejected_qty_kg || '-'}
@@ -1974,8 +1957,8 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                             </label>
                                             <Input
                                                 type="number"
-                                                name="planned_total_sachets"
-                                                value={formData.planned_total_sachets}
+                                                name="total_sachets"
+                                                value={formData.total_sachets}
                                                 onChange={handleInputChange}
                                                 max={99999999}
                                             />
@@ -1987,8 +1970,8 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                             </label>
                                             <Input
                                                 type="number"
-                                                name="planned_total_sterilization_cartons"
-                                                value={formData.planned_total_sterilization_cartons}
+                                                name="total_sterilization_cartons"
+                                                value={formData.total_sterilization_cartons}
                                                 onChange={handleInputChange}
                                                 max={99999}
                                             />
@@ -2000,8 +1983,8 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                             </label>
                                             <Input
                                                 type="number"
-                                                name="planned_total_shipper_cartons"
-                                                value={formData.planned_total_shipper_cartons}
+                                                name="total_shipper_cartons"
+                                                value={formData.total_shipper_cartons}
                                                 onChange={handleInputChange}
                                                 max={99999}
                                             />

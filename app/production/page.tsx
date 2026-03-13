@@ -814,108 +814,171 @@ export default function ProductionPage() {
             <AnimatePresence>
                 {isEditModalOpen && selectedItem && selectedItem.status !== 'C' && (
                     <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => handleCancelClick('edit')} />
-                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Edit Production Record</h2>
-                                    <button onClick={() => handleCancelClick('edit')} className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors">
-                                        <X className="w-6 h-6" />
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 z-50" onClick={() => handleCancelClick('edit')} />
+                        <motion.div initial={{ opacity: 0, scale: 0.97, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 16 }} transition={{ duration: 0.2 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                            <div className="bg-[#f4f6f8] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
+
+                                {/* ── Modal title bar ── */}
+                                <div className="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
+                                    <h2 className="text-base font-bold text-gray-800 tracking-wide">Edit Production Record</h2>
+                                    <button type="button" onClick={() => handleCancelClick('edit')} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-1.5 transition-colors">
+                                        <X className="w-5 h-5" />
                                     </button>
                                 </div>
-                                <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-4">
-                                    {/* Read-only display fields */}
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Production ID</label>
-                                            <Input value={editFormData.production_id} disabled className="bg-gray-50 font-mono" />
+
+                                <form onSubmit={handleEditSubmit} className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+
+                                    {/* ── Card 1: Production ID + Entry Date ── */}
+                                    <div className="bg-white rounded-xl shadow-sm px-6 py-5 flex items-center">
+                                        <div className="flex-1 pr-4 border-r border-gray-200">
+                                            <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1">Production ID</p>
+                                            <p className="text-lg font-bold text-orange-500 tracking-wide">{editFormData.production_id}</p>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Production Date</label>
-                                            <Input value={formatDate(editFormData.production_date)} disabled className="bg-gray-50" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Machine ID</label>
-                                            <Input value={editFormData.machine_id} disabled className="bg-gray-50 font-mono" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Batch No</label>
-                                            <Input value={editFormData.batch_no} disabled className="bg-gray-50 font-mono" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Product ID</label>
-                                            <Input value={editFormData.product_id} disabled className="bg-gray-50 font-mono" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Collection Bin No</label>
-                                            <Input value={editFormData.collection_bin_no} disabled className="bg-gray-50" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Tare Weight (kg)</label>
-                                            <Input value={editFormData.tare_weight_kgs} disabled className="bg-gray-50" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Net Weight (kg)</label>
-                                            <Input value={editFormData.net_weight_kgs} disabled className="bg-gray-50" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Calculated Total Qty</label>
-                                            <Input value={editFormData.calculated_total_qty} disabled className="bg-gray-50" />
+                                        <div className="flex-1 pl-4 text-right">
+                                            <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1">Entry Date</p>
+                                            <p className="text-lg font-bold text-gray-800">{formatDate(editFormData.production_date)}</p>
                                         </div>
                                     </div>
-                                    {/* Editable fields */}
-                                    <div className="grid grid-cols-2 gap-6">
+
+                                    {/* ── Card 2: Machine info ── */}
+                                    <div className="bg-white rounded-xl shadow-sm px-6 py-5">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Bot className="w-5 h-5 text-orange-500" />
+                                            <p className="text-sm font-bold text-gray-700">Machine Details</p>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            <span className="px-4 py-2 rounded-lg border-2 border-orange-500 text-orange-500 bg-orange-50 text-sm font-semibold">
+                                                {editFormData.machine_id}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* ── Card 3: Main form fields ── */}
+                                    <div className="bg-white rounded-xl shadow-sm px-6 py-5 space-y-5">
+
+                                        {/* Batch No + Product ID */}
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Batch Number</p>
+                                                <input
+                                                    value={editFormData.batch_no}
+                                                    disabled
+                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Product ID</p>
+                                                <input
+                                                    value={editFormData.product_id}
+                                                    disabled
+                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Collection Bin + Tare Weight */}
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Collection Bin No.</p>
+                                                <input
+                                                    value={editFormData.collection_bin_no}
+                                                    disabled
+                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Tare Weight (KG)</p>
+                                                <input
+                                                    value={editFormData.tare_weight_kgs}
+                                                    disabled
+                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Gross Weight + Machine Count */}
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div>
+                                                <p className="text-[10px] font-bold text-orange-500 tracking-widest uppercase mb-1.5">Gross Weight (KG) *</p>
+                                                <input
+                                                    type="number"
+                                                    step="0.001"
+                                                    value={editFormData.gross_weight_kgs}
+                                                    onChange={(e) => setEditFormData(f => ({ ...f, gross_weight_kgs: e.target.value }))}
+                                                    placeholder="0.00"
+                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                                                />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Machine Count Qty</p>
+                                                <input
+                                                    type="number"
+                                                    value={editFormData.machine_count_qty}
+                                                    onChange={(e) => setEditFormData(f => ({ ...f, machine_count_qty: e.target.value }))}
+                                                    placeholder="Enter count"
+                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Net Weight + Calc Qty */}
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Net Weight (KG)</p>
+                                                <input
+                                                    value={editFormData.net_weight_kgs}
+                                                    disabled
+                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Calculated Total Qty</p>
+                                                <input
+                                                    value={editFormData.calculated_total_qty}
+                                                    disabled
+                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Remarks */}
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Gross Weight (kg)</label>
-                                            <Input
-                                                name="gross_weight_kgs"
-                                                type="number"
-                                                step="0.001"
-                                                value={editFormData.gross_weight_kgs}
-                                                onChange={(e) => setEditFormData(f => ({ ...f, gross_weight_kgs: e.target.value }))}
+                                            <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Remarks / Observations</p>
+                                            <textarea
+                                                value={editFormData.remarks}
+                                                onChange={(e) => setEditFormData(f => ({ ...f, remarks: e.target.value.slice(0, 100) }))}
+                                                maxLength={100}
+                                                rows={3}
+                                                placeholder="Note any abnormalities or variations..."
+                                                className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 resize-none"
                                             />
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Machine Count Qty</label>
-                                            <Input
-                                                name="machine_count_qty"
-                                                type="number"
-                                                value={editFormData.machine_count_qty}
-                                                onChange={(e) => setEditFormData(f => ({ ...f, machine_count_qty: e.target.value }))}
-                                            />
+
+                                        {/* Production Status toggle */}
+                                        <div className="flex items-center justify-between pt-1">
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-700">Production Status</p>
+                                                <p className="text-xs text-gray-400 mt-0.5">Mark as &apos;Closed&apos; when batch finishes</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-xs font-bold tracking-wide ${editFormData.status === 'W' ? 'text-orange-500' : 'text-gray-400'}`}>WIP</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditFormData(f => ({ ...f, status: f.status === 'W' ? 'C' : 'W' }))}
+                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${editFormData.status === 'W' ? 'bg-orange-500' : 'bg-gray-300'}`}
+                                                >
+                                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${editFormData.status === 'W' ? 'translate-x-1' : 'translate-x-6'}`} />
+                                                </button>
+                                                <span className={`text-xs font-bold tracking-wide ${editFormData.status === 'C' ? 'text-gray-700' : 'text-gray-400'}`}>CLOSED</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Remarks</label>
-                                        <Input
-                                            name="remarks"
-                                            value={editFormData.remarks}
-                                            onChange={(e) => setEditFormData(f => ({ ...f, remarks: e.target.value.slice(0, 100) }))}
-                                            maxLength={100}
-                                        />
-                                    </div>
-                                    {/* Status Toggle */}
-                                    <div>
-                                        <label className="block text-sm font-semibold text-foreground mb-2">Status</label>
-                                        <div className="flex rounded-lg border border-border overflow-hidden w-fit">
-                                            <button
-                                                type="button"
-                                                onClick={() => setEditFormData(f => ({ ...f, status: 'W' }))}
-                                                className={`px-6 py-2 text-sm font-semibold transition-all ${editFormData.status === 'W' ? 'bg-yellow-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                                            >
-                                                W — WIP
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setEditFormData(f => ({ ...f, status: 'C' }))}
-                                                className={`px-6 py-2 text-sm font-semibold border-l border-border transition-all ${editFormData.status === 'C' ? 'bg-green-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                                            >
-                                                C — Closed
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-end gap-4 pt-4 border-t border-border">
-                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update Record</Button>
+
+                                    {/* ── Update button ── */}
+                                    <div className="pb-2">
+                                        <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl text-sm tracking-wide shadow-md">
+                                            Update Production Record
+                                        </Button>
                                     </div>
                                 </form>
                             </div>
