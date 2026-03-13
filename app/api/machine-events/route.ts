@@ -4,6 +4,8 @@ import MachineEvent from '@/server/models/MachineEvent';
 import MachineEventMaterial from '@/server/models/MachineEventMaterial';
 import MachineStatus from '@/server/models/MachineStatus';
 import BatchMaterialSummary from '@/server/models/BatchMaterialSummary';
+import MachineEventTypeMaster from '@/server/models/MachineEventTypeMaster';
+import GoodsReceiptUnits from '@/server/models/GoodsReceiptUnits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -75,6 +77,52 @@ export async function POST(request: NextRequest) {
         uom: body.uom || undefined,
       });
       await material.save();
+
+      // Fetch event type master once for both open/close qty checks
+      const eventTypeMaster = await MachineEventTypeMaster.findOne({
+        machine_event_type_id: body.machine_event_type_id?.toUpperCase(),
+      }).lean();
+
+      // Update GoodsReceiptUnits if event type accepts open qty and actual_open_qty > 0
+      if (
+        eventTypeMaster &&
+        (eventTypeMaster as any).accept_open_qty === 'Y' &&
+        Number(body.actual_open_qty) > 0
+      ) {
+        await GoodsReceiptUnits.findOneAndUpdate(
+          {
+            material_id: body.material_id.toUpperCase(),
+            roll_no: body.roll_no,
+          },
+          {
+            $set: {
+              actual_qty: Number(body.actual_open_qty),
+              status: 'I',
+            },
+          }
+        );
+      }
+
+      // Update GoodsReceiptUnits if event type accepts close qty
+      if (
+        eventTypeMaster &&
+        (eventTypeMaster as any).accept_close_qty === 'Y'
+      ) {
+        const closeQty = Number(body.actual_close_qty);
+        const updateOp: any = {
+          $inc: { consumed_qty: Number(body.actual_consumed_qty) },
+        };
+        if (closeQty === 0) {
+          updateOp.$set = { balance_qty: 0, status: 'C' };
+        }
+        await GoodsReceiptUnits.findOneAndUpdate(
+          {
+            material_id: body.material_id.toUpperCase(),
+            roll_no: body.roll_no,
+          },
+          updateOp
+        );
+      }
     }
 
     // Upsert BatchMaterialSummary — accumulate consumed qty per batch+product+material
