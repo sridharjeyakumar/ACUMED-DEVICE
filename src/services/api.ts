@@ -127,13 +127,13 @@ export const companyAPI = {
 };
 
 // Product Status Master API
-export const productStatusAPI = {
-  getAll: () => fetchAPI('/product-statuses'),
-  getById: (id: string) => fetchAPI(`/product-statuses/${id}`),
-  create: (data: any) => fetchAPI('/product-statuses', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: any) => fetchAPI(`/product-statuses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id: string) => fetchAPI(`/product-statuses/${id}`, { method: 'DELETE' }),
-};
+// export const productStatusAPI = {
+//   getAll: () => fetchAPI('/product-statuses'),
+//   getById: (id: string) => fetchAPI(`/product-statuses/${id}`),
+//   create: (data: any) => fetchAPI('/product-statuses', { method: 'POST', body: JSON.stringify(data) }),
+//   update: (id: string, data: any) => fetchAPI(`/product-statuses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+//   delete: (id: string) => fetchAPI(`/product-statuses/${id}`, { method: 'DELETE' }),
+// };
 
 // Machine Event API
 export const machineEventAPI = {
@@ -332,14 +332,42 @@ export const cartonTypeAPI = {
 };
 
 // Carton Capacity Master API
+// export const cartonCapacityAPI = {
+//   getAll: () => fetchAPI('/carton-capacities'),
+//   getById: (id: string) => fetchAPI(`/carton-capacities/${id}`),
+//   create: (data: any) => fetchAPI('/carton-capacities', { method: 'POST', body: JSON.stringify(data) }),
+//   update: (id: string, data: any) => fetchAPI(`/carton-capacities/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+//   delete: (id: string) => fetchAPI(`/carton-capacities/${id}`, { method: 'DELETE' }),
+// };
+// Carton Capacity Master API
 export const cartonCapacityAPI = {
-  getAll: () => fetchAPI('/carton-capacities'),
+  getAll: (params?: { productId?: string; packSizeId?: string; cartonTypeId?: string; active?: boolean }) => {
+    let url = '/carton-capacities';
+    if (params) {
+      const queryParams = new URLSearchParams();
+      if (params.productId) queryParams.append('productId', params.productId);
+      if (params.packSizeId) queryParams.append('packSizeId', params.packSizeId);
+      if (params.cartonTypeId) queryParams.append('cartonTypeId', params.cartonTypeId);
+      if (params.active !== undefined) queryParams.append('active', String(params.active));
+      if (queryParams.toString()) {
+        url += `?${queryParams.toString()}`;
+      }
+    }
+    return fetchAPI(url);
+  },
   getById: (id: string) => fetchAPI(`/carton-capacities/${id}`),
-  create: (data: any) => fetchAPI('/carton-capacities', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: any) => fetchAPI(`/carton-capacities/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id: string) => fetchAPI(`/carton-capacities/${id}`, { method: 'DELETE' }),
+  create: (data: any) => fetchAPI('/carton-capacities', { 
+    method: 'POST', 
+    body: JSON.stringify(data) 
+  }),
+  update: (id: string, data: any) => fetchAPI(`/carton-capacities/${id}`, { 
+    method: 'PUT', 
+    body: JSON.stringify(data) 
+  }),
+  delete: (id: string) => fetchAPI(`/carton-capacities/${id}`, { 
+    method: 'DELETE' 
+  }),
 };
-
 // Product BOM Master API
 export const productBOMAPI = {
   getAll: () => fetchAPI('/product-bom'),
@@ -804,4 +832,136 @@ export const productionAPI = {
   create: (data: any) => fetchAPI('/productions', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: any) => fetchAPI(`/productions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) => fetchAPI(`/productions/${id}`, { method: 'DELETE' }),
+};
+export const packingAPI={
+    getAll: () => fetchAPI('/packing-entry'),
+    getById: (id: string) => fetchAPI(`/packing-entry/${id}`),
+    create: (data: any) => fetchAPI('/packing-entry', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => fetchAPI(`/packing-entry/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchAPI(`/packing-entry/${id}`, { method: 'DELETE' }),
+}
+// Product Stock API
+export const productStockAPI = {
+    getAll: (params?: { productId?: string; batchNo?: string }) => {
+        let url = '/product-stock';
+        if (params) {
+            const queryParams = new URLSearchParams();
+            if (params.productId) queryParams.append('productId', params.productId);
+            if (params.batchNo) queryParams.append('batchNo', params.batchNo);
+            if (queryParams.toString()) {
+                url += `?${queryParams.toString()}`;
+            }
+        }
+        return fetchAPI(url);
+    },
+    getByBatchNo: (batchNo: string) => fetchAPI(`/product-stock/${batchNo}`),
+    create: (data: any) => fetchAPI('/product-stock', { 
+        method: 'POST', 
+        body: JSON.stringify(data) 
+    }),
+    update: (batchNo: string, data: any) => fetchAPI(`/product-stock/${batchNo}`, { 
+        method: 'PUT', 
+        body: JSON.stringify(data) 
+    }),
+    delete: (batchNo: string) => fetchAPI(`/product-stock/${batchNo}`, { 
+        method: 'DELETE' 
+    }),
+};
+
+// Update productStatusAPI to include movement type filter
+export const productStatusAPI = {
+    getAll: (params?: { movementType?: string; active?: boolean }) => {
+        let url = '/product-statuses';
+        if (params) {
+            const queryParams = new URLSearchParams();
+            if (params.movementType) queryParams.append('movementType', params.movementType);
+            if (params.active !== undefined) queryParams.append('active', String(params.active));
+            if (queryParams.toString()) {
+                url += `?${queryParams.toString()}`;
+            }
+        }
+        return fetchAPI(url);
+    },
+    getById: (id: string) => fetchAPI(`/product-statuses/${id}`),
+    getByMovementType: (movementType: string) => 
+        fetchAPI(`/product-statuses?movementType=${movementType}`),
+    create: (data: any) => fetchAPI('/product-statuses', { 
+        method: 'POST', 
+        body: JSON.stringify(data) 
+    }),
+    update: (id: string, data: any) => fetchAPI(`/product-statuses/${id}`, { 
+        method: 'PUT', 
+        body: JSON.stringify(data) 
+    }),
+    delete: (id: string) => fetchAPI(`/product-statuses/${id}`, { 
+        method: 'DELETE' 
+    }),
+};
+
+// Update productStatusTransitionAPI to include fromStatus filter
+export const productStatusTransitionAPI = {
+    getAll: (params?: { active?: boolean; fromStatus?: string; toStatus?: string }) => {
+        let url = '/product-status-transitions';
+        if (params) {
+            const queryParams = new URLSearchParams();
+            if (params.active !== undefined) queryParams.append('active', String(params.active));
+            if (params.fromStatus) queryParams.append('fromStatus', params.fromStatus);
+            if (params.toStatus) queryParams.append('toStatus', params.toStatus);
+            if (queryParams.toString()) {
+                url += `?${queryParams.toString()}`;
+            }
+        }
+        return fetchAPI(url);
+    },
+    getById: (id: string) => fetchAPI(`/product-status-transitions/${id}`),
+    getByFromStatus: (fromStatus: string) => 
+        fetchAPI(`/product-status-transitions?fromStatus=${fromStatus}`),
+    getByFromToStatus: (fromStatus: string, toStatus?: string) => {
+        let url = `/product-status-transitions?fromStatus=${fromStatus}`;
+        if (toStatus) {
+            url += `&toStatus=${toStatus}`;
+        }
+        return fetchAPI(url);
+    },
+    create: (data: any) => fetchAPI('/product-status-transitions', { 
+        method: 'POST', 
+        body: JSON.stringify(data) 
+    }),
+    update: (id: string, data: any) => fetchAPI(`/product-status-transitions/${id}`, { 
+        method: 'PUT', 
+        body: JSON.stringify(data) 
+    }),
+    delete: (id: string) => fetchAPI(`/product-status-transitions/${id}`, { 
+        method: 'DELETE' 
+    }),
+};
+// Add this at the end of your api.ts file
+
+// Product Movement API
+export const productMovementAPI = {
+    getAll: (params?: { batchNo?: string; status?: string; year?: string }) => {
+        let url = '/product-movements';
+        if (params) {
+            const queryParams = new URLSearchParams();
+            if (params.batchNo) queryParams.append('batchNo', params.batchNo);
+            if (params.status) queryParams.append('status', params.status);
+            if (params.year) queryParams.append('year', params.year);
+            if (queryParams.toString()) {
+                url += `?${queryParams.toString()}`;
+            }
+        }
+        return fetchAPI(url);
+    },
+    getById: (id: number) => fetchAPI(`/product-movements/${id}`),
+    create: (data: any) => fetchAPI('/product-movements', { 
+        method: 'POST', 
+        body: JSON.stringify(data) 
+    }),
+    update: (id: number, data: any) => fetchAPI(`/product-movements/${id}`, { 
+        method: 'PUT', 
+        body: JSON.stringify(data) 
+    }),
+    delete: (id: number) => fetchAPI(`/product-movements/${id}`, { 
+        method: 'DELETE' 
+    }),
 };

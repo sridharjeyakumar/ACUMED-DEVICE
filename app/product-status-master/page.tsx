@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { productStatusAPI } from "@/services/api";
+import { cartonTypeAPI, productStatusAPI } from "@/services/api";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -28,6 +28,7 @@ interface ProductStatus {
     prod_status_id: string; // Char(3) - PK
     product_status: string; // Char(30)
     stock_movement?: string; // Char(3) - dropdown (IN / OUT) - can be empty
+    carton_type_id?: string; // Char(2) - FK to CartonTypeMaster
     movement_type?: string; // Char(1) - N (Normal) / S (Special)
     stock_origin?: string; // Char(1) - Y / N
     from_prod_status_id?: string; // Char(2) - FK
@@ -38,7 +39,14 @@ interface ProductStatus {
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
 }
-
+interface CartonType {
+    carton_type_id: string; // Char(2) - PK
+    carton_type_name: string; // Char(100)
+    carton_type_shortname: string; // Char(50)
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date; // Date
+    active: boolean; // Boolean
+}
 // Helper function to format dates consistently (prevents hydration errors)
 function formatDateTime(date: Date | string): string {
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -72,6 +80,8 @@ export default function ProductStatusMasterPage() {
     const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: ProductStatus } | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
+    const [cartonTypes, setCartonTypes] = useState<CartonType[]>([]);
+    
     const [formData, setFormData] = useState({
         prod_status_id: "",
         product_status: "",
@@ -83,6 +93,7 @@ export default function ProductStatusMasterPage() {
         seq_no: "",
         active: true,
         location_id: "",
+        carton_type_id: "",
     });
 
     const emptyForm = {
@@ -96,8 +107,19 @@ export default function ProductStatusMasterPage() {
         seq_no: "",
         active: true,
         location_id: "",
+        carton_type_id: "",
     };
-
+    useEffect(() => {
+             const loadPackSizes = async () => {
+                 try {
+                     const data = await cartonTypeAPI.getAll();
+                     setCartonTypes(data);
+                 } catch (error) {
+                     console.error("Failed to load carton types", error);
+                 }
+             };
+             loadPackSizes();
+         }, []);
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -196,6 +218,7 @@ export default function ProductStatusMasterPage() {
                 active: true,
                 last_modified_user_id: "ADMIN",
                 location_id: formData.location_id || '',
+                carton_type_id: formData.carton_type_id || '',
             });
             toast({
                 title: "Success",
@@ -238,6 +261,7 @@ export default function ProductStatusMasterPage() {
             seq_no: status.seq_no.toString(),
             active: status.active,
             location_id: status.location_id || "",
+            carton_type_id: status.carton_type_id || "",
         });
         setIsEditModalOpen(true);
     };
@@ -276,6 +300,7 @@ export default function ProductStatusMasterPage() {
                 active: formData.active,
                 last_modified_user_id: "ADMIN",
                 location_id: formData.location_id || '',
+                carton_type_id: formData.carton_type_id || '',
             });
             
             // Store last action for undo
@@ -322,6 +347,7 @@ export default function ProductStatusMasterPage() {
                     active: lastAction.data.active,
                     last_modified_user_id: "ADMIN",
                     location_id: lastAction.data.location_id || '',
+                    carton_type_id: lastAction.data.carton_type_id || '',
                 });
                 toast({
                     title: "Undone",
@@ -369,6 +395,7 @@ export default function ProductStatusMasterPage() {
                 active: false,
                 last_modified_user_id: "ADMIN",
                 location_id: statusToCancel.location_id || '',
+                    carton_type_id: statusToCancel.carton_type_id || '',
             });
             
             // Update local state by reloading from API
@@ -588,6 +615,7 @@ export default function ProductStatusMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Icon</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Stock Movement</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Movement Type</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Carton Type Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Stock Origin</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap"><div className="flex flex-col"><span>From Prod</span><span>Status Id</span></div></th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Location Id</th>
@@ -654,9 +682,12 @@ export default function ProductStatusMasterPage() {
                                                     <td className="px-6 py-4">
                                                         {status.movement_type ? (
                                                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.movement_type === 'N' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
-                                                                {status.movement_type === 'N' ? 'Normal' : 'Special'}
+                                                                {status.movement_type === 'N' ? 'N - Normal' : status.movement_type === 'S' ? 'S - Special' : 'I - Initial'}
                                                             </span>
                                                         ) : <span className="text-sm text-muted-foreground">-</span>}
+                                                    </td>
+                                                     <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.carton_type_id || "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         {status.stock_origin ? (
@@ -853,8 +884,31 @@ export default function ProductStatusMasterPage() {
                                                 <option value="">Select...</option>
                                                 <option value="N">N - Normal</option>
                                                 <option value="S">S - Special</option>
+                                                <option value="S">I - Initial</option>
+
                                             </select>
+       
                                         </div>
+                                                                             <div>
+            <label className="block text-sm font-semibold text-foreground mb-2">
+                Carton Type
+            </label>
+            <select
+                name="carton_type_id"
+                value={formData.carton_type_id}
+                onChange={handleInputChange}
+                disabled={cartonTypes.length === 0}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"
+            >
+                <option value="">Select Carton Type...</option>
+                {cartonTypes.map((type) => (
+      <option key={type.carton_type_id} value={type.carton_type_id}>
+        {/* If your API returns the name, show it; otherwise show the ID */}
+        {type.carton_type_id}
+      </option>
+    ))}
+            </select>
+        </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Stock Origin
@@ -1075,8 +1129,29 @@ export default function ProductStatusMasterPage() {
                                                 <option value="">Select...</option>
                                                 <option value="N">N - Normal</option>
                                                 <option value="S">S - Special</option>
+                                                <option value="I">I - Initial</option>
+
                                             </select>
                                         </div>
+                                                                                                                     <div>
+            <label className="block text-sm font-semibold text-foreground mb-2">
+                Carton Type
+            </label>
+            <select
+                name="carton_type_id"
+                value={formData.carton_type_id}
+                onChange={handleInputChange}
+                disabled={cartonTypes.length === 0}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"
+            >
+                <option value="">Select Carton Type...</option>
+                {cartonTypes.map((type) => (
+      <option key={type.carton_type_id} value={type.carton_type_id}>
+        {type.carton_type_id}
+      </option>
+    ))}
+            </select>
+        </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Stock Origin
