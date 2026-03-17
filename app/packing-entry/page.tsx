@@ -1282,7 +1282,7 @@ const handleUndo = async () => {
     {/* Optional: Helpful hint if no batches are found */}
     {activeBatches.length === 0 && (
         <p className="text-xs text-amber-500 mt-1">
-            Note: Only batches with 'Work in Progress' status are shown.
+            Note: Only batches with Work in Progress status are shown.
         </p>
     )}
 </div>
