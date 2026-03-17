@@ -6,6 +6,7 @@ export interface IProductStatusMaster extends Document {
   stock_movement?: string; // Char(3) - IN/OUT dropdown
   // effect_in_stock?: string; // Char(1) - + or - dropdown
   movement_type?: string; // Char(1) - N (Normal) / S (Special)
+  carton_type_id?: string; // Char(2) - FK to CartonTypeMaster
   stock_origin?: string; // Char(1) - Y / N
   from_prod_status_id?: string; // Char(2) - FK to prod_status_id
   prod_status_icon?: string; // image (base64 or URL)
@@ -49,7 +50,13 @@ const ProductStatusMasterSchema: Schema = new Schema({
     required: false,
     maxlength: 1,
     trim: true,
-    enum: ['N', 'S', ''],
+    enum: ['N', 'S', 'I', ''],
+  },
+  carton_type_id: {
+        type: String,
+    required: false,
+    maxlength: 2,
+    trim: true,
   },
   stock_origin: {
     type: String,

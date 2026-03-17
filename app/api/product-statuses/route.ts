@@ -6,11 +6,26 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // GET /api/product-statuses - Get all product statuses
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await ensureConnection();
-    // Use lean() for faster queries
-    const statuses = await ProductStatusMaster.find().lean().sort({ seq_no: 1 });
+    
+    const { searchParams } = new URL(request.url);
+    const movementType = searchParams.get('movementType');
+    const active = searchParams.get('active');
+    
+    let query: any = {};
+    if (movementType) {
+      query.movement_type = movementType;
+    }
+    if (active !== null) {
+      query.active = active === 'true';
+    }
+    
+    const statuses = await ProductStatusMaster.find(query)
+      .lean()
+      .sort({ seq_no: 1 });
+      
     return NextResponse.json(statuses, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
@@ -30,6 +45,16 @@ export async function POST(request: NextRequest) {
   try {
     await ensureConnection();
     const body = await request.json();
+    
+    // Check if status already exists
+    const existingStatus = await ProductStatusMaster.findOne({ prod_status_id: body.prod_status_id });
+    if (existingStatus) {
+      return NextResponse.json(
+        { error: 'Product status ID already exists' },
+        { status: 400 }
+      );
+    }
+    
     const status = new ProductStatusMaster({
       prod_status_id: body.prod_status_id,
       product_status: body.product_status,
@@ -44,7 +69,9 @@ export async function POST(request: NextRequest) {
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
       location_id: body.location_id || '',
+      carton_type_id: body.carton_type_id || '',
     });
+    
     await status.save();
     return NextResponse.json(status, { status: 201 });
   } catch (error: any) {

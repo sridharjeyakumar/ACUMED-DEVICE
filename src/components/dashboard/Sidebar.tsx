@@ -76,6 +76,7 @@ const navSections: NavSection[] = [
       { icon: Layers, label: "Material Category Master", href: "/material-category-master" },
       { icon: MapPin, label: "Location Master", href: "/location-master" },
       { icon: CheckCircle2, label: "Product Status Master", href: "/product-status-master" },
+      { icon: CheckCircle2, label: "Product Status Transition Master", href: "/product-status-transition-master" },
       { icon: Package, label: "Material Status Master", href: "/material-status-master" },
       { icon: Factory, label: "Department Master", href: "/department-master" },
       { icon: Award, label: "Employee Grade Master", href: "/employee-grade-master" },
@@ -105,6 +106,8 @@ const navSections: NavSection[] = [
       { icon: Activity, label: "Machine Event", href: "/machine-event" },
       { icon: TableProperties, label: "Goods Receipt", href: "/goods-receipt" },
       { icon: Factory, label: "Production", href: "/production" },
+      { icon: Factory, label: "Packing Entry & Approval", href: "/packing-entry" },
+
 
     ],
   },
