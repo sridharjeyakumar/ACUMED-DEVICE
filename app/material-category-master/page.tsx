@@ -56,7 +56,7 @@ export default function MaterialCategoryMasterPage() {
     const [categories, setCategories] = useState<MaterialCategory[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: MaterialCategory } | null>(null);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
     const [categoryToCancel, setCategoryToCancel] = useState<MaterialCategory | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -413,7 +413,7 @@ export default function MaterialCategoryMasterPage() {
                                                             onChange={() => setFilterActive("inactive")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="mc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Cancelled</Label>
+                                                        <Label htmlFor="mc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -545,7 +545,7 @@ export default function MaterialCategoryMasterPage() {
                                                                 ? 'bg-green-100 text-green-800' 
                                                                 : 'bg-red-100 text-red-800'
                                                         }`}>
-                                                            {category.active ? 'Active' : 'Cancelled'}
+                                                            {category.active ? 'Active' : 'Inactive'}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">

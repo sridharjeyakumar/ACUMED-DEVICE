@@ -60,7 +60,7 @@ export default function MaterialStatusMasterPage() {
     const [statusToCancel, setStatusToCancel] = useState<MaterialStatus | null>(null);
     const [selectedStatus, setSelectedStatus] = useState<MaterialStatus | null>(null);
     const isSubmittingRef = useRef(false);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [filterStockMovement, setFilterStockMovement] = useState<string>("all");
     const [statuses, setStatuses] = useState<MaterialStatus[]>([]);
     const [loading, setLoading] = useState(true);
@@ -481,7 +481,7 @@ export default function MaterialStatusMasterPage() {
                                                             onChange={() => setFilterActive("inactive")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="ms-active-false" className="text-sm font-normal cursor-pointer text-foreground">Cancelled</Label>
+                                                        <Label htmlFor="ms-active-false" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -639,7 +639,7 @@ export default function MaterialStatusMasterPage() {
                                                                 ? "bg-green-100 text-green-800" 
                                                                 : "bg-red-100 text-red-800"
                                                         }`}>
-                                                            {status.active ? "Active" : "Cancelled"}
+                                                            {status.active ? "Active" : "Inactive"}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">

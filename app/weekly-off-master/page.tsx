@@ -62,7 +62,7 @@ export default function WeeklyOffMasterPage() {
     const isSubmittingRef = useRef(false);
     const [weeklyOffs, setWeeklyOffs] = useState<WeeklyOff[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [weeklyOffToCancel, setWeeklyOffToCancel] = useState<WeeklyOff | null>(null);
     const [filterDay, setFilterDay] = useState<string>("all");

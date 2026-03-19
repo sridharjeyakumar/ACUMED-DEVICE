@@ -85,6 +85,7 @@ export default function ProductBOMPage() {
     const [bomToCancel, setBomToCancel] = useState<BOMRecord | null>(null);
     const [cancelledBOMs, setCancelledBOMs] = useState<Set<string>>(new Set());
     const [selectedBOM, setSelectedBOM] = useState<BOMRecord | null>(null);
+    const [filterActive, setFilterActive] = useState<string>("true");
     const [filterProduct, setFilterProduct] = useState<string>("all");
     const [filterMaterial, setFilterMaterial] = useState<string>("all");
     const [records, setRecords] = useState<BOMRecord[]>([]);
@@ -207,10 +208,14 @@ useEffect(() => {
         const matchesSearch = item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.bomId.toLowerCase().includes(searchQuery.toLowerCase());
         
+        const matchesActive = filterActive === "all" ||
+            (filterActive === "true" && item.active === true) ||
+            (filterActive === "false" && item.active === false);
+
         const matchesProduct = filterProduct === "all" || item.productId === filterProduct;
         const matchesMaterial = filterMaterial === "all" || item.materialId === filterMaterial;
-        
-        return matchesSearch && matchesProduct && matchesMaterial;
+
+        return matchesSearch && matchesActive && matchesProduct && matchesMaterial;
     });
 
     const uniqueProducts = Array.from(new Set(records.map(r => r.productId)));
@@ -440,6 +445,23 @@ const confirmCancelItem = async () => {
                                     <PopoverContent className="w-auto max-w-4xl p-4" align="end">
                                         <div className="flex flex-wrap gap-6 items-start">
                                             <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Active Status</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input type="radio" id="bom-active-all" name="bomActiveFilter" checked={filterActive === "all"} onChange={() => setFilterActive("all")} className="h-4 w-4" />
+                                                        <Label htmlFor="bom-active-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input type="radio" id="bom-active-true" name="bomActiveFilter" checked={filterActive === "true"} onChange={() => setFilterActive("true")} className="h-4 w-4" />
+                                                        <Label htmlFor="bom-active-true" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input type="radio" id="bom-active-false" name="bomActiveFilter" checked={filterActive === "false"} onChange={() => setFilterActive("false")} className="h-4 w-4" />
+                                                        <Label htmlFor="bom-active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
                                                 <Label className="text-sm font-semibold">Product</Label>
                                                 <div className="space-y-2 max-h-48 overflow-y-auto">
                                                     <div className="flex items-center space-x-2">
@@ -502,6 +524,7 @@ const confirmCancelItem = async () => {
                                                 size="sm" 
                                                 className="w-full"
                                                 onClick={() => {
+                                                    setFilterActive("all");
                                                     setFilterProduct("all");
                                                     setFilterMaterial("all");
                                                 }}
@@ -645,7 +668,7 @@ const confirmCancelItem = async () => {
               <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
                 displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
               }`}>
-                {displayActive ? "TRUE" : "FALSE"}
+                {displayActive ? "ACTIVE" : "INACTIVE"}
               </span>
             );
           })()}
@@ -820,7 +843,7 @@ const confirmCancelItem = async () => {
         required
     >
         <option value="">Select a product</option>
-        {products.map(product => (
+        {products.filter(product => product.active).map(product => (
             <option key={product.product_id} value={product.product_id}>
                 {product.product_id}
             </option>
@@ -871,7 +894,7 @@ const confirmCancelItem = async () => {
         required
     >
         <option value="">Select a material</option>
-        {materials.map(material => (
+        {materials.filter(material => material.active).map(material => (
             <option key={material.material_id} value={material.material_id}>
                 {material.material_id}
             </option>
@@ -1008,18 +1031,25 @@ const confirmCancelItem = async () => {
                                         </div> */}
 
                                         {/* Product ID */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Product ID <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input 
-                                                name="productId" 
-                                                value={formData.productId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="PRD-XXX-XX" 
-                                                required
-                                            />
-                                        </div>
+                                                                                                                 <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Product ID <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="productId"
+        value={formData.productId}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a product</option>
+        {products.filter(product => product.active).map(product => (
+            <option key={product.product_id} value={product.product_id}>
+                {product.product_id}
+            </option>
+        ))}
+    </select>
+</div>
 
                                         {/* Output Qty */}
                                         <div>
@@ -1052,18 +1082,25 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Material ID */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Material ID <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input 
-                                                name="materialId" 
-                                                value={formData.materialId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="MAT-XXX-XX" 
-                                                required
-                                            />
-                                        </div>
+                                                                                                                                                       <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Material ID <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="materialId"
+        value={formData.materialId}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a material</option>
+        {materials.filter(material => material.active).map(material => (
+            <option key={material.material_id} value={material.material_id}>
+                {material.material_id}
+            </option>
+        ))}
+    </select>
+</div>
 
                                         {/* Input Qty */}
                                         <div>

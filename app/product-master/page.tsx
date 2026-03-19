@@ -55,6 +55,7 @@ interface ProductCategory {
     product_category_name: string; // Char(100)
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
+    active?:boolean
 }
 interface PackSizeMaster {
     pack_size_id: string;
@@ -85,7 +86,7 @@ export default function ProductMasterPage() {
     const [productToCancel, setProductToCancel] = useState<Product | null>(null);
     const [cancelledProducts, setCancelledProducts] = useState<Set<string>>(new Set());
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("true");
     const [filterCategory, setFilterCategory] = useState<string>("all");
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -934,7 +935,7 @@ const confirmCancelItem = async () => {
               ? "bg-green-50 text-green-600"
               : "bg-red-50 text-red-600"
           }`}>
-            {isActive ? "ACTIVE" : "CANCELLED"}
+            {isActive ? "ACTIVE" : "INACTIVE"}
           </span>
         </td>
 
@@ -1117,7 +1118,7 @@ const confirmCancelItem = async () => {
         required
     >
         <option value="">Select a uom</option>
-        {uoms.map(product => (
+        {uoms.filter((uom) => uom.active !== false).map(product => (
             <option key={product.uom_id} value={product.uom_id}>
                 {product.uom_id}
             </option>
@@ -1139,7 +1140,7 @@ const confirmCancelItem = async () => {
         required
     >
         <option value="">Select a category ID</option>
-        {categories.map(product => (
+        {categories.filter((data) => data.active !== false).map(product => (
             <option key={product.product_category_id} value={product.product_category_id}>
                 {product.product_category_id}-{product.product_category_name}
             </option>
@@ -1194,7 +1195,7 @@ const confirmCancelItem = async () => {
                                                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                             >
                                                 <option value="">Select a uom</option>
-                                                {uoms.map(uom => (
+                                                {uoms.filter((uom) => uom.active !== false).map(uom => (
                                                     <option key={uom.uom_id} value={uom.uom_id}>
                                                         {uom.uom_id}
                                                     </option>
@@ -1276,7 +1277,7 @@ const confirmCancelItem = async () => {
                                                 className="w-full border border-input bg-background rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                                             >
                                                 <option value="">Select Pack Size</option>
-                                                {packSizes.map(ps => (
+                                                {packSizes.filter((ps) => ps.active !== false).map(ps => (
                                                     <option key={ps.pack_size_id} value={ps.pack_size_id}>
                                                         {ps.pack_size_id} - {ps.pack_size_name}
                                                     </option>
@@ -1346,7 +1347,7 @@ const confirmCancelItem = async () => {
         required
     >
         <option value="">Enter COA checklist ID</option>
-        {checklists.map(product => (
+        {checklists.filter((data) => data.active !== false).map(product => (
             <option key={product.checklist_id} value={product.checklist_id}>
                 {product.checklist_id}
             </option>
@@ -1622,7 +1623,7 @@ const confirmCancelItem = async () => {
                                                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                             >
                                                 <option value="">Select a uom</option>
-                                                {uoms.map(uom => (
+                                                {uoms.filter((uom) => uom.active !== false).map(uom => (
                                                     <option key={uom.uom_id} value={uom.uom_id}>
                                                         {uom.uom_id}
                                                     </option>
@@ -1761,16 +1762,23 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* COA Checklist ID */}
-                                        <div>
+                                                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 COA Checklist ID
                                             </label>
-                                            <Input
-                                                name="coa_checklist_id"
-                                                value={formData.coa_checklist_id}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter COA checklist ID"
-                                            />
+                                                                                                                                                                                                                                                                     <select
+        name="coa_checklist_id"
+        value={formData.coa_checklist_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        {checklists.filter((data) => data.active !== false).map(product => (
+            <option key={product.checklist_id} value={product.checklist_id}>
+                {product.checklist_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Sterilization Required */}

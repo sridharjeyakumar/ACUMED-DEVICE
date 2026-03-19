@@ -57,7 +57,7 @@ export default function LocationMasterPage() {
     const [locations, setLocations] = useState<Location[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Location } | null>(null);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
     const [locationToCancel, setLocationToCancel] = useState<Location | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -395,7 +395,7 @@ export default function LocationMasterPage() {
                                                             onChange={() => setFilterActive("inactive")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="loc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Cancelled</Label>
+                                                        <Label htmlFor="loc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -528,7 +528,7 @@ export default function LocationMasterPage() {
                                                                 ? 'bg-green-100 text-green-800'
                                                                 : 'bg-red-100 text-red-800'
                                                         }`}>
-                                                            {location.active ? 'Active' : 'Cancelled'}
+                                                            {location.active ? 'Active' : "Inactive"}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">

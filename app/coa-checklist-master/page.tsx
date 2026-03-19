@@ -30,7 +30,7 @@ export default function COAChecklistMasterPage() {
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [checklistToCancel, setChecklistToCancel] = useState<ChecklistRecord | null>(null);
     const [cancelledChecklists, setCancelledChecklists] = useState<Set<string>>(new Set());
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("true");
     const [selectedChecklist, setSelectedChecklist] = useState<ChecklistRecord | null>(null);
     const [records, setRecords] = useState<ChecklistRecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -100,9 +100,9 @@ export default function COAChecklistMasterPage() {
         const matchesSearch = item.checklistDescription.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.checklistId.toLowerCase().includes(searchQuery.toLowerCase());
         
-        const matchesActive = filterActive === "all" || 
-            (filterActive === "active" && !cancelledChecklists.has(item.checklistId)) ||
-            (filterActive === "inactive" && cancelledChecklists.has(item.checklistId));
+        const matchesActive = filterActive === "all" ||
+            (filterActive === "true" && item.active === true) ||
+            (filterActive === "false" && item.active === false);
         
         return matchesSearch && matchesActive;
     });
@@ -314,8 +314,8 @@ const confirmCancelItem = async () => {
                                                             type="radio" 
                                                             id="coa-status-active" 
                                                             name="coaStatusFilter"
-                                                            checked={filterActive === "active"}
-                                                            onChange={() => setFilterActive("active")}
+                                                            checked={filterActive === "true"}
+                                                            onChange={() => setFilterActive("true")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
                                                         <Label htmlFor="coa-status-active" className="text-sm font-normal cursor-pointer text-foreground">Active</Label>
@@ -325,8 +325,8 @@ const confirmCancelItem = async () => {
                                                             type="radio" 
                                                             id="coa-status-inactive" 
                                                             name="coaStatusFilter"
-                                                            checked={filterActive === "inactive"}
-                                                            onChange={() => setFilterActive("inactive")}
+                                                            checked={filterActive === "false"}
+                                                            onChange={() => setFilterActive("false")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
                                                         <Label htmlFor="coa-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
@@ -458,7 +458,7 @@ const confirmCancelItem = async () => {
               item.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
             }`}
           >
-            {item.active ? "TRUE" : "FALSE"}
+            {item.active ? "ACTIVE" : "INACTIVE"}
           </span>
         </td>
 

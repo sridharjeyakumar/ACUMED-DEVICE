@@ -60,7 +60,7 @@ export default function DepartmentMasterPage() {
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: Department } | null>(null);
     const [cancelledDepartments, setCancelledDepartments] = useState<Set<string>>(new Set());
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
@@ -523,7 +523,7 @@ export default function DepartmentMasterPage() {
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
                                                             department.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                         }`}>
-                                                            {department.active ? "TRUE" : "FALSE"}
+                                                            {department.active ? "ACTIVE" : "INACTIVE"}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3">

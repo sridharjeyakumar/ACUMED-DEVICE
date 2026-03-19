@@ -65,7 +65,7 @@ export default function ProductStatusTransitionMasterPage() {
     const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
     const [transitionToDeactivate, setTransitionToDeactivate] = useState<ProductStatusTransition | null>(null);
     const [selectedTransition, setSelectedTransition] = useState<ProductStatusTransition | null>(null);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [filterSterilization, setFilterSterilization] = useState<string>("all");
     const [filterApproval, setFilterApproval] = useState<string>("all");
     const isSubmittingRef = useRef(false);

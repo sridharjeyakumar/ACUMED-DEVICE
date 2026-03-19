@@ -155,7 +155,7 @@ export default function GoodsReceiptHeaderPage() {
     const [loading, setLoading]           = useState(true);
     const [rowsPerPage, setRowsPerPage]   = useState<number>(10);
     const [currentPage, setCurrentPage]   = useState<number>(1);
-    const [filterStatus, setFilterStatus] = useState<string>("all");
+    const [filterStatus, setFilterStatus] = useState<string>("active");
 
     // ── Expandable rows state ─────────────────────────────────────────────────
     const [expandedDocRows,    setExpandedDocRows]    = useState<Set<string>>(new Set());
@@ -757,7 +757,7 @@ export default function GoodsReceiptHeaderPage() {
                                 <select name="material_status_id" value={formData.material_status_id} onChange={handleInputChange}
                                     className="w-full h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none">
                                     <option value="">Select</option>
-                                    {statuses.map(r => <option key={r.matl_status_id} value={r.matl_status_id}>{r.matl_status_id} -{ r.material_status}</option>)}
+                                    {statuses.filter(s => s.active).map(r => <option key={r.matl_status_id} value={r.matl_status_id}>{r.matl_status_id} -{ r.material_status}</option>)}
                                 </select>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
@@ -825,7 +825,7 @@ export default function GoodsReceiptHeaderPage() {
                                     <select name="received_by_emp_id" value={formData.received_by_emp_id} onChange={handleInputChange}
                                         className="w-full h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none">
                                         <option value="">Select</option>
-                                        {records.map(r => <option key={r.id} value={r.empId}>{r.empId} {r.emp_name}</option>)}
+                                        {records.filter(r => r.active).map(r => <option key={r.id} value={r.empId}>{r.empId} {r.emp_name}</option>)}
                                     </select>
                                 </div>
                                 <div>
@@ -833,7 +833,7 @@ export default function GoodsReceiptHeaderPage() {
                                     <select name="checked_by_emp_id" value={formData.checked_by_emp_id} onChange={handleInputChange}
                                         className="w-full h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none">
                                         <option value="">Select</option>
-                                        {records.map(r => <option key={r.id} value={r.empId}>{r.empId} {r.emp_name}</option>)}
+                                        {records.filter(r => r.active).map(r => <option key={r.id} value={r.empId}>{r.empId} {r.emp_name}</option>)}
                                     </select>
                                 </div>
                             </div>
@@ -908,11 +908,11 @@ export default function GoodsReceiptHeaderPage() {
                                         onChange={e => handleMaterialSelect(row.id, e.target.value)}
                                         className="w-full h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none">
                                         <option value="">Select Material</option>
-                                        {materials.map(r => <option key={r.material_id} value={r.material_id}>{r.material_id} - {r.material_name}</option>)}
+                                        {materials.filter(m => m.active).map(r => <option key={r.material_id} value={r.material_id}>{r.material_id} - {r.material_name}</option>)}
                                     </select>
                                     {row.material_id && (
                                         <p className="text-[9px] text-slate-400 truncate mt-0.5 px-1">
-                                            {materials.find(m => m.material_id === row.material_id)?.material_name || ""}
+                                            {materials.filter(m => m.active).find(m => m.material_id === row.material_id)?.material_name || ""}
                                         </p>
                                     )}
                                 </div>
@@ -1244,7 +1244,7 @@ export default function GoodsReceiptHeaderPage() {
                                                         <td className="px-4 py-4 text-sm align-middle whitespace-nowrap">{item.last_modified_date_time ? formatDateTime(item.last_modified_date_time) : "-"}</td>
                                                         <td className="px-4 py-4 align-middle">
                                                             <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${item.status === "A" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}>
-                                                                {item.status === "A" ? "A — Active" : "D — Draft"}
+                                                                {item.status === "A" ? "Active" : "Draft"}
                                                             </span>
                                                         </td>
                                                         {/* Details expand */}
