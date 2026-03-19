@@ -56,7 +56,7 @@ export default function ProductCategoryMasterPage() {
     const [categories, setCategories] = useState<ProductCategory[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: ProductCategory } | null>(null);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
     const [categoryToCancel, setCategoryToCancel] = useState<ProductCategory | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -415,7 +415,7 @@ export default function ProductCategoryMasterPage() {
                                                             onChange={() => setFilterActive("inactive")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="pc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Cancelled</Label>
+                                                        <Label htmlFor="pc-status-inactive" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -561,7 +561,7 @@ export default function ProductCategoryMasterPage() {
                                                                 ? 'bg-green-100 text-green-800' 
                                                                 : 'bg-red-100 text-red-800'
                                                         }`}>
-                                                            {category.active ? 'Active' : 'Cancelled'}
+                                                            {category.active ? 'Active' : 'INACTIVE'}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">

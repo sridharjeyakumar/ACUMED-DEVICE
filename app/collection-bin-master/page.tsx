@@ -38,7 +38,7 @@ export default function CollectionBinMasterPage() {
     const [cancelledBins, setCancelledBins] = useState<Set<string>>(new Set());
     const [selectedBin, setSelectedBin] = useState<BinRecord | null>(null);
     const [filterBinType, setFilterBinType] = useState<string>("all");
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [records, setRecords] = useState<BinRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -617,7 +617,7 @@ const confirmCancelItem = async () => {
                     : "bg-red-50 text-red-600"
                 }`}
               >
-                {displayActive ? "TRUE" : "FALSE"}
+                {displayActive ? "ACTIVE" : "INACTIVE"}
               </span>
             );
           })()}

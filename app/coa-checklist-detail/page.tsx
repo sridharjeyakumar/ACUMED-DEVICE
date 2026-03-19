@@ -551,7 +551,7 @@ export default function COAChecklistDetailPage() {
                                             required
                                         >
                                             <option value="">Select Checklist ID</option>
-                                            {checklists.map((checklist) => (
+                                            {checklists.filter((checklist) => checklist.active === true).map((checklist) => (
                                                 <option key={checklist.checklist_id} value={checklist.checklist_id}>
                                                     {checklist.checklist_id} 
                                                 </option>

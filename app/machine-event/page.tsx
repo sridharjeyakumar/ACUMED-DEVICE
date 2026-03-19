@@ -586,7 +586,7 @@ export default function MachineEventPage() {
                             onChange={e => setEditForm(prev => ({ ...prev, done_by_emp_id: e.target.value }))}
                             className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="">-- Select Employee --</option>
-                            {employees.map(emp => <option key={emp.emp_id} value={emp.emp_id}>{emp.emp_id} - {emp.emp_name}</option>)}
+                            {employees.filter(emp => emp.active).map(emp => <option key={emp.emp_id} value={emp.emp_id}>{emp.emp_id} - {emp.emp_name}</option>)}
                         </select>
                     </div>
                     {/* Stop Reason (conditional) */}

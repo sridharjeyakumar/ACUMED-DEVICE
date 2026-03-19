@@ -48,6 +48,7 @@ export default function ProductionCapacityPage() {
     const [machineToCancel, setMachineToCancel] = useState<MachineRecord | null>(null);
     const [cancelledMachines, setCancelledMachines] = useState<Set<string>>(new Set());
     const [selectedMachine, setSelectedMachine] = useState<MachineRecord | null>(null);
+    const [filterActive, setFilterActive] = useState<string>("true");
     const [filterUom, setFilterUom] = useState<string>("all");
     const [filterSection, setFilterSection] = useState<string>("all");
     const [machines, setMachines] = useState<MachineRecord[]>([]);
@@ -126,10 +127,14 @@ const fetchMachines = async () => {
         const matchesSearch = machine.machineName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             machine.machineId.toLowerCase().includes(searchQuery.toLowerCase());
         
+        const matchesActive = filterActive === "all" ||
+            (filterActive === "true" && machine.active === true) ||
+            (filterActive === "false" && machine.active === false);
+
         const matchesUom = filterUom === "all" || machine.uom === filterUom;
         const matchesSection = filterSection === "all" || machine.section === filterSection;
-        
-        return matchesSearch && matchesUom && matchesSection;
+
+        return matchesSearch && matchesActive && matchesUom && matchesSection;
     });
 
     const uniqueUoms = Array.from(new Set(machines.map(m => m.uom)));
@@ -348,6 +353,23 @@ const handleSubmit = async (e: React.FormEvent) => {
                                     <PopoverContent className="w-56" align="end">
                                         <div className="space-y-4">
                                             <div className="space-y-2">
+                                                <Label className="text-sm font-semibold">Active Status</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input type="radio" id="cap-active-all" name="capActiveFilter" checked={filterActive === "all"} onChange={() => setFilterActive("all")} className="h-4 w-4" />
+                                                        <Label htmlFor="cap-active-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input type="radio" id="cap-active-true" name="capActiveFilter" checked={filterActive === "true"} onChange={() => setFilterActive("true")} className="h-4 w-4" />
+                                                        <Label htmlFor="cap-active-true" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input type="radio" id="cap-active-false" name="capActiveFilter" checked={filterActive === "false"} onChange={() => setFilterActive("false")} className="h-4 w-4" />
+                                                        <Label htmlFor="cap-active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
                                                 <Label className="text-sm font-semibold">Unit of Measure</Label>
                                                 <div className="space-y-2 max-h-48 overflow-y-auto">
                                                     <div className="flex items-center space-x-2">
@@ -412,6 +434,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                                                 size="sm" 
                                                 className="w-full"
                                                 onClick={() => {
+                                                    setFilterActive("all");
                                                     setFilterUom("all");
                                                     setFilterSection("all");
                                                 }}
@@ -543,7 +566,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 : "bg-red-50 text-red-600"
             }`}
           >
-            {isActive ? "ACTIVE" : "CANCELLED"}
+            {isActive ? "ACTIVE" : "INACTIVE"}
           </span>
         </td>
 
@@ -768,7 +791,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         required
     >
         <option value="">Select a uom</option>
-        {uoms.map(product => (
+        {uoms.filter((uom: any) => uom.active).map((product: any) => (
             <option key={product.uom_id} value={product.uom_id}>
                 {product.uom_id}
             </option>
@@ -950,22 +973,24 @@ const handleSubmit = async (e: React.FormEvent) => {
                                             />
                                         </div>
 
-                                        {/* UOM */}
-                                        <div>
+                                                                       <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 UOM
                                             </label>
-                                            <select
-                                                name="uom"
-                                                value={formData.uom}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                            >
-                                                <option value="UNITS">UNITS</option>
-                                                <option value="PACKS">PACKS</option>
-                                                <option value="CARTONS">CARTONS</option>
-                                                <option value="NOS">NOS</option>
-                                            </select>
+                                                                                      <select
+        name="uom"
+        value={formData.uom}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a uom</option>
+        {uoms.filter((uom: any) => uom.active).map((product: any) => (
+            <option key={product.uom_id} value={product.uom_id}>
+                {product.uom_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Avg Prod Hrs/Day */}

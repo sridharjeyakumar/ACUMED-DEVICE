@@ -80,6 +80,7 @@ export default function CartonCapacityMasterPage() {
     const [capacityToCancel, setCapacityToCancel] = useState<CartonCapacityRecord | null>(null);
     const [cancelledCapacities, setCancelledCapacities] = useState<Set<string>>(new Set());
     const [selectedCapacity, setSelectedCapacity] = useState<CartonCapacityRecord | null>(null);
+    const [filterActive, setFilterActive] = useState<string>("true");
     const [filterPackSize, setFilterPackSize] = useState<string>("all");
     const [filterMaterial, setFilterMaterial] = useState<string>("all");
     const [records, setRecords] = useState<CartonCapacityRecord[]>([]);
@@ -215,10 +216,14 @@ useEffect(() => {
         const matchesSearch = item.cartonCapacityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.cartonCapacityId.toLowerCase().includes(searchQuery.toLowerCase());
         
+        const matchesActive = filterActive === "all" ||
+            (filterActive === "true" && item.active === true) ||
+            (filterActive === "false" && item.active === false);
+
         const matchesPackSize = filterPackSize === "all" || item.packSizeId === filterPackSize;
         const matchesMaterial = filterMaterial === "all" || item.packMatlId === filterMaterial;
-        
-        return matchesSearch && matchesPackSize && matchesMaterial;
+
+        return matchesSearch && matchesActive && matchesPackSize && matchesMaterial;
     });
 
     const uniquePackSizes = Array.from(new Set(records.map(r => r.packSizeId)));
@@ -455,6 +460,23 @@ const confirmCancelItem = async () => {
                                     <PopoverContent className="w-auto max-w-4xl p-4" align="end">
                                         <div className="flex flex-wrap gap-6 items-start">
                                             <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <Label className="text-sm font-semibold">Active Status</Label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <input type="radio" id="cc-active-all" name="ccActiveFilter" checked={filterActive === "all"} onChange={() => setFilterActive("all")} className="h-4 w-4" />
+                                                        <Label htmlFor="cc-active-all" className="text-sm font-normal cursor-pointer">All</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input type="radio" id="cc-active-true" name="ccActiveFilter" checked={filterActive === "true"} onChange={() => setFilterActive("true")} className="h-4 w-4" />
+                                                        <Label htmlFor="cc-active-true" className="text-sm font-normal cursor-pointer">Active</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input type="radio" id="cc-active-false" name="ccActiveFilter" checked={filterActive === "false"} onChange={() => setFilterActive("false")} className="h-4 w-4" />
+                                                        <Label htmlFor="cc-active-false" className="text-sm font-normal cursor-pointer">Inactive</Label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
                                                 <Label className="text-sm font-semibold">Pack Size</Label>
                                                 <div className="flex flex-wrap gap-3 max-h-48 overflow-y-auto">
                                                     <div className="flex items-center space-x-2">
@@ -517,6 +539,7 @@ const confirmCancelItem = async () => {
                                                 size="sm" 
                                                 className="w-full"
                                                 onClick={() => {
+                                                    setFilterActive("all");
                                                     setFilterPackSize("all");
                                                     setFilterMaterial("all");
                                                 }}
@@ -693,7 +716,7 @@ const confirmCancelItem = async () => {
                   displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                 }`}
               >
-                {displayActive ? "TRUE" : "FALSE"}
+                {displayActive ? "Active" : "Inactive"}
               </span>
             );
           })()}
@@ -873,7 +896,7 @@ const confirmCancelItem = async () => {
         required
     >
         <option value="">Select a product</option>
-        {products.map(product => (
+        {products.filter((product) => product.active).map(product => (
             <option key={product.product_id} value={product.product_id}>
                 {product.product_id}
             </option>
@@ -895,7 +918,7 @@ const confirmCancelItem = async () => {
         required
     >
         <option value="">Select a Pack Size</option>
-        {packSizes.map(product => (
+        {packSizes.filter((packSize) => packSize.active).map(product => (
             <option key={product.pack_size_id} value={product.pack_size_id}>
                 {product.pack_size_id}-{product.pack_size_name}
             </option>
@@ -932,7 +955,7 @@ const confirmCancelItem = async () => {
         required
     >
         <option value="">Select a Carton Type</option>
-        {cartonTypes.map(product => (
+        {cartonTypes.filter((cartonType) => cartonType.active).map(product => (
             <option key={product.carton_type_id} value={product.carton_type_id}>
                 {product.carton_type_id}
             </option>
@@ -1071,29 +1094,46 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Product ID */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Product ID
-                                            </label>
-                                            <Input 
-                                                name="productId" 
-                                                value={formData.productId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="P0001" 
-                                            />
-                                        </div>
+                                                                     <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Product ID <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="productId"
+        value={formData.productId}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a product</option>
+        {products.filter((product) => product.active).map(product => (
+            <option key={product.product_id} value={product.product_id}>
+                {product.product_id}
+            </option>
+        ))}
+    </select>
+</div>
 
                                         {/* Pack Size ID */}
-                                        <div>
+                                                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Pack Size ID
+                                                Pack Size ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="packSizeId" 
-                                                value={formData.packSizeId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="PK24" 
-                                            />
+                     
+                                                                                                                                      <select
+        name="packSizeId"
+        value={formData.packSizeId}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a Pack Size</option>
+        {packSizes.filter((packSize) => packSize.active).map(product => (
+            <option key={product.pack_size_id} value={product.pack_size_id}>
+                {product.pack_size_id}-{product.pack_size_name}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Pack Matl ID */}
@@ -1112,16 +1152,25 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Carton Type ID */}
-                                        <div>
+                                                                          <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Carton Type ID
+                                                Carton Type ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="cartonTypeId" 
-                                                value={formData.cartonTypeId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="ST" 
-                                            />
+                                 
+                                              <select
+        name="cartonTypeId"
+        value={formData.cartonTypeId}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a Carton Type</option>
+        {cartonTypes.filter((cartonType) => cartonType.active).map(product => (
+            <option key={product.carton_type_id} value={product.carton_type_id}>
+                {product.carton_type_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Carton Material ID */}

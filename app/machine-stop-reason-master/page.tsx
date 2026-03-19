@@ -57,7 +57,7 @@ export default function MachineStopReasonMasterPage() {
     const [reasonToCancel, setReasonToCancel] = useState<MachineStopReason | null>(null);
     const [selectedReason, setSelectedReason] = useState<MachineStopReason | null>(null);
     const isSubmittingRef = useRef(false);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [reasons, setReasons] = useState<MachineStopReason[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: MachineStopReason } | null>(null);
@@ -379,7 +379,7 @@ export default function MachineStopReasonMasterPage() {
                                                     {[
                                                         { value: "all", label: "All" },
                                                         { value: "active", label: "Active" },
-                                                        { value: "inactive", label: "Cancelled" },
+                                                        { value: "inactive", label: "Inactive" },
                                                     ].map(({ value, label }) => (
                                                         <div key={value} className="flex items-center space-x-2">
                                                             <input
@@ -496,7 +496,7 @@ export default function MachineStopReasonMasterPage() {
                                                                 ? "bg-green-100 text-green-800"
                                                                 : "bg-red-100 text-red-800"
                                                         }`}>
-                                                            {reason.active ? "Active" : "Cancelled"}
+                                                            {reason.active ? "Active" : "Inactive"}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">

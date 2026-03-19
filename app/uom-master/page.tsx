@@ -52,7 +52,7 @@ export default function UOMMasterPage() {
     const [loading, setLoading] = useState(true);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [formData, setFormData] = useState({
         uom_id: "",
         uom_desc: "",
@@ -565,7 +565,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                                                     displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                                 }`}
                                                             >
-                                                                {displayActive ? "TRUE" : "FALSE"}
+                                                                {displayActive ? "ACTIVE" : "INACTIVE"}
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-6 text-center align-middle">

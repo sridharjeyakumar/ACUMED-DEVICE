@@ -82,7 +82,7 @@ export default function MachineEventTypeMasterPage() {
     const [typeToCancel, setTypeToCancel] = useState<MachineEventType | null>(null);
     const [selectedType, setSelectedType] = useState<MachineEventType | null>(null);
     const isSubmittingRef = useRef(false);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [types, setTypes] = useState<MachineEventType[]>([]);
     const [batchStatuses, setBatchStatuses] = useState<BatchStatus[]>([]);
     const [loading, setLoading] = useState(true);
@@ -516,7 +516,7 @@ export default function MachineEventTypeMasterPage() {
                                                     {[
                                                         { value: "all", label: "All" },
                                                         { value: "active", label: "Active" },
-                                                        { value: "inactive", label: "Cancelled" },
+                                                        { value: "inactive", label: "Inactive" },
                                                     ].map(({ value, label }) => (
                                                         <div key={value} className="flex items-center space-x-2">
                                                             <input
@@ -639,7 +639,7 @@ export default function MachineEventTypeMasterPage() {
                                                     ))}
                                                     <td className="px-4 py-4">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${type.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                                                            {type.active ? "Active" : "Cancelled"}
+                                                            {type.active ? "Active" : "Inactive"}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-4">

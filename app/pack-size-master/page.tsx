@@ -58,7 +58,7 @@ export default function PackSizeMasterPage() {
     const [packSizeToCancel, setPackSizeToCancel] = useState<PackSize | null>(null);
     const [cancelledPackSizes, setCancelledPackSizes] = useState<Set<string>>(new Set());
     const [selectedPackSize, setSelectedPackSize] = useState<PackSize | null>(null);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("true");
     const [packSizes, setPackSizes] = useState<PackSize[]>([]);
     const [loading, setLoading] = useState(true);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -567,7 +567,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                 : "bg-red-50 text-red-600"
             }`}
           >
-            {isActive ? "TRUE" : "FALSE"}
+            {isActive ? "ACTIVE" : "INACTIVE"}
           </span>
         </td>
 
@@ -761,7 +761,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
         required
     >
         <option value="">Select a uom</option>
-        {uoms.map(product => (
+        {uoms.filter((uom) => uom.active !== false).map(product => (
             <option key={product.uom_id} value={product.uom_id}>
                 {product.uom_id}
             </option>
@@ -877,21 +877,24 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                                 required
                                             />
                                         </div>
-                                        <div>
+                                                                <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 UOM <span className="text-red-500">*</span>
                                             </label>
-                                            <select
-                                                name="uom"
-                                                value={formData.uom}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                                required
-                                            >
-                                                <option value="NOS">NOS</option>
-                                                <option value="KG">KG</option>
-                                                <option value="GMS">GMS</option>
-                                            </select>
+                                                                       <select
+        name="uom"
+        value={formData.uom}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a uom</option>
+        {uoms.filter((uom) => uom.active !== false).map(product => (
+            <option key={product.uom_id} value={product.uom_id}>
+                {product.uom_id}
+            </option>
+        ))}
+    </select>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">

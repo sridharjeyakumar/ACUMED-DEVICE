@@ -60,7 +60,7 @@ export default function CompanyMasterPage() {
     const [filterCity, setFilterCity] = useState<string>("all");
     const [companies, setCompanies] = useState<Company[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [companyToCancel, setCompanyToCancel] = useState<Company | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);

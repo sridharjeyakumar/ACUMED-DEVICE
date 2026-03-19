@@ -49,7 +49,7 @@ export default function CartonTypeMasterPage() {
     const [loading, setLoading] = useState(true);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [formData, setFormData] = useState({
         carton_type_id: "",
         carton_type_name: "",
@@ -581,7 +581,7 @@ export default function CartonTypeMasterPage() {
                 displayActive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
               }`}
             >
-              {displayActive ? "TRUE" : "FALSE"}
+              {displayActive ? "ACTIVE" : "INACTIVE"}
             </span>
           </td>
 

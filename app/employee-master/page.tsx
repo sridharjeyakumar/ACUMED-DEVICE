@@ -13,7 +13,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { employeeAPI } from "@/services/api";
+import { employeeAPI, departmentAPI, employeeGradeAPI } from "@/services/api";
 
 interface EmployeeRecord {
     email: string;
@@ -50,12 +50,14 @@ export default function EmployeeMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRecord | null>(null);
-    const [filterStatus, setFilterStatus] = useState<string>("all");
+    const [filterStatus, setFilterStatus] = useState<string>("Active");
     const [filterDepartment, setFilterDepartment] = useState<string>("all");
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [loading, setLoading] = useState(true);
     const [records, setRecords] = useState<EmployeeRecord[]>([]);
+    const [departments, setDepartments] = useState<{ dept_id: string; department_name: string ; active: boolean }[]>([]);
+    const [grades, setGrades] = useState<{ grade_id: string; grade_name: string }[]>([]);
     const [formData, setFormData] = useState({
         emp_id: "",
         emp_name: "",
@@ -132,6 +134,16 @@ export default function EmployeeMasterPage() {
         loadEmployees();
     }, [loadEmployees]);
 
+    // Load departments and grades
+    useEffect(() => {
+        departmentAPI.getAll().then((data: any[]) =>
+            setDepartments(data.filter((d) => d.active !== false))
+        ).catch(() => {});
+        employeeGradeAPI.getAll().then((data: any[]) =>
+            setGrades(data.filter((g) => g.active !== false))
+        ).catch(() => {});
+    }, []);
+
     const filteredRecords = records.filter((item) => {
         const matchesSearch = item.empName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.empId.toLowerCase().includes(searchQuery.toLowerCase());
@@ -187,6 +199,25 @@ export default function EmployeeMasterPage() {
             });
         }
     }, [isAddModalOpen]);
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                toast({
+                    title: "File too large",
+                    description: "Please upload an image smaller than 2MB",
+                    variant: "destructive",
+                });
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData(prev => ({ ...prev, emp_photo: reader.result as string }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -462,11 +493,11 @@ const confirmDelete = async () => {
                                                             type="radio" 
                                                             id="emp-status-resigned" 
                                                             name="empStatus"
-                                                            checked={filterStatus === "Resigned"}
-                                                            onChange={() => setFilterStatus("Resigned")}
+                                                            checked={filterStatus === "Exited"}
+                                                            onChange={() => setFilterStatus("Exited")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="emp-status-resigned" className="text-sm font-normal cursor-pointer text-foreground">Resigned</Label>
+                                                        <Label htmlFor="emp-status-resigned" className="text-sm font-normal cursor-pointer text-foreground">Exited</Label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -624,7 +655,11 @@ const confirmDelete = async () => {
         <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.married || "-"}</td>
         <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.bloodGroup || "-"}</td>
         <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.education || "-"}</td>
-        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.empPhoto || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm text-foreground">
+          {item.empPhoto
+            ? <img src={item.empPhoto} alt="photo" className="w-8 h-8 rounded-full object-cover" />
+            : "-"}
+        </td>
 
         {/* Status Badge */}
         <td className="px-6 py-4 text-center align-middle">
@@ -828,13 +863,22 @@ const confirmDelete = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Blood Group
                                             </label>
-                                            <Input 
-                                                name="blood_group" 
-                                                value={formData.blood_group} 
-                                                onChange={handleInputChange} 
-                                                placeholder="e.g. O+"
-                                                maxLength={4}
-                                            />
+                                            <select
+                                                name="blood_group"
+                                                value={formData.blood_group}
+                                                onChange={handleInputChange}
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                                            >
+                                                <option value="">Select Blood Group</option>
+                                                <option value="A+">A+</option>
+                                                <option value="A-">A-</option>
+                                                <option value="B+">B+</option>
+                                                <option value="B-">B-</option>
+                                                <option value="AB+">AB+</option>
+                                                <option value="AB-">AB-</option>
+                                                <option value="O+">O+</option>
+                                                <option value="O-">O-</option>
+                                            </select>
                                         </div>
 
                                         {/* Married */}
@@ -868,14 +912,23 @@ const confirmDelete = async () => {
                                         {/* Employee Photo */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Employee Photo URL
+                                                Employee Photo
                                             </label>
-                                            <Input 
-                                                name="emp_photo" 
-                                                value={formData.emp_photo} 
-                                                onChange={handleInputChange} 
-                                                placeholder="URL or path"
-                                            />
+                                            <div className="flex items-center gap-4">
+                                                {formData.emp_photo && (
+                                                    <img
+                                                        src={formData.emp_photo}
+                                                        alt="Preview"
+                                                        className="w-12 h-12 rounded-full object-cover border"
+                                                    />
+                                                )}
+                                                <Input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleImageUpload}
+                                                    className="cursor-pointer"
+                                                />
+                                            </div>
                                         </div>
 
                                         {/* Employment Details Section */}
@@ -905,14 +958,20 @@ const confirmDelete = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Department ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="dept_id" 
-                                                value={formData.dept_id} 
-                                                onChange={handleInputChange} 
-                                                placeholder="e.g. MGT, ADM, PR1"
+                                            <select
+                                                name="dept_id"
+                                                value={formData.dept_id}
+                                                onChange={handleInputChange}
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                                                 required
-                                                maxLength={3}
-                                            />
+                                            >
+                                                <option value="">Select Department</option>
+                                                {departments.filter((d) => d.active).map((d) => (
+                                                    <option key={d.dept_id} value={d.dept_id}>
+                                                        {d.dept_id} - {d.department_name}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         {/* Grade ID */}
@@ -920,14 +979,20 @@ const confirmDelete = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Grade ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="grade_id" 
-                                                value={formData.grade_id} 
-                                                onChange={handleInputChange} 
-                                                placeholder="e.g. DIR, MGR, OPR"
+                                            <select
+                                                name="grade_id"
+                                                value={formData.grade_id}
+                                                onChange={handleInputChange}
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                                                 required
-                                                maxLength={3}
-                                            />
+                                            >
+                                                <option value="">Select Grade</option>
+                                                {grades.map((g) => (
+                                                    <option key={g.grade_id} value={g.grade_id}>
+                                                        {g.grade_id} - {g.grade_name}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         {/* Team */}
@@ -935,10 +1000,10 @@ const confirmDelete = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Team <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="team" 
-                                                value={formData.team} 
-                                                onChange={handleInputChange} 
+                                            <Input
+                                                name="team"
+                                                value={formData.team}
+                                                onChange={handleInputChange}
                                                 placeholder="e.g. EX, T2, T1"
                                                 required
                                                 maxLength={2}
@@ -950,10 +1015,10 @@ const confirmDelete = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Category <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="category" 
-                                                value={formData.category} 
-                                                onChange={handleInputChange} 
+                                            <Input
+                                                name="category"
+                                                value={formData.category}
+                                                onChange={handleInputChange}
                                                 placeholder="e.g. Regular, Contract"
                                                 required
                                                 maxLength={20}
@@ -1252,13 +1317,22 @@ const confirmDelete = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Blood Group
                                             </label>
-                                            <Input 
-                                                name="blood_group" 
-                                                value={formData.blood_group} 
-                                                onChange={handleInputChange} 
-                                                placeholder="e.g. O+"
-                                                maxLength={4}
-                                            />
+                                            <select
+                                                name="blood_group"
+                                                value={formData.blood_group}
+                                                onChange={handleInputChange}
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                                            >
+                                                <option value="">Select Blood Group</option>
+                                                <option value="A+">A+</option>
+                                                <option value="A-">A-</option>
+                                                <option value="B+">B+</option>
+                                                <option value="B-">B-</option>
+                                                <option value="AB+">AB+</option>
+                                                <option value="AB-">AB-</option>
+                                                <option value="O+">O+</option>
+                                                <option value="O-">O-</option>
+                                            </select>
                                         </div>
 
                                         {/* Married */}
@@ -1292,14 +1366,23 @@ const confirmDelete = async () => {
                                         {/* Employee Photo */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Employee Photo URL
+                                                Employee Photo
                                             </label>
-                                            <Input 
-                                                name="emp_photo" 
-                                                value={formData.emp_photo} 
-                                                onChange={handleInputChange} 
-                                                placeholder="URL or path"
-                                            />
+                                            <div className="flex items-center gap-4">
+                                                {formData.emp_photo && (
+                                                    <img
+                                                        src={formData.emp_photo}
+                                                        alt="Preview"
+                                                        className="w-12 h-12 rounded-full object-cover border"
+                                                    />
+                                                )}
+                                                <Input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleImageUpload}
+                                                    className="cursor-pointer"
+                                                />
+                                            </div>
                                         </div>
 
                                         {/* Employment Details Section */}
@@ -1329,14 +1412,20 @@ const confirmDelete = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Department ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="dept_id" 
-                                                value={formData.dept_id} 
-                                                onChange={handleInputChange} 
-                                                placeholder="e.g. MGT, ADM, PR1"
+                                            <select
+                                                name="dept_id"
+                                                value={formData.dept_id}
+                                                onChange={handleInputChange}
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                                                 required
-                                                maxLength={3}
-                                            />
+                                            >
+                                                <option value="">Select Department</option>
+                                                {departments.filter((d) => d.active).map((d) => (
+                                                    <option key={d.dept_id} value={d.dept_id}>
+                                                        {d.dept_id} - {d.department_name}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         {/* Grade ID */}
@@ -1344,14 +1433,20 @@ const confirmDelete = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Grade ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="grade_id" 
-                                                value={formData.grade_id} 
-                                                onChange={handleInputChange} 
-                                                placeholder="e.g. DIR, MGR, OPR"
+                                            <select
+                                                name="grade_id"
+                                                value={formData.grade_id}
+                                                onChange={handleInputChange}
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                                                 required
-                                                maxLength={3}
-                                            />
+                                            >
+                                                <option value="">Select Grade</option>
+                                                {grades.map((g) => (
+                                                    <option key={g.grade_id} value={g.grade_id}>
+                                                        {g.grade_id} - {g.grade_name}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         {/* Team */}
@@ -1359,10 +1454,10 @@ const confirmDelete = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Team <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="team" 
-                                                value={formData.team} 
-                                                onChange={handleInputChange} 
+                                            <Input
+                                                name="team"
+                                                value={formData.team}
+                                                onChange={handleInputChange}
                                                 placeholder="e.g. EX, T2, T1"
                                                 required
                                                 maxLength={2}
@@ -1374,10 +1469,10 @@ const confirmDelete = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Category <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="category" 
-                                                value={formData.category} 
-                                                onChange={handleInputChange} 
+                                            <Input
+                                                name="category"
+                                                value={formData.category}
+                                                onChange={handleInputChange}
                                                 placeholder="e.g. Regular, Contract"
                                                 required
                                                 maxLength={10}
@@ -1389,11 +1484,11 @@ const confirmDelete = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Date of Joining
                                             </label>
-                                            <Input 
-                                                type="date" 
-                                                name="doj" 
-                                                value={formData.doj} 
-                                                onChange={handleInputChange} 
+                                            <Input
+                                                type="date"
+                                                name="doj"
+                                                value={formData.doj}
+                                                onChange={handleInputChange}
                                             />
                                         </div>
 
@@ -1402,11 +1497,11 @@ const confirmDelete = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Date of Leaving
                                             </label>
-                                            <Input 
-                                                type="date" 
-                                                name="dol" 
-                                                value={formData.dol} 
-                                                onChange={handleInputChange} 
+                                            <Input
+                                                type="date"
+                                                name="dol"
+                                                value={formData.dol}
+                                                onChange={handleInputChange}
                                             />
                                         </div>
 

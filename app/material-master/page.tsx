@@ -53,6 +53,7 @@ interface MaterialCategory {
     material_category_name: string; // Char(25)
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
+    active?: boolean;
 }
 // Helper function to format dates consistently
 function formatDateTime(date: Date | string | undefined): string {
@@ -77,7 +78,7 @@ export default function MaterialMasterPage() {
     const [materialToCancel, setMaterialToCancel] = useState<Material | null>(null);
     const [cancelledMaterials, setCancelledMaterials] = useState<Set<string>>(new Set());
     const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("true");
     const [filterType, setFilterType] = useState<string>("all");
     const [filterCategory, setFilterCategory] = useState<string>("all");
     const [materials, setMaterials] = useState<Material[]>([]);
@@ -886,7 +887,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
               ? "bg-green-50 text-green-600"
               : "bg-red-50 text-red-600"
           }`}>
-            {isActive ? "ACTIVE" : "CANCELLED"}
+            {isActive ? "ACTIVE" : "INACTIVE"}
           </span>
         </td>
 
@@ -1067,7 +1068,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         required
     >
         <option value="">Select a uom</option>
-        {uoms.map(product => (
+        {uoms.filter((uom) => uom.active !== false).map(product => (
             <option key={product.uom_id} value={product.uom_id}>
                 {product.uom_id}
             </option>
@@ -1088,7 +1089,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         required
     >
         <option value="">Select a category</option>
-        {categories.map(category => (
+        {categories.filter((category) => category.active !== false).map(category => (
             <option key={category.material_category_id} value={category.material_category_id}>
             {category.material_category_id}
             </option>
@@ -1280,7 +1281,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         required
     >
         <option value="">Enter COA checklist ID</option>
-        {checklists.map(product => (
+        {checklists.filter((checklist) => checklist.active !== false).map(product => (
             <option key={product.checklist_id} value={product.checklist_id}>
                 {product.checklist_id}
             </option>
@@ -1475,40 +1476,46 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                         </div>
 
                                         {/* UOM */}
-                                        <div>
+                                                                           <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 UOM <span className="text-red-500">*</span>
                                             </label>
-                                            <select
-                                                name="uom"
-                                                value={formData.uom}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                                required
-                                            >
-                                                <option value="KGS">KGS</option>
-                                                <option value="NOS">NOS</option>
-                                                <option value="KG">KG</option>
-                                                <option value="GMS">GMS</option>
-                                                <option value="PCS">PCS</option>
-                                                <option value="BOX">BOX</option>
-                                                <option value="CARTON">CARTON</option>
-                                            </select>
+                                                                                           <select
+        name="uom"
+        value={formData.uom}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a uom</option>
+        {uoms.filter((uom) => uom.active !== false).map(product => (
+            <option key={product.uom_id} value={product.uom_id}>
+                {product.uom_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Material Category ID */}
-                                        <div>
+                                                                   <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Material Category ID
+                                                Material Category ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input
-                                                name="material_category_id"
-                                                value={formData.material_category_id}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter category ID"
-                                            />
+                                                                                           <select
+        name="material_category_id"
+        value={formData.material_category_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a category</option>
+        {categories.filter((category) => category.active !== false).map(category => (
+            <option key={category.material_category_id} value={category.material_category_id}>
+            {category.material_category_id}
+            </option>
+        ))}
+    </select>
                                         </div>
-
                                         {/* Material Type */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
@@ -1680,16 +1687,25 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                         </div>
 
                                         {/* COA Checklist ID */}
-                                        <div>
+                                                                      <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 COA Checklist ID
                                             </label>
-                                            <Input
-                                                name="coa_checklist_id"
-                                                value={formData.coa_checklist_id}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter COA checklist ID"
-                                            />
+                                 
+                                                                                                                                                                                                                              <select
+        name="coa_checklist_id"
+        value={formData.coa_checklist_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Enter COA checklist ID</option>
+        {checklists.filter((checklist) => checklist.active !== false).map(product => (
+            <option key={product.checklist_id} value={product.checklist_id}>
+                {product.checklist_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Images Section */}

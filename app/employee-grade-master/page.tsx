@@ -60,7 +60,7 @@ export default function EmployeeGradeMasterPage() {
     const [loading, setLoading] = useState(true);
     const [lastAction, setLastAction] = useState<{ type: 'edit' | 'delete'; data: EmployeeGrade } | null>(null);
     const [cancelledGrades, setCancelledGrades] = useState<Set<string>>(new Set());
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 
@@ -525,7 +525,7 @@ export default function EmployeeGradeMasterPage() {
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
                                                             grade.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                         }`}>
-                                                            {grade.active ? "TRUE" : "FALSE"}
+                                                            {grade.active ? "ACTIVE" : "INACTIVE"}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">

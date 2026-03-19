@@ -1428,7 +1428,7 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                             required
                                         >
                                             <option value="">Select Product Master</option>
-                                            {products.map((p) => (
+                                            {products.filter(p => p.active).map((p) => (
                                                 <option key={p.product_id} value={p.product_id}>{p.product_name}</option>
                                             ))}
                                         </select>

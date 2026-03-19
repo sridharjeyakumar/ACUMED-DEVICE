@@ -69,7 +69,7 @@ export default function HolidaysMasterPage() {
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [holidayToCancel, setHolidayToCancel] = useState<Holiday | null>(null);
     const [filterYear, setFilterYear] = useState<string>("all");
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
 

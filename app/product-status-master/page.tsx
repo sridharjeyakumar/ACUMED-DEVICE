@@ -70,7 +70,7 @@ export default function ProductStatusMasterPage() {
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [statusToCancel, setStatusToCancel] = useState<ProductStatus | null>(null);
     const [selectedStatus, setSelectedStatus] = useState<ProductStatus | null>(null);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [filterStockMovement, setFilterStockMovement] = useState<string>("all");
     const isSubmittingRef = useRef(false);
     const addIconInputRef = useRef<HTMLInputElement>(null);
@@ -531,7 +531,7 @@ export default function ProductStatusMasterPage() {
                                                             onChange={() => setFilterActive("inactive")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
-                                                        <Label htmlFor="ps-active-false" className="text-sm font-normal cursor-pointer text-foreground">Cancelled</Label>
+                                                        <Label htmlFor="ps-active-false" className="text-sm font-normal cursor-pointer text-foreground">Inactive</Label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -708,7 +708,7 @@ export default function ProductStatusMasterPage() {
                                                                 ? "bg-green-100 text-green-800" 
                                                                 : "bg-red-100 text-red-800"
                                                         }`}>
-                                                            {status.active ? "Active" : "Cancelled"}
+                                                            {status.active ? "Active" : "Inactive"}
                                                         </span>
                                                     </td>
                                                      <td className="px-6 py-4">
@@ -887,7 +887,7 @@ export default function ProductStatusMasterPage() {
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"
             >
                 <option value="">Select Carton Type...</option>
-                {cartonTypes.map((type) => (
+                {cartonTypes.filter((type) => type.active).map((type) => (
       <option key={type.carton_type_id} value={type.carton_type_id}>
         {/* If your API returns the name, show it; otherwise show the ID */}
         {type.carton_type_id}
@@ -1131,7 +1131,7 @@ export default function ProductStatusMasterPage() {
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"
             >
                 <option value="">Select Carton Type...</option>
-                {cartonTypes.map((type) => (
+                {cartonTypes.filter((type) => type.active).map((type) => (
       <option key={type.carton_type_id} value={type.carton_type_id}>
         {type.carton_type_id}
       </option>
