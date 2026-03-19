@@ -30,11 +30,12 @@ export async function POST(request: NextRequest) {
   try {
     await ensureConnection();
     const body = await request.json();
-    const department = new DepartmentMaster({ 
+    const department = new DepartmentMaster({
       dept_id: body.dept_id,
       department_name: body.department_name,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
+      active: body.active ?? true,
     });
     await department.save();
     return NextResponse.json(department, { status: 201 });

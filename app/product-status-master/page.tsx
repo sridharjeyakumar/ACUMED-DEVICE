@@ -612,15 +612,11 @@ export default function ProductStatusMasterPage() {
                                         <tr className="bg-gray-100 border-b border-border">
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Prod Status Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Product Status</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Icon</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Stock Movement</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Movement Type</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Carton Type Id</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Stock Origin</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap"><div className="flex flex-col"><span>From Prod</span><span>Status Id</span></div></th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Location Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Seq No.</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Icon</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
                                                     <span>Last Modified</span>
@@ -633,9 +629,12 @@ export default function ProductStatusMasterPage() {
                                                     <span>Date & Time</span>
                                                 </div>
                                             </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Status</th>
+
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
+
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
@@ -664,7 +663,20 @@ export default function ProductStatusMasterPage() {
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{status.product_status}</span>
                                                     </td>
+                                                  
                                                     <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.stock_movement || "-"}</span>
+                                                    </td>
+                                                     <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.carton_type_id || "-"}</span>
+                                                    </td>
+                                                        <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground font-semibold">{status.location_id || "-"}</span>
+                                                    </td>
+                                                      <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.seq_no}</span>
+                                                    </td>
+                                                            <td className="px-6 py-4">
                                                         {status.prod_status_icon ? (
                                                             <img
                                                                 src={status.prod_status_icon}
@@ -676,37 +688,21 @@ export default function ProductStatusMasterPage() {
                                                             <span className="text-sm text-muted-foreground">-</span>
                                                         )}
                                                     </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground">{status.stock_movement || "-"}</span>
+                                                        <td className="px-6 py-4">
+                                                        {status.last_modified_user_id ? (
+                                                            <span className="text-sm font-mono text-foreground">{status.last_modified_user_id}</span>
+                                                        ) : (
+                                                            <span className="text-sm text-foreground">-</span>
+                                                        )}
                                                     </td>
-                                                    <td className="px-6 py-4">
-                                                        {status.movement_type ? (
-                                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.movement_type === 'N' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
-                                                                {status.movement_type === 'N' ? 'N - Normal' : status.movement_type === 'S' ? 'S - Special' : 'I - Initial'}
-                                                            </span>
-                                                        ) : <span className="text-sm text-muted-foreground">-</span>}
+                                                      <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">
+                                                            {status.last_modified_date_time 
+                                                                ? formatDateTime(status.last_modified_date_time)
+                                                                : "-"}
+                                                        </span>
                                                     </td>
-                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground">{status.carton_type_id || "-"}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        {status.stock_origin ? (
-                                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.stock_origin === 'Y' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                                                                {status.stock_origin}
-                                                            </span>
-                                                        ) : <span className="text-sm text-muted-foreground">-</span>}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-sm font-mono text-foreground">{status.from_prod_status_id || "-"}</span>
-                                                    </td>
-                                                   
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground font-semibold">{status.location_id || "-"}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground">{status.seq_no}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
+                                                                <td className="px-6 py-4">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
                                                             status.active 
                                                                 ? "bg-green-100 text-green-800" 
@@ -715,21 +711,7 @@ export default function ProductStatusMasterPage() {
                                                             {status.active ? "Active" : "Cancelled"}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4">
-                                                        {status.last_modified_user_id ? (
-                                                            <span className="text-sm font-mono text-foreground">{status.last_modified_user_id}</span>
-                                                        ) : (
-                                                            <span className="text-sm text-foreground">-</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground">
-                                                            {status.last_modified_date_time 
-                                                                ? formatDateTime(status.last_modified_date_time)
-                                                                : "-"}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
+                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <Button
                                                                 variant="ghost"
@@ -765,6 +747,10 @@ export default function ProductStatusMasterPage() {
                                                             </Button>
                                                         </div>
                                                     </td>
+                                 
+                                                
+                                                  
+                                                   
                                                 </motion.tr>
                                             ))
                                         )}

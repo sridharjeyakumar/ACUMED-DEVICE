@@ -957,7 +957,7 @@ export default function MaterialStatusMasterPage() {
                                                 onChange={handleInputChange}
                                                 required
                                                 maxLength={2}
-                                                disabled
+                                                // disabled
                                             />
                                         </div>
                                         <div>

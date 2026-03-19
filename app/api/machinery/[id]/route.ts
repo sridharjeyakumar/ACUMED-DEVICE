@@ -12,9 +12,22 @@ export async function PATCH(
     const { id } = params;
     const body = await request.json();
 
+    const updateData: any = {
+      last_modified_user_id: body.lastModifiedUserId ?? "ADMIN",
+      last_modified_date_time: new Date(),
+    };
+
+    if (body.active !== undefined) updateData.active = body.active;
+    if (body.machineName !== undefined) updateData.machine_name = body.machineName;
+    if (body.shortName !== undefined) updateData.machine_short_name = body.shortName;
+    if (body.qtyPerMin !== undefined) updateData.prod_qty_per_minute = Number(body.qtyPerMin);
+    if (body.uom !== undefined) updateData.uom = body.uom;
+    if (body.avgHrsPerDay !== undefined) updateData.avg_prod_hrs_per_day = Number(body.avgHrsPerDay);
+    if (body.remarks !== undefined) updateData.remarks = body.remarks;
+
     const updated = await ProductMachineMaster.findByIdAndUpdate(
       id,
-      { active: body.active },
+      updateData,
       { new: true }
     );
 

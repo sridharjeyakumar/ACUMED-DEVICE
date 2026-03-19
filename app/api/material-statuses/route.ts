@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       seq_no: body.seq_no,
       active: body.active !== false,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
+      location_id: body.location_id || '',
       last_modified_date_time: new Date(),
     });
     await status.save();

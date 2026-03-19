@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       material_category_id: body.material_category_id,
       material_category_name: body.material_category_name,
       unit_split: body.unit_split !== undefined ? body.unit_split : false,
+      active: body.active !== undefined ? body.active : true,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
     });

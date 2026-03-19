@@ -212,21 +212,41 @@ const handleSubmit = async (e: React.FormEvent) => {
         setIsEditModalOpen(true);
     };
 
-    const handleEditSubmit = (e: React.FormEvent) => {
+    const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsEditModalOpen(false);
-        setSelectedMachine(null);
-        setFormData({
-            machineId: "",
-            machineName: "",
-            section: "",
-            shortName: "",
-            qtyPerMin: "",
-            uom: "UNITS",
-            avgHrsPerDay: "",
-            active: true,
-            remarks:"",
-        });
+        if (!selectedMachine) return;
+
+        try {
+            setLoading(true);
+            const response = await fetch(`/api/machinery/${selectedMachine.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            });
+
+            if (!response.ok) throw new Error("Failed to update machine");
+
+            await fetchMachines();
+            setIsEditModalOpen(false);
+            setSelectedMachine(null);
+            setFormData({
+                machineId: "",
+                machineName: "",
+                section: "",
+                shortName: "",
+                qtyPerMin: "",
+                uom: "UNITS",
+                avgHrsPerDay: "",
+                active: true,
+                remarks: "",
+            });
+            toast({ title: "Success", description: "Machine updated successfully" });
+        } catch (error) {
+            console.error("Error updating machine:", error);
+            toast({ title: "Error", description: "Failed to update machine", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
     };
    const handleCancel = (machine: MachineRecord) => {
         setMachineToCancel(machine);
@@ -283,7 +303,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <h1 className="text-3xl font-bold text-foreground mb-2">Production Machinery Master</h1>
+                                <h1 className="text-3xl font-bold text-foreground mb-2">Machine Master</h1>
                                 <p className="text-muted-foreground">Configure and manage manufacturing line throughput and operational parameters</p>
                             </div>
                             <Button

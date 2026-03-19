@@ -6,6 +6,7 @@ export interface IHolidaysMaster extends Document {
   year: number; // N(4)
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
+  active?: boolean; // Active status for soft delete
 }
 
 const HolidaysMasterSchema: Schema = new Schema({
@@ -35,6 +36,10 @@ const HolidaysMasterSchema: Schema = new Schema({
   last_modified_date_time: {
     type: Date,
     required: false,
+  },
+  active: {
+    type: Boolean,
+    default: true,
   },
 }, {
   timestamps: true,

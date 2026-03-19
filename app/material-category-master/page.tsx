@@ -65,12 +65,13 @@ export default function MaterialCategoryMasterPage() {
         material_category_id: "",
         material_category_name: "",
         unit_split: false,
+        active: true,
     });
 
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({ material_category_id: "", material_category_name: "", unit_split: false });
+            setFormData({ material_category_id: "", material_category_name: "", unit_split: false, active: true });
         }
     }, [isAddModalOpen]);
 
@@ -136,7 +137,7 @@ export default function MaterialCategoryMasterPage() {
                 material_category_name: formData.material_category_name,
                 unit_split: formData.unit_split,
                 last_modified_user_id: "ADMIN",
-                active: true,
+                active: formData.active,
             });
             toast({
                 title: "Success",
@@ -147,6 +148,7 @@ export default function MaterialCategoryMasterPage() {
                 material_category_id: "",
                 material_category_name: "",
                 unit_split: false,
+                active: true,
             });
             loadCategories();
         } catch (error: any) {
@@ -176,6 +178,7 @@ export default function MaterialCategoryMasterPage() {
             material_category_id: category.material_category_id,
             material_category_name: category.material_category_name,
             unit_split: category.unit_split ?? false,
+            active: category.active,
         });
         setIsEditModalOpen(true);
     };
@@ -207,7 +210,7 @@ export default function MaterialCategoryMasterPage() {
                 material_category_name: formData.material_category_name,
                 unit_split: formData.unit_split,
                 last_modified_user_id: "ADMIN",
-                active: selectedCategory.active,
+                active: formData.active,
             });
             
             // Store last action for undo
@@ -228,6 +231,7 @@ export default function MaterialCategoryMasterPage() {
                 material_category_id: "",
                 material_category_name: "",
                 unit_split: false,
+                active: true,
             });
             loadCategories();
         } catch (error: any) {
@@ -681,6 +685,18 @@ export default function MaterialCategoryMasterPage() {
                                             Unit Split
                                         </label>
                                     </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="add-active"
+                                            checked={formData.active}
+                                            onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="add-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Active
+                                        </label>
+                                    </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -760,6 +776,18 @@ export default function MaterialCategoryMasterPage() {
                                         />
                                         <label htmlFor="edit-unit-split" className="text-sm font-semibold text-foreground cursor-pointer">
                                             Unit Split
+                                        </label>
+                                    </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="edit-active"
+                                            checked={formData.active}
+                                            onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="edit-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Active
                                         </label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">

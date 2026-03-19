@@ -67,6 +67,7 @@ export async function PUT(
     
     const updateData: any = {};
     if (body.grade_name !== undefined) updateData.grade_name = body.grade_name;
+    if (body.active !== undefined) updateData.active = body.active;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
     
