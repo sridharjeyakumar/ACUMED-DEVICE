@@ -8,7 +8,7 @@ export const dynamicParams = true;
 
 // GET /api/product-stock/[batchNo] - Get stock by batch number
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ batchNo: string }> }
 ) {
   try {
@@ -79,7 +79,7 @@ export async function PUT(
 
 // DELETE /api/product-stock/[batchNo] - Delete stock
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ batchNo: string }> }
 ) {
   try {
@@ -103,6 +103,56 @@ export async function DELETE(
     console.error('Error deleting product stock:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to delete product stock' },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH /api/product-stock/[batchNo] - Adjust (upsert) stock by composite key
+// Body: { pack_size_id, product_status_id, packs_delta, sachets_delta,
+//         product_id?, carton_type_id?, total_no_of_cartons?, last_modified_user_id? }
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ batchNo: string }> }
+) {
+  try {
+    const { batchNo } = await params;
+    await ensureConnection();
+    const body = await request.json();
+
+    const now = new Date();
+
+    // Try exact match first (batch_no + pack_size_id + product_status_id)
+    let stock = await ProductStock.findOneAndUpdate(
+      { batch_no: batchNo, pack_size_id: body.pack_size_id, product_status_id: body.product_status_id },
+      {
+        $inc: { total_no_of_packs: body.packs_delta, total_no_of_sachets: body.sachets_delta },
+        $set: { last_modified_user_id: body.last_modified_user_id || 'ADMIN', last_modified_date_time: now },
+      },
+      { new: true }
+    );
+
+    // If not found, fall back to batch_no + pack_size_id only and also update product_status_id
+    if (!stock) {
+      stock = await ProductStock.findOneAndUpdate(
+        { batch_no: batchNo, pack_size_id: body.pack_size_id },
+        {
+          $inc: { total_no_of_packs: body.packs_delta, total_no_of_sachets: body.sachets_delta },
+          $set: {
+            product_status_id:       body.product_status_id,
+            last_modified_user_id:   body.last_modified_user_id || 'ADMIN',
+            last_modified_date_time: now,
+          },
+        },
+        { new: true }
+      );
+    }
+
+    return NextResponse.json(stock ?? { message: 'No stock record found for this batch' });
+  } catch (error: any) {
+    console.error('Error adjusting product stock:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to adjust product stock' },
       { status: 500 }
     );
   }

@@ -842,6 +842,12 @@ export const packingAPI={
 }
 // Product Stock API
 export const productStockAPI = {
+    // Adjust (upsert) stock by composite key — creates the record if it doesn't exist
+    adjust: (batchNo: string, data: {
+        pack_size_id: string; product_status_id: string;
+        packs_delta: number; sachets_delta: number;
+        product_id?: string; carton_type_id?: string; total_no_of_cartons?: number;
+    }) => fetchAPI(`/product-stock/${encodeURIComponent(batchNo)}`, { method: 'PATCH', body: JSON.stringify(data) }),
     getAll: (params?: { productId?: string; batchNo?: string }) => {
         let url = '/product-stock';
         if (params) {
