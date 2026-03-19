@@ -29,6 +29,7 @@ interface EmployeeGrade {
     grade_name: string; // Char(25)
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
+    active: boolean;
 }
 
 // Helper function to format dates consistently (prevents hydration errors)
@@ -66,7 +67,7 @@ export default function EmployeeGradeMasterPage() {
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({ grade_id: "", grade_name: "" });
+            setFormData({ grade_id: "", grade_name: "", active: true });
         }
     }, [isAddModalOpen]);
 
@@ -74,7 +75,11 @@ export default function EmployeeGradeMasterPage() {
         try {
             setLoading(true);
             const data = await employeeGradeAPI.getAll();
-            setGrades(data);
+            const gradesWithActive = data.map((g: any) => ({
+                ...g,
+                active: g.active !== undefined ? g.active : true,
+            }));
+            setGrades(gradesWithActive);
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -92,15 +97,16 @@ export default function EmployeeGradeMasterPage() {
     const [formData, setFormData] = useState({
         grade_id: "",
         grade_name: "",
+        active: true,
     });
 
     const filteredGrades = grades.filter((grade) => {
         const matchesSearch = grade.grade_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             grade.grade_name.toLowerCase().includes(searchQuery.toLowerCase());
         
-        const matchesActive = filterActive === "all" || 
-            (filterActive === "active" && !cancelledGrades.has(grade.grade_id)) ||
-            (filterActive === "inactive" && cancelledGrades.has(grade.grade_id));
+        const matchesActive = filterActive === "all" ||
+            (filterActive === "active" && grade.active) ||
+            (filterActive === "inactive" && !grade.active);
         
         return matchesSearch && matchesActive;
     });
@@ -117,8 +123,8 @@ export default function EmployeeGradeMasterPage() {
     }, [searchQuery, filterActive, rowsPerPage]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
+        const { name, value, type, checked } = e.target;
+        setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -131,6 +137,7 @@ export default function EmployeeGradeMasterPage() {
                 grade_id: formData.grade_id,
                 grade_name: formData.grade_name,
                 last_modified_user_id: "ADMIN",
+                active: formData.active,
             });
             toast({
                 title: "Success",
@@ -140,6 +147,7 @@ export default function EmployeeGradeMasterPage() {
             setFormData({
                 grade_id: "",
                 grade_name: "",
+                active: true,
             });
             loadGrades();
         } catch (error: any) {
@@ -158,6 +166,7 @@ export default function EmployeeGradeMasterPage() {
         setFormData({
             grade_id: grade.grade_id,
             grade_name: grade.grade_name,
+            active: grade.active,
         });
         setIsEditModalOpen(true);
     };
@@ -176,6 +185,7 @@ export default function EmployeeGradeMasterPage() {
             await employeeGradeAPI.update(selectedGrade.grade_id, {
                 grade_name: formData.grade_name,
                 last_modified_user_id: "ADMIN",
+                active: formData.active,
             });
             
             // Store last action for undo
@@ -195,6 +205,7 @@ export default function EmployeeGradeMasterPage() {
             setFormData({
                 grade_id: "",
                 grade_name: "",
+                active: true,
             });
             loadGrades();
         } catch (error: any) {
@@ -246,47 +257,39 @@ export default function EmployeeGradeMasterPage() {
     };
 
     const handleCancel = (grade: EmployeeGrade) => {
+        if (!grade.active) {
+            toast({
+                title: "Already Cancelled",
+                description: "This employee grade is already cancelled",
+                variant: "destructive",
+            });
+            return;
+        }
         setGradeToCancel(grade);
         setIsCancelItemDialogOpen(true);
     };
 
     const confirmCancelItem = async () => {
         if (!gradeToCancel) return;
-        
-        const isCancelled = cancelledGrades.has(gradeToCancel.grade_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
+
         try {
             await employeeGradeAPI.update(gradeToCancel.grade_id, {
-                active: newActiveStatus,
+                active: false,
                 last_modified_user_id: "ADMIN",
             });
-            
-            setCancelledGrades(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(gradeToCancel.grade_id);
-                    toast({
-                        title: "Restored",
-                        description: `Employee grade ${gradeToCancel.grade_name} has been restored`,
-                    });
-                } else {
-                    newSet.add(gradeToCancel.grade_id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Employee grade ${gradeToCancel.grade_name} has been cancelled`,
-                    });
-                }
-                return newSet;
+
+            toast({
+                title: "Cancelled",
+                description: `Employee grade ${gradeToCancel.grade_name} has been cancelled`,
             });
-            
-            loadGrades(); // Reload data from API
+
+            await loadGrades();
             setIsCancelItemDialogOpen(false);
             setGradeToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} employee grade`,
+                description: error.message || "Failed to cancel employee grade",
                 variant: "destructive",
             });
         }
@@ -300,11 +303,11 @@ export default function EmployeeGradeMasterPage() {
     const confirmCancel = () => {
         if (cancelModalType === 'add') {
             setIsAddModalOpen(false);
-            setFormData({ grade_id: "", grade_name: "" });
+            setFormData({ grade_id: "", grade_name: "", active: true });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
             setSelectedGrade(null);
-            setFormData({ grade_id: "", grade_name: "" });
+            setFormData({ grade_id: "", grade_name: "", active: true });
         }
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
@@ -485,14 +488,13 @@ export default function EmployeeGradeMasterPage() {
                                             </tr>
                                         ) : (
                                             paginatedGrades.map((grade, index) => {
-                                                const isCancelled = cancelledGrades.has(grade.grade_id);
                                                 return (
                                                 <motion.tr
                                                     key={grade.grade_id}
                                                     initial={{ opacity: 0, x: -20 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
+                                                    className={`hover:bg-muted/30 transition-colors ${!grade.active ? 'opacity-40' : ''}`}
                                                 >
                                                     <td className="px-6 py-4">
                                                         <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
@@ -521,9 +523,9 @@ export default function EmployeeGradeMasterPage() {
                                                     </td>
                                                     <td className="px-6 py-4 text-left">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                            !isCancelled ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                            grade.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                         }`}>
-                                                            {!isCancelled ? "TRUE" : "FALSE"}
+                                                            {grade.active ? "TRUE" : "FALSE"}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
@@ -536,7 +538,7 @@ export default function EmployeeGradeMasterPage() {
                                                                     handleEdit(grade);
                                                                 }}
                                                                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                                disabled={isCancelled}
+                                                                disabled={!grade.active}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -547,8 +549,9 @@ export default function EmployeeGradeMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleCancel(grade);
                                                                 }}
-                                                                className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={isCancelled ? "Restore grade" : "Cancel grade"}
+                                                                className={`text-red-600 hover:text-red-700 hover:bg-red-50 ${!grade.active ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                disabled={!grade.active}
+                                                                title={!grade.active ? "Already cancelled" : "Cancel grade"}
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
@@ -644,6 +647,19 @@ export default function EmployeeGradeMasterPage() {
                                             maxLength={25}
                                         />
                                     </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="add-active"
+                                            name="active"
+                                            checked={formData.active}
+                                            onChange={handleInputChange}
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="add-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Active
+                                        </label>
+                                    </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -713,6 +729,19 @@ export default function EmployeeGradeMasterPage() {
                                             maxLength={25}
                                         />
                                     </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="edit-active"
+                                            name="active"
+                                            checked={formData.active}
+                                            onChange={handleInputChange}
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="edit-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Active
+                                        </label>
+                                    </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -753,15 +782,9 @@ export default function EmployeeGradeMasterPage() {
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {gradeToCancel && cancelledGrades.has(gradeToCancel.grade_id) 
-                                ? "Confirm Restore" 
-                                : "Confirm Cancel"}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {gradeToCancel && cancelledGrades.has(gradeToCancel.grade_id)
-                                ? `Are you sure you want to restore employee grade "${gradeToCancel.grade_name}"?`
-                                : `Are you sure you want to cancel employee grade "${gradeToCancel?.grade_name}"? This action can be undone.`}
+                            Are you sure you want to cancel employee grade &quot;{gradeToCancel?.grade_name}&quot;? This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -769,15 +792,10 @@ export default function EmployeeGradeMasterPage() {
                             setIsCancelItemDialogOpen(false);
                             setGradeToCancel(null);
                         }}>
-                            No, Keep Current Status
+                            No
                         </AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={confirmCancelItem} 
-                            className={gradeToCancel && cancelledGrades.has(gradeToCancel.grade_id) 
-                                ? "bg-green-600 hover:bg-green-700" 
-                                : "bg-red-600 hover:bg-red-700"}
-                        >
-                            Yes, {gradeToCancel && cancelledGrades.has(gradeToCancel.grade_id) ? "Restore" : "Cancel"}
+                        <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

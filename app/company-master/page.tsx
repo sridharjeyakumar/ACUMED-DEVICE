@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { ToastAction } from "@/components/ui/toast";
+
 import { companyAPI } from "@/services/api";
 import {
     AlertDialog,
@@ -36,6 +36,7 @@ interface Company {
     gst_no?: string; // Char(15)
     cin_no?: string; // Char(21)
     pan_no?: string; // Char(15)
+    tan_no?: string; // Char(15)
     factory_license_no?: string; // Char(20)
     email_id?: string; // Char(50)
     website?: string; // Char(50)
@@ -44,6 +45,7 @@ interface Company {
     logo?: string; // image (URL or base64)
     last_modified_user_id?: string; // Char(5) - user ID
     last_modified_date_time?: Date; // Date
+    active?: boolean;
 }
 
 export default function CompanyMasterPage() {
@@ -58,7 +60,7 @@ export default function CompanyMasterPage() {
     const [filterCity, setFilterCity] = useState<string>("all");
     const [companies, setCompanies] = useState<Company[]>([]);
     const [loading, setLoading] = useState(true);
-    const [cancelledCompanies, setCancelledCompanies] = useState<Set<string>>(new Set());
+    const [filterActive, setFilterActive] = useState<string>("all");
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [companyToCancel, setCompanyToCancel] = useState<Company | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -75,16 +77,18 @@ export default function CompanyMasterPage() {
         gst_no: "",
         cin_no: "",
         pan_no: "",
+        tan_no: "",
         email_id: "",
         website: "",
         contact_person: "",
         contact_no: "",
         logo: "",
         factory_license_no: "",
+        active: true,
     });
     const fileInputRef = useRef<HTMLInputElement>(null);
     const isSubmittingRef = useRef(false);
-    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Company } | null>(null);
+
 
     const handleCancelClick = (modalType: 'add' | 'edit') => {
         setCancelModalType(modalType);
@@ -106,12 +110,14 @@ export default function CompanyMasterPage() {
                 gst_no: "",
                 cin_no: "",
                 pan_no: "",
+                tan_no: "",
                 email_id: "",
                 website: "",
                 contact_person: "",
                 contact_no: "",
                 logo: "",
                 factory_license_no: "",
+                active: true,
             });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
@@ -128,12 +134,14 @@ export default function CompanyMasterPage() {
                 gst_no: "",
                 cin_no: "",
                 pan_no: "",
+                tan_no: "",
                 email_id: "",
                 website: "",
                 contact_person: "",
                 contact_no: "",
                 logo: "",
                 factory_license_no: "",
+                active: true,
             });
         }
         setIsCancelDialogOpen(false);
@@ -155,12 +163,14 @@ export default function CompanyMasterPage() {
                 gst_no: "",
                 cin_no: "",
                 pan_no: "",
+                tan_no: "",
                 email_id: "",
                 website: "",
                 contact_person: "",
                 contact_no: "",
                 logo: "",
                 factory_license_no: "",
+                active: true,
             });
         }
     }, [isAddModalOpen]);
@@ -184,12 +194,13 @@ export default function CompanyMasterPage() {
     const filteredCompanies = companies.filter((company) => {
         const matchesSearch = company.comp_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             company.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            company.company_short_name.toLowerCase().includes(searchQuery.toLowerCase());
-        
+            (company.company_short_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+
         const matchesState = filterState === "all" || company.state === filterState;
         const matchesCity = filterCity === "all" || company.city === filterCity;
-        
-        return matchesSearch && matchesState && matchesCity;
+        const matchesActive = filterActive === "all" || (filterActive === "active" ? company.active !== false : company.active === false);
+
+        return matchesSearch && matchesState && matchesCity && matchesActive;
     });
 
     // Pagination logic
@@ -206,14 +217,14 @@ export default function CompanyMasterPage() {
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, filterState, filterCity, rowsPerPage]);
+    }, [searchQuery, filterState, filterCity, filterActive, rowsPerPage]);
 
     const uniqueStates = Array.from(new Set(companies.map(c => c.state).filter(s => s)));
     const uniqueCities = Array.from(new Set(companies.map(c => c.city).filter(c => c)));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
+        const { name, value, type, checked } = e.target;
+        setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -245,6 +256,7 @@ export default function CompanyMasterPage() {
                 gst_no: formData.gst_no || undefined,
                 cin_no: formData.cin_no || undefined,
                 pan_no: formData.pan_no || undefined,
+                tan_no: formData.tan_no || undefined,
                 email_id: formData.email_id || undefined,
                 website: formData.website || undefined,
                 contact_person: formData.contact_person || undefined,
@@ -252,6 +264,7 @@ export default function CompanyMasterPage() {
                 logo: formData.logo || undefined,
                 last_modified_user_id: "ADMIN",
                 factory_license_no: formData.factory_license_no || undefined,
+                active: formData.active,
             });
             toast({
                 title: "Success",
@@ -270,12 +283,14 @@ export default function CompanyMasterPage() {
                 gst_no: "",
                 cin_no: "",
                 pan_no: "",
+                tan_no: "",
                 email_id: "",
                 website: "",
                 contact_person: "",
                 contact_no: "",
                 logo: "",
                 factory_license_no: "",
+                active: true,
             });
             loadCompanies();
         } catch (error: any) {
@@ -303,12 +318,14 @@ export default function CompanyMasterPage() {
             gst_no: company.gst_no || "",
             cin_no: company.cin_no || "",
             pan_no: company.pan_no || "",
+            tan_no: company.tan_no || "",
             email_id: company.email_id || "",
             website: company.website || "",
             contact_person: company.contact_person || "",
             contact_no: company.contact_no?.toString() || "",
             logo: company.logo || "",
             factory_license_no: company.factory_license_no || "",
+            active: company.active !== false,
         });
         setIsEditModalOpen(true);
     };
@@ -319,9 +336,6 @@ export default function CompanyMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedCompany) return;
         isSubmittingRef.current = true;
-        
-        // Store previous state for undo
-        const previousData = { ...selectedCompany };
         
         try {
             await companyAPI.update(selectedCompany.comp_id, {
@@ -335,6 +349,7 @@ export default function CompanyMasterPage() {
                 gst_no: formData.gst_no || undefined,
                 cin_no: formData.cin_no || undefined,
                 pan_no: formData.pan_no || undefined,
+                tan_no: formData.tan_no || undefined,
                 email_id: formData.email_id || undefined,
                 website: formData.website || undefined,
                 contact_person: formData.contact_person || undefined,
@@ -342,19 +357,12 @@ export default function CompanyMasterPage() {
                 logo: formData.logo || undefined,
                 last_modified_user_id: "ADMIN",
                 factory_license_no: formData.factory_license_no || undefined,
+                active: formData.active,
             });
-            
-            // Store last action for undo
-            setLastAction({ type: 'edit', data: previousData });
-            
+
             toast({
                 title: "Success",
                 description: "Company updated successfully",
-                action: (
-                    <ToastAction altText="Undo" onClick={handleUndo}>
-                        Undo
-                    </ToastAction>
-                ),
             });
             setIsEditModalOpen(false);
             setSelectedCompany(null);
@@ -370,12 +378,14 @@ export default function CompanyMasterPage() {
                 gst_no: "",
                 cin_no: "",
                 pan_no: "",
+                tan_no: "",
                 email_id: "",
                 website: "",
                 contact_person: "",
                 contact_no: "",
                 logo: "",
                 factory_license_no: "",
+                active: true,
             });
             loadCompanies();
         } catch (error: any) {
@@ -389,45 +399,6 @@ export default function CompanyMasterPage() {
         }
     };
     
-    const handleUndo = async () => {
-        if (!lastAction) return;
-        
-        try {
-            // Restore previous data
-            await companyAPI.update(lastAction.data.comp_id, {
-                company_name: lastAction.data.company_name,
-                company_short_name: lastAction.data.company_short_name || undefined,
-                address_1: lastAction.data.address_1 || undefined,
-                address_2: lastAction.data.address_2 || undefined,
-                city: lastAction.data.city || undefined,
-                state: lastAction.data.state || undefined,
-                pincode: lastAction.data.pincode || undefined,
-                gst_no: lastAction.data.gst_no || undefined,
-                cin_no: lastAction.data.cin_no || undefined,
-                pan_no: lastAction.data.pan_no || undefined,
-                email_id: lastAction.data.email_id || undefined,
-                website: lastAction.data.website || undefined,
-                contact_person: lastAction.data.contact_person || undefined,
-                contact_no: lastAction.data.contact_no || undefined,
-                logo: lastAction.data.logo || undefined,
-                last_modified_user_id: "ADMIN",
-                factory_license_no: lastAction.data.factory_license_no || undefined,
-            });
-            toast({
-                title: "Undone",
-                description: "Changes have been reverted",
-            });
-            setLastAction(null);
-            loadCompanies();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to undo action",
-                variant: "destructive",
-            });
-        }
-    };
-
     const handleCancel = (company: Company) => {
         setCompanyToCancel(company);
         setIsCancelItemDialogOpen(true);
@@ -435,41 +406,34 @@ export default function CompanyMasterPage() {
 
     const confirmCancelItem = async () => {
         if (!companyToCancel) return;
-        
-        const isCancelled = cancelledCompanies.has(companyToCancel.comp_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
+
+        if (companyToCancel.active === false) {
+            toast({
+                title: "Already Cancelled",
+                description: `Company "${companyToCancel.company_name}" is already cancelled.`,
+                variant: "destructive",
+            });
+            setIsCancelItemDialogOpen(false);
+            setCompanyToCancel(null);
+            return;
+        }
+
         try {
             await companyAPI.update(companyToCancel.comp_id, {
-                active: newActiveStatus,
+                active: false,
                 last_modified_user_id: "ADMIN",
             });
-            
-            setCancelledCompanies(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(companyToCancel.comp_id);
-                    toast({
-                        title: "Restored",
-                        description: `Company ${companyToCancel.company_name} has been restored`,
-                    });
-                } else {
-                    newSet.add(companyToCancel.comp_id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Company ${companyToCancel.company_name} has been cancelled`,
-                    });
-                }
-                return newSet;
+            toast({
+                title: "Cancelled",
+                description: `Company "${companyToCancel.company_name}" has been cancelled.`,
             });
-            
-            loadCompanies(); // Reload data from API
+            loadCompanies();
             setIsCancelItemDialogOpen(false);
             setCompanyToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} company`,
+                description: error.message || "Failed to cancel company",
                 variant: "destructive",
             });
         }
@@ -599,6 +563,24 @@ export default function CompanyMasterPage() {
                                                 </div>
                                             )}
                                             <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">Status</Label>
+                                                <div className="space-y-2">
+                                                    {[{ value: "all", label: "All" }, { value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }].map(opt => (
+                                                        <div key={opt.value} className="flex items-center space-x-2">
+                                                            <input
+                                                                type="radio"
+                                                                id={`comp-active-${opt.value}`}
+                                                                name="compActiveFilter"
+                                                                checked={filterActive === opt.value}
+                                                                onChange={() => setFilterActive(opt.value)}
+                                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <Label htmlFor={`comp-active-${opt.value}`} className="text-sm font-normal cursor-pointer text-foreground">{opt.label}</Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3 pt-3 border-t border-border">
                                                 <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
                                                 <select
                                                     value={rowsPerPage}
@@ -621,6 +603,7 @@ export default function CompanyMasterPage() {
                                                 onClick={() => {
                                                     setFilterState("all");
                                                     setFilterCity("all");
+                                                    setFilterActive("all");
                                                 }}
                                             >
                                                 Clear Filters
@@ -653,6 +636,7 @@ export default function CompanyMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Gst No.</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Cin No.</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Pan No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Tan No.</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Factory License No.</th>
 
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Email Id</th>
@@ -677,25 +661,26 @@ export default function CompanyMasterPage() {
                                                     <span>Date & Time</span>
                                                 </div>
                                             </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Status</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={19} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={21} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading companies...
                                                 </td>
                                             </tr>
                                         ) : filteredCompanies.length === 0 ? (
                                             <tr>
-                                                <td colSpan={19} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={21} className="px-6 py-4 text-center text-muted-foreground">
                                                     No companies found
                                                 </td>
                                             </tr>
                                         ) : (
                                             paginatedCompanies.map((company, index) => {
-                                                const isCancelled = cancelledCompanies.has(company.comp_id);
+                                                const isCancelled = company.active === false;
                                                 return (
                                                 <motion.tr
                                                     key={company.comp_id}
@@ -738,6 +723,9 @@ export default function CompanyMasterPage() {
                                                         <span className="text-sm text-foreground font-mono">{company.pan_no || "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground font-mono">{company.tan_no || "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{company.factory_license_no || "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
@@ -769,6 +757,11 @@ export default function CompanyMasterPage() {
                                                             {company.last_modified_date_time ? new Date(company.last_modified_date_time).toLocaleString() : "-"}
                                                         </span>
                                                     </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${isCancelled ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                                            {isCancelled ? 'Inactive' : 'Active'}
+                                                        </span>
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <Button
@@ -790,8 +783,9 @@ export default function CompanyMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleCancel(company);
                                                                 }}
-                                                                className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={isCancelled ? "Restore company" : "Cancel company"}
+                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                title="Cancel company"
+                                                                disabled={isCancelled}
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
@@ -1067,6 +1061,19 @@ export default function CompanyMasterPage() {
                                                 maxLength={20}
                                             />
                                         </div>
+                                        {/* TAN No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                TAN No.
+                                            </label>
+                                            <Input
+                                                name="tan_no"
+                                                value={formData.tan_no}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter TAN number"
+                                                maxLength={15}
+                                            />
+                                        </div>
                                          <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Factory License No.
@@ -1142,6 +1149,21 @@ export default function CompanyMasterPage() {
                                                 placeholder="Enter contact number"
                                                 maxLength={10}
                                             />
+                                        </div>
+
+                                        {/* Active */}
+                                        <div className="col-span-2 flex items-center gap-3 mt-2">
+                                            <input
+                                                type="checkbox"
+                                                id="add-active"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="add-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                Active
+                                            </label>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
@@ -1383,6 +1405,18 @@ export default function CompanyMasterPage() {
                                                 maxLength={15}
                                             />
                                         </div>
+                                        {/* TAN No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                TAN No.
+                                            </label>
+                                            <Input
+                                                name="tan_no"
+                                                value={formData.tan_no}
+                                                onChange={handleInputChange}
+                                                maxLength={15}
+                                            />
+                                        </div>
                                            <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Factory License No.
@@ -1455,6 +1489,21 @@ export default function CompanyMasterPage() {
                                                 maxLength={10}
                                             />
                                         </div>
+
+                                        {/* Active */}
+                                        <div className="col-span-2 flex items-center gap-3 mt-2">
+                                            <input
+                                                type="checkbox"
+                                                id="edit-active"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="edit-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                Active
+                                            </label>
+                                        </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
@@ -1496,15 +1545,9 @@ export default function CompanyMasterPage() {
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {companyToCancel && cancelledCompanies.has(companyToCancel.comp_id) 
-                                ? "Confirm Restore" 
-                                : "Confirm Cancel"}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {companyToCancel && cancelledCompanies.has(companyToCancel.comp_id)
-                                ? `Are you sure you want to restore company "${companyToCancel.company_name}"?`
-                                : `Are you sure you want to cancel company "${companyToCancel?.company_name}"? This action can be undone.`}
+                            Are you sure you want to cancel company &quot;{companyToCancel?.company_name}&quot;? This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -1512,15 +1555,10 @@ export default function CompanyMasterPage() {
                             setIsCancelItemDialogOpen(false);
                             setCompanyToCancel(null);
                         }}>
-                            No, Keep Current Status
+                            No, Keep Active
                         </AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={confirmCancelItem} 
-                            className={companyToCancel && cancelledCompanies.has(companyToCancel.comp_id) 
-                                ? "bg-green-600 hover:bg-green-700" 
-                                : "bg-red-600 hover:bg-red-700"}
-                        >
-                            Yes, {companyToCancel && cancelledCompanies.has(companyToCancel.comp_id) ? "Restore" : "Cancel"}
+                        <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

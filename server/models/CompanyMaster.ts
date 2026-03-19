@@ -12,6 +12,7 @@ export interface ICompanyMaster extends Document {
   gst_no?: string; // Char(15)
   cin_no?: string; // Char(21)
   pan_no?: string; // Char(15)
+  tan_no?: string; // Char(15)
   email_id?: string; // Char(50)
   website?: string; // Char(50)
   contact_person?: string; // Char(50)
@@ -20,6 +21,7 @@ export interface ICompanyMaster extends Document {
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
   factory_license_no?: string; // Char(20)
+  active?: boolean; // For soft delete
 }
 
 const CompanyMasterSchema: Schema = new Schema({
@@ -90,6 +92,12 @@ const CompanyMasterSchema: Schema = new Schema({
     maxlength: 15,
     trim: true,
   },
+    tan_no: {
+    type: String,
+    required: false,
+    maxlength: 15,
+    trim: true,
+  },
   email_id: {
     type: String,
     required: false,
@@ -133,6 +141,10 @@ const CompanyMasterSchema: Schema = new Schema({
     required: false,
     maxlength: 20,
     trim: true,
+  },
+  active: {
+    type: Boolean,
+    default: true,
   },
 }, {
   timestamps: true,

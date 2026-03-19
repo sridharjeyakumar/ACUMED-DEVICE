@@ -11,7 +11,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { ToastAction } from "@/components/ui/toast";
 import { holidaysAPI } from "@/services/api";
 import {
     AlertDialog,
@@ -31,6 +30,7 @@ interface Holiday {
     year: number; // N(4)
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date | string; // Date
+    active?: boolean;
 }
 
 // Helper function to format dates consistently (prevents hydration errors)
@@ -66,8 +66,6 @@ export default function HolidaysMasterPage() {
     const isSubmittingRef = useRef(false);
     const [holidays, setHolidays] = useState<Holiday[]>([]);
     const [loading, setLoading] = useState(true);
-    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Holiday } | null>(null);
-    const [cancelledHolidays, setCancelledHolidays] = useState<Set<string>>(new Set());
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [holidayToCancel, setHolidayToCancel] = useState<Holiday | null>(null);
     const [filterYear, setFilterYear] = useState<string>("all");
@@ -78,7 +76,7 @@ export default function HolidaysMasterPage() {
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({ date: "", remarks: "", year: new Date().getFullYear().toString() });
+            setFormData({ date: "", remarks: "", year: new Date().getFullYear().toString(), active: true });
         }
     }, [isAddModalOpen]);
 
@@ -106,19 +104,17 @@ export default function HolidaysMasterPage() {
         date: "",
         remarks: "",
         year: new Date().getFullYear().toString(),
+        active: true,
     });
 
     const filteredHolidays = holidays.filter((holiday) => {
         const matchesSearch = holiday.remarks.toLowerCase().includes(searchQuery.toLowerCase()) ||
             formatDate(holiday.date).toLowerCase().includes(searchQuery.toLowerCase());
-        
+
         const matchesYear = filterYear === "all" || holiday.year.toString() === filterYear;
-        
-        const holidayKey = holiday._id || `${formatDate(holiday.date)}-${holiday.year}`;
-        const matchesActive = filterActive === "all" || 
-            (filterActive === "active" && !cancelledHolidays.has(holidayKey)) ||
-            (filterActive === "inactive" && cancelledHolidays.has(holidayKey));
-        
+        const matchesActive = filterActive === "all" ||
+            (filterActive === "active" ? holiday.active !== false : holiday.active === false);
+
         return matchesSearch && matchesYear && matchesActive;
     });
 
@@ -137,7 +133,9 @@ export default function HolidaysMasterPage() {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
+        const checked = (e.target as HTMLInputElement).checked;
+        const type = (e.target as HTMLInputElement).type;
+        setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -151,6 +149,7 @@ export default function HolidaysMasterPage() {
                 remarks: formData.remarks,
                 year: parseInt(formData.year),
                 last_modified_user_id: "ADMIN",
+                active: formData.active,
             });
             toast({
                 title: "Success",
@@ -161,6 +160,7 @@ export default function HolidaysMasterPage() {
                 date: "",
                 remarks: "",
                 year: new Date().getFullYear().toString(),
+                active: true,
             });
             loadHolidays();
         } catch (error: any) {
@@ -182,6 +182,7 @@ export default function HolidaysMasterPage() {
             date: dateStr,
             remarks: holiday.remarks,
             year: holiday.year.toString(),
+            active: holiday.active !== false,
         });
         setIsEditModalOpen(true);
     };
@@ -193,28 +194,17 @@ export default function HolidaysMasterPage() {
         if (!selectedHoliday || !selectedHoliday._id) return;
         isSubmittingRef.current = true;
         
-        // Store previous state for undo
-        const previousData = { ...selectedHoliday };
-        
         try {
             await holidaysAPI.update(selectedHoliday._id, {
                 date: formData.date,
                 remarks: formData.remarks,
                 year: parseInt(formData.year),
                 last_modified_user_id: "ADMIN",
+                active: formData.active,
             });
-            
-            // Store last action for undo
-            setLastAction({ type: 'edit', data: previousData });
-            
             toast({
                 title: "Success",
                 description: "Holiday updated successfully",
-                action: (
-                    <ToastAction altText="Undo" onClick={handleUndo}>
-                        Undo
-                    </ToastAction>
-                ),
             });
             setIsEditModalOpen(false);
             setSelectedHoliday(null);
@@ -222,6 +212,7 @@ export default function HolidaysMasterPage() {
                 date: "",
                 remarks: "",
                 year: new Date().getFullYear().toString(),
+                active: true,
             });
             loadHolidays();
         } catch (error: any) {
@@ -234,36 +225,6 @@ export default function HolidaysMasterPage() {
             isSubmittingRef.current = false;
         }
     };
-    
-    const handleUndo = async () => {
-        if (!lastAction || !lastAction.data._id) return;
-        
-        try {
-            if (lastAction.type === 'edit') {
-                const holidayDate = typeof lastAction.data.date === 'string' ? new Date(lastAction.data.date) : lastAction.data.date;
-                const dateStr = holidayDate.toISOString().split('T')[0];
-                // Restore previous data
-                await holidaysAPI.update(lastAction.data._id, {
-                    date: dateStr,
-                    remarks: lastAction.data.remarks,
-                    year: lastAction.data.year,
-                    last_modified_user_id: "ADMIN",
-                });
-                toast({
-                    title: "Undone",
-                    description: "Changes have been reverted",
-                });
-            }
-            setLastAction(null);
-            loadHolidays();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to undo action",
-                variant: "destructive",
-            });
-        }
-    };
 
     const handleCancel = (holiday: Holiday) => {
         setHolidayToCancel(holiday);
@@ -272,42 +233,34 @@ export default function HolidaysMasterPage() {
 
     const confirmCancelItem = async () => {
         if (!holidayToCancel || !holidayToCancel._id) return;
-        
-        const holidayKey = holidayToCancel._id || `${formatDate(holidayToCancel.date)}-${holidayToCancel.year}`;
-        const isCancelled = cancelledHolidays.has(holidayKey);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
+
+        if (holidayToCancel.active === false) {
+            toast({
+                title: "Already Cancelled",
+                description: `Holiday "${holidayToCancel.remarks}" is already cancelled.`,
+                variant: "destructive",
+            });
+            setIsCancelItemDialogOpen(false);
+            setHolidayToCancel(null);
+            return;
+        }
+
         try {
             await holidaysAPI.update(holidayToCancel._id, {
-                active: newActiveStatus,
+                active: false,
                 last_modified_user_id: "ADMIN",
             });
-            
-            setCancelledHolidays(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(holidayKey);
-                    toast({
-                        title: "Restored",
-                        description: `Holiday ${holidayToCancel.remarks} has been restored`,
-                    });
-                } else {
-                    newSet.add(holidayKey);
-                    toast({
-                        title: "Cancelled",
-                        description: `Holiday ${holidayToCancel.remarks} has been cancelled`,
-                    });
-                }
-                return newSet;
+            toast({
+                title: "Cancelled",
+                description: `Holiday "${holidayToCancel.remarks}" has been cancelled.`,
             });
-            
-            loadHolidays(); // Reload data from API
+            loadHolidays();
             setIsCancelItemDialogOpen(false);
             setHolidayToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} holiday`,
+                description: error.message || "Failed to cancel holiday",
                 variant: "destructive",
             });
         }
@@ -500,26 +453,27 @@ export default function HolidaysMasterPage() {
                                                     <span>date & time</span>
                                                 </div>
                                             </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Status</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading holidays...
                                                 </td>
                                             </tr>
                                         ) : filteredHolidays.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
                                                     No holidays found
                                                 </td>
                                             </tr>
                                         ) : (
                                             paginatedHolidays.map((holiday, index) => {
                                                 const holidayKey = holiday._id || `${formatDate(holiday.date)}-${holiday.year}`;
-                                                const isCancelled = cancelledHolidays.has(holidayKey);
+                                                const isCancelled = holiday.active === false;
                                                 return (
                                                 <motion.tr
                                                     key={holidayKey}
@@ -554,6 +508,11 @@ export default function HolidaysMasterPage() {
                                                                 : "-"}
                                                         </span>
                                                     </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${isCancelled ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                                            {isCancelled ? 'Inactive' : 'Active'}
+                                                        </span>
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <Button
@@ -575,8 +534,9 @@ export default function HolidaysMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleCancel(holiday);
                                                                 }}
-                                                                className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={isCancelled ? "Restore holiday" : "Cancel holiday"}
+                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                title="Cancel holiday"
+                                                                disabled={isCancelled}
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
@@ -686,6 +646,19 @@ export default function HolidaysMasterPage() {
                                             max={9999}
                                         />
                                     </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="add-active"
+                                            name="active"
+                                            checked={formData.active}
+                                            onChange={handleInputChange}
+                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        />
+                                        <label htmlFor="add-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Active
+                                        </label>
+                                    </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -770,6 +743,19 @@ export default function HolidaysMasterPage() {
                                             max={9999}
                                         />
                                     </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="edit-active"
+                                            name="active"
+                                            checked={formData.active}
+                                            onChange={handleInputChange}
+                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        />
+                                        <label htmlFor="edit-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Active
+                                        </label>
+                                    </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -790,15 +776,9 @@ export default function HolidaysMasterPage() {
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {holidayToCancel && cancelledHolidays.has(holidayToCancel._id || `${formatDate(holidayToCancel.date)}-${holidayToCancel.year}`) 
-                                ? "Confirm Restore" 
-                                : "Confirm Cancel"}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {holidayToCancel && cancelledHolidays.has(holidayToCancel._id || `${formatDate(holidayToCancel.date)}-${holidayToCancel.year}`)
-                                ? `Are you sure you want to restore holiday "${holidayToCancel.remarks}"?`
-                                : `Are you sure you want to cancel holiday "${holidayToCancel?.remarks}"? This action can be undone.`}
+                            Are you sure you want to cancel holiday &quot;{holidayToCancel?.remarks}&quot;? This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -806,15 +786,10 @@ export default function HolidaysMasterPage() {
                             setIsCancelItemDialogOpen(false);
                             setHolidayToCancel(null);
                         }}>
-                            No, Keep Current Status
+                            No, Keep Active
                         </AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={confirmCancelItem} 
-                            className={holidayToCancel && cancelledHolidays.has(holidayToCancel._id || `${formatDate(holidayToCancel.date)}-${holidayToCancel.year}`) 
-                                ? "bg-green-600 hover:bg-green-700" 
-                                : "bg-red-600 hover:bg-red-700"}
-                        >
-                            Yes, {holidayToCancel && cancelledHolidays.has(holidayToCancel._id || `${formatDate(holidayToCancel.date)}-${holidayToCancel.year}`) ? "Restore" : "Cancel"}
+                        <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

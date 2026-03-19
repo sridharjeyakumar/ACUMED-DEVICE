@@ -484,7 +484,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
       Pack Size Short Name
     </th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">
-      Quantity per Carton
+      Quantity per pack
     </th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">
       UOM
@@ -738,7 +738,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
 
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Qty Per Carton <span className="text-red-500">*</span>
+                                                Qty Per Pack <span className="text-red-500">*</span>
                                             </label>
                                             <Input
                                                 type="number"
@@ -867,7 +867,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
 
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Qty Per Carton <span className="text-red-500">*</span>
+                                                Qty Per Pack <span className="text-red-500">*</span>
                                             </label>
                                             <Input
                                                 type="number"

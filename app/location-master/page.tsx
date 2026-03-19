@@ -66,11 +66,12 @@ export default function LocationMasterPage() {
         location_id: "",
         location_name: "",
         location_icon: "",
+        active: true,
     });
 
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({ location_id: "", location_name: "", location_icon: "" });
+            setFormData({ location_id: "", location_name: "", location_icon: "", active: true });
             if (addIconInputRef.current) addIconInputRef.current.value = "";
         }
     }, [isAddModalOpen]);
@@ -147,14 +148,14 @@ export default function LocationMasterPage() {
                 location_name: formData.location_name,
                 location_icon: formData.location_icon || undefined,
                 last_modified_user_id: "ADMIN",
-                active: true,
+                active: formData.active,
             });
             toast({
                 title: "Success",
                 description: "Location created successfully",
             });
             setIsAddModalOpen(false);
-            setFormData({ location_id: "", location_name: "", location_icon: "" });
+            setFormData({ location_id: "", location_name: "", location_icon: "", active: true });
             loadLocations();
         } catch (error: any) {
             toast({
@@ -181,6 +182,7 @@ export default function LocationMasterPage() {
             location_id: location.location_id,
             location_name: location.location_name,
             location_icon: location.location_icon || "",
+            active: location.active,
         });
         setIsEditModalOpen(true);
     };
@@ -209,7 +211,7 @@ export default function LocationMasterPage() {
                 location_name: formData.location_name,
                 location_icon: formData.location_icon || undefined,
                 last_modified_user_id: "ADMIN",
-                active: selectedLocation.active,
+                active: formData.active,
             });
 
             setLastAction({ type: 'edit', data: previousData });
@@ -225,7 +227,7 @@ export default function LocationMasterPage() {
             });
             setIsEditModalOpen(false);
             setSelectedLocation(null);
-            setFormData({ location_id: "", location_name: "", location_icon: "" });
+            setFormData({ location_id: "", location_name: "", location_icon: "", active: true });
             loadLocations();
         } catch (error: any) {
             toast({
@@ -702,6 +704,18 @@ export default function LocationMasterPage() {
                                         </div>
                                         <p className="text-xs text-muted-foreground mt-1">PNG, JPG, SVG up to 2MB</p>
                                     </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="add-active"
+                                            checked={formData.active}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.checked }))}
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="add-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Active
+                                        </label>
+                                    </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -817,6 +831,18 @@ export default function LocationMasterPage() {
                                             />
                                         </div>
                                         <p className="text-xs text-muted-foreground mt-1">PNG, JPG, SVG up to 2MB</p>
+                                    </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="edit-active"
+                                            checked={formData.active}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.checked }))}
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="edit-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Active
+                                        </label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button

@@ -30,11 +30,12 @@ export async function POST(request: NextRequest) {
   try {
     await ensureConnection();
     const body = await request.json();
-    const grade = new EmployeeGradeMaster({ 
+    const grade = new EmployeeGradeMaster({
       grade_id: body.grade_id,
       grade_name: body.grade_name,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
+      active: body.active ?? true,
     });
     await grade.save();
     return NextResponse.json(grade, { status: 201 });

@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
       location_id: body.location_id,
       location_name: body.location_name,
       location_icon: body.location_icon || undefined,
+      active: body.active !== undefined ? body.active : true,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
     });

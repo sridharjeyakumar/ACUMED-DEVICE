@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { coaChecklistAPI, productAPI, productCategoryAPI, uomAPI } from "@/services/api";
+import { coaChecklistAPI, packSizeAPI, productAPI, productCategoryAPI, uomAPI } from "@/services/api";
 
 interface Product {
     product_id: string;
@@ -56,6 +56,12 @@ interface ProductCategory {
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
 }
+interface PackSizeMaster {
+    pack_size_id: string;
+    pack_size_name: string;
+    pack_size_short_name: string;
+    active: boolean;
+}
 // Helper function to format dates consistently
 function formatDateTime(date: Date | string | undefined): string {
     if (!date) return "-";
@@ -92,6 +98,7 @@ export default function ProductMasterPage() {
     const [checklists, setChecklists] = useState<any[]>([]);
     const [uoms, setUOMs] = useState<UOM[]>([]);
     const [categories, setCategories] = useState<ProductCategory[]>([]);
+    const [packSizes, setPackSizes] = useState<PackSizeMaster[]>([]);
     const [isDuplicateId, setIsDuplicateId] = useState(false);
     
     const isSubmittingRef = useRef(false);
@@ -186,6 +193,17 @@ useEffect(() => {
         }
     };
     loadProducts();
+}, []);
+useEffect(() => {
+    const loadPackSizes = async () => {
+        try {
+            const data = await packSizeAPI.getAll();
+            setPackSizes(data);
+        } catch (error) {
+            console.error("Failed to load pack sizes", error);
+        }
+    };
+    loadPackSizes();
 }, []);
     // Reset form data when Add modal opens
     useEffect(() => {
@@ -1175,10 +1193,12 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange}
                                                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                             >
-                                                <option value="GMS">GMS</option>
-                                                <option value="KG">KG</option>
-                                                <option value="MG">MG</option>
-                                                <option value="">-</option>
+                                                <option value="">Select a uom</option>
+                                                {uoms.map(uom => (
+                                                    <option key={uom.uom_id} value={uom.uom_id}>
+                                                        {uom.uom_id}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </div>
 
@@ -1249,14 +1269,19 @@ const confirmCancelItem = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Default Pack Size ID
                                             </label>
-                                            <Input
+                                            <select
                                                 name="default_pack_size_id"
                                                 value={formData.default_pack_size_id}
                                                 onChange={handleInputChange}
-                                                placeholder="Enter pack size ID"
-                                                maxLength={4}
-
-                                            />
+                                                className="w-full border border-input bg-background rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                            >
+                                                <option value="">Select Pack Size</option>
+                                                {packSizes.map(ps => (
+                                                    <option key={ps.pack_size_id} value={ps.pack_size_id}>
+                                                        {ps.pack_size_id} - {ps.pack_size_name}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         {/* Batch No. Pattern */}
@@ -1596,10 +1621,12 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange}
                                                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                             >
-                                                <option value="GMS">GMS</option>
-                                                <option value="KG">KG</option>
-                                                <option value="MG">MG</option>
-                                                <option value="">-</option>
+                                                <option value="">Select a uom</option>
+                                                {uoms.map(uom => (
+                                                    <option key={uom.uom_id} value={uom.uom_id}>
+                                                        {uom.uom_id}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </div>
 
@@ -1670,13 +1697,19 @@ const confirmCancelItem = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Default Pack Size ID
                                             </label>
-                                            <Input
+                                            <select
                                                 name="default_pack_size_id"
                                                 value={formData.default_pack_size_id}
                                                 onChange={handleInputChange}
-                                                placeholder="Enter pack size ID"
-                                                maxLength={4}
-                                            />
+                                                className="w-full border border-input bg-background rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                            >
+                                                <option value="">Select Pack Size</option>
+                                                {packSizes.filter(ps => ps.active).map(ps => (
+                                                    <option key={ps.pack_size_id} value={ps.pack_size_id}>
+                                                        {ps.pack_size_id} - {ps.pack_size_name}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         {/* Batch No. Pattern */}

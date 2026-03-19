@@ -11,7 +11,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { ToastAction } from "@/components/ui/toast";
 import { weeklyOffAPI } from "@/services/api";
 import {
     AlertDialog,
@@ -31,6 +30,7 @@ interface WeeklyOff {
     week_of_month?: number; // N(1) - Optional, week number within month (1-4)
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date | string; // Date
+    active?: boolean;
 }
 
 // Helper function to get day name from number
@@ -62,8 +62,7 @@ export default function WeeklyOffMasterPage() {
     const isSubmittingRef = useRef(false);
     const [weeklyOffs, setWeeklyOffs] = useState<WeeklyOff[]>([]);
     const [loading, setLoading] = useState(true);
-    const [lastAction, setLastAction] = useState<{ type: 'edit'; data: WeeklyOff } | null>(null);
-    const [cancelledWeeklyOffs, setCancelledWeeklyOffs] = useState<Set<string>>(new Set());
+    const [filterActive, setFilterActive] = useState<string>("all");
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [weeklyOffToCancel, setWeeklyOffToCancel] = useState<WeeklyOff | null>(null);
     const [filterDay, setFilterDay] = useState<string>("all");
@@ -73,7 +72,7 @@ export default function WeeklyOffMasterPage() {
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({ week_off_id: "", day_of_week: "", week_of_month: "" });
+            setFormData({ week_off_id: "", day_of_week: "", week_of_month: "", active: true });
         }
     }, [isAddModalOpen]);
 
@@ -101,15 +100,22 @@ export default function WeeklyOffMasterPage() {
         week_off_id: "",
         day_of_week: "",
         week_of_month: "",
+        active: true,
     });
 
     const filteredWeeklyOffs = weeklyOffs.filter((weeklyOff) => {
         const matchesSearch = weeklyOff.week_off_id.toString().includes(searchQuery) ||
             getDayName(weeklyOff.day_of_week).toLowerCase().includes(searchQuery.toLowerCase());
-        
+
         const matchesDay = filterDay === "all" || weeklyOff.day_of_week.toString() === filterDay;
-        
-        return matchesSearch && matchesDay;
+
+        const matchesActive = filterActive === "all"
+            ? true
+            : filterActive === "active"
+            ? weeklyOff.active !== false
+            : weeklyOff.active === false;
+
+        return matchesSearch && matchesDay && matchesActive;
     });
 
     // Pagination logic
@@ -121,13 +127,14 @@ export default function WeeklyOffMasterPage() {
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, filterDay, rowsPerPage]);
+    }, [searchQuery, filterDay, filterActive, rowsPerPage]);
 
     const uniqueDays = Array.from(new Set(weeklyOffs.map(w => w.day_of_week.toString()))).sort((a, b) => parseInt(a) - parseInt(b));
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
+        const { name, value, type } = e.target;
+        const checked = (e.target as HTMLInputElement).checked;
+        setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -140,6 +147,7 @@ export default function WeeklyOffMasterPage() {
                 week_off_id: formData.week_off_id,
                 day_of_week: formData.day_of_week,
                 week_of_month: formData.week_of_month || undefined,
+                active: formData.active,
                 last_modified_user_id: "ADMIN",
             });
             toast({
@@ -151,6 +159,7 @@ export default function WeeklyOffMasterPage() {
                 week_off_id: "",
                 day_of_week: "",
                 week_of_month: "",
+                active: true,
             });
             loadWeeklyOffs();
         } catch (error: any) {
@@ -170,6 +179,7 @@ export default function WeeklyOffMasterPage() {
             week_off_id: weeklyOff.week_off_id.toString(),
             day_of_week: weeklyOff.day_of_week.toString(),
             week_of_month: weeklyOff.week_of_month?.toString() || "",
+            active: weeklyOff.active !== false,
         });
         setIsEditModalOpen(true);
     };
@@ -180,28 +190,18 @@ export default function WeeklyOffMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedWeeklyOff || !selectedWeeklyOff._id) return;
         isSubmittingRef.current = true;
-        
-        // Store previous state for undo
-        const previousData = { ...selectedWeeklyOff };
-        
+
         try {
             await weeklyOffAPI.update(selectedWeeklyOff._id, {
                 day_of_week: formData.day_of_week,
                 week_of_month: formData.week_of_month || undefined,
+                active: formData.active,
                 last_modified_user_id: "ADMIN",
             });
-            
-            // Store last action for undo
-            setLastAction({ type: 'edit', data: previousData });
-            
+
             toast({
                 title: "Success",
                 description: "Weekly off record updated successfully",
-                action: (
-                    <ToastAction altText="Undo" onClick={handleUndo}>
-                        Undo
-                    </ToastAction>
-                ),
             });
             setIsEditModalOpen(false);
             setSelectedWeeklyOff(null);
@@ -209,6 +209,7 @@ export default function WeeklyOffMasterPage() {
                 week_off_id: "",
                 day_of_week: "",
                 week_of_month: "",
+                active: true,
             });
             loadWeeklyOffs();
         } catch (error: any) {
@@ -222,33 +223,6 @@ export default function WeeklyOffMasterPage() {
         }
     };
     
-    const handleUndo = async () => {
-        if (!lastAction || !lastAction.data._id) return;
-        
-        try {
-            if (lastAction.type === 'edit') {
-                // Restore previous data
-                await weeklyOffAPI.update(lastAction.data._id, {
-                    day_of_week: lastAction.data.day_of_week,
-                    week_of_month: lastAction.data.week_of_month,
-                    last_modified_user_id: "ADMIN",
-                });
-                toast({
-                    title: "Undone",
-                    description: "Changes have been reverted",
-                });
-            }
-            setLastAction(null);
-            loadWeeklyOffs();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to undo action",
-                variant: "destructive",
-            });
-        }
-    };
-
     const handleCancel = (weeklyOff: WeeklyOff) => {
         setWeeklyOffToCancel(weeklyOff);
         setIsCancelItemDialogOpen(true);
@@ -256,42 +230,26 @@ export default function WeeklyOffMasterPage() {
 
     const confirmCancelItem = async () => {
         if (!weeklyOffToCancel || !weeklyOffToCancel._id) return;
-        
-        const weeklyOffKey = weeklyOffToCancel._id || weeklyOffToCancel.week_off_id.toString();
-        const isCancelled = cancelledWeeklyOffs.has(weeklyOffKey);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
+        if (weeklyOffToCancel.active === false) return;
+
         try {
             await weeklyOffAPI.update(weeklyOffToCancel._id, {
-                active: newActiveStatus,
+                active: false,
                 last_modified_user_id: "ADMIN",
             });
-            
-            setCancelledWeeklyOffs(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(weeklyOffKey);
-                    toast({
-                        title: "Restored",
-                        description: `Weekly off record has been restored`,
-                    });
-                } else {
-                    newSet.add(weeklyOffKey);
-                    toast({
-                        title: "Cancelled",
-                        description: `Weekly off record has been cancelled`,
-                    });
-                }
-                return newSet;
+
+            toast({
+                title: "Cancelled",
+                description: `Weekly off record has been cancelled`,
             });
-            
-            loadWeeklyOffs(); // Reload data from API
+
+            loadWeeklyOffs();
             setIsCancelItemDialogOpen(false);
             setWeeklyOffToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} weekly off record`,
+                description: error.message || `Failed to cancel weekly off record`,
                 variant: "destructive",
             });
         }
@@ -389,6 +347,24 @@ export default function WeeklyOffMasterPage() {
                                                     ))}
                                                 </div>
                                             </div>
+                                                <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">Status</Label>
+                                                <div className="space-y-2">
+                                                    {[{ value: "all", label: "All" }, { value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }].map(opt => (
+                                                        <div key={opt.value} className="flex items-center space-x-2">
+                                                            <input
+                                                                type="radio"
+                                                                id={`status-${opt.value}`}
+                                                                name="statusFilter"
+                                                                checked={filterActive === opt.value}
+                                                                onChange={() => setFilterActive(opt.value)}
+                                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <Label htmlFor={`status-${opt.value}`} className="text-sm font-normal cursor-pointer text-foreground">{opt.label}</Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
                                             <div className="space-y-3 pt-3 border-t border-border">
                                                 <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
                                                 <select
@@ -409,7 +385,7 @@ export default function WeeklyOffMasterPage() {
                                                 variant="outline" 
                                                 size="sm" 
                                                 className="w-full"
-                                                onClick={() => setFilterDay("all")}
+                                                onClick={() => { setFilterDay("all"); setFilterActive("all"); }}
                                             >
                                                 Clear Filters
                                             </Button>
@@ -445,26 +421,27 @@ export default function WeeklyOffMasterPage() {
                                                     <span>Date & Time</span>
                                                 </div>
                                             </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading weekly off records...
                                                 </td>
                                             </tr>
                                         ) : filteredWeeklyOffs.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
                                                     No weekly off records found
                                                 </td>
                                             </tr>
                                         ) : (
                                             paginatedWeeklyOffs.map((weeklyOff, index) => {
                                                 const weeklyOffKey = weeklyOff._id || weeklyOff.week_off_id.toString();
-                                                const isCancelled = cancelledWeeklyOffs.has(weeklyOffKey);
+                                                const isCancelled = weeklyOff.active === false;
                                                 return (
                                                 <motion.tr
                                                     key={weeklyOffKey}
@@ -502,6 +479,11 @@ export default function WeeklyOffMasterPage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isCancelled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                                                            {isCancelled ? 'Inactive' : 'Active'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <Button
                                                                 variant="ghost"
@@ -522,8 +504,9 @@ export default function WeeklyOffMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleCancel(weeklyOff);
                                                                 }}
-                                                                className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                                title={isCancelled ? "Restore record" : "Cancel record"}
+                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                title="Cancel record"
+                                                                disabled={isCancelled}
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
@@ -646,6 +629,10 @@ export default function WeeklyOffMasterPage() {
                                             <option value="4">Week 4</option>
                                         </select>
                                     </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input type="checkbox" id="add-active" name="active" checked={formData.active} onChange={handleInputChange} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                                        <label htmlFor="add-active" className="text-sm font-semibold text-foreground cursor-pointer">Active</label>
+                                    </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -741,6 +728,10 @@ export default function WeeklyOffMasterPage() {
                                             <option value="4">Week 4</option>
                                         </select>
                                     </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input type="checkbox" id="edit-active" name="active" checked={formData.active} onChange={handleInputChange} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                                        <label htmlFor="edit-active" className="text-sm font-semibold text-foreground cursor-pointer">Active</label>
+                                    </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -761,15 +752,9 @@ export default function WeeklyOffMasterPage() {
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {weeklyOffToCancel && cancelledWeeklyOffs.has(weeklyOffToCancel._id || weeklyOffToCancel.week_off_id.toString()) 
-                                ? "Confirm Restore" 
-                                : "Confirm Cancel"}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {weeklyOffToCancel && cancelledWeeklyOffs.has(weeklyOffToCancel._id || weeklyOffToCancel.week_off_id.toString())
-                                ? `Are you sure you want to restore weekly off record for ${getDayName(weeklyOffToCancel.day_of_week)}?`
-                                : `Are you sure you want to cancel weekly off record for ${weeklyOffToCancel ? getDayName(weeklyOffToCancel.day_of_week) : ''}? This action can be undone.`}
+                            Are you sure you want to cancel weekly off record for {weeklyOffToCancel ? getDayName(weeklyOffToCancel.day_of_week) : ''}?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -777,15 +762,10 @@ export default function WeeklyOffMasterPage() {
                             setIsCancelItemDialogOpen(false);
                             setWeeklyOffToCancel(null);
                         }}>
-                            No, Keep Current Status
+                            No, Keep It
                         </AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={confirmCancelItem} 
-                            className={weeklyOffToCancel && cancelledWeeklyOffs.has(weeklyOffToCancel._id || weeklyOffToCancel.week_off_id.toString()) 
-                                ? "bg-green-600 hover:bg-green-700" 
-                                : "bg-red-600 hover:bg-red-700"}
-                        >
-                            Yes, {weeklyOffToCancel && cancelledWeeklyOffs.has(weeklyOffToCancel._id || weeklyOffToCancel.week_off_id.toString()) ? "Restore" : "Cancel"}
+                        <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

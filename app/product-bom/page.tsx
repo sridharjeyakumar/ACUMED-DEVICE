@@ -795,7 +795,7 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Line / Subtitle */}
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Line / Subtitle
                                             </label>
@@ -805,7 +805,7 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. HIGH PRECISION LINE" 
                                             />
-                                        </div>
+                                        </div> */}
 
                                         {/* Product ID */}
                                                                           <div>
@@ -995,7 +995,7 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Line / Subtitle */}
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Line / Subtitle
                                             </label>
@@ -1005,7 +1005,7 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. HIGH PRECISION LINE" 
                                             />
-                                        </div>
+                                        </div> */}
 
                                         {/* Product ID */}
                                         <div>

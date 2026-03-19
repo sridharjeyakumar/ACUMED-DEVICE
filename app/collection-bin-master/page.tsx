@@ -816,11 +816,6 @@ const confirmCancelItem = async () => {
                                             >
                                                 <option value="Normal">Normal</option>
                                                 <option value="Rejected">Rejected</option>
-                                                <option value="GENERAL">GENERAL</option>
-                                                <option value="HAZARDOUS">HAZARDOUS</option>
-                                                <option value="RECYCLABLE">RECYCLABLE</option>
-                                                <option value="SCRAP">SCRAP</option>
-                                                <option value="REWORK">REWORK</option>
                                             </select>
                                         </div>
 
@@ -986,11 +981,6 @@ const confirmCancelItem = async () => {
                                             >
                                                 <option value="Normal">Normal</option>
                                                 <option value="Rejected">Rejected</option>
-                                                <option value="GENERAL">GENERAL</option>
-                                                <option value="HAZARDOUS">HAZARDOUS</option>
-                                                <option value="RECYCLABLE">RECYCLABLE</option>
-                                                <option value="SCRAP">SCRAP</option>
-                                                <option value="REWORK">REWORK</option>
                                             </select>
                                         </div>
 

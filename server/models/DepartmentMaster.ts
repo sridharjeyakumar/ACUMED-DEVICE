@@ -5,6 +5,7 @@ export interface IDepartmentMaster extends Document {
   department_name: string; // Char(25)
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
+  active?: boolean; // Boolean
 }
 
 const DepartmentMasterSchema: Schema = new Schema({
@@ -30,6 +31,11 @@ const DepartmentMasterSchema: Schema = new Schema({
   last_modified_date_time: {
     type: Date,
     required: false,
+  },
+  active: {
+    type: Boolean,
+    required: false,
+    default: true,
   },
 }, {
   timestamps: true,

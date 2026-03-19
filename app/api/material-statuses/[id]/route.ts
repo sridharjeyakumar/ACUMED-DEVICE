@@ -71,6 +71,7 @@ export async function PUT(
     if (body.effect_in_stock !== undefined) updateData.effect_in_stock = body.effect_in_stock || '';
     if (body.seq_no !== undefined) updateData.seq_no = body.seq_no;
     if (body.active !== undefined) updateData.active = body.active !== false;
+    if (body.location_id !== undefined) updateData.location_id = body.location_id || '';
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
     

@@ -69,6 +69,7 @@ export async function PUT(
     const updateData: any = {};
     if (body.day_of_week !== undefined) updateData.day_of_week = safeInteger(body.day_of_week) || 0;
     if (body.week_of_month !== undefined) updateData.week_of_month = safeInteger(body.week_of_month) || undefined;
+    if (body.active !== undefined) updateData.active = body.active;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
     

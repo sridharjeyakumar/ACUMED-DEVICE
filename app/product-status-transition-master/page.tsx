@@ -595,8 +595,8 @@ export default function ProductStatusTransitionMasterPage() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-border">
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">From Status</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">To Status</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">To Product Status ID</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">From Product Status ID</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Sterilization Required</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Approval Required</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Seq No.</th>
@@ -638,30 +638,25 @@ export default function ProductStatusTransitionMasterPage() {
                                                     transition={{ duration: 0.3, delay: index * 0.05 }}
                                                     className={`hover:bg-muted/30 transition-colors ${!transition.active ? 'opacity-50 bg-gray-50' : ''}`}
                                                 >
+                                                        <td className="px-6 py-4">
+                                                        <div className="text-sm">
+                                                            <span className="ftext-sm font-mono text-foreground">{transition.product_status_id}</span>
+                                                        </div>
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <div className="text-sm">
                                                             <span className="text-sm font-mono text-foreground">{transition.from_product_status_id}</span>
-                                                            {/* <span className="text-muted-foreground ml-2">
-                                                                {statuses.find(s => s.prod_status_id === transition.from_product_status_id)?.product_status || ''}
-                                                            </span> */}
                                                         </div>
                                                     </td>
                                                
-                                                    <td className="px-6 py-4">
-                                                        <div className="text-sm">
-                                                            <span className="ftext-sm font-mono text-foreground">{transition.product_status_id}</span>
-                                                            {/* <span className="text-muted-foreground ml-2">
-                                                                {statuses.find(s => s.prod_status_id === transition.product_status_id)?.product_status || ''}
-                                                            </span> */}
-                                                        </div>
-                                                    </td>
+                                                
                                                     <td className="px-6 py-4">
                                                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
                                                             transition.sterilization_required === 'Y' 
                                                                 ? 'bg-yellow-100 text-yellow-800' 
                                                                 : 'bg-gray-100 text-gray-600'
                                                         }`}>
-                                                            {transition.sterilization_required === 'Y' ? 'Required' : 'Not Required'}
+                                                            {transition.sterilization_required === 'Y' ? 'Y' : 'N'}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
@@ -670,7 +665,7 @@ export default function ProductStatusTransitionMasterPage() {
                                                                 ? 'bg-purple-100 text-purple-800' 
                                                                 : 'bg-gray-100 text-gray-600'
                                                         }`}>
-                                                            {transition.approval_required === 'Y' ? 'Required' : 'Not Required'}
+                                                            {transition.approval_required === 'Y' ? 'Y' : 'N'}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">

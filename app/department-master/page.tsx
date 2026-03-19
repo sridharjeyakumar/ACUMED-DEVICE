@@ -29,6 +29,7 @@ interface Department {
     department_name: string; // Char(25)
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
+    active: boolean;
 }
 
 // Helper function to format dates consistently (prevents hydration errors)
@@ -66,7 +67,7 @@ export default function DepartmentMasterPage() {
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({ dept_id: "", department_name: "" });
+            setFormData({ dept_id: "", department_name: "", active: true });
         }
     }, [isAddModalOpen]);
 
@@ -74,7 +75,11 @@ export default function DepartmentMasterPage() {
         try {
             setLoading(true);
             const data = await departmentAPI.getAll();
-            setDepartments(data);
+            const departmentsWithActive = data.map((dept: any) => ({
+                ...dept,
+                active: dept.active !== undefined ? dept.active : true,
+            }));
+            setDepartments(departmentsWithActive);
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -92,15 +97,16 @@ export default function DepartmentMasterPage() {
     const [formData, setFormData] = useState({
         dept_id: "",
         department_name: "",
+        active: true,
     });
 
     const filteredDepartments = departments.filter((dept) => {
         const matchesSearch = dept.dept_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             dept.department_name.toLowerCase().includes(searchQuery.toLowerCase());
         
-        const matchesActive = filterActive === "all" || 
-            (filterActive === "active" && !cancelledDepartments.has(dept.dept_id)) ||
-            (filterActive === "inactive" && cancelledDepartments.has(dept.dept_id));
+        const matchesActive = filterActive === "all" ||
+            (filterActive === "active" && dept.active) ||
+            (filterActive === "inactive" && !dept.active);
         
         return matchesSearch && matchesActive;
     });
@@ -117,8 +123,8 @@ export default function DepartmentMasterPage() {
     }, [searchQuery, filterActive, rowsPerPage]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
+        const { name, value, type, checked } = e.target;
+        setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -131,6 +137,7 @@ export default function DepartmentMasterPage() {
                 dept_id: formData.dept_id,
                 department_name: formData.department_name,
                 last_modified_user_id: "ADMIN",
+                active: formData.active,
             });
             toast({
                 title: "Success",
@@ -140,6 +147,7 @@ export default function DepartmentMasterPage() {
             setFormData({
                 dept_id: "",
                 department_name: "",
+                active: true,
             });
             loadDepartments();
         } catch (error: any) {
@@ -158,6 +166,7 @@ export default function DepartmentMasterPage() {
         setFormData({
             dept_id: department.dept_id,
             department_name: department.department_name,
+            active: department.active,
         });
         setIsEditModalOpen(true);
     };
@@ -176,6 +185,7 @@ export default function DepartmentMasterPage() {
             await departmentAPI.update(selectedDepartment.dept_id, {
                 department_name: formData.department_name,
                 last_modified_user_id: "ADMIN",
+                active: formData.active,
             });
             
             // Store last action for undo
@@ -195,6 +205,7 @@ export default function DepartmentMasterPage() {
             setFormData({
                 dept_id: "",
                 department_name: "",
+                active: true,
             });
             loadDepartments();
         } catch (error: any) {
@@ -246,47 +257,39 @@ export default function DepartmentMasterPage() {
     };
 
     const handleCancel = (department: Department) => {
+        if (!department.active) {
+            toast({
+                title: "Already Cancelled",
+                description: "This department is already cancelled",
+                variant: "destructive",
+            });
+            return;
+        }
         setDepartmentToCancel(department);
         setIsCancelItemDialogOpen(true);
     };
 
     const confirmCancelItem = async () => {
         if (!departmentToCancel) return;
-        
-        const isCancelled = cancelledDepartments.has(departmentToCancel.dept_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
+
         try {
             await departmentAPI.update(departmentToCancel.dept_id, {
-                active: newActiveStatus,
+                active: false,
                 last_modified_user_id: "ADMIN",
             });
-            
-            setCancelledDepartments(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(departmentToCancel.dept_id);
-                    toast({
-                        title: "Restored",
-                        description: `Department ${departmentToCancel.department_name} has been restored`,
-                    });
-                } else {
-                    newSet.add(departmentToCancel.dept_id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Department ${departmentToCancel.department_name} has been cancelled`,
-                    });
-                }
-                return newSet;
+
+            toast({
+                title: "Cancelled",
+                description: `Department ${departmentToCancel.department_name} has been cancelled`,
             });
-            
-            loadDepartments(); // Reload data from API
+
+            await loadDepartments();
             setIsCancelItemDialogOpen(false);
             setDepartmentToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} department`,
+                description: error.message || "Failed to cancel department",
                 variant: "destructive",
             });
         }
@@ -300,11 +303,11 @@ export default function DepartmentMasterPage() {
     const confirmCancel = () => {
         if (cancelModalType === 'add') {
             setIsAddModalOpen(false);
-            setFormData({ dept_id: "", department_name: "" });
+            setFormData({ dept_id: "", department_name: "", active: true });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
             setSelectedDepartment(null);
-            setFormData({ dept_id: "", department_name: "" });
+            setFormData({ dept_id: "", department_name: "", active: true });
         }
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
@@ -485,14 +488,13 @@ export default function DepartmentMasterPage() {
                                             </tr>
                                         ) : (
                                             paginatedDepartments.map((department, index) => {
-                                                const isCancelled = cancelledDepartments.has(department.dept_id);
                                                 return (
                                                 <motion.tr
                                                     key={department.dept_id}
                                                     initial={{ opacity: 0, x: -20 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
+                                                    className={`hover:bg-muted/30 transition-colors ${!department.active ? 'opacity-40' : ''}`}
                                                 >
                                                     <td className="px-4 py-3">
                                                         <span className="text-sm text-muted-foreground font-mono">{department.dept_id}</span>
@@ -519,9 +521,9 @@ export default function DepartmentMasterPage() {
                                                     </td>
                                                     <td className="px-4 py-3 text-left">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                                                            !isCancelled ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                            department.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                         }`}>
-                                                            {!isCancelled ? "TRUE" : "FALSE"}
+                                                            {department.active ? "TRUE" : "FALSE"}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3">
@@ -534,22 +536,23 @@ export default function DepartmentMasterPage() {
                                                                     handleEdit(department);
                                                                 }}
                                                                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                                disabled={isCancelled}
+                                                                disabled={!department.active}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
-                                                            size="icon"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleCancel(department);
-                                                            }}
-                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                            title={isCancelled ? "Restore department" : "Cancel department"}
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
+                                                                size="icon"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleCancel(department);
+                                                                }}
+                                                                className={`text-red-600 hover:text-red-700 hover:bg-red-50 ${!department.active ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                disabled={!department.active}
+                                                                title={!department.active ? "Already cancelled" : "Cancel department"}
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </Button>
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -642,6 +645,19 @@ export default function DepartmentMasterPage() {
                                             maxLength={25}
                                         />
                                     </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="add-active"
+                                            name="active"
+                                            checked={formData.active}
+                                            onChange={handleInputChange}
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="add-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Active
+                                        </label>
+                                    </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -711,6 +727,19 @@ export default function DepartmentMasterPage() {
                                             maxLength={25}
                                         />
                                     </div>
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="edit-active"
+                                            name="active"
+                                            checked={formData.active}
+                                            onChange={handleInputChange}
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="edit-active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Active
+                                        </label>
+                                    </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -751,15 +780,9 @@ export default function DepartmentMasterPage() {
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {departmentToCancel && cancelledDepartments.has(departmentToCancel.dept_id) 
-                                ? "Confirm Restore" 
-                                : "Confirm Cancel"}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {departmentToCancel && cancelledDepartments.has(departmentToCancel.dept_id)
-                                ? `Are you sure you want to restore department "${departmentToCancel.department_name}"?`
-                                : `Are you sure you want to cancel department "${departmentToCancel?.department_name}"? This action can be undone.`}
+                            Are you sure you want to cancel department &quot;{departmentToCancel?.department_name}&quot;? This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -767,15 +790,10 @@ export default function DepartmentMasterPage() {
                             setIsCancelItemDialogOpen(false);
                             setDepartmentToCancel(null);
                         }}>
-                            No, Keep Current Status
+                            No
                         </AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={confirmCancelItem} 
-                            className={departmentToCancel && cancelledDepartments.has(departmentToCancel.dept_id) 
-                                ? "bg-green-600 hover:bg-green-700" 
-                                : "bg-red-600 hover:bg-red-700"}
-                        >
-                            Yes, {departmentToCancel && cancelledDepartments.has(departmentToCancel.dept_id) ? "Restore" : "Cancel"}
+                        <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

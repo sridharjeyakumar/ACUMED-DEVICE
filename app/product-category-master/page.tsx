@@ -65,6 +65,7 @@ export default function ProductCategoryMasterPage() {
         product_category_id: "",
         product_category_name: "",
         unit_split: false,
+        active: true,
     });
 
     const loadCategories = useCallback(async () => {
@@ -96,7 +97,7 @@ export default function ProductCategoryMasterPage() {
     // Reset form when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({ product_category_id: "", product_category_name: "", unit_split: false });
+            setFormData({ product_category_id: "", product_category_name: "", unit_split: false, active: true });
         }
     }, [isAddModalOpen]);
 
@@ -138,7 +139,7 @@ export default function ProductCategoryMasterPage() {
                 product_category_name: formData.product_category_name,
                 unit_split: formData.unit_split,
                 last_modified_user_id: "ADMIN",
-                active: true,
+                active: formData.active,
             });
             toast({
                 title: "Success",
@@ -149,6 +150,7 @@ export default function ProductCategoryMasterPage() {
                 product_category_id: "",
                 product_category_name: "",
                 unit_split: false,
+                active: true,
             });
             loadCategories();
         } catch (error: any) {
@@ -178,6 +180,7 @@ export default function ProductCategoryMasterPage() {
             product_category_id: category.product_category_id,
             product_category_name: category.product_category_name,
             unit_split: category.unit_split,
+            active: category.active,
         });
         setIsEditModalOpen(true);
     };
@@ -209,7 +212,7 @@ export default function ProductCategoryMasterPage() {
                 product_category_name: formData.product_category_name,
                 unit_split: formData.unit_split,
                 last_modified_user_id: "ADMIN",
-                active: selectedCategory.active,
+                active: formData.active,
             });
             
             // Store last action for undo
@@ -230,6 +233,7 @@ export default function ProductCategoryMasterPage() {
                 product_category_id: "",
                 product_category_name: "",
                 unit_split: false,
+                active: true,
             });
             loadCategories();
         } catch (error: any) {
@@ -697,6 +701,18 @@ export default function ProductCategoryMasterPage() {
                                             <span className="text-sm font-semibold text-foreground">Unit Split</span>
                                         </label>
                                     </div>
+                                    <div className="mb-6">
+                                        <label className="flex items-center gap-3 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm font-semibold text-foreground">Active</span>
+                                        </label>
+                                    </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -776,6 +792,18 @@ export default function ProductCategoryMasterPage() {
                                                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                             />
                                             <span className="text-sm font-semibold text-foreground">Unit Split</span>
+                                        </label>
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="flex items-center gap-3 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                name="active"
+                                                checked={formData.active}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm font-semibold text-foreground">Active</span>
                                         </label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
