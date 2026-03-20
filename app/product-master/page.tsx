@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -84,6 +84,8 @@ export default function ProductMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [productToCancel, setProductToCancel] = useState<Product | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
     const [cancelledProducts, setCancelledProducts] = useState<Set<string>>(new Set());
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [filterActive, setFilterActive] = useState<string>("true");
@@ -539,6 +541,37 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         setIsCancelItemDialogOpen(true);
     };
 
+    const handleDelete = (product: Product) => {
+        setProductToDelete(product);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!productToDelete) return;
+        try {
+            const response = await fetch(`/api/products/${productToDelete.product_id}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to delete product');
+            }
+            setProducts(prev => prev.filter(p => p.product_id !== productToDelete.product_id));
+            toast({
+                title: "Deleted",
+                description: `Product ${productToDelete.product_name} has been deleted.`,
+            });
+            setIsDeleteDialogOpen(false);
+            setProductToDelete(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || 'Failed to delete product',
+                variant: "destructive",
+            });
+        }
+    };
+
 
 const confirmCancelItem = async () => {
     if (!productToCancel) return;
@@ -977,6 +1010,18 @@ const confirmCancelItem = async () => {
               }`}
             >
               <X className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(product);
+              }}
+              className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4" />
             </Button>
 
           </div>
@@ -1916,6 +1961,58 @@ const confirmCancelItem = async () => {
                                                 className={`${productToCancel?.active === true ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white`}
                                         >
                                             {productToCancel?.active === true ? "Yes, Cancel" : "Yes, Restore"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                                <div className="flex items-center justify-between p-6 bg-red-600 rounded-t-xl">
+                                    <h2 className="text-xl font-bold text-white">Delete Product</h2>
+                                    <button
+                                        onClick={() => setIsDeleteDialogOpen(false)}
+                                        className="text-white hover:opacity-80 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <p className="text-gray-700">
+                                        Are you sure you want to permanently delete <span className="font-semibold">{productToDelete?.product_name}</span>? This action cannot be undone.
+                                    </p>
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            onClick={confirmDelete}
+                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                        >
+                                            Yes, Delete
                                         </Button>
                                     </div>
                                 </div>

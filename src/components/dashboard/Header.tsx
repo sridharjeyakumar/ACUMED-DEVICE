@@ -1,13 +1,23 @@
-import { Search, Bell, ChevronDown, RefreshCw } from "lucide-react";
+'use client';
+
+import { Search, Bell, ChevronDown, RefreshCw, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
 
 interface HeaderProps {
   onRefresh?: () => void;
 }
 
 export function Header({ onRefresh }: HeaderProps) {
+  const router = useRouter();
   const today = new Date();
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/login');
+    router.refresh();
+  };
   const formattedDate = today.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -49,6 +59,13 @@ export function Header({ onRefresh }: HeaderProps) {
           <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-foreground flex items-center justify-center text-[10px] sm:text-xs font-medium text-background">
             RK
           </div>
+          <button
+            onClick={handleLogout}
+            className="p-1.5 sm:p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-destructive"
+            title="Logout"
+          >
+            <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
         </div>
       </div>
 
