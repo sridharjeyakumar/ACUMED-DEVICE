@@ -60,8 +60,7 @@ export default function MenuMasterPage() {
     const [loading, setLoading] = useState(true);
     const isSubmittingRef = useRef(false);
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Menu } | null>(null);
-    const [filterActive, setFilterActive] = useState<string>("all");
-    const [cancelledMenus, setCancelledMenus] = useState<Set<string>>(new Set());
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
@@ -236,41 +235,22 @@ export default function MenuMasterPage() {
 
     const confirmCancelItem = async () => {
         if (!menuToCancel) return;
-        
-        const isCancelled = cancelledMenus.has(menuToCancel.menu_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
         try {
             await menuAPI.update(menuToCancel.menu_id, {
-                active: newActiveStatus,
+                active: false,
                 last_modified_user_id: "ADMIN",
             });
-            
-            setCancelledMenus(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(menuToCancel.menu_id);
-                    toast({
-                        title: "Restored",
-                        description: `Menu ${menuToCancel.menu_desc} has been restored`,
-                    });
-                } else {
-                    newSet.add(menuToCancel.menu_id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Menu ${menuToCancel.menu_desc} has been cancelled`,
-                    });
-                }
-                return newSet;
+            toast({
+                title: "Cancelled",
+                description: `Menu ${menuToCancel.menu_desc} has been cancelled`,
             });
-            
-            loadMenus(); // Reload data from API
+            loadMenus();
             setIsCancelItemDialogOpen(false);
             setMenuToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} menu`,
+                description: error.message || "Failed to cancel menu",
                 variant: "destructive",
             });
         }
@@ -467,14 +447,13 @@ export default function MenuMasterPage() {
                                             </tr>
                                         ) : (
                                             paginatedMenus.map((menu, index) => {
-                                                const isCancelled = cancelledMenus.has(menu.menu_id);
                                                 return (
                                             <motion.tr
                                                 key={menu.menu_id}
                                                 initial={{ opacity: 0, x: -20 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className={`hover:bg-muted/30 transition-colors ${isCancelled ? 'opacity-40' : ''}`}
+                                                className={`hover:bg-muted/30 transition-colors ${!menu.active ? 'opacity-40' : ''}`}
                                             >
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-muted-foreground font-mono">
@@ -490,7 +469,7 @@ export default function MenuMasterPage() {
                                                     <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
                                                         menu.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                     }`}>
-                                                        {menu.active ? "TRUE" : "FALSE"}
+                                                        {menu.active ? "Active" : "Inactive"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -520,7 +499,7 @@ export default function MenuMasterPage() {
                                                                 handleEdit(menu);
                                                             }}
                                                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            disabled={isCancelled}
+                                                            disabled={!menu.active}
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -531,8 +510,9 @@ export default function MenuMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleCancel(menu);
                                                             }}
-                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                            title={isCancelled ? "Restore menu" : "Cancel menu"}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            disabled={!menu.active}
+                                                            title="Cancel menu"
                                                         >
                                                             <X className="w-4 h-4" />
                                                         </Button>
@@ -775,15 +755,9 @@ export default function MenuMasterPage() {
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {menuToCancel && cancelledMenus.has(menuToCancel.menu_id) 
-                                ? "Confirm Restore" 
-                                : "Confirm Cancel"}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {menuToCancel && cancelledMenus.has(menuToCancel.menu_id)
-                                ? `Are you sure you want to restore menu "${menuToCancel.menu_desc}"?`
-                                : `Are you sure you want to cancel menu "${menuToCancel?.menu_desc}"? This action can be undone.`}
+                            Are you sure you want to cancel menu &quot;{menuToCancel?.menu_desc}&quot;? This will set it as inactive.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -791,15 +765,10 @@ export default function MenuMasterPage() {
                             setIsCancelItemDialogOpen(false);
                             setMenuToCancel(null);
                         }}>
-                            No, Keep Current Status
+                            No, Keep It
                         </AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={confirmCancelItem} 
-                            className={menuToCancel && cancelledMenus.has(menuToCancel.menu_id) 
-                                ? "bg-green-600 hover:bg-green-700" 
-                                : "bg-red-600 hover:bg-red-700"}
-                        >
-                            Yes, {menuToCancel && cancelledMenus.has(menuToCancel.menu_id) ? "Restore" : "Cancel"}
+                        <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

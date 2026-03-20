@@ -10,6 +10,7 @@ export interface IMenuAccessMaster extends Document {
   can_cancel: boolean;
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
+  active?: boolean; 
 }
 
 const MenuAccessMasterSchema: Schema = new Schema({
@@ -61,6 +62,11 @@ const MenuAccessMasterSchema: Schema = new Schema({
   last_modified_date_time: {
     type: Date,
     required: false,
+  },
+  active: {
+    type: Boolean,
+    required: false,
+    default: true,
   },
 }, {
   timestamps: true,
