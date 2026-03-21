@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { coaChecklistAPI, materialAPI, materialCategoryAPI, uomAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
+
 
 interface Material {
     gr_tolerance_percent?: number; 
@@ -117,7 +119,9 @@ export default function MaterialMasterPage() {
         material_image_icon: "",
         active: true,
     });
-
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [materialToDelete, setMaterialToDelete] = useState<Material | null>(null);
     // Load materials from API
     const loadMaterials = async () => {
         try {
@@ -495,6 +499,31 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         });
     }
 };
+
+    const handleDelete = (material: Material) => {
+        setMaterialToDelete(material);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!materialToDelete) return;
+        try {
+            await materialAPI.delete(materialToDelete.material_id);
+            setMaterials(prev => prev.filter(m => m.material_id !== materialToDelete.material_id));
+            toast({
+                title: "Deleted",
+                description: `Material ${materialToDelete.material_name} has been deleted.`,
+            });
+            setIsDeleteDialogOpen(false);
+            setMaterialToDelete(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || 'Failed to delete material',
+                variant: "destructive",
+            });
+        }
+    };
 
     if (loading) {
         return (
@@ -898,14 +927,14 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
             <Button
               variant="ghost"
               size="sm"
-              disabled={!isActive}
+              disabled={!isActive && !isSuperAdmin}
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isActive) return;
+                if (!isActive && !isSuperAdmin) return;
                 handleEdit(material);
               }}
               className={`${
-                isActive
+                isActive || isSuperAdmin
                   ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                   : "text-gray-400 cursor-not-allowed"
               }`}
@@ -930,6 +959,20 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
             >
               <X className="w-4 h-4" />
             </Button>
+
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(material);
+                }}
+                className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
 
           </div>
         </td>
@@ -1828,6 +1871,58 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                             className={`${cancelledMaterials.has(materialToCancel?.material_id || '') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                                         >
                                             {cancelledMaterials.has(materialToCancel?.material_id || '') ? "Restore" : "Cancel"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                                <div className="flex items-center justify-between p-6 bg-red-600 rounded-t-xl">
+                                    <h2 className="text-xl font-bold text-white">Delete Material</h2>
+                                    <button
+                                        onClick={() => setIsDeleteDialogOpen(false)}
+                                        className="text-white hover:opacity-80 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <p className="text-gray-700">
+                                        Are you sure you want to permanently delete <span className="font-semibold">{materialToDelete?.material_name}</span>? This action cannot be undone.
+                                    </p>
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setIsDeleteDialogOpen(false)}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            onClick={confirmDelete}
+                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                        >
+                                            Delete
                                         </Button>
                                     </div>
                                 </div>

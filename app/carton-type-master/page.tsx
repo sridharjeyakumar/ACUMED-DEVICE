@@ -6,13 +6,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatsCards } from "@/components/dashboard/StatsCards";
-import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { cartonTypeAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 
 interface CartonType {
     carton_type_id: string; // Char(2) - PK
@@ -38,6 +39,9 @@ function formatDateTime(date: Date | string): string {
 
 export default function CartonTypeMasterPage() {
     const { toast } = useToast();
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [cartonTypeToDelete, setCartonTypeToDelete] = useState<CartonType | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -327,6 +331,31 @@ export default function CartonTypeMasterPage() {
 };
 
 
+    const handleDelete = (cartonType: CartonType) => {
+        setCartonTypeToDelete(cartonType);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!cartonTypeToDelete) return;
+        try {
+            await cartonTypeAPI.delete(cartonTypeToDelete.carton_type_id);
+            setCartonTypes(prev => prev.filter(c => c.carton_type_id !== cartonTypeToDelete.carton_type_id));
+            toast({
+                title: "Deleted",
+                description: `Carton type ${cartonTypeToDelete.carton_type_name} has been deleted.`,
+            });
+            setIsDeleteDialogOpen(false);
+            setCartonTypeToDelete(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || 'Failed to delete carton type',
+                variant: "destructive",
+            });
+        }
+    };
+
     return (
         <div className="flex min-h-screen bg-background">
             <Sidebar />
@@ -594,14 +623,14 @@ export default function CartonTypeMasterPage() {
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!displayActive) return;
+                  if (!displayActive && !isSuperAdmin) return;
                   handleEdit(item);
                 }}
                 className={`${
-                  displayActive ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" : "text-gray-400 cursor-not-allowed"
+                  displayActive || isSuperAdmin ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" : "text-gray-400 cursor-not-allowed"
                 }`}
-                title={displayActive ? "Edit carton type" : "Cannot edit inactive carton type"}
-                disabled={!displayActive}
+                title={displayActive || isSuperAdmin ? "Edit carton type" : "Cannot edit inactive carton type"}
+                disabled={!displayActive && !isSuperAdmin}
               >
                 <Pencil className="w-4 h-4" />
               </Button>
@@ -623,6 +652,21 @@ export default function CartonTypeMasterPage() {
               >
                 <X className="w-4 h-4" />
               </Button>
+
+              {/* Delete — super admin only */}
+              {isSuperAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(item);
+                  }}
+                  className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
             </div>
           </td>
         </motion.tr>
@@ -944,6 +988,52 @@ export default function CartonTypeMasterPage() {
                                             className={`${cancelledCartonTypes.has(cartonTypeToCancel?.carton_type_id || '') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                                         >
                                             {cancelledCartonTypes.has(cartonTypeToCancel?.carton_type_id || '') ? "Restore" : "Cancel"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                                <div className="flex items-center justify-between p-6 bg-red-600 rounded-t-xl">
+                                    <h2 className="text-xl font-bold text-white">Delete Carton Type</h2>
+                                    <button
+                                        onClick={() => setIsDeleteDialogOpen(false)}
+                                        className="text-white hover:opacity-80 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <p className="text-gray-700">
+                                        Are you sure you want to permanently delete <span className="font-semibold">{cartonTypeToDelete?.carton_type_name}</span>? This action cannot be undone.
+                                    </p>
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                                            Delete
                                         </Button>
                                     </div>
                                 </div>

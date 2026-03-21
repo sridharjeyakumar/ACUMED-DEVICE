@@ -57,9 +57,8 @@ export default function RoleMasterPage() {
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Role } | null>(null);
-    const [cancelledRoles, setCancelledRoles] = useState<Set<string>>(new Set());
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [roleToCancel, setRoleToCancel] = useState<Role | null>(null);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -249,41 +248,22 @@ export default function RoleMasterPage() {
 
     const confirmCancelItem = async () => {
         if (!roleToCancel) return;
-        
-        const isCancelled = cancelledRoles.has(roleToCancel.roll_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
-        
         try {
             await roleAPI.update(roleToCancel.roll_id, {
-                active: newActiveStatus,
+                active: false,
                 last_modified_user_id: "ADMIN",
             });
-            
-            setCancelledRoles(prev => {
-                const newSet = new Set(prev);
-                if (isCancelled) {
-                    newSet.delete(roleToCancel.roll_id);
-                    toast({
-                        title: "Restored",
-                        description: `Role ${roleToCancel.roll_description} has been restored`,
-                    });
-                } else {
-                    newSet.add(roleToCancel.roll_id);
-                    toast({
-                        title: "Cancelled",
-                        description: `Role ${roleToCancel.roll_description} has been cancelled`,
-                    });
-                }
-                return newSet;
+            toast({
+                title: "Cancelled",
+                description: `Role ${roleToCancel.roll_description} has been cancelled`,
             });
-            
-            loadRoles(); // Reload data from API
+            loadRoles();
             setIsCancelItemDialogOpen(false);
             setRoleToCancel(null);
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.message || `Failed to ${isCancelled ? 'restore' : 'cancel'} role`,
+                description: error.message || "Failed to cancel role",
                 variant: "destructive",
             });
         }
@@ -463,14 +443,13 @@ export default function RoleMasterPage() {
                                             </tr>
                                         ) : (
                                             paginatedRoles.map((role, index) => {
-                                                const isCancelled = cancelledRoles.has(role.roll_id);
                                                 return (
                                             <motion.tr
                                                 key={role.roll_id}
                                                 initial={{ opacity: 0, x: -20 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                className={`hover:bg-muted/30 transition-colors cursor-pointer ${isCancelled ? 'opacity-40' : ''}`}
+                                                className={`hover:bg-muted/30 transition-colors cursor-pointer ${!role.active ? 'opacity-40' : ''}`}
                                             >
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-muted-foreground font-mono">
@@ -521,7 +500,7 @@ export default function RoleMasterPage() {
                                                                 handleEdit(role);
                                                             }}
                                                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            disabled={isCancelled}
+                                                            disabled={!role.active}
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -532,8 +511,9 @@ export default function RoleMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleCancel(role);
                                                             }}
-                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                            title={isCancelled ? "Restore role" : "Cancel role"}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            disabled={!role.active}
+                                                            title="Cancel role"
                                                         >
                                                             <X className="w-4 h-4" />
                                                         </Button>
@@ -787,15 +767,9 @@ export default function RoleMasterPage() {
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {roleToCancel && cancelledRoles.has(roleToCancel.roll_id) 
-                                ? "Confirm Restore" 
-                                : "Confirm Cancel"}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {roleToCancel && cancelledRoles.has(roleToCancel.roll_id)
-                                ? `Are you sure you want to restore role "${roleToCancel.roll_description}"?`
-                                : `Are you sure you want to cancel role "${roleToCancel?.roll_description}"? This action can be undone.`}
+                            Are you sure you want to cancel role &quot;{roleToCancel?.roll_description}&quot;? This will set it as inactive.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -803,15 +777,10 @@ export default function RoleMasterPage() {
                             setIsCancelItemDialogOpen(false);
                             setRoleToCancel(null);
                         }}>
-                            No, Keep Current Status
+                            No, Keep It
                         </AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={confirmCancelItem} 
-                            className={roleToCancel && cancelledRoles.has(roleToCancel.roll_id) 
-                                ? "bg-green-600 hover:bg-green-700" 
-                                : "bg-red-600 hover:bg-red-700"}
-                        >
-                            Yes, {roleToCancel && cancelledRoles.has(roleToCancel.roll_id) ? "Restore" : "Cancel"}
+                        <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

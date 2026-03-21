@@ -5,11 +5,12 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Pencil, X, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Pencil, X, Filter, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { coaChecklistAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 
@@ -24,6 +25,9 @@ interface ChecklistRecord {
 
 export default function COAChecklistMasterPage() {
     const { toast } = useToast();
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [checklistToDelete, setChecklistToDelete] = useState<ChecklistRecord | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -179,6 +183,31 @@ export default function COAChecklistMasterPage() {
             toast({
                 title: "Error",
                 description: error.message || "Failed to update COA checklist",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleDelete = (checklist: ChecklistRecord) => {
+        setChecklistToDelete(checklist);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!checklistToDelete) return;
+        try {
+            await coaChecklistAPI.delete(checklistToDelete.checklistId);
+            setRecords(prev => prev.filter(r => r.checklistId !== checklistToDelete.checklistId));
+            toast({
+                title: "Deleted",
+                description: `Checklist ${checklistToDelete.checklistDescription} has been deleted.`,
+            });
+            setIsDeleteDialogOpen(false);
+            setChecklistToDelete(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || 'Failed to delete checklist',
                 variant: "destructive",
             });
         }
@@ -471,11 +500,12 @@ const confirmCancelItem = async () => {
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
+                if (!item.active && !isSuperAdmin) return;
                 handleEdit(item);
               }}
-              disabled={!item.active}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-              title={item.active ? "Edit COA checklist" : "Cannot edit inactive checklist"}
+              disabled={!item.active && !isSuperAdmin}
+              className={item.active || isSuperAdmin ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" : "text-gray-400 cursor-not-allowed"}
+              title={item.active || isSuperAdmin ? "Edit COA checklist" : "Cannot edit inactive checklist"}
             >
               <Pencil className="w-4 h-4" />
             </Button>
@@ -504,6 +534,21 @@ const confirmCancelItem = async () => {
             >
               <X className="w-4 h-4" />
             </Button>
+
+            {/* Delete — super admin only */}
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(item);
+                }}
+                className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </td>
       </motion.tr>
@@ -784,6 +829,52 @@ const confirmCancelItem = async () => {
                                             className={`${cancelledChecklists.has(checklistToCancel?.checklistId || '') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                                         >
                                             {cancelledChecklists.has(checklistToCancel?.checklistId || '') ? "Restore" : "Cancel"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                                <div className="flex items-center justify-between p-6 bg-red-600 rounded-t-xl">
+                                    <h2 className="text-xl font-bold text-white">Delete Checklist</h2>
+                                    <button
+                                        onClick={() => setIsDeleteDialogOpen(false)}
+                                        className="text-white hover:opacity-80 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <p className="text-gray-700">
+                                        Are you sure you want to permanently delete <span className="font-semibold">{checklistToDelete?.checklistDescription}</span>? This action cannot be undone.
+                                    </p>
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                                            Delete
                                         </Button>
                                     </div>
                                 </div>

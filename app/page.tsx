@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Header } from "@/components/dashboard/Header";
 import { ProductionCard } from "@/components/dashboard/ProductionCard";
@@ -13,6 +14,7 @@ import { PackagingMaterials } from "@/components/dashboard/PackagingMaterials";
 import { DaysOfStock } from "@/components/dashboard/DaysOfStock";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AuthGuard } from "../components/AuthGuard";
 
 export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -27,6 +29,7 @@ export default function Home() {
   };
 
   return (
+    <AuthGuard>
     <div className="flex min-h-screen bg-background">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -79,6 +82,7 @@ export default function Home() {
         </div>
       </main>
     </div>
+    </AuthGuard>
   );
 }
 

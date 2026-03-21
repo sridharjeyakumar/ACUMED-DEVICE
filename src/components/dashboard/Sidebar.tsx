@@ -298,12 +298,8 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
             Settings
           </a>
           <div className="flex items-center gap-3 mt-4 px-3">
-            <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center text-xs font-medium text-sidebar-accent-foreground">
-              RK
-            </div>
             <div>
-              <p className="text-sm font-medium text-foreground">Rajesh Kumar</p>
-              <p className="text-xs text-sidebar-muted">SUPERADMIN</p>
+              <p className="text-xs text-sidebar-muted">SUPER ADMIN</p>
             </div>
           </div>
         </div>

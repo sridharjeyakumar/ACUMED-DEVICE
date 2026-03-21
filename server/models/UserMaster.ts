@@ -13,6 +13,7 @@ export interface IUserMaster extends Document {
   active: boolean;
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
+  super_admin: boolean; // Virtual field, not stored in DB
 }
 
 const UserMasterSchema: Schema = new Schema({
@@ -77,6 +78,11 @@ const UserMasterSchema: Schema = new Schema({
     type: Date,
     required: false,
   },
+  super_admin: {
+    type: Boolean,
+    required: false,
+    default: false,
+  }
 }, {
   timestamps: true,
 });
