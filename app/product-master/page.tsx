@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { coaChecklistAPI, packSizeAPI, productAPI, productCategoryAPI, uomAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 
 interface Product {
     product_id: string;
@@ -79,6 +80,7 @@ function formatDateTime(date: Date | string | undefined): string {
 
 export default function ProductMasterPage() {
     const { toast } = useToast();
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -979,14 +981,14 @@ const confirmCancelItem = async () => {
             <Button
               variant="ghost"
               size="sm"
-              disabled={!isActive}
+              disabled={!isActive && !isSuperAdmin}
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isActive) return;
+                if (!isActive && !isSuperAdmin) return;
                 handleEdit(product);
               }}
               className={`${
-                isActive
+                isActive || isSuperAdmin
                   ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                   : "text-gray-400 cursor-not-allowed"
               }`}
@@ -1012,17 +1014,19 @@ const confirmCancelItem = async () => {
               <X className="w-4 h-4" />
             </Button>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(product);
-              }}
-              className="text-gray-500 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(product);
+                }}
+                className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
 
           </div>
         </td>

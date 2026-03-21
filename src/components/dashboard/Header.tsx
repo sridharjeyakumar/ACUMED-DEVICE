@@ -4,6 +4,7 @@ import { Search, Bell, ChevronDown, RefreshCw, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
+import { clearSessionUser, getSessionUser } from "@/lib/auth";
 
 interface HeaderProps {
   onRefresh?: () => void;
@@ -12,11 +13,12 @@ interface HeaderProps {
 export function Header({ onRefresh }: HeaderProps) {
   const router = useRouter();
   const today = new Date();
+  const sessionUser = getSessionUser();
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-    router.refresh();
+    clearSessionUser();
+    router.replace('/login');
   };
   const formattedDate = today.toLocaleDateString("en-US", {
     weekday: "long",
@@ -74,7 +76,7 @@ export function Header({ onRefresh }: HeaderProps) {
         <div className="animate-fade-in-up animate-delay-200">
           <h1 className="text-2xl font-semibold text-foreground">Dashboard Overview</h1>
           <p className="text-muted-foreground mt-1">
-            Welcome back, Rajesh Kumar. {formattedDate}
+            Welcome back, {sessionUser?.user_id ?? 'User'}. {formattedDate}
           </p>
         </div>
         <Button

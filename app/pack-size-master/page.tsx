@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { packSizeAPI, uomAPI, userAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 
 interface PackSize {
     pack_size_id: string;
@@ -51,6 +52,9 @@ function formatDateTime(date: Date | string | undefined): string {
 
 export default function PackSizeMasterPage() {
     const { toast } = useToast();
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [packSizeToDelete, setPackSizeToDelete] = useState<PackSize | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -319,6 +323,31 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
 };
 
 
+    const handleDelete = (packSize: PackSize) => {
+        setPackSizeToDelete(packSize);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!packSizeToDelete) return;
+        try {
+            await packSizeAPI.delete(packSizeToDelete.pack_size_id);
+            setPackSizes(prev => prev.filter(p => p.pack_size_id !== packSizeToDelete.pack_size_id));
+            toast({
+                title: "Deleted",
+                description: `Pack Size ${packSizeToDelete.pack_size_name} has been deleted.`,
+            });
+            setIsDeleteDialogOpen(false);
+            setPackSizeToDelete(null);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || 'Failed to delete pack size',
+                variant: "destructive",
+            });
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex min-h-screen bg-background">
@@ -580,10 +609,13 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
+                if (!isActive && !isSuperAdmin) return;
                 handleEdit(packSize);
               }}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-              disabled={!isActive}
+              className={isActive || isSuperAdmin
+                ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                : "text-gray-400 cursor-not-allowed"}
+              disabled={!isActive && !isSuperAdmin}
             >
               <Pencil className="w-4 h-4" />
             </Button>
@@ -606,6 +638,21 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
             >
               <X className="w-4 h-4" />
             </Button>
+
+            {/* Delete — super admin only */}
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(packSize);
+                }}
+                className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </td>
       </motion.tr>
@@ -769,6 +816,23 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
     </select>
                                         </div>
                                     </div>
+
+                                    {/* Active */}
+                                    <div className="flex items-center gap-3 mt-4">
+                                        <input
+                                            type="checkbox"
+                                            id="add_active"
+                                            checked={formData.active as boolean}
+                                            onChange={(e) =>
+                                                setFormData(prev => ({ ...prev, active: e.target.checked }))
+                                            }
+                                            className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                        />
+                                        <label htmlFor="add_active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Active
+                                        </label>
+                                    </div>
+
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -897,6 +961,23 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
     </select>
                                         </div>
                                     </div>
+
+                                    {/* Active */}
+                                    <div className="flex items-center gap-3 mt-4">
+                                        <input
+                                            type="checkbox"
+                                            id="edit_active"
+                                            checked={formData.active as boolean}
+                                            onChange={(e) =>
+                                                setFormData(prev => ({ ...prev, active: e.target.checked }))
+                                            }
+                                            className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                        />
+                                        <label htmlFor="edit_active" className="text-sm font-semibold text-foreground cursor-pointer">
+                                            Active
+                                        </label>
+                                    </div>
+
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
                                             type="submit"
@@ -962,6 +1043,52 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                             className={`${cancelledPackSizes.has(packSizeToCancel?.pack_size_id || '') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                                         >
                                             {cancelledPackSizes.has(packSizeToCancel?.pack_size_id || '') ? "Restore" : "Cancel"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                                <div className="flex items-center justify-between p-6 bg-red-600 rounded-t-xl">
+                                    <h2 className="text-xl font-bold text-white">Delete Pack Size</h2>
+                                    <button
+                                        onClick={() => setIsDeleteDialogOpen(false)}
+                                        className="text-white hover:opacity-80 rounded-lg p-2 transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <p className="text-gray-700">
+                                        Are you sure you want to permanently delete <span className="font-semibold">{packSizeToDelete?.pack_size_name}</span>? This action cannot be undone.
+                                    </p>
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                                            Delete
                                         </Button>
                                     </div>
                                 </div>
