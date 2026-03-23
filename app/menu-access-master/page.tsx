@@ -5,10 +5,11 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Key } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Key, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { menuAccessAPI, roleAPI, menuAPI, userAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,7 @@ interface MenuAccess {
     can_cancel: boolean;
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date | string; // Date
+    active?: boolean;
 }
 
 // Helper function to format dates consistently (prevents hydration errors)
@@ -67,9 +69,13 @@ export default function MenuAccessMasterPage() {
     const [loading, setLoading] = useState(true);
     const [filterRole, setFilterRole] = useState<string>("all");
     const [filterMenu, setFilterMenu] = useState<string>("all");
-    const [filterAccess, setFilterAccess] = useState<string>("all");
+    const [filterAccess, setFilterAccess] = useState<string>("active");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: MenuAccess; newData?: { rold_id: string; menu_id: string } } | null>(null);
     const [cancelledAccesses, setCancelledAccesses] = useState<Set<string>>(new Set());
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [accessToDelete, setAccessToDelete] = useState<MenuAccess | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
@@ -80,12 +86,13 @@ export default function MenuAccessMasterPage() {
         can_edit: true,
         can_view: true,
         can_cancel: true,
+        active: true,
     });
 
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({ rold_id: "", menu_id: "", access: true, can_add: true, can_edit: true, can_view: true, can_cancel: true });
+            setFormData({ rold_id: "", menu_id: "", access: true, can_add: true, can_edit: true, can_view: true, can_cancel: true, active: true });
         }
     }, [isAddModalOpen]);
 
@@ -102,6 +109,11 @@ export default function MenuAccessMasterPage() {
             setRoles(rolesData);
             setMenus(menusData);
             setUsers(usersData);
+            // Seed cancelledAccesses from DB active=false records
+            const cancelled = new Set<string>(
+                accessesData.filter((a: MenuAccess) => a.active === false).map((a: MenuAccess) => `${a.rold_id}-${a.menu_id}`)
+            );
+            setCancelledAccesses(cancelled);
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -125,14 +137,18 @@ export default function MenuAccessMasterPage() {
     const filteredAccesses = menuAccesses.filter((access) => {
         const matchesSearch = access.rold_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             access.menu_id.toLowerCase().includes(searchQuery.toLowerCase());
-        
+
         const matchesRole = filterRole === "all" || access.rold_id === filterRole;
         const matchesMenu = filterMenu === "all" || access.menu_id === filterMenu;
-        const matchesAccess = filterAccess === "all" || 
+        const matchesAccess = filterAccess === "all" ||
             (filterAccess === "active" && access.access === true) ||
             (filterAccess === "inactive" && access.access === false);
-        
-        return matchesSearch && matchesRole && matchesMenu && matchesAccess;
+        const isCancelledRecord = cancelledAccesses.has(`${access.rold_id}-${access.menu_id}`);
+        const matchesActive = filterActive === "all" ||
+            (filterActive === "active" && !isCancelledRecord) ||
+            (filterActive === "inactive" && isCancelledRecord);
+
+        return matchesSearch && matchesRole && matchesMenu && matchesAccess && matchesActive;
     });
 
     // Pagination logic
@@ -144,7 +160,7 @@ export default function MenuAccessMasterPage() {
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, filterRole, filterMenu, filterAccess, rowsPerPage]);
+    }, [searchQuery, filterRole, filterMenu, filterAccess, filterActive, rowsPerPage]);
 
     const uniqueRoles = Array.from(new Set(menuAccesses.map(a => a.rold_id)));
     const uniqueMenus = Array.from(new Set(menuAccesses.map(a => a.menu_id)));
@@ -164,7 +180,7 @@ export default function MenuAccessMasterPage() {
                 description: "Menu access created successfully",
             });
             setIsAddModalOpen(false);
-            setFormData({ rold_id: "", menu_id: "", access: true, can_add: true, can_edit: true, can_view: true, can_cancel: true });
+            setFormData({ rold_id: "", menu_id: "", access: true, can_add: true, can_edit: true, can_view: true, can_cancel: true, active: true });
             loadAllData();
         } catch (error: any) {
             toast({
@@ -172,6 +188,26 @@ export default function MenuAccessMasterPage() {
                 description: error.message || "Failed to create menu access",
                 variant: "destructive",
             });
+        }
+    };
+
+    const handleDelete = (access: MenuAccess) => {
+        setAccessToDelete(access);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!accessToDelete) return;
+        try {
+            await menuAccessAPI.delete(accessToDelete.rold_id, accessToDelete.menu_id);
+            toast({ title: "Deleted", description: "Menu access permanently deleted" });
+            setIsDeleteDialogOpen(false);
+            const key = `${accessToDelete.rold_id}-${accessToDelete.menu_id}`;
+            setAccessToDelete(null);
+            setMenuAccesses(prev => prev.filter(a => `${a.rold_id}-${a.menu_id}` !== key));
+            setCancelledAccesses(prev => { const s = new Set(prev); s.delete(key); return s; });
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete menu access", variant: "destructive" });
         }
     };
 
@@ -185,6 +221,7 @@ export default function MenuAccessMasterPage() {
             can_edit: access.can_edit,
             can_view: access.can_view,
             can_cancel: access.can_cancel,
+            active: access.active !== false,
         });
         setIsEditModalOpen(true);
     };
@@ -280,7 +317,7 @@ export default function MenuAccessMasterPage() {
             });
             setIsEditModalOpen(false);
             setSelectedAccess(null);
-            setFormData({ rold_id: "", menu_id: "", access: true, can_add: true, can_edit: true, can_view: true, can_cancel: true });
+            setFormData({ rold_id: "", menu_id: "", access: true, can_add: true, can_edit: true, can_view: true, can_cancel: true, active: true });
             loadAllData();
         } catch (error: any) {
             toast({
@@ -345,7 +382,7 @@ export default function MenuAccessMasterPage() {
         
         const accessKey = `${accessToCancel.rold_id}-${accessToCancel.menu_id}`;
         const isCancelled = cancelledAccesses.has(accessKey);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        const newActiveStatus = isCancelled; // true when restoring (was cancelled), false when cancelling (was active)
         
         try {
             await menuAccessAPI.update(accessToCancel.rold_id, accessToCancel.menu_id, {
@@ -399,6 +436,7 @@ export default function MenuAccessMasterPage() {
                 can_edit: true,
                 can_view: true,
                 can_cancel: true,
+                active: true,
             });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
@@ -411,6 +449,7 @@ export default function MenuAccessMasterPage() {
                 can_edit: true,
                 can_view: true,
                 can_cancel: true,
+                active: true,
             });
         }
         setIsCancelDialogOpen(false);
@@ -575,6 +614,17 @@ export default function MenuAccessMasterPage() {
                                                 </div>
                                             </div>
                                             <div className="space-y-3 pt-3 border-t border-border">
+                                                <Label className="text-sm font-semibold text-foreground">Record Status</Label>
+                                                <div className="space-y-2">
+                                                    {[["all", "All"], ["active", "Active"], ["inactive", "Inactive"]].map(([val, label]) => (
+                                                        <div key={val} className="flex items-center space-x-2">
+                                                            <input type="radio" id={`ma-status-${val}`} name="maStatusFilter" checked={filterActive === val} onChange={() => setFilterActive(val)} className="h-4 w-4 text-blue-600 focus:ring-blue-500" />
+                                                            <Label htmlFor={`ma-status-${val}`} className="text-sm font-normal cursor-pointer text-foreground">{label}</Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3 pt-3 border-t border-border">
                                                 <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
                                                 <select
                                                     value={rowsPerPage}
@@ -719,8 +769,8 @@ export default function MenuAccessMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleEdit(access);
                                                             }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            disabled={isCancelled}
+                                                            className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${isCancelled && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            disabled={isCancelled && !isSuperAdmin}
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -731,11 +781,23 @@ export default function MenuAccessMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleCancel(access);
                                                             }}
-                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                            title={isCancelled ? "Restore access" : "Cancel access"}
+                                                            className={`text-red-600 hover:text-red-700 hover:bg-red-50 ${isCancelled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            title={isCancelled ? "Already cancelled" : "Cancel access"}
+                                                            disabled={isCancelled}
                                                         >
                                                             <X className="w-4 h-4" />
                                                         </Button>
+                                                        {isSuperAdmin && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={(e) => { e.stopPropagation(); handleDelete(access); }}
+                                                                className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                                                                title="Permanently delete"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </motion.tr>
@@ -869,6 +931,10 @@ export default function MenuAccessMasterPage() {
                                             <input type="checkbox" name="can_cancel" checked={formData.can_cancel} onChange={handleInputChange} className="w-4 h-4 text-blue-600" />
                                             <span className="text-sm font-medium">Can Cancel</span>
                                         </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input type="checkbox" name="active" checked={formData.active} onChange={handleInputChange} className="w-4 h-4 text-blue-600" />
+                                            <span className="text-sm font-medium">Active</span>
+                                        </label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Save Access</Button>
@@ -936,6 +1002,7 @@ export default function MenuAccessMasterPage() {
                                         <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="can_edit" checked={formData.can_edit} onChange={handleInputChange} className="w-4 h-4 text-blue-600" /><span className="text-sm font-medium">Can Edit</span></label>
                                         <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="can_view" checked={formData.can_view} onChange={handleInputChange} className="w-4 h-4 text-blue-600" /><span className="text-sm font-medium">Can View</span></label>
                                         <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="can_cancel" checked={formData.can_cancel} onChange={handleInputChange} className="w-4 h-4 text-blue-600" /><span className="text-sm font-medium">Can Cancel</span></label>
+                                        <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="active" checked={formData.active} onChange={handleInputChange} className="w-4 h-4 text-blue-600" /><span className="text-sm font-medium">Active</span></label>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6">Update Access</Button>
@@ -967,19 +1034,33 @@ export default function MenuAccessMasterPage() {
                 </AlertDialogContent>
             </AlertDialog>
 
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Menu Access</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete access for Role &quot;{accessToDelete?.rold_id}&quot; - Menu &quot;{accessToDelete?.menu_id}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setAccessToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Cancel Item Confirmation Dialog (for table actions) */}
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {accessToCancel && cancelledAccesses.has(`${accessToCancel.rold_id}-${accessToCancel.menu_id}`) 
-                                ? "Confirm Restore" 
-                                : "Confirm Cancel"}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {accessToCancel && cancelledAccesses.has(`${accessToCancel.rold_id}-${accessToCancel.menu_id}`)
-                                ? `Are you sure you want to restore menu access for Role ${accessToCancel.rold_id} - Menu ${accessToCancel.menu_id}?`
-                                : `Are you sure you want to cancel menu access for Role ${accessToCancel?.rold_id} - Menu ${accessToCancel?.menu_id}? This action can be undone.`}
+                            Are you sure you want to cancel menu access for Role &quot;{accessToCancel?.rold_id}&quot; - Menu &quot;{accessToCancel?.menu_id}&quot;?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -987,15 +1068,10 @@ export default function MenuAccessMasterPage() {
                             setIsCancelItemDialogOpen(false);
                             setAccessToCancel(null);
                         }}>
-                            No, Keep Current Status
+                            No, Keep Active
                         </AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={confirmCancelItem} 
-                            className={accessToCancel && cancelledAccesses.has(`${accessToCancel.rold_id}-${accessToCancel.menu_id}`) 
-                                ? "bg-green-600 hover:bg-green-700" 
-                                : "bg-red-600 hover:bg-red-700"}
-                        >
-                            Yes, {accessToCancel && cancelledAccesses.has(`${accessToCancel.rold_id}-${accessToCancel.menu_id}`) ? "Restore" : "Cancel"}
+                        <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

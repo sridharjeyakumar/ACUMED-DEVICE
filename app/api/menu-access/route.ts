@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       can_edit: can_edit !== false,
       can_view: can_view !== false,
       can_cancel: can_cancel !== false,
+      active: body.active !== false,
     });
     await menuAccess.save();
     return NextResponse.json(menuAccess, { status: 201 });

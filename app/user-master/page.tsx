@@ -5,10 +5,11 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, User } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, User, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { userAPI, roleAPI, employeeAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -74,10 +75,13 @@ export default function UserMasterPage() {
     const [roles, setRoles] = useState<any[]>([]);
     const [employees, setEmployees] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filterActive, setFilterActive] = useState<string>("all");
+    const [filterActive, setFilterActive] = useState<string>("active");
     const [filterRole, setFilterRole] = useState<string>("all");
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: User } | null>(null);
     const [cancelledUsers, setCancelledUsers] = useState<Set<string>>(new Set());
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<User | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
@@ -118,6 +122,10 @@ export default function UserMasterPage() {
             })));
             setRoles(rolesData);
             setEmployees(employeesData || []);
+            // Sync cancelledUsers from DB
+            setCancelledUsers(new Set(
+                usersData.filter((u: any) => u.active === false).map((u: any) => u.user_id)
+            ));
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -200,6 +208,25 @@ export default function UserMasterPage() {
         }
     };
 
+    const handleDelete = (user: User) => {
+        setUserToDelete(user);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!userToDelete) return;
+        try {
+            await userAPI.delete(userToDelete.user_id);
+            toast({ title: "Deleted", description: "User permanently deleted" });
+            setIsDeleteDialogOpen(false);
+            const deletedId = userToDelete.user_id;
+            setUserToDelete(null);
+            setUsers(prev => prev.filter(u => u.user_id !== deletedId));
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete user", variant: "destructive" });
+        }
+    };
+
     const handleEdit = (user: User) => {
         setSelectedUser(user);
         setFormData({
@@ -258,6 +285,17 @@ export default function UserMasterPage() {
                 ));
             }
             
+            // Sync cancelledUsers set with new active status
+            setCancelledUsers(prev => {
+                const newSet = new Set(prev);
+                if (formData.active) {
+                    newSet.delete(selectedUser.user_id);
+                } else {
+                    newSet.add(selectedUser.user_id);
+                }
+                return newSet;
+            });
+
             // Store last action for undo
             setLastAction({ type: 'edit', data: previousData });
             
@@ -325,7 +363,7 @@ export default function UserMasterPage() {
         if (!userToCancel) return;
         
         const isCancelled = cancelledUsers.has(userToCancel.user_id);
-        const newActiveStatus = !isCancelled; // false when cancelling, true when restoring
+        const newActiveStatus = isCancelled; // true when restoring (was cancelled), false when cancelling (was active)
         
         try {
             await userAPI.update(userToCancel.user_id, {
@@ -630,7 +668,7 @@ export default function UserMasterPage() {
                                                     <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
                                                         user.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                                                     }`}>
-                                                        {user.active ? "TRUE" : "FALSE"}
+                                                        {user.active ? "Active" : "Inactive"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -642,8 +680,8 @@ export default function UserMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleEdit(user);
                                                             }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            disabled={isCancelled}
+                                                            className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${isCancelled && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            disabled={isCancelled && !isSuperAdmin}
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -654,11 +692,23 @@ export default function UserMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleCancel(user);
                                                             }}
-                                                            className={`${isCancelled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                                                            title={isCancelled ? "Restore user" : "Cancel user"}
+                                                            className={`text-red-600 hover:text-red-700 hover:bg-red-50 ${isCancelled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            title={isCancelled ? "Already cancelled" : "Cancel user"}
+                                                            disabled={isCancelled}
                                                         >
                                                             <X className="w-4 h-4" />
                                                         </Button>
+                                                        {isSuperAdmin && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={(e) => { e.stopPropagation(); handleDelete(user); }}
+                                                                className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                                                                title="Permanently delete"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </motion.tr>
@@ -963,19 +1013,33 @@ export default function UserMasterPage() {
                 </AlertDialogContent>
             </AlertDialog>
 
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete User</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete user &quot;{userToDelete?.user_id}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setUserToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Cancel Item Confirmation Dialog (for table actions) */}
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {userToCancel && cancelledUsers.has(userToCancel.user_id) 
-                                ? "Confirm Restore" 
-                                : "Confirm Cancel"}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Cancel</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {userToCancel && cancelledUsers.has(userToCancel.user_id)
-                                ? `Are you sure you want to restore user "${userToCancel.user_id}"?`
-                                : `Are you sure you want to cancel user "${userToCancel?.user_id}"? This action can be undone.`}
+                            Are you sure you want to cancel user &quot;{userToCancel?.user_id}&quot;?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -983,15 +1047,10 @@ export default function UserMasterPage() {
                             setIsCancelItemDialogOpen(false);
                             setUserToCancel(null);
                         }}>
-                            No, Keep Current Status
+                            No, Keep Active
                         </AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={confirmCancelItem} 
-                            className={userToCancel && cancelledUsers.has(userToCancel.user_id) 
-                                ? "bg-green-600 hover:bg-green-700" 
-                                : "bg-red-600 hover:bg-red-700"}
-                        >
-                            Yes, {userToCancel && cancelledUsers.has(userToCancel.user_id) ? "Restore" : "Cancel"}
+                        <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
+                            Yes, Cancel
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

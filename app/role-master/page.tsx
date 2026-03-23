@@ -5,10 +5,11 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { roleAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -61,6 +62,9 @@ export default function RoleMasterPage() {
     const [lastAction, setLastAction] = useState<{ type: 'edit'; data: Role } | null>(null);
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [roleToCancel, setRoleToCancel] = useState<Role | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({
@@ -142,6 +146,25 @@ export default function RoleMasterPage() {
                 description: error.message || "Failed to create role",
                 variant: "destructive",
             });
+        }
+    };
+
+    const handleDelete = (role: Role) => {
+        setRoleToDelete(role);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!roleToDelete) return;
+        try {
+            await roleAPI.delete(roleToDelete.roll_id);
+            toast({ title: "Deleted", description: "Role permanently deleted" });
+            setIsDeleteDialogOpen(false);
+            const deletedId = roleToDelete.roll_id;
+            setRoleToDelete(null);
+            setRoles(prev => prev.filter(r => r.roll_id !== deletedId));
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete role", variant: "destructive" });
         }
     };
 
@@ -499,8 +522,8 @@ export default function RoleMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleEdit(role);
                                                             }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            disabled={!role.active}
+                                                            className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${!role.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            disabled={!role.active && !isSuperAdmin}
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -517,6 +540,17 @@ export default function RoleMasterPage() {
                                                         >
                                                             <X className="w-4 h-4" />
                                                         </Button>
+                                                        {isSuperAdmin && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={(e) => { e.stopPropagation(); handleDelete(role); }}
+                                                                className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                                                                title="Permanently delete"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </motion.tr>
@@ -758,6 +792,26 @@ export default function RoleMasterPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
                             Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Role</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete &quot;{roleToDelete?.roll_description}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setRoleToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
