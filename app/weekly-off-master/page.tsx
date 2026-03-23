@@ -5,13 +5,14 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Calendar } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Calendar, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { weeklyOffAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -65,6 +66,9 @@ export default function WeeklyOffMasterPage() {
     const [filterActive, setFilterActive] = useState<string>("active");
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [weeklyOffToCancel, setWeeklyOffToCancel] = useState<WeeklyOff | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [weeklyOffToDelete, setWeeklyOffToDelete] = useState<WeeklyOff | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [filterDay, setFilterDay] = useState<string>("all");
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
@@ -170,6 +174,25 @@ export default function WeeklyOffMasterPage() {
             });
         } finally {
             isSubmittingRef.current = false;
+        }
+    };
+
+    const handleDelete = (weeklyOff: WeeklyOff) => {
+        setWeeklyOffToDelete(weeklyOff);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!weeklyOffToDelete?._id) return;
+        try {
+            await weeklyOffAPI.delete(weeklyOffToDelete._id);
+            toast({ title: "Deleted", description: "Weekly off record permanently deleted" });
+            setIsDeleteDialogOpen(false);
+            const deletedId = weeklyOffToDelete._id;
+            setWeeklyOffToDelete(null);
+            setWeeklyOffs(prev => prev.filter(w => w._id !== deletedId));
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete weekly off", variant: "destructive" });
         }
     };
 
@@ -492,8 +515,8 @@ export default function WeeklyOffMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleEdit(weeklyOff);
                                                                 }}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                                disabled={isCancelled}
+                                                                className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${isCancelled && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                disabled={isCancelled && !isSuperAdmin}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -510,6 +533,17 @@ export default function WeeklyOffMasterPage() {
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={(e) => { e.stopPropagation(); handleDelete(weeklyOff); }}
+                                                                    className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                                                                    title="Permanently delete"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -747,6 +781,26 @@ export default function WeeklyOffMasterPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Weekly Off</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete this weekly off record? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setWeeklyOffToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             {/* Cancel Item Confirmation Dialog (for table actions) */}
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>

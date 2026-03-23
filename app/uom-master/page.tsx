@@ -6,13 +6,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatsCards } from "@/components/dashboard/StatsCards";
-import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { uomAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 
 interface UOM {
     _id?: string; // MongoDB ID
@@ -46,6 +47,9 @@ export default function UOMMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [uomToCancel, setUomToCancel] = useState<UOM | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [uomToDelete, setUomToDelete] = useState<UOM | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [cancelledUOMs, setCancelledUOMs] = useState<Set<string>>(new Set());
     const [selectedUOM, setSelectedUOM] = useState<UOM | null>(null);
     const [uoms, setUOMs] = useState<UOM[]>([]);
@@ -190,6 +194,30 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
         }
     };
 
+    const handleDelete = (uom: UOM) => {
+        setUomToDelete(uom);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!uomToDelete) return;
+        try {
+            await uomAPI.delete(uomToDelete.uom_id);
+            toast({ title: "Deleted", description: "UOM permanently deleted" });
+            setIsDeleteDialogOpen(false);
+            const deletedId = uomToDelete.uom_id;
+            setUomToDelete(null);
+            setUOMs(prev => prev.filter(u => u.uom_id !== deletedId));
+            setCancelledUOMs(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(deletedId);
+                return newSet;
+            });
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete UOM", variant: "destructive" });
+        }
+    };
+
     const handleEdit = (uom: UOM) => {
         setSelectedUOM(uom);
         setFormData({
@@ -222,6 +250,15 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
             
             // Store last action for undo
             setLastAction({ type: 'edit', data: previousData });
+
+            // If set to active, remove from cancelled set so displayActive updates immediately
+            if (formData.active) {
+                setCancelledUOMs(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(selectedUOM.uom_id);
+                    return newSet;
+                });
+            }
             
             toast({
                 title: "Success",
@@ -575,14 +612,14 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                                                     size="sm"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        if (!displayActive) return;
+                                                                        if (!displayActive && !isSuperAdmin) return;
                                                                         handleEdit(item);
                                                                     }}
                                                                     className={`${
-                                                                        displayActive ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" : "text-gray-400 cursor-not-allowed"
+                                                                        displayActive || isSuperAdmin ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" : "text-gray-400 cursor-not-allowed"
                                                                     }`}
-                                                                    title={displayActive ? "Edit UOM" : "Cannot edit inactive UOM"}
-                                                                    disabled={!displayActive}
+                                                                    title={displayActive || isSuperAdmin ? "Edit UOM" : "Cannot edit inactive UOM"}
+                                                                    disabled={!displayActive && !isSuperAdmin}
                                                                 >
                                                                     <Pencil className="w-4 h-4" />
                                                                 </Button>
@@ -602,6 +639,17 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                                                 >
                                                                     <X className="w-4 h-4" />
                                                                 </Button>
+                                                                {isSuperAdmin && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
+                                                                        className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                                                                        title="Permanently delete"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </Button>
+                                                                )}
                                                             </div>
                                                         </td>
                                                     </motion.tr>
@@ -858,6 +906,33 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                         </Button>
                                     </div>
                                 </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => setIsDeleteDialogOpen(false)} />
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
+                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-xl font-bold">Delete UOM</h2>
+                                    <button onClick={() => setIsDeleteDialogOpen(false)} className="text-white hover:opacity-80 rounded-lg p-2 transition-colors">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6">
+                                    <p className="text-foreground mb-4">Are you sure you want to permanently delete <strong>{uomToDelete?.uom_desc}</strong>?</p>
+                                    <p className="text-sm text-muted-foreground mb-6">This action cannot be undone.</p>
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button variant="outline" onClick={() => { setIsDeleteDialogOpen(false); setUomToDelete(null); }}>Cancel</Button>
+                                        <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     </>

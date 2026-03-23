@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { materialStatusAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -58,6 +59,9 @@ export default function MaterialStatusMasterPage() {
     const [cancelModalType, setCancelModalType] = useState<'add' | 'edit' | null>(null);
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [statusToCancel, setStatusToCancel] = useState<MaterialStatus | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [statusToDelete, setStatusToDelete] = useState<MaterialStatus | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [selectedStatus, setSelectedStatus] = useState<MaterialStatus | null>(null);
     const isSubmittingRef = useRef(false);
     const [filterActive, setFilterActive] = useState<string>("active");
@@ -196,9 +200,27 @@ export default function MaterialStatusMasterPage() {
         }
     };
 
+    const handleDelete = (status: MaterialStatus) => {
+        setStatusToDelete(status);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!statusToDelete) return;
+        try {
+            await materialStatusAPI.delete(statusToDelete.matl_status_id);
+            toast({ title: "Deleted", description: "Material status permanently deleted" });
+            setIsDeleteDialogOpen(false);
+            setStatusToDelete(null);
+            loadStatuses();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete material status", variant: "destructive" });
+        }
+    };
+
     const handleEdit = (status: MaterialStatus) => {
         // Only allow editing if status is active
-        if (!status.active) {
+        if (!status.active && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "Cancelled statuses cannot be edited",
@@ -227,7 +249,7 @@ export default function MaterialStatusMasterPage() {
         if (!selectedStatus) return;
         
         // Double-check if status is still active
-        if (!selectedStatus.active) {
+        if (!selectedStatus.active && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "This status has been cancelled and cannot be edited",
@@ -666,10 +688,10 @@ export default function MaterialStatusMasterPage() {
                                                                     handleEdit(status);
                                                                 }}
                                                                 className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${
-                                                                    !status.active ? 'opacity-50 cursor-not-allowed' : ''
+                                                                    !status.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''
                                                                 }`}
-                                                                disabled={!status.active}
-                                                                title={!status.active ? "Cannot edit cancelled statuses" : "Edit status"}
+                                                                disabled={!status.active && !isSuperAdmin}
+                                                                title={!status.active && !isSuperAdmin ? "Cannot edit cancelled statuses" : "Edit status"}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -681,8 +703,8 @@ export default function MaterialStatusMasterPage() {
                                                                     handleCancel(status);
                                                                 }}
                                                                 className={`${
-                                                                    status.active 
-                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
+                                                                    status.active
+                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50'
                                                                         : 'opacity-50 cursor-not-allowed'
                                                                 }`}
                                                                 disabled={!status.active}
@@ -690,6 +712,20 @@ export default function MaterialStatusMasterPage() {
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDelete(status);
+                                                                    }}
+                                                                    className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                                                                    title="Permanently delete"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -866,7 +902,7 @@ export default function MaterialStatusMasterPage() {
             </AnimatePresence>
 
             <AnimatePresence>
-                {isEditModalOpen && selectedStatus?.active && (
+                {isEditModalOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -1025,6 +1061,26 @@ export default function MaterialStatusMasterPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
                             Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Material Status</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete &quot;{statusToDelete?.material_status}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setStatusToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

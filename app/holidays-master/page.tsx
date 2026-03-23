@@ -5,13 +5,14 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Calendar } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Calendar, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { holidaysAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -68,6 +69,9 @@ export default function HolidaysMasterPage() {
     const [loading, setLoading] = useState(true);
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [holidayToCancel, setHolidayToCancel] = useState<Holiday | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [holidayToDelete, setHolidayToDelete] = useState<Holiday | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [filterYear, setFilterYear] = useState<string>("all");
     const [filterActive, setFilterActive] = useState<string>("active");
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -171,6 +175,25 @@ export default function HolidaysMasterPage() {
             });
         } finally {
             isSubmittingRef.current = false;
+        }
+    };
+
+    const handleDelete = (holiday: Holiday) => {
+        setHolidayToDelete(holiday);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!holidayToDelete?._id) return;
+        try {
+            await holidaysAPI.delete(holidayToDelete._id);
+            toast({ title: "Deleted", description: "Holiday permanently deleted" });
+            setIsDeleteDialogOpen(false);
+            const deletedId = holidayToDelete._id;
+            setHolidayToDelete(null);
+            setHolidays(prev => prev.filter(h => h._id !== deletedId));
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete holiday", variant: "destructive" });
         }
     };
 
@@ -522,8 +545,8 @@ export default function HolidaysMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleEdit(holiday);
                                                                 }}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                                disabled={isCancelled}
+                                                                className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${isCancelled && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                disabled={isCancelled && !isSuperAdmin}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -540,6 +563,17 @@ export default function HolidaysMasterPage() {
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={(e) => { e.stopPropagation(); handleDelete(holiday); }}
+                                                                    className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                                                                    title="Permanently delete"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -771,6 +805,26 @@ export default function HolidaysMasterPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Holiday</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete &quot;{holidayToDelete?.remarks}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setHolidayToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             {/* Cancel Item Confirmation Dialog (for table actions) */}
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
