@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Package } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Package, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { productCategoryAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -48,6 +49,9 @@ function formatDateTime(date: Date | string): string {
 
 export default function ProductCategoryMasterPage() {
     const { toast } = useToast();
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [categoryToDelete, setCategoryToDelete] = useState<ProductCategory | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -165,8 +169,7 @@ export default function ProductCategoryMasterPage() {
     };
 
     const handleEdit = (category: ProductCategory) => {
-        // Only allow editing if category is active
-        if (!category.active) {
+        if (!category.active && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "Cancelled categories cannot be edited",
@@ -191,8 +194,8 @@ export default function ProductCategoryMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedCategory) return;
         
-        // Double-check if category is still active
-        if (!selectedCategory.active) {
+        // Double-check if category is still active (super admin bypasses this)
+        if (!selectedCategory.active && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "This category has been cancelled and cannot be edited",
@@ -272,6 +275,24 @@ export default function ProductCategoryMasterPage() {
                 description: error.message || "Failed to undo action",
                 variant: "destructive",
             });
+        }
+    };
+
+    const handleDelete = (category: ProductCategory) => {
+        setCategoryToDelete(category);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!categoryToDelete) return;
+        try {
+            await productCategoryAPI.delete(categoryToDelete.product_category_id);
+            setCategories(prev => prev.filter(c => c.product_category_id !== categoryToDelete.product_category_id));
+            toast({ title: "Deleted", description: `Category "${categoryToDelete.product_category_name}" has been deleted.` });
+            setIsDeleteDialogOpen(false);
+            setCategoryToDelete(null);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || 'Failed to delete category', variant: "destructive" });
         }
     };
 
@@ -571,13 +592,14 @@ export default function ProductCategoryMasterPage() {
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    if (!category.active && !isSuperAdmin) return;
                                                                     handleEdit(category);
                                                                 }}
                                                                 className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${
-                                                                    !category.active ? 'opacity-50 cursor-not-allowed' : ''
+                                                                    !category.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''
                                                                 }`}
-                                                                disabled={!category.active}
-                                                                title={!category.active ? "Cannot edit cancelled categories" : "Edit category"}
+                                                                disabled={!category.active && !isSuperAdmin}
+                                                                title={!category.active && !isSuperAdmin ? "Cannot edit cancelled categories" : "Edit category"}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -589,8 +611,8 @@ export default function ProductCategoryMasterPage() {
                                                                     handleCancel(category);
                                                                 }}
                                                                 className={`${
-                                                                    category.active 
-                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
+                                                                    category.active
+                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50'
                                                                         : 'opacity-50 cursor-not-allowed'
                                                                 }`}
                                                                 disabled={!category.active}
@@ -598,6 +620,19 @@ export default function ProductCategoryMasterPage() {
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDelete(category);
+                                                                    }}
+                                                                    className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -844,6 +879,25 @@ export default function ProductCategoryMasterPage() {
                             className="bg-red-600 hover:bg-red-700"
                         >
                             Yes, Cancel Category
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete &quot;{categoryToDelete?.product_category_name}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setCategoryToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

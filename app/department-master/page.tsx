@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Building2 } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Building2, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { departmentAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -47,6 +48,9 @@ function formatDateTime(date: Date | string): string {
 
 export default function DepartmentMasterPage() {
     const { toast } = useToast();
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [departmentToDelete, setDepartmentToDelete] = useState<Department | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -161,7 +165,26 @@ export default function DepartmentMasterPage() {
         }
     };
 
+    const handleDelete = (department: Department) => {
+        setDepartmentToDelete(department);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!departmentToDelete) return;
+        try {
+            await departmentAPI.delete(departmentToDelete.dept_id);
+            setDepartments(prev => prev.filter(d => d.dept_id !== departmentToDelete.dept_id));
+            toast({ title: "Deleted", description: `Department "${departmentToDelete.department_name}" has been deleted.` });
+            setIsDeleteDialogOpen(false);
+            setDepartmentToDelete(null);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || 'Failed to delete department', variant: "destructive" });
+        }
+    };
+
     const handleEdit = (department: Department) => {
+        if (!department.active && !isSuperAdmin) return;
         setSelectedDepartment(department);
         setFormData({
             dept_id: department.dept_id,
@@ -533,10 +556,11 @@ export default function DepartmentMasterPage() {
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    if (!department.active && !isSuperAdmin) return;
                                                                     handleEdit(department);
                                                                 }}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                                disabled={!department.active}
+                                                                className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${!department.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                disabled={!department.active && !isSuperAdmin}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -553,6 +577,19 @@ export default function DepartmentMasterPage() {
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDelete(department);
+                                                                    }}
+                                                                    className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -794,6 +831,25 @@ export default function DepartmentMasterPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
                             Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Department</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete &quot;{departmentToDelete?.department_name}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setDepartmentToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

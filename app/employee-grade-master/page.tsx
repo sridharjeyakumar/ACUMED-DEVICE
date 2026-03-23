@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Award } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Award, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { employeeGradeAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -47,6 +48,9 @@ function formatDateTime(date: Date | string): string {
 
 export default function EmployeeGradeMasterPage() {
     const { toast } = useToast();
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [gradeToDelete, setGradeToDelete] = useState<EmployeeGrade | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -161,7 +165,26 @@ export default function EmployeeGradeMasterPage() {
         }
     };
 
+    const handleDelete = (grade: EmployeeGrade) => {
+        setGradeToDelete(grade);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!gradeToDelete) return;
+        try {
+            await employeeGradeAPI.delete(gradeToDelete.grade_id);
+            setGrades(prev => prev.filter(g => g.grade_id !== gradeToDelete.grade_id));
+            toast({ title: "Deleted", description: `Grade "${gradeToDelete.grade_name}" has been deleted.` });
+            setIsDeleteDialogOpen(false);
+            setGradeToDelete(null);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || 'Failed to delete grade', variant: "destructive" });
+        }
+    };
+
     const handleEdit = (grade: EmployeeGrade) => {
+        if (!grade.active && !isSuperAdmin) return;
         setSelectedGrade(grade);
         setFormData({
             grade_id: grade.grade_id,
@@ -535,10 +558,11 @@ export default function EmployeeGradeMasterPage() {
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    if (!grade.active && !isSuperAdmin) return;
                                                                     handleEdit(grade);
                                                                 }}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                                disabled={!grade.active}
+                                                                className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${!grade.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                disabled={!grade.active && !isSuperAdmin}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -555,6 +579,19 @@ export default function EmployeeGradeMasterPage() {
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDelete(grade);
+                                                                    }}
+                                                                    className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -796,6 +833,25 @@ export default function EmployeeGradeMasterPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
                             Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Grade</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete &quot;{gradeToDelete?.grade_name}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setGradeToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

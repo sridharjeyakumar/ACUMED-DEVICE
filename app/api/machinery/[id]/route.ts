@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { ensureConnection } from "@/server/db/connection";
 import ProductMachineMaster from "@/server/models/ProductMachinerMaster";
 
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await ensureConnection();
+    const { id } = params;
+    const deleted = await ProductMachineMaster.findByIdAndDelete(id);
+    if (!deleted) {
+      return NextResponse.json({ error: "Machine not found" }, { status: 404 });
+    }
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Delete failed" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }

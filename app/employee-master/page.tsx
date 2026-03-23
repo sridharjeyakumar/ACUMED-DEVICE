@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, ChevronDown, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Filter, Pencil, ChevronDown, Trash2, ChevronLeft, ChevronRight, X as XIcon } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { employeeAPI, departmentAPI, employeeGradeAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 
 interface EmployeeRecord {
     email: string;
@@ -45,10 +46,13 @@ interface EmployeeRecord {
 
 export default function EmployeeMasterPage() {
     const { toast } = useToast();
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [employeeToCancel, setEmployeeToCancel] = useState<EmployeeRecord | null>(null);
     const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRecord | null>(null);
     const [filterStatus, setFilterStatus] = useState<string>("Active");
     const [filterDepartment, setFilterDepartment] = useState<string>("all");
@@ -376,31 +380,40 @@ export default function EmployeeMasterPage() {
 
 const confirmDelete = async () => {
     if (!selectedEmployee) return;
-    
     try {
         setLoading(true);
-        // Call API to update active status to false
-        await employeeAPI.update(selectedEmployee.empId, { active: false });
-        
-        toast({
-            title: "Success",
-            description: "Employee deactivated successfully",
-        });
-        
-        // Reload the employees list
-        await loadEmployees();
+        await employeeAPI.delete(selectedEmployee.empId);
+        setRecords(prev => prev.filter(e => e.empId !== selectedEmployee.empId));
+        toast({ title: "Deleted", description: `Employee "${selectedEmployee.empName}" has been permanently deleted.` });
     } catch (error: any) {
-        toast({
-            title: "Error",
-            description: error.message || "Failed to deactivate employee",
-            variant: "destructive",
-        });
+        toast({ title: "Error", description: error.message || "Failed to delete employee", variant: "destructive" });
     } finally {
         setIsDeleteDialogOpen(false);
         setSelectedEmployee(null);
         setLoading(false);
     }
 };
+
+    const handleCancel = (employee: EmployeeRecord) => {
+        setEmployeeToCancel(employee);
+        setIsCancelDialogOpen(true);
+    };
+
+    const confirmCancel = async () => {
+        if (!employeeToCancel) return;
+        try {
+            setLoading(true);
+            await employeeAPI.update(employeeToCancel.empId, { active: false });
+            toast({ title: "Cancelled", description: `Employee "${employeeToCancel.empName}" has been deactivated.` });
+            await loadEmployees();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to cancel employee", variant: "destructive" });
+        } finally {
+            setIsCancelDialogOpen(false);
+            setEmployeeToCancel(null);
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="flex min-h-screen bg-background">
@@ -676,10 +689,10 @@ const confirmDelete = async () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
-              disabled={!item.active}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-              title={item.active ? "Edit employee" : "Cannot edit inactive employee"}
+              onClick={(e) => { e.stopPropagation(); if (!item.active && !isSuperAdmin) return; handleEdit(item); }}
+              disabled={!item.active && !isSuperAdmin}
+              className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${!item.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={item.active || isSuperAdmin ? "Edit employee" : "Cannot edit inactive employee"}
             >
               <Pencil className="w-4 h-4" />
             </Button>
@@ -687,13 +700,25 @@ const confirmDelete = async () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
+              onClick={(e) => { e.stopPropagation(); handleCancel(item); }}
               disabled={!item.active}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              title={item.active ? "Delete employee" : "Cannot delete inactive employee"}
+              className={`${item.active ? 'text-red-600 hover:text-red-700 hover:bg-red-50' : 'text-gray-400 cursor-not-allowed'}`}
+              title={item.active ? "Cancel employee" : "Already inactive"}
             >
-              <X className="w-4 h-4" />
+              <XIcon className="w-4 h-4" />
             </Button>
+
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
+                className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+                title="Permanently delete employee"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </td>
       </motion.tr>
@@ -1651,6 +1676,48 @@ const confirmDelete = async () => {
                                         </Button>
                                     </div>
                                 </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Cancel Confirmation Dialog */}
+            <AnimatePresence>
+                {isCancelDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsCancelDialogOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
+                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-xl font-bold">Cancel Employee</h2>
+                                    <button onClick={() => setIsCancelDialogOpen(false)} className="text-white hover:bg-red-700 rounded-lg p-2 transition-colors">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6">
+                                    <p className="text-foreground mb-4">
+                                        Are you sure you want to deactivate <strong>{employeeToCancel?.empName}</strong>?
+                                    </p>
+                                    <p className="text-sm text-muted-foreground mb-6">
+                                        This will set the employee as inactive.
+                                    </p>
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>Cancel</Button>
+                                        <Button onClick={confirmCancel} className="bg-red-600 hover:bg-red-700 text-white">Confirm</Button>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     </>

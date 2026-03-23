@@ -5,12 +5,13 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, Factory, ChevronDown, Scale, X } from "lucide-react";
+import { Search, Plus, Filter, Pencil, Factory, ChevronDown, Scale, X, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { uomAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 
 interface MachineRecord {
@@ -40,7 +41,9 @@ interface UOM {
 }
 export default function ProductionCapacityPage() {
         const { toast } = useToast();
-    
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [machineToDelete, setMachineToDelete] = useState<MachineRecord | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -201,7 +204,27 @@ const handleSubmit = async (e: React.FormEvent) => {
 
 
 
+    const handleDelete = (machine: MachineRecord) => {
+        setMachineToDelete(machine);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!machineToDelete) return;
+        try {
+            const response = await fetch(`/api/machinery/${machineToDelete.id}`, { method: "DELETE" });
+            if (!response.ok) throw new Error("Failed to delete machine");
+            setMachines(prev => prev.filter(m => m.id !== machineToDelete.id));
+            toast({ title: "Deleted", description: `Machine "${machineToDelete.machineName}" has been deleted.` });
+            setIsDeleteDialogOpen(false);
+            setMachineToDelete(null);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || 'Failed to delete machine', variant: "destructive" });
+        }
+    };
+
     const handleEdit = (machine: MachineRecord) => {
+        if (!machine.active && !isSuperAdmin) return;
         setSelectedMachine(machine);
         setFormData({
             machineId: machine.machineId,
@@ -577,14 +600,14 @@ const handleSubmit = async (e: React.FormEvent) => {
             <Button
               variant="ghost"
               size="sm"
-              disabled={!isActive}
+              disabled={!isActive && !isSuperAdmin}
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isActive) return;
+                if (!isActive && !isSuperAdmin) return;
                 handleEdit(machine);
               }}
               className={`${
-                isActive
+                isActive || isSuperAdmin
                   ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                   : "text-gray-400 cursor-not-allowed"
               }`}
@@ -609,6 +632,20 @@ const handleSubmit = async (e: React.FormEvent) => {
             >
               <X className="w-4 h-4" />
             </Button>
+
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(machine);
+                }}
+                className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
 
           </div>
         </td>
@@ -1096,6 +1133,45 @@ const handleSubmit = async (e: React.FormEvent) => {
                                         >
                                             {cancelledMachines.has(machineToCancel?.id || '') ? "Restore" : "Cancel"}
                                         </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                                <div className="flex items-center justify-between p-6 bg-red-600 rounded-t-xl">
+                                    <h2 className="text-xl font-bold text-white">Delete Machine</h2>
+                                    <button onClick={() => setIsDeleteDialogOpen(false)} className="text-white hover:opacity-80 rounded-lg p-2 transition-colors">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <p className="text-gray-700">
+                                        Are you sure you want to permanently delete <strong>{machineToDelete?.machineName}</strong>? This action cannot be undone.
+                                    </p>
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+                                        <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
                                     </div>
                                 </div>
                             </div>
