@@ -1077,7 +1077,7 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                         transition={{ duration: 0.5, delay: 0.2 }}
                     >
                         <Card className="overflow-hidden">
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-gray-300">
