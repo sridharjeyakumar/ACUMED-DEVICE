@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import TransactionTable from '@/server/models/TransactionTable';
+import ProductionPlanDetail from '@/server/models/ProductionPlanDetails';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -131,23 +132,26 @@ export async function PUT(
   }
 }
 
-// DELETE /api/transactions/[id] - Delete transaction
+// DELETE /api/transactions/[id] - Delete transaction and related plan details
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     await ensureConnection();
     const transaction = await TransactionTable.findOneAndDelete({ batch_no: params.id });
-    
+
     if (!transaction) {
       return NextResponse.json(
         { error: 'Transaction not found' },
         { status: 404 }
       );
     }
-    
-    return NextResponse.json({ message: 'Transaction deleted successfully' });
+
+    // Cascade delete related production plan details
+    await ProductionPlanDetail.deleteMany({ batch_no: params.id });
+
+    return NextResponse.json({ message: 'Transaction and related plan details deleted successfully' });
   } catch (error: any) {
     console.error('Error deleting transaction:', error);
     return NextResponse.json(

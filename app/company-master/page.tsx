@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Upload } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Upload, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getSessionUser } from "@/lib/auth";
 
 interface Company {
     comp_id: string; // Char(4) - PK
@@ -50,6 +51,9 @@ interface Company {
 
 export default function CompanyMasterPage() {
     const { toast } = useToast();
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -304,7 +308,26 @@ export default function CompanyMasterPage() {
         }
     };
 
+    const handleDelete = (company: Company) => {
+        setCompanyToDelete(company);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!companyToDelete) return;
+        try {
+            await companyAPI.delete(companyToDelete.comp_id);
+            setCompanies(prev => prev.filter(c => c.comp_id !== companyToDelete.comp_id));
+            toast({ title: "Deleted", description: `Company "${companyToDelete.company_name}" has been deleted.` });
+            setIsDeleteDialogOpen(false);
+            setCompanyToDelete(null);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || 'Failed to delete company', variant: "destructive" });
+        }
+    };
+
     const handleEdit = (company: Company) => {
+        if (!company.active && !isSuperAdmin) return;
         setSelectedCompany(company);
         setFormData({
             comp_id: company.comp_id,
@@ -769,10 +792,11 @@ export default function CompanyMasterPage() {
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    if (isCancelled && !isSuperAdmin) return;
                                                                     handleEdit(company);
                                                                 }}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                                disabled={isCancelled}
+                                                                className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${isCancelled && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                disabled={isCancelled && !isSuperAdmin}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -783,12 +807,25 @@ export default function CompanyMasterPage() {
                                                                     e.stopPropagation();
                                                                     handleCancel(company);
                                                                 }}
-                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                className={`text-red-600 hover:text-red-700 hover:bg-red-50 ${isCancelled ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                 title="Cancel company"
                                                                 disabled={isCancelled}
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDelete(company);
+                                                                    }}
+                                                                    className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -1559,6 +1596,25 @@ export default function CompanyMasterPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
                             Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Company</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete &quot;{companyToDelete?.company_name}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setCompanyToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

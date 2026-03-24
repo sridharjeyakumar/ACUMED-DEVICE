@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Upload, ImageIcon } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Upload, ImageIcon, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { cartonTypeAPI, productStatusAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -62,6 +63,9 @@ function formatDateTime(date: Date | string): string {
 
 export default function ProductStatusMasterPage() {
     const { toast } = useToast();
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [statusToDelete, setStatusToDelete] = useState<ProductStatus | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -238,9 +242,26 @@ export default function ProductStatusMasterPage() {
         }
     };
 
+    const handleDelete = (status: ProductStatus) => {
+        setStatusToDelete(status);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!statusToDelete) return;
+        try {
+            await productStatusAPI.delete(statusToDelete.prod_status_id);
+            setStatuses(prev => prev.filter(s => s.prod_status_id !== statusToDelete.prod_status_id));
+            toast({ title: "Deleted", description: `Status "${statusToDelete.product_status}" has been deleted.` });
+            setIsDeleteDialogOpen(false);
+            setStatusToDelete(null);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || 'Failed to delete status', variant: "destructive" });
+        }
+    };
+
     const handleEdit = (status: ProductStatus) => {
-        // Only allow editing if status is active
-        if (!status.active) {
+        if (!status.active && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "Cancelled statuses cannot be edited",
@@ -272,8 +293,8 @@ export default function ProductStatusMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedStatus) return;
         
-        // Double-check if status is still active
-        if (!selectedStatus.active) {
+        // Double-check if status is still active (super admin bypasses)
+        if (!selectedStatus.active && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "This status has been cancelled and cannot be edited",
@@ -718,13 +739,14 @@ export default function ProductStatusMasterPage() {
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    if (!status.active && !isSuperAdmin) return;
                                                                     handleEdit(status);
                                                                 }}
                                                                 className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${
-                                                                    !status.active ? 'opacity-50 cursor-not-allowed' : ''
+                                                                    !status.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''
                                                                 }`}
-                                                                disabled={!status.active}
-                                                                title={!status.active ? "Cannot edit cancelled statuses" : "Edit status"}
+                                                                disabled={!status.active && !isSuperAdmin}
+                                                                title={!status.active && !isSuperAdmin ? "Cannot edit cancelled statuses" : "Edit status"}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -736,8 +758,8 @@ export default function ProductStatusMasterPage() {
                                                                     handleCancel(status);
                                                                 }}
                                                                 className={`${
-                                                                    status.active 
-                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
+                                                                    status.active
+                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50'
                                                                         : 'opacity-50 cursor-not-allowed'
                                                                 }`}
                                                                 disabled={!status.active}
@@ -745,6 +767,19 @@ export default function ProductStatusMasterPage() {
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDelete(status);
+                                                                    }}
+                                                                    className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                  
@@ -1035,7 +1070,7 @@ export default function ProductStatusMasterPage() {
 
             {/* Edit Status Modal */}
             <AnimatePresence>
-                {isEditModalOpen && selectedStatus?.active && (
+                {isEditModalOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -1315,6 +1350,26 @@ export default function ProductStatusMasterPage() {
                             className="bg-red-600 hover:bg-red-700"
                         >
                             Yes, Cancel Status
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Status</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete &quot;{statusToDelete?.product_status}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setStatusToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

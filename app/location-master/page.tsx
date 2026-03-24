@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Upload, ImageIcon } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Upload, ImageIcon, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { locationAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -47,6 +48,9 @@ function formatDateTime(date: Date | string): string {
 
 export default function LocationMasterPage() {
     const { toast } = useToast();
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -168,8 +172,26 @@ export default function LocationMasterPage() {
         }
     };
 
+    const handleDelete = (location: Location) => {
+        setLocationToDelete(location);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!locationToDelete) return;
+        try {
+            await locationAPI.delete(locationToDelete.location_id);
+            setLocations(prev => prev.filter(l => l.location_id !== locationToDelete.location_id));
+            toast({ title: "Deleted", description: `Location "${locationToDelete.location_name}" has been deleted.` });
+            setIsDeleteDialogOpen(false);
+            setLocationToDelete(null);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || 'Failed to delete location', variant: "destructive" });
+        }
+    };
+
     const handleEdit = (location: Location) => {
-        if (!location.active) {
+        if (!location.active && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "Cancelled locations cannot be edited",
@@ -193,7 +215,7 @@ export default function LocationMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedLocation) return;
 
-        if (!selectedLocation.active) {
+        if (!selectedLocation.active && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "This location has been cancelled and cannot be edited",
@@ -538,13 +560,14 @@ export default function LocationMasterPage() {
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    if (!location.active && !isSuperAdmin) return;
                                                                     handleEdit(location);
                                                                 }}
                                                                 className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${
-                                                                    !location.active ? 'opacity-50 cursor-not-allowed' : ''
+                                                                    !location.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''
                                                                 }`}
-                                                                disabled={!location.active}
-                                                                title={!location.active ? "Cannot edit cancelled locations" : "Edit location"}
+                                                                disabled={!location.active && !isSuperAdmin}
+                                                                title={!location.active && !isSuperAdmin ? "Cannot edit cancelled locations" : "Edit location"}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -565,6 +588,19 @@ export default function LocationMasterPage() {
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDelete(location);
+                                                                    }}
+                                                                    className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -861,6 +897,25 @@ export default function LocationMasterPage() {
             </AnimatePresence>
 
             {/* Cancel Location Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Location</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete &quot;{locationToDelete?.location_name}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setLocationToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

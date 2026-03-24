@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, AlertCircle, Bot, ChevronDown } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, AlertCircle, Bot, ChevronDown, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { productionAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -112,6 +113,9 @@ export default function ProductionPage() {
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [itemToCancel, setItemToCancel] = useState<Production | null>(null);
     const [selectedItem, setSelectedItem] = useState<Production | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<Production | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const isSubmittingRef = useRef(false);
 
     // ── Reference data ──
@@ -282,8 +286,26 @@ export default function ProductionPage() {
     };
 
     // ── Edit handlers ──
+    const handleDelete = (item: Production) => {
+        setItemToDelete(item);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete?._id) return;
+        try {
+            await productionAPI.delete(itemToDelete._id);
+            toast({ title: "Deleted", description: `Production #${itemToDelete.production_id} permanently deleted` });
+            setIsDeleteDialogOpen(false);
+            setItemToDelete(null);
+            loadProductions();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete production", variant: "destructive" });
+        }
+    };
+
     const handleEdit = (item: Production) => {
-        if (item.status === 'C') {
+        if (item.status === 'C' && !isSuperAdmin) {
             toast({ title: "Cannot Edit", description: "Closed records cannot be edited", variant: "destructive" });
             return;
         }
@@ -552,12 +574,17 @@ export default function ProductionPage() {
                                                     <td className="px-6 py-4"><span className="text-sm text-foreground">{item.last_modified_date_time ? formatDateTime(item.last_modified_date_time) : "-"}</span></td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center justify-center gap-2">
-                                                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(item); }} className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${item.status === 'C' ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={item.status === 'C'} title={item.status === 'C' ? "Cannot edit closed records" : "Edit record"}>
+                                                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(item); }} className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${item.status === 'C' && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={item.status === 'C' && !isSuperAdmin} title={item.status === 'C' && !isSuperAdmin ? "Cannot edit closed records" : "Edit record"}>
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
                                                             <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleCancelItem(item); }} className={`${item.status !== 'C' ? 'text-red-600 hover:text-red-700 hover:bg-red-50' : 'opacity-50 cursor-not-allowed'}`} disabled={item.status === 'C'} title={item.status !== 'C' ? "Close record" : "Already closed"}>
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDelete(item); }} className="text-red-700 hover:text-red-800 hover:bg-red-50" title="Permanently delete">
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -812,7 +839,7 @@ export default function ProductionPage() {
                 EDIT MODAL
             ══════════════════════════════════ */}
             <AnimatePresence>
-                {isEditModalOpen && selectedItem && selectedItem.status !== 'C' && (
+                {isEditModalOpen && selectedItem && (selectedItem.status !== 'C' || isSuperAdmin) && (
                     <>
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 z-50" onClick={() => handleCancelClick('edit')} />
                         <motion.div initial={{ opacity: 0, scale: 0.97, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 16 }} transition={{ duration: 0.2 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1002,6 +1029,21 @@ export default function ProductionPage() {
             </AlertDialog>
 
             {/* Close record confirmation */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Production Record</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete Production #{itemToDelete?.production_id}? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setItemToDelete(null); }}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

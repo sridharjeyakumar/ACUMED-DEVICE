@@ -6,13 +6,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatsCards } from "@/components/dashboard/StatsCards";
-import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X, CheckCircle, XCircle, ChevronDown, ChevronUp, LayoutList } from "lucide-react";
+import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X, CheckCircle, XCircle, ChevronDown, ChevronUp, LayoutList, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { cartonCapacityAPI, packingAPI, packSizeAPI, productionPlanDetailAPI, productMovementAPI, productStatusAPI, productStatusTransitionAPI, productStockAPI, transactionAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -118,6 +119,9 @@ export default function PackingMasterPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [packingToDelete, setPackingToDelete] = useState<Packing | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
     const [selectedPacking, setSelectedPacking] = useState<Packing | null>(null);
     const [packings, setPackings] = useState<Packing[]>([]);
@@ -409,8 +413,26 @@ const handleBatchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         }
     };
 
+    const handleDelete = (packing: Packing) => {
+        setPackingToDelete(packing);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!packingToDelete) return;
+        try {
+            await packingAPI.delete(packingToDelete.packing_id.toString());
+            toast({ title: "Deleted", description: `Packing record #${packingToDelete.packing_id} permanently deleted` });
+            setIsDeleteDialogOpen(false);
+            setPackingToDelete(null);
+            loadPackings();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete packing record", variant: "destructive" });
+        }
+    };
+
     const handleEdit = (packing: Packing) => {
-        if (packing.status !== 'E') {
+        if (packing.status !== 'E' && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "Only pending records can be edited",
@@ -1075,15 +1097,26 @@ const handleUndo = async () => {
                                                                         handleEdit(item);
                                                                     }}
                                                                     className={`${
-                                                                        item.status === 'E' 
-                                                                            ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
+                                                                        item.status === 'E' || isSuperAdmin
+                                                                            ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                                                             : "text-gray-400 cursor-not-allowed"
                                                                     }`}
-                                                                    title={item.status === 'E' ? "Edit Record" : "Only pending records can be edited"}
-                                                                    disabled={item.status !== 'E'}
+                                                                    title={item.status === 'E' || isSuperAdmin ? "Edit Record" : "Only pending records can be edited"}
+                                                                    disabled={item.status !== 'E' && !isSuperAdmin}
                                                                 >
                                                                     <Pencil className="w-4 h-4" />
                                                                 </Button>
+                                                                {isSuperAdmin && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
+                                                                        className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                                                                        title="Permanently delete"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </Button>
+                                                                )}
                                                                 {item.status === 'E' && (
                                                                     <>
                                                                         <Button
@@ -1817,6 +1850,27 @@ const handleUndo = async () => {
         </>
     )}
 </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-[60]" onClick={() => { setIsDeleteDialogOpen(false); setPackingToDelete(null); }} />
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+                                <h2 className="text-lg font-bold text-gray-900 mb-2">Delete Packing Record</h2>
+                                <p className="text-sm text-gray-600 mb-6">
+                                    Are you sure you want to permanently delete Packing #{packingToDelete?.packing_id}? This action cannot be undone.
+                                </p>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => { setIsDeleteDialogOpen(false); setPackingToDelete(null); }} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
+                                    <button onClick={confirmDelete} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Delete</button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

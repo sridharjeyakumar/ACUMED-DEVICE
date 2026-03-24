@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, ArrowRight, AlertCircle } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, ArrowRight, AlertCircle, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { productStatusTransitionAPI, productStatusAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -64,6 +65,9 @@ export default function ProductStatusTransitionMasterPage() {
     const [cancelModalType, setCancelModalType] = useState<'add' | 'edit' | null>(null);
     const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
     const [transitionToDeactivate, setTransitionToDeactivate] = useState<ProductStatusTransition | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [transitionToDelete, setTransitionToDelete] = useState<ProductStatusTransition | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [selectedTransition, setSelectedTransition] = useState<ProductStatusTransition | null>(null);
     const [filterActive, setFilterActive] = useState<string>("active");
     const [filterSterilization, setFilterSterilization] = useState<string>("all");
@@ -207,8 +211,26 @@ export default function ProductStatusTransitionMasterPage() {
         }
     };
 
+    const handleDelete = (transition: ProductStatusTransition) => {
+        setTransitionToDelete(transition);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!transitionToDelete) return;
+        try {
+            await productStatusTransitionAPI.delete(transitionToDelete._id!);
+            toast({ title: "Deleted", description: "Transition permanently deleted" });
+            setIsDeleteDialogOpen(false);
+            setTransitionToDelete(null);
+            loadData();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete transition", variant: "destructive" });
+        }
+    };
+
     const handleEdit = (transition: ProductStatusTransition) => {
-        if (!transition.active) {
+        if (!transition.active && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "Deactivated transitions cannot be edited",
@@ -235,7 +257,7 @@ export default function ProductStatusTransitionMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedTransition) return;
         
-        if (!selectedTransition.active) {
+        if (!selectedTransition.active && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "This transition has been deactivated and cannot be edited",
@@ -701,10 +723,10 @@ export default function ProductStatusTransitionMasterPage() {
                                                                 size="sm"
                                                                 onClick={() => handleEdit(transition)}
                                                                 className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${
-                                                                    !transition.active ? 'opacity-50 cursor-not-allowed' : ''
+                                                                    !transition.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''
                                                                 }`}
-                                                                disabled={!transition.active}
-                                                                title={!transition.active ? "Cannot edit inactive transitions" : "Edit transition"}
+                                                                disabled={!transition.active && !isSuperAdmin}
+                                                                title={!transition.active && !isSuperAdmin ? "Cannot edit inactive transitions" : "Edit transition"}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -713,8 +735,8 @@ export default function ProductStatusTransitionMasterPage() {
                                                                 size="icon"
                                                                 onClick={() => handleDeactivate(transition)}
                                                                 className={`${
-                                                                    transition.active 
-                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
+                                                                    transition.active
+                                                                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50'
                                                                         : 'opacity-50 cursor-not-allowed'
                                                                 }`}
                                                                 disabled={!transition.active}
@@ -722,6 +744,17 @@ export default function ProductStatusTransitionMasterPage() {
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => handleDelete(transition)}
+                                                                    className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                                                                    title="Permanently delete"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -910,7 +943,7 @@ export default function ProductStatusTransitionMasterPage() {
 
             {/* Edit Transition Modal */}
             <AnimatePresence>
-                {isEditModalOpen && selectedTransition?.active && (
+                {isEditModalOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -1065,6 +1098,30 @@ export default function ProductStatusTransitionMasterPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
                             Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Transition</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete the transition from{" "}
+                            <span className="font-mono font-semibold">{transitionToDelete?.from_product_status_id}</span>
+                            {" → "}
+                            <span className="font-mono font-semibold">{transitionToDelete?.product_status_id}</span>?
+                            This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setTransitionToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

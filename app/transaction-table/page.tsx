@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { cartonCapacityAPI, packSizeAPI, productAPI, transactionAPI, productionPlanDetailAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 
 interface Transaction {
     _id?: string;
@@ -143,6 +144,9 @@ export default function TransactionTablePage() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -785,6 +789,24 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
         }
     };
 
+    const handleDelete = (transaction: Transaction) => {
+        setTransactionToDelete(transaction);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!transactionToDelete) return;
+        try {
+            await transactionAPI.delete(transactionToDelete.batch_no);
+            toast({ title: "Deleted", description: `Batch ${transactionToDelete.batch_no} permanently deleted` });
+            setIsDeleteDialogOpen(false);
+            setTransactionToDelete(null);
+            loadTransactions();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete transaction", variant: "destructive" });
+        }
+    };
+
     const handleEdit = (transaction: Transaction) => {
         setSelectedTransaction(transaction);
         setFormData({
@@ -1110,6 +1132,9 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
                                                 Status
                                             </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                Actions
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -1207,6 +1232,26 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                                                     <StatusIcon className="w-3 h-3" />
                                                                     {statusConfig[item.current_batch_status_id].label}
                                                                 </span>
+                                                            </td>
+                                                            <td className="px-6 py-4 align-middle">
+                                                                <div className="flex items-center justify-center gap-2">
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                                                                        className="text-blue-600 hover:text-blue-800 p-1 rounded"
+                                                                        title="Edit transaction"
+                                                                    >
+                                                                        <Pencil className="w-4 h-4" />
+                                                                    </button>
+                                                                    {isSuperAdmin && (
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
+                                                                            className="text-red-700 hover:text-red-900 p-1 rounded"
+                                                                            title="Permanently delete"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             </td>
                                                         </motion.tr>
                                                         
@@ -2316,6 +2361,27 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                         </button>
                                     </div>
                                 </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-[60]" onClick={() => { setIsDeleteDialogOpen(false); setTransactionToDelete(null); }} />
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+                                <h2 className="text-lg font-bold text-gray-900 mb-2">Delete Transaction</h2>
+                                <p className="text-sm text-gray-600 mb-6">
+                                    Are you sure you want to permanently delete batch <span className="font-mono font-semibold">{transactionToDelete?.batch_no}</span>? This action cannot be undone.
+                                </p>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => { setIsDeleteDialogOpen(false); setTransactionToDelete(null); }} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
+                                    <button onClick={confirmDelete} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Delete</button>
+                                </div>
                             </div>
                         </motion.div>
                     </>

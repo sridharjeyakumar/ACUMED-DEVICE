@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { machineEventTypeAPI, batchStatusAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -80,7 +81,10 @@ export default function MachineEventTypeMasterPage() {
     const [cancelModalType, setCancelModalType] = useState<'add' | 'edit' | null>(null);
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [typeToCancel, setTypeToCancel] = useState<MachineEventType | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [typeToDelete, setTypeToDelete] = useState<MachineEventType | null>(null);
     const [selectedType, setSelectedType] = useState<MachineEventType | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const isSubmittingRef = useRef(false);
     const [filterActive, setFilterActive] = useState<string>("active");
     const [types, setTypes] = useState<MachineEventType[]>([]);
@@ -177,8 +181,26 @@ export default function MachineEventTypeMasterPage() {
         }
     };
 
+    const handleDelete = (type: MachineEventType) => {
+        setTypeToDelete(type);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!typeToDelete) return;
+        try {
+            await machineEventTypeAPI.delete(typeToDelete.machine_event_type_id);
+            toast({ title: "Deleted", description: "Machine event type permanently deleted" });
+            setIsDeleteDialogOpen(false);
+            setTypeToDelete(null);
+            loadTypes();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete machine event type", variant: "destructive" });
+        }
+    };
+
     const handleEdit = (type: MachineEventType) => {
-        if (!type.active) {
+        if (!type.active && !isSuperAdmin) {
             toast({ title: "Cannot Edit", description: "Cancelled event types cannot be edited", variant: "destructive" });
             return;
         }
@@ -205,7 +227,7 @@ export default function MachineEventTypeMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedType) return;
 
-        if (!selectedType.active) {
+        if (!selectedType.active && !isSuperAdmin) {
             toast({ title: "Cannot Edit", description: "This event type has been cancelled and cannot be edited", variant: "destructive" });
             setIsEditModalOpen(false);
             return;
@@ -656,9 +678,9 @@ export default function MachineEventTypeMasterPage() {
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 onClick={(e) => { e.stopPropagation(); handleEdit(type); }}
-                                                                className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${!type.active ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                disabled={!type.active}
-                                                                title={!type.active ? "Cannot edit cancelled event types" : "Edit event type"}
+                                                                className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${!type.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                disabled={!type.active && !isSuperAdmin}
+                                                                title={!type.active && !isSuperAdmin ? "Cannot edit cancelled event types" : "Edit event type"}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -672,6 +694,17 @@ export default function MachineEventTypeMasterPage() {
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={(e) => { e.stopPropagation(); handleDelete(type); }}
+                                                                    className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                                                                    title="Permanently delete"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -723,7 +756,7 @@ export default function MachineEventTypeMasterPage() {
 
             {/* Edit Modal */}
             <AnimatePresence>
-                {isEditModalOpen && selectedType?.active && (
+                {isEditModalOpen && (
                     <>
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => handleCancelClick('edit')} />
                         <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -756,6 +789,26 @@ export default function MachineEventTypeMasterPage() {
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => setIsCancelDialogOpen(false)}>No, Continue Editing</AlertDialogCancel>
                         <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">Yes, Cancel</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Machine Event Type</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete &quot;{typeToDelete?.machine_event_type_name}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setTypeToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
+                        </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

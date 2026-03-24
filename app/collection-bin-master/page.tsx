@@ -5,13 +5,14 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Filter, Pencil, X, ChevronDown, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { collectionBinAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import { safeNumber } from "@/utils/numberUtils";
 
 interface BinRecord {
@@ -31,6 +32,9 @@ interface BinRecord {
 export default function CollectionBinMasterPage() {
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [binToDelete, setBinToDelete] = useState<BinRecord | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
@@ -213,7 +217,26 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
         }
     };
 
+    const handleDelete = (bin: BinRecord) => {
+        setBinToDelete(bin);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!binToDelete) return;
+        try {
+            await collectionBinAPI.delete(binToDelete.binId);
+            setRecords(prev => prev.filter(b => b.binId !== binToDelete.binId));
+            toast({ title: "Deleted", description: `Collection bin "${binToDelete.binName}" has been deleted.` });
+            setIsDeleteDialogOpen(false);
+            setBinToDelete(null);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || 'Failed to delete collection bin', variant: "destructive" });
+        }
+    };
+
     const handleEdit = (bin: BinRecord) => {
+        if (!bin.active && !isSuperAdmin) return;
         setSelectedBin(bin);
         setFormData({
             binId: bin.binId,
@@ -632,11 +655,12 @@ const confirmCancelItem = async () => {
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
+                if (!item.active && !isSuperAdmin) return;
                 handleEdit(item);
               }}
-              disabled={!item.active}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-              title={item.active ? "Edit collection bin" : "Cannot edit inactive"}
+              disabled={!item.active && !isSuperAdmin}
+              className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${!item.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={item.active || isSuperAdmin ? "Edit collection bin" : "Cannot edit inactive"}
             >
               <Pencil className="w-4 h-4" />
             </Button>
@@ -665,6 +689,21 @@ const confirmCancelItem = async () => {
             >
               <X className="w-4 h-4" />
             </Button>
+
+            {/* Delete — super admin only */}
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(item);
+                }}
+                className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </td>
       </motion.tr>
@@ -1109,6 +1148,45 @@ const confirmCancelItem = async () => {
                                         >
                                             {cancelledBins.has(binToCancel?.binId || '') ? "Restore" : "Cancel"}
                                         </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                                <div className="flex items-center justify-between p-6 bg-red-600 rounded-t-xl">
+                                    <h2 className="text-xl font-bold text-white">Delete Collection Bin</h2>
+                                    <button onClick={() => setIsDeleteDialogOpen(false)} className="text-white hover:opacity-80 rounded-lg p-2 transition-colors">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <p className="text-gray-700">
+                                        Are you sure you want to permanently delete <strong>{binToDelete?.binName}</strong>? This action cannot be undone.
+                                    </p>
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+                                        <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
                                     </div>
                                 </div>
                             </div>

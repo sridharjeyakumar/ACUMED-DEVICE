@@ -5,13 +5,14 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, Archive, ChevronDown, X } from "lucide-react";
+import { Search, Plus, Filter, Pencil, Archive, ChevronDown, X, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { cartonCapacityAPI, cartonTypeAPI, packSizeAPI, productAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 
 interface CartonCapacityRecord {
     id: string;
@@ -78,6 +79,9 @@ export default function CartonCapacityMasterPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [capacityToCancel, setCapacityToCancel] = useState<CartonCapacityRecord | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [capacityToDelete, setCapacityToDelete] = useState<CartonCapacityRecord | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [cancelledCapacities, setCancelledCapacities] = useState<Set<string>>(new Set());
     const [selectedCapacity, setSelectedCapacity] = useState<CartonCapacityRecord | null>(null);
     const [filterActive, setFilterActive] = useState<string>("true");
@@ -294,6 +298,24 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                 description: error.message || "Failed to create carton capacity",
                 variant: "destructive",
             });
+        }
+    };
+
+    const handleDelete = (capacity: CartonCapacityRecord) => {
+        setCapacityToDelete(capacity);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!capacityToDelete) return;
+        try {
+            await cartonCapacityAPI.delete(capacityToDelete.cartonCapacityId);
+            toast({ title: "Deleted", description: "Carton capacity permanently deleted" });
+            setIsDeleteDialogOpen(false);
+            setCapacityToDelete(null);
+            loadRecords();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete carton capacity", variant: "destructive" });
         }
     };
 
@@ -733,8 +755,8 @@ const confirmCancelItem = async () => {
                 handleEdit(item);
               }}
               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-              disabled={!item.active}
-              title={item.active ? "Edit carton capacity" : "Cannot edit inactive"}
+              disabled={!item.active && !isSuperAdmin}
+              title={!item.active && !isSuperAdmin ? "Cannot edit inactive" : "Edit carton capacity"}
             >
               <Pencil className="w-4 h-4" />
             </Button>
@@ -762,6 +784,20 @@ const confirmCancelItem = async () => {
             >
               <X className="w-4 h-4" />
             </Button>
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(item);
+                }}
+                className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                title="Permanently delete"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </td>
       </motion.tr>
@@ -1223,6 +1259,49 @@ const confirmCancelItem = async () => {
                                         </Button>
                                     </div>
                                 </form>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        >
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
+                                <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+                                    <h2 className="text-xl font-bold">Delete Carton Capacity</h2>
+                                    <button onClick={() => setIsDeleteDialogOpen(false)} className="text-white hover:opacity-80 rounded-lg p-2 transition-colors">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6">
+                                    <p className="text-foreground mb-2">
+                                        Are you sure you want to permanently delete <strong>{capacityToDelete?.cartonCapacityName}</strong>?
+                                    </p>
+                                    <p className="text-sm text-muted-foreground mb-6">This action cannot be undone.</p>
+                                    <div className="flex items-center justify-end gap-4">
+                                        <Button variant="outline" onClick={() => { setIsDeleteDialogOpen(false); setCapacityToDelete(null); }}>
+                                            Cancel
+                                        </Button>
+                                        <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                                            Delete
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     </>

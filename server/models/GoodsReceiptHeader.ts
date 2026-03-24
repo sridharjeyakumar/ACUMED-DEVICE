@@ -15,6 +15,7 @@ export interface IGoodsReceiptHeader extends Document {
   last_modified_user_id: string;     // Char(5)
   last_modified_date_time: Date;     // Date
   status: string;                    // Char(1) (e.g., 'A' for Active, 'P' for Pending)
+  active: boolean;                   // Virtual field to indicate if the record is active (status === 'A')
 }
 
 const GoodsReceiptHeaderSchema: Schema = new Schema({
@@ -53,6 +54,11 @@ const GoodsReceiptHeaderSchema: Schema = new Schema({
     required: true, 
     maxlength: 5, 
     ref: 'EmployeeMaster' 
+  },
+    active: {
+    type: Boolean,
+    required: false,
+    default: true,
   },
   
   remarks: { type: String, maxlength: 100, trim: true },

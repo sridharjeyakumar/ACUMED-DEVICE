@@ -5,10 +5,11 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Menu as MenuIcon } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Menu as MenuIcon, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { menuAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,9 @@ export default function MenuMasterPage() {
     const [cancelModalType, setCancelModalType] = useState<'add' | 'edit' | null>(null);
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [menuToCancel, setMenuToCancel] = useState<Menu | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
     const [menus, setMenus] = useState<Menu[]>([]);
     const [loading, setLoading] = useState(true);
@@ -145,6 +149,25 @@ export default function MenuMasterPage() {
             });
         } finally {
             isSubmittingRef.current = false;
+        }
+    };
+
+    const handleDelete = (menu: Menu) => {
+        setMenuToDelete(menu);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!menuToDelete) return;
+        try {
+            await menuAPI.delete(menuToDelete.menu_id);
+            toast({ title: "Deleted", description: "Menu permanently deleted" });
+            setIsDeleteDialogOpen(false);
+            const deletedId = menuToDelete.menu_id;
+            setMenuToDelete(null);
+            setMenus(prev => prev.filter(m => m.menu_id !== deletedId));
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete menu", variant: "destructive" });
         }
     };
 
@@ -498,8 +521,8 @@ export default function MenuMasterPage() {
                                                                 e.stopPropagation();
                                                                 handleEdit(menu);
                                                             }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            disabled={!menu.active}
+                                                            className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${!menu.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            disabled={!menu.active && !isSuperAdmin}
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
@@ -516,6 +539,17 @@ export default function MenuMasterPage() {
                                                         >
                                                             <X className="w-4 h-4" />
                                                         </Button>
+                                                        {isSuperAdmin && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={(e) => { e.stopPropagation(); handleDelete(menu); }}
+                                                                className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                                                                title="Permanently delete"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </motion.tr>
@@ -746,6 +780,26 @@ export default function MenuMasterPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
                             Yes, Cancel
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Menu</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete &quot;{menuToDelete?.menu_desc}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setMenuToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

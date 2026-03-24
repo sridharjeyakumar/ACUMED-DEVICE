@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { machineStopReasonAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -48,6 +49,9 @@ function formatDateTime(date: Date | string): string {
 
 export default function MachineStopReasonMasterPage() {
     const { toast } = useToast();
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [reasonToDelete, setReasonToDelete] = useState<MachineStopReason | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -157,8 +161,26 @@ export default function MachineStopReasonMasterPage() {
         }
     };
 
+    const handleDelete = (reason: MachineStopReason) => {
+        setReasonToDelete(reason);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!reasonToDelete) return;
+        try {
+            await machineStopReasonAPI.delete(reasonToDelete.reason_id);
+            setReasons(prev => prev.filter(r => r.reason_id !== reasonToDelete.reason_id));
+            toast({ title: "Deleted", description: `Reason "${reasonToDelete.reason_name}" has been deleted.` });
+            setIsDeleteDialogOpen(false);
+            setReasonToDelete(null);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || 'Failed to delete reason', variant: "destructive" });
+        }
+    };
+
     const handleEdit = (reason: MachineStopReason) => {
-        if (!reason.active) {
+        if (!reason.active && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "Cancelled reasons cannot be edited",
@@ -183,7 +205,7 @@ export default function MachineStopReasonMasterPage() {
         if (isSubmittingRef.current) return;
         if (!selectedReason) return;
 
-        if (!selectedReason.active) {
+        if (!selectedReason.active && !isSuperAdmin) {
             toast({
                 title: "Cannot Edit",
                 description: "This reason has been cancelled and cannot be edited",
@@ -514,10 +536,10 @@ export default function MachineStopReasonMasterPage() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={(e) => { e.stopPropagation(); handleEdit(reason); }}
-                                                                className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${!reason.active ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                disabled={!reason.active}
-                                                                title={!reason.active ? "Cannot edit cancelled reasons" : "Edit reason"}
+                                                                onClick={(e) => { e.stopPropagation(); if (!reason.active && !isSuperAdmin) return; handleEdit(reason); }}
+                                                                className={`text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${!reason.active && !isSuperAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                disabled={!reason.active && !isSuperAdmin}
+                                                                title={!reason.active && !isSuperAdmin ? "Cannot edit cancelled reasons" : "Edit reason"}
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </Button>
@@ -531,6 +553,16 @@ export default function MachineStopReasonMasterPage() {
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </Button>
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={(e) => { e.stopPropagation(); handleDelete(reason); }}
+                                                                    className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>
@@ -676,7 +708,7 @@ export default function MachineStopReasonMasterPage() {
 
             {/* Edit Modal */}
             <AnimatePresence>
-                {isEditModalOpen && selectedReason?.active && (
+                {isEditModalOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -822,6 +854,25 @@ export default function MachineStopReasonMasterPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">
                             Yes, Cancel Reason
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Reason</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete &quot;{reasonToDelete?.reason_name}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setReasonToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
