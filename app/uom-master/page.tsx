@@ -984,7 +984,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                                             variant="outline"
                                             onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
-                                            Cancel
+                                            Discard
                                         </Button>
                                         <Button
                                             onClick={confirmCancelItem}

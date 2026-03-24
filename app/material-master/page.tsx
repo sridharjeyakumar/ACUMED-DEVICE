@@ -1864,7 +1864,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                             variant="outline"
                                             onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
-                                            Cancel
+                                            Discard
                                         </Button>
                                         <Button
                                             onClick={confirmCancelItem}

@@ -981,7 +981,7 @@ export default function CartonTypeMasterPage() {
                                             variant="outline"
                                             onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
-                                            Cancel
+                                            Discard
                                         </Button>
                                         <Button
                                             onClick={confirmCancelItem}

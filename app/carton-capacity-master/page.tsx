@@ -1353,7 +1353,7 @@ const confirmCancelItem = async () => {
                                             variant="outline"
                                             onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
-                                            Cancel
+                                            Discard
                                         </Button>
                                         <Button
                                             onClick={confirmCancelItem}
