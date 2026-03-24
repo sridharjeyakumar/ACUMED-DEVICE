@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import MachineEvent from '@/server/models/MachineEvent';
+import MachineEventMaterial from '@/server/models/MachineEventMaterial';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // GET /api/machine-events/[id]
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await ensureConnection();
     const event = await MachineEvent.findOne({ machine_event_id: Number(params.id) }).lean();
@@ -45,14 +46,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE /api/machine-events/[id]
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await ensureConnection();
     const event = await MachineEvent.findOneAndDelete({ machine_event_id: Number(params.id) });
     if (!event) {
       return NextResponse.json({ error: 'Machine Event not found' }, { status: 404 });
     }
-    return NextResponse.json({ message: 'Machine Event deleted successfully' });
+    // Cascade delete related machine event materials
+    await MachineEventMaterial.deleteMany({ machine_event_id: Number(params.id) });
+    return NextResponse.json({ message: 'Machine Event and related materials deleted successfully' });
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Failed to delete machine event' },

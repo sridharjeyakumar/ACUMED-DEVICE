@@ -16,10 +16,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { employeeAPI, goodsReceiptHeaderAPI, goodsReceiptDetailAPI, goodsReceiptUnitsAPI, materialStatusAPI, materialAPI, materialStockAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
 interface GoodsReceiptHeader {
+    active: boolean;
     _id?: string;
     material_doc_no: string;
     material_doc_date: Date | string;
@@ -156,6 +162,11 @@ export default function GoodsReceiptHeaderPage() {
     const [rowsPerPage, setRowsPerPage]   = useState<number>(10);
     const [currentPage, setCurrentPage]   = useState<number>(1);
     const [filterStatus, setFilterStatus] = useState<string>("active");
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<GoodsReceiptHeader | null>(null);
+    const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
+    const [itemToCancel, setItemToCancel] = useState<GoodsReceiptHeader | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
 
     // ── Expandable rows state ─────────────────────────────────────────────────
     const [expandedDocRows,    setExpandedDocRows]    = useState<Set<string>>(new Set());
@@ -293,10 +304,12 @@ export default function GoodsReceiptHeaderPage() {
             item.invoice_no?.toLowerCase().includes(q) ||
             item.po_no?.toLowerCase().includes(q) ||
             item.received_by_emp_id?.toLowerCase().includes(q);
+        const isCancelled = item.active === false;
         const matchStatus =
             filterStatus === "all" ||
-            (filterStatus === "draft"  && item.status === "D") ||
-            (filterStatus === "active" && item.status === "A");
+            (filterStatus === "cancelled" && isCancelled) ||
+            (filterStatus === "draft"  && item.status === "D" && !isCancelled) ||
+            (filterStatus === "active" && !isCancelled);
         return matchSearch && matchStatus;
     });
 
@@ -480,6 +493,44 @@ export default function GoodsReceiptHeaderPage() {
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "Failed to create record", variant: "destructive" });
         } finally { isSubmittingRef.current = false; }
+    };
+
+    const handleCancelItem = (item: GoodsReceiptHeader) => {
+        setItemToCancel(item);
+        setIsCancelItemDialogOpen(true);
+    };
+
+    const confirmCancelItem = async () => {
+        if (!itemToCancel) return;
+        try {
+            await goodsReceiptHeaderAPI.cancel(itemToCancel.material_doc_no);
+            setItems(prev => prev.map(i =>
+                i.material_doc_no === itemToCancel.material_doc_no ? { ...i, active: false } : i
+            ));
+            toast({ title: "Cancelled", description: `GR ${itemToCancel.material_doc_no} has been cancelled` });
+            setIsCancelItemDialogOpen(false);
+            setItemToCancel(null);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to cancel goods receipt", variant: "destructive" });
+        }
+    };
+
+    const handleDelete = (item: GoodsReceiptHeader) => {
+        setItemToDelete(item);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        try {
+            await goodsReceiptHeaderAPI.delete(itemToDelete.material_doc_no);
+            toast({ title: "Deleted", description: `GR ${itemToDelete.material_doc_no} permanently deleted` });
+            setIsDeleteDialogOpen(false);
+            setItemToDelete(null);
+            loadItems();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to delete goods receipt", variant: "destructive" });
+        }
     };
 
     const handleEdit = async (item: GoodsReceiptHeader) => {
@@ -839,9 +890,9 @@ export default function GoodsReceiptHeaderPage() {
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Status</label>
-                                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${formData.status === "A" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+                                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${selectedItem?.active === false ? "bg-red-100 text-red-600" : formData.status === "A" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
                                     <span className="w-2 h-2 rounded-full bg-current" />
-                                    {formData.status === "A" ? "ACTIVE" : "DRAFT MODE"}
+                                    {selectedItem?.active === false ? "CANCELLED" : formData.status === "A" ? "ACTIVE" : "DRAFT MODE"}
                                 </div>
                             </div>
                         </div>
@@ -1141,7 +1192,7 @@ export default function GoodsReceiptHeaderPage() {
                                             <div className="space-y-3">
                                                 <Label className="text-sm font-semibold">Status</Label>
                                                 <div className="space-y-2">
-                                                    {[["all","All"],["draft","Draft (D)"],["active","Active (A)"]].map(([val,label]) => (
+                                                    {[["all","All"],["active","Active"],["draft","Draft (D)"],["cancelled","Cancelled"]].map(([val,label]) => (
                                                         <div key={val} className="flex items-center gap-2">
                                                             <input type="radio" id={`sf-${val}`} name="sf" checked={filterStatus === val} onChange={() => setFilterStatus(val)} className="h-4 w-4" />
                                                             <Label htmlFor={`sf-${val}`} className="text-sm font-normal cursor-pointer">{label}</Label>
@@ -1243,18 +1294,34 @@ export default function GoodsReceiptHeaderPage() {
                                                         <td className="px-4 py-4 text-sm align-middle font-mono">{item.last_modified_user_id || "-"}</td>
                                                         <td className="px-4 py-4 text-sm align-middle whitespace-nowrap">{item.last_modified_date_time ? formatDateTime(item.last_modified_date_time) : "-"}</td>
                                                         <td className="px-4 py-4 align-middle">
-                                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${item.status === "A" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}>
-                                                                {item.status === "A" ? "Active" : "Draft"}
+                                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${item.active === false ? "bg-red-50 text-red-600" : item.status === "A" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}>
+                                                                {item.active === false ? "Cancelled" : item.status === "A" ? "Active" : "Draft"}
                                                             </span>
                                                         </td>
                                                         {/* Details expand */}
                                                       
                                                         <td className="px-4 py-4 text-center align-middle">
-                                                            <Button variant="ghost" size="sm"
-                                                                onClick={e => { e.stopPropagation(); handleEdit(item); }}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Edit">
-                                                                <Pencil className="w-4 h-4" />
-                                                            </Button>
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                <Button variant="ghost" size="sm"
+                                                                    onClick={e => { e.stopPropagation(); handleEdit(item); }}
+                                                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Edit">
+                                                                    <Pencil className="w-4 h-4" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="sm"
+                                                                    onClick={e => { e.stopPropagation(); handleCancelItem(item); }}
+                                                                    disabled={item.active === false}
+                                                                    className={item.active !== false ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "text-gray-400 cursor-not-allowed"}
+                                                                    title={item.active !== false ? "Cancel GR" : "Already cancelled"}>
+                                                                    <X className="w-4 h-4" />
+                                                                </Button>
+                                                                {isSuperAdmin && (
+                                                                    <Button variant="ghost" size="sm"
+                                                                        onClick={e => { e.stopPropagation(); handleDelete(item); }}
+                                                                        className="text-red-700 hover:text-red-800 hover:bg-red-50" title="Permanently delete">
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                     </motion.tr>
 
@@ -1422,6 +1489,45 @@ export default function GoodsReceiptHeaderPage() {
 
             <AnimatePresence>{isAddModalOpen  && renderModal(false)}</AnimatePresence>
             <AnimatePresence>{isEditModalOpen && renderModal(true)}</AnimatePresence>
+
+            <AlertDialog open={isCancelItemDialogOpen} onOpenChange={setIsCancelItemDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Cancel Goods Receipt</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to cancel GR &quot;{itemToCancel?.material_doc_no}&quot;? It will be set to inactive.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsCancelItemDialogOpen(false); setItemToCancel(null); }}>
+                            No, Keep Active
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700 text-white">
+                            Yes, Cancel GR
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Goods Receipt</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete GR &quot;{itemToDelete?.material_doc_no}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setItemToDelete(null); }}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
+

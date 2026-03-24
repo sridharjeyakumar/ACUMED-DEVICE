@@ -16,6 +16,7 @@ export interface IProduction {
   last_modified_user_id: string;
   last_modified_date_time: Date;
   status: string;
+  active: boolean; // Virtual field to indicate if the record is active (status === 'A')
 }
 
 export interface IProductionDocument extends Document, IProduction {}
@@ -35,7 +36,12 @@ const ProductionSchema = new Schema<IProductionDocument>({
   remarks: { type: String, maxlength: 100 },
   last_modified_user_id: { type: String, maxlength: 5 },
   last_modified_date_time: { type: Date, default: Date.now },
-  status: { type: String, maxlength: 1, trim: true, uppercase: true }
+  status: { type: String, maxlength: 1, trim: true, uppercase: true },
+    active: {
+    type: Boolean,
+    required: false,
+    default: true,
+  },
 }, {
   timestamps: true
 });

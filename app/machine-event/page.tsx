@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Info, Layers, CheckCircle2, Clock, User, FileText, Save, History, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Info, Layers, CheckCircle2, Clock, User, FileText, Save, History, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
 import { machineEventAPI, machineEventTypeAPI, machineStopReasonAPI, employeeAPI, materialStockAPI, productBomAPI, availableRollsAPI, machineEventMaterialAPI, batchMaterialSummaryAPI } from "@/services/api";
+import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -115,6 +116,7 @@ export default function MachineEventPage() {
     const [cancelModalType, setCancelModalType] = useState<"add" | "edit" | null>(null);
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [eventToCancel, setEventToCancel] = useState<MachineEvent | null>(null);
+    const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [selectedEvent, setSelectedEvent] = useState<MachineEvent | null>(null);
     const isSubmittingRef = useRef(false);
 
@@ -746,8 +748,10 @@ export default function MachineEventPage() {
                                                     <div className="flex items-center justify-center gap-2">
                                                         <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); handleEdit(ev); }}
                                                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"><Pencil className="w-4 h-4" /></Button>
-                                                        <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); handleCancel(ev); }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"><X className="w-4 h-4" /></Button>
+                                                        {isSuperAdmin && (
+                                                            <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); handleCancel(ev); }}
+                                                                className="text-red-700 hover:text-red-800 hover:bg-red-50" title="Permanently delete"><Trash2 className="w-4 h-4" /></Button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </motion.tr>

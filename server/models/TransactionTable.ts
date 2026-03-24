@@ -17,6 +17,7 @@ export interface ITransactionTable extends Document {
   last_modified_date_time?: Date;
   current_batch_event_type_id?: string;
   current_batch_status_id: 'P' | 'R' | 'W' | 'C';
+  active: boolean;
 }
 
 const TransactionTableSchema: Schema = new Schema({
@@ -55,7 +56,8 @@ const TransactionTableSchema: Schema = new Schema({
     enum: ['P', 'R', 'W', 'C'],
     default: 'P',
     required: true
-  }
+  },
+  active: { type: Boolean, default: true }
 }, {
   timestamps: true 
 });

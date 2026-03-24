@@ -637,6 +637,10 @@ export const goodsReceiptHeaderAPI = {
     /** Delete a header */
     delete: (docNo: string) =>
         fetchAPI(`/goods-receipt-headers/${docNo}`, { method: 'DELETE' }),
+
+    /** Cancel a header (set active=false) */
+    cancel: (docNo: string) =>
+        fetchAPI(`/goods-receipt-headers/${docNo}`, { method: 'PATCH', body: JSON.stringify({ active: false }) }),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

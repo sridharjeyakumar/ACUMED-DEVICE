@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import GoodsReceiptHeader from '@/server/models/GoodsReceiptHeader';
+import GoodsReceiptDetail from '@/server/models/GoodsReceiptDetail';
+import GoodsReceiptUnits from '@/server/models/GoodsReceiptUnits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -125,6 +127,28 @@ export async function PUT(
     }
 }
 
+// PATCH /api/goods-receipt-headers/[id] - Partial update (e.g., cancel: set active=false)
+export async function PATCH(
+    _request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        await ensureConnection();
+        const body = await _request.json();
+        const updated = await GoodsReceiptHeader.findOneAndUpdate(
+            { material_doc_no: params.id.toUpperCase() },
+            { ...body, last_modified_date_time: new Date() },
+            { new: true }
+        ).lean();
+        if (!updated) {
+            return NextResponse.json({ error: `GR '${params.id}' not found` }, { status: 404 });
+        }
+        return NextResponse.json(updated, { status: 200 });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message || 'Failed to update' }, { status: 500 });
+    }
+}
+
 // DELETE /api/goods-receipt-headers/[id] - Delete a Goods Receipt Header
 export async function DELETE(
     request: NextRequest,
@@ -133,8 +157,10 @@ export async function DELETE(
     try {
         await ensureConnection();
 
+        const docNo = params.id.toUpperCase();
+
         const deleted = await GoodsReceiptHeader.findOneAndDelete({
-            material_doc_no: params.id.toUpperCase(),
+            material_doc_no: docNo,
         }).lean();
 
         if (!deleted) {
@@ -144,8 +170,14 @@ export async function DELETE(
             );
         }
 
+        // Cascade delete: remove all related detail rows and unit rows
+        await Promise.all([
+            GoodsReceiptDetail.deleteMany({ material_doc_no: docNo }),
+            GoodsReceiptUnits.deleteMany({ material_doc_no: docNo }),
+        ]);
+
         return NextResponse.json(
-            { message: `Goods Receipt Header '${params.id}' deleted successfully` },
+            { message: `Goods Receipt Header '${params.id}' and all related records deleted successfully` },
             { status: 200 }
         );
     } catch (error: any) {
