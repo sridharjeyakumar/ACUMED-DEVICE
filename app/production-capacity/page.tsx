@@ -1125,7 +1125,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                                             variant="outline"
                                             onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
-                                            Cancel
+                                            Discard
                                         </Button>
                                         <Button
                                             onClick={confirmCancelItem}

@@ -1592,37 +1592,47 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* UOM */}
-                                        <div>
+                                                                          <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 UOM <span className="text-red-500">*</span>
                                             </label>
-                                            <select
-                                                name="uom"
-                                                value={formData.uom}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                                required
-                                            >
-                                                <option value="NOS">NOS</option>
-                                                <option value="KG">KG</option>
-                                                <option value="GMS">GMS</option>
-                                                <option value="PCS">PCS</option>
-                                                <option value="BOX">BOX</option>
-                                                <option value="CARTON">CARTON</option>
-                                            </select>
+                                      
+                                                <select
+        name="uom"
+        value={formData.uom}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a uom</option>
+        {uoms.filter((uom) => uom.active !== false||uom.uom_id===formData.uom).map(product => (
+            <option key={product.uom_id} value={product.uom_id}>
+                {product.uom_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Product Category ID */}
-                                        <div>
+                                                                             <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Product Category ID
                                             </label>
-                                            <Input
-                                                name="product_category_id"
-                                                value={formData.product_category_id}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter category ID"
-                                            />
+                             
+                                                                                            <select
+        name="product_category_id"
+        value={formData.product_category_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a category ID</option>
+        {categories.filter((data) => data.active !== false).map(product => (
+            <option key={product.product_category_id} value={product.product_category_id}>
+                {product.product_category_id}-{product.product_category_name}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Specifications Section */}
@@ -1958,7 +1968,7 @@ const confirmCancelItem = async () => {
                                             variant="outline"
                                             onClick={() => setIsCancelItemDialogOpen(false)}
                                         >
-                                            Cancel
+                                            Discard
                                         </Button>
                                         <Button
                                             onClick={confirmCancelItem}
