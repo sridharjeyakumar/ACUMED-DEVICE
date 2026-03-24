@@ -4,7 +4,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, User } from "lucide-react";
-import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { userAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
@@ -190,7 +189,6 @@ const UserMaster = () => {
                         </div>
                     </motion.div>
 
-                    <StatsCards />
 
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}

@@ -4,7 +4,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, Pencil, Archive, ChevronDown, Trash2 } from "lucide-react";
-import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 
@@ -191,7 +190,6 @@ const CartonCapacityMaster = () => {
                         </div>
                     </motion.div>
 
-                    <StatsCards />
 
                     {/* Search and Filter Bar */}
                     <motion.div

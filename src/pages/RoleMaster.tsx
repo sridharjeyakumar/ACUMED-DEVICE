@@ -4,7 +4,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Shield, Trash2 } from "lucide-react";
-import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Role {
@@ -140,7 +139,6 @@ const RoleMaster = () => {
                         </div>
                     </motion.div>
 
-                    <StatsCards />
 
                     {/* Search and Filter Bar */}
                     <motion.div

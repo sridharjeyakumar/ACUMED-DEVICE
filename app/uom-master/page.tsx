@@ -5,7 +5,6 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StatsCards } from "@/components/dashboard/StatsCards";
 import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -399,7 +398,6 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                         </div>
                     </motion.div>
 
-                    <StatsCards />
 
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -510,9 +508,9 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                         transition={{ duration: 0.5, delay: 0.2 }}
                     >
                         <Card className="overflow-hidden">
-                            <div className="overflow-x-auto">
+                            <div className="overflow-auto max-h-[360px]">
                                 <table className="w-full">
-                                    <thead>
+                                    <thead className="sticky top-0 z-10">
                                         <tr className="bg-gray-100 border-b border-gray-300">
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 UOM ID

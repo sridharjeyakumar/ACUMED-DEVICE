@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, User, Trash2 } from "lucide-react";
-import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { userAPI, roleAPI, employeeAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
@@ -446,7 +445,6 @@ export default function UserMasterPage() {
                         </div>
                     </motion.div>
 
-                    <StatsCards />
 
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -589,9 +587,9 @@ export default function UserMasterPage() {
                         transition={{ duration: 0.5, delay: 0.2 }}
                     >
                         <Card className="overflow-hidden">
-                            <div className="overflow-x-auto">
+                            <div className="overflow-auto max-h-[360px]">
                                 <table className="w-full">
-                                    <thead>
+                                    <thead className="sticky top-0 z-10">
                                         <tr className="bg-gray-100 border-b border-border">
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">User Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Employee Id</th>
