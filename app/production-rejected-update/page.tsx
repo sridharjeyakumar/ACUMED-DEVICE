@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, X, Calendar, Download, Settings2, Pencil, Trash2 } from "lucide-react";
-import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -166,7 +165,6 @@ export default function ProductionRejectedUpdatePage() {
                         </div>
                     </motion.div>
 
-                    <StatsCards />
 
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}

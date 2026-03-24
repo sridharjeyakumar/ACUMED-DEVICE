@@ -5,7 +5,6 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StatsCards } from "@/components/dashboard/StatsCards";
 import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X, Play, Pause, CheckCircle, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -975,7 +974,6 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                         </div>
                     </motion.div>
 
-                    <StatsCards />
 
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}

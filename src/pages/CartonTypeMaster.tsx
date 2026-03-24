@@ -3,7 +3,6 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StatsCards } from "@/components/dashboard/StatsCards";
 import { Search, Plus, Filter, Pencil, Truck, ChevronDown, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
@@ -144,7 +143,6 @@ const CartonTypeMaster = () => {
                         </div>
                     </motion.div>
 
-                    <StatsCards />
 
                     {/* Search and Filter Bar */}
                     <motion.div

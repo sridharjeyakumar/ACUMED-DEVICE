@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
-import { StatsCards } from "@/components/dashboard/StatsCards";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -661,7 +660,6 @@ const confirmCancelItem = async () => {
                         </div>
                     </motion.div>
 
-                    <StatsCards />
 
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -806,9 +804,9 @@ const confirmCancelItem = async () => {
                         transition={{ duration: 0.5, delay: 0.2 }}
                     >
                         <Card className="overflow-hidden">
-                            <div className="overflow-x-auto">
+                            <div className="overflow-auto max-h-[360px]">
                                 <table className="w-full">
-                                   <thead>
+                                   <thead className="sticky top-0 z-10">
   <tr className="bg-gray-100 border-b border-border">
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Product ID</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Product Name</th>

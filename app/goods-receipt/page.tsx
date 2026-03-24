@@ -5,7 +5,6 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StatsCards } from "@/components/dashboard/StatsCards";
 import {
     Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X,
     Truck, FileText, Settings, LayoutList, ChevronDown, ChevronUp, Trash2, MessageSquare
@@ -1168,7 +1167,6 @@ export default function GoodsReceiptHeaderPage() {
                         </div>
                     </motion.div>
 
-                    <StatsCards />
 
                     {/* Search / Filter bar */}
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="mb-6">

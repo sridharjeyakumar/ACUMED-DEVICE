@@ -154,7 +154,7 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
     if (activeSection && !expandedSections.includes(activeSection)) {
       setExpandedSections(prev => [...prev, activeSection]);
     }
-  }, [pathname, getActiveSection, expandedSections]);
+  }, [pathname, getActiveSection]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to active item when it becomes visible
   useEffect(() => {
@@ -175,7 +175,7 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
         scrollPositionRef.current = nav.scrollTop;
       }
     }
-  }, [pathname, expandedSections]);
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Preserve scroll position on re-renders (but not when pathname changes)
   useEffect(() => {

@@ -5,7 +5,6 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StatsCards } from "@/components/dashboard/StatsCards";
 import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X, CheckCircle, XCircle, ChevronDown, ChevronUp, LayoutList, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -846,7 +845,6 @@ const handleUndo = async () => {
                         </div>
                     </motion.div>
 
-                    <StatsCards />
 
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
