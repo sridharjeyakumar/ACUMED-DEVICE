@@ -4,8 +4,9 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryProvider } from './providers';
+import AuthGuard from '@/components/AuthGuard';
+
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,7 +29,7 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning>
         <ReactQueryProvider>
           <TooltipProvider>
-            {children}
+            <AuthGuard>{children}</AuthGuard>
             <Toaster />
             <Sonner />
             {/* App Version Overlay */}
