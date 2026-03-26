@@ -43,6 +43,7 @@ interface ProductMovementRecord {
     approved_by_user_id: string;
     approved_date_time: string;
     status: 'E' | 'A' | 'X';
+    movement_type?: 'NORMAL' | 'SPECIAL_A' | 'SPECIAL_R';
 }
 
 interface StockOption {
@@ -637,6 +638,7 @@ export default function ProductMovementsPage() {
                 approved_by_user_id: "",
                 approved_date_time:  null,
                 status:              form2Data.status,
+                movement_type:       `SPECIAL_${form2Data.adjustment_type}` as 'SPECIAL_A' | 'SPECIAL_R',
             };
             await productMovementAPI.create(payload2);
             if (form2Data.status === 'A') await updateStockForMovement(payload2 as any);
@@ -673,9 +675,49 @@ export default function ProductMovementsPage() {
     const handleEdit = (record: ProductMovementRecord) => {
         if (record.status !== 'E') return; // only allow editing Entered records
         setSelectedRecord(record);
-        setApprovalRemarks("");
-        setApprovalError(null);
+        setFormData({
+            movement_date:       record.movement_date?.slice(0, 10) || today(),
+            batch_no:            record.batch_no,
+            product_id:          record.product_id,
+            pack_size_id:        record.pack_size_id,
+            to_prod_status_id:   record.to_prod_status_id,
+            from_prod_status_id: record.from_prod_status_id,
+            carton_type_id:      record.carton_type_id,
+            carton_capacity_id:  record.carton_capacity_id,
+            no_of_cartons:       String(record.no_of_cartons ?? ""),
+            no_of_packs:         String(record.no_of_packs ?? ""),
+            no_of_sachets:       String(record.no_of_sachets ?? ""),
+            remarks:             record.remarks || "",
+            entered_by_user_id:  record.entered_by_user_id,
+            status:              record.status,
+        });
+        setTransitionOptions([]);
+        setCartonCapacityInfo(null);
+        setPackSizeInfo(null);
         setIsEditModalOpen(true);
+    };
+
+    const handleEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedRecord) return;
+        setSaving(true);
+        setError(null);
+        try {
+            await productMovementAPI.update(selectedRecord.prod_movement_id, {
+                movement_date:  formData.movement_date,
+                no_of_cartons:  Number(formData.no_of_cartons) || 0,
+                no_of_packs:    Number(formData.no_of_packs),
+                no_of_sachets:  Number(formData.no_of_sachets),
+                remarks:        formData.remarks,
+            });
+            setIsEditModalOpen(false);
+            setSelectedRecord(null);
+            fetchMovements();
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setSaving(false);
+        }
     };
 
     // ── CRUD helpers ──────────────────────────────────────────────────────────
@@ -736,6 +778,7 @@ export default function ProductMovementsPage() {
                 approved_by_user_id: "",
                 approved_date_time:  null,
                 status:              formData.status,
+                movement_type:       'NORMAL',
             };
             await productMovementAPI.create(payload);
             if (formData.status === 'A') await updateStockForMovement(payload as any);
@@ -1460,6 +1503,7 @@ export default function ProductMovementsPage() {
                                                     <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Approval Remarks</th>
                                                     <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Approved By</th>
                                                     <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Approved Date &amp; Time</th>
+                                                    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Type</th>
                                                     <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Status</th>
                                                     <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th>
                                                 </tr>
@@ -1467,7 +1511,7 @@ export default function ProductMovementsPage() {
                                             <tbody className="divide-y divide-border">
                                                 {filteredRecords.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={20} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                                                        <td colSpan={21} className="px-6 py-12 text-center text-sm text-muted-foreground">
                                                             No product movements found.
                                                         </td>
                                                     </tr>
@@ -1504,6 +1548,17 @@ export default function ProductMovementsPage() {
                                                             <td className="px-6 py-4 text-sm text-foreground">{record.approval_remarks}</td>
                                                             <td className="px-6 py-4 text-sm text-foreground">{record.approved_by_user_id}</td>
                                                             <td className="px-6 py-4 text-sm text-foreground whitespace-nowrap">{formatDateTime(record.approved_date_time)}</td>
+                                                            <td className="px-6 py-4 text-center">
+                                                                {record.movement_type === 'SPECIAL_A' && (
+                                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Special Add</span>
+                                                                )}
+                                                                {record.movement_type === 'SPECIAL_R' && (
+                                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Special Reduce</span>
+                                                                )}
+                                                                {(!record.movement_type || record.movement_type === 'NORMAL') && (
+                                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Normal</span>
+                                                                )}
+                                                            </td>
                                                             <td className="px-6 py-4 text-center">
                                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_LABELS[record.status]?.color}`}>
                                                                     {STATUS_LABELS[record.status]?.label}
@@ -1605,96 +1660,19 @@ export default function ProductMovementsPage() {
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
                                 <div className="bg-amber-600 text-white px-6 py-4 flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-2xl font-bold">Approve / Cancel Movement</h2>
+                                        <h2 className="text-2xl font-bold">Edit Movement</h2>
                                         <p className="text-amber-100 text-sm mt-0.5">{formatMovementId(selectedRecord.prod_movement_id)} — {selectedRecord.batch_no}</p>
                                     </div>
-                                    <button onClick={() => { setIsEditModalOpen(false); setApprovalRemarks(""); setApprovalError(null); }} className="text-white hover:bg-amber-700 rounded-lg p-2 transition-colors">
+                                    <button onClick={() => { setIsEditModalOpen(false); setError(null); }} className="text-white hover:bg-amber-700 rounded-lg p-2 transition-colors">
                                         <X className="w-6 h-6" />
                                     </button>
                                 </div>
-
-                                <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    {/* Display-only movement fields */}
-                                    <div className="grid grid-cols-2 gap-3 mb-5">
-                                        {[
-                                            ["Movement Date",  selectedRecord.movement_date?.slice(0,10)],
-                                            ["Batch No.",      selectedRecord.batch_no],
-                                            ["Product ID",     selectedRecord.product_id],
-                                            ["Pack Size",      selectedRecord.pack_size_id],
-                                            ["From Status",    selectedRecord.from_prod_status_id],
-                                            ["To Status",      selectedRecord.to_prod_status_id],
-                                            ["Carton Type",    selectedRecord.carton_type_id],
-                                            ["Carton Cap.",    selectedRecord.carton_capacity_id],
-                                            ["No. of Cartons", selectedRecord.no_of_cartons],
-                                            ["No. of Packs",   selectedRecord.no_of_packs?.toLocaleString()],
-                                            ["No. of Sachets", selectedRecord.no_of_sachets?.toLocaleString()],
-                                            ["Remarks",        selectedRecord.remarks],
-                                            ["Entered By",     selectedRecord.entered_by_user_id],
-                                            ["Entered At",     selectedRecord.entered_date_time ? formatDateTime(new Date(selectedRecord.entered_date_time)) : ""],
-                                        ].map(([label, value]) => (
-                                            <div key={String(label)}>
-                                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
-                                                <div className="px-3 py-1.5 rounded border border-input bg-muted text-sm">{value || "—"}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <hr className="mb-4" />
-
-                                    {/* Approval fields */}
-                                    <div className="mb-4">
-                                        <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                                            Approval Remarks <span className="text-red-500">*</span>
-                                        </label>
-                                        <Input
-                                            value={approvalRemarks}
-                                            onChange={e => setApprovalRemarks(e.target.value)}
-                                            placeholder="Required before approving"
-                                            maxLength={100}
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3 mb-4">
-                                        <div>
-                                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Approved By</p>
-                                            <div className="px-3 py-1.5 rounded border border-input bg-muted text-sm">ADMIN</div>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Approved Date &amp; Time</p>
-                                            <div className="px-3 py-1.5 rounded border border-input bg-muted text-sm">{formatDateTime(new Date())}</div>
-                                        </div>
-                                    </div>
-
-                                    {approvalError && (
-                                        <p className="text-sm text-red-600 mb-4 bg-red-50 border border-red-200 rounded px-3 py-2">{approvalError}</p>
-                                    )}
-
-                                    {/* Approve / Cancel buttons */}
-                                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => { setIsEditModalOpen(false); setApprovalRemarks(""); setApprovalError(null); }}
-                                            disabled={saving}
-                                        >
-                                            Close
-                                        </Button>
-                                        <Button
-                                            onClick={handleCancelMovement}
-                                            className="bg-red-600 hover:bg-red-700 text-white px-5"
-                                            disabled={saving}
-                                        >
-                                            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-                                            X — Cancel
-                                        </Button>
-                                        <Button
-                                            onClick={handleApprove}
-                                            className="bg-green-600 hover:bg-green-700 text-white px-5"
-                                            disabled={saving}
-                                        >
-                                            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-                                            A — Approve
-                                        </Button>
-                                    </div>
-                                </div>
+                                {MovementForm({
+                                    onSubmit: handleEditSubmit,
+                                    submitLabel: "Update Movement",
+                                    onClose: () => { setIsEditModalOpen(false); setError(null); },
+                                    isEdit: true,
+                                })}
                             </div>
                         </motion.div>
                     </>
