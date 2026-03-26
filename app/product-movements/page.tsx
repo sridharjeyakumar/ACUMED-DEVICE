@@ -1349,13 +1349,13 @@ export default function ProductMovementsPage() {
                                     <Plus className="w-5 h-5" />
                                     <span className="whitespace-nowrap">Add Movement</span>
                                 </Button>
-                                <Button
+                                {/* <Button
                                     onClick={handleOpenAdd2}
                                     className="bg-green-600 hover:bg-green-700 text-white px-4 md:px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all flex-1 md:flex-none"
                                 >
                                     <Plus className="w-5 h-5" />
                                     <span className="whitespace-nowrap">Add Movement (Special)</span>
-                                </Button>
+                                </Button> */}
                             </div>
                         </div>
                     </motion.div>

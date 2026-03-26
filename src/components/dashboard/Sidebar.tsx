@@ -109,6 +109,7 @@ const navSections: NavSection[] = [
       { icon: Factory, label: "Packing Entry", href: "/packing-entry" },
       { icon: Factory, label: "Packing Approval", href: "/packing-entry-approval" },
       { icon: Factory, label: "Product Movement", href: "/product-movements" },
+      { icon: Factory, label: "Product Movement Special", href: "/product-movement-special" },
       { icon: Factory, label: "Product Movement Approval", href: "/product-movement-approval" },
 
 
