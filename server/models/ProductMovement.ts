@@ -20,6 +20,7 @@ export interface IProductMovement extends Document {
   approved_by_user_id?: string;      // Char(5)
   approved_date_time?: Date;         // Date
   status: 'E' | 'A' | 'X';           // Char(1) - E=Entered, A=Approved, X=Cancelled
+  movement_type: 'NORMAL' | 'SPECIAL_A' | 'SPECIAL_R'; // Char(9) - movement origin
 }
 
 const ProductMovementSchema: Schema = new Schema({
@@ -131,6 +132,14 @@ const ProductMovementSchema: Schema = new Schema({
       message: 'Status must be either E (Entered), A (Approved), or X (Cancelled)'
     },
     default: 'E',
+  },
+  movement_type: {
+    type: String,
+    enum: {
+      values: ['NORMAL', 'SPECIAL_A', 'SPECIAL_R'],
+      message: 'movement_type must be NORMAL, SPECIAL_A, or SPECIAL_R',
+    },
+    default: 'NORMAL',
   },
 }, {
   timestamps: true,

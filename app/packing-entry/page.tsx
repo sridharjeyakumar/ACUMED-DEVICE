@@ -504,23 +504,23 @@ const handleBatchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         }
     };
 
-    const handleApproval = (packing: Packing) => {
-        if (packing.status !== 'E') {
-            toast({
-                title: "Already Processed",
-                description: "This record has already been approved or rejected",
-                variant: "destructive",
-            });
-            return;
-        }
+    // const handleApproval = (packing: Packing) => {
+    //     if (packing.status !== 'E') {
+    //         toast({
+    //             title: "Already Processed",
+    //             description: "This record has already been approved or rejected",
+    //             variant: "destructive",
+    //         });
+    //         return;
+    //     }
         
-        setSelectedPacking(packing);
-        setApprovalData({
-            approval_remarks: "",
-            status: "A",
-        });
-        setIsApprovalModalOpen(true);
-    };
+    //     setSelectedPacking(packing);
+    //     setApprovalData({
+    //         approval_remarks: "",
+    //         status: "A",
+    //     });
+    //     setIsApprovalModalOpen(true);
+    // };
 
 const generateMovementId = async (): Promise<number> => {
     const currentYear = new Date().getFullYear();
@@ -1115,7 +1115,7 @@ const handleUndo = async () => {
                                                                         <Trash2 className="w-4 h-4" />
                                                                     </Button>
                                                                 )}
-                                                                {item.status === 'E' && (
+                                                                {/* {item.status === 'E' && (
                                                                     <>
                                                                         <Button
                                                                             variant="ghost"
@@ -1130,7 +1130,7 @@ const handleUndo = async () => {
                                                                             <CheckCircle className="w-4 h-4" />
                                                                         </Button>
                                                                     </>
-                                                                )}
+                                                                )} */}
                                                             </div>
                                                         </td>
                                                     </motion.tr>
