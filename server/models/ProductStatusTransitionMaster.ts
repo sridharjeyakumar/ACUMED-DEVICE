@@ -6,6 +6,8 @@ export interface IProductStatusTransitionMaster extends Document {
   sterilization_required: string;    // Char(1) - Y/N
   approval_required: string;         // Char(1) - Y/N
   seq_no: number;                    // N(2)
+  no_of_days_min?: number;           // N(2)
+  no_of_days_max?: number;           // N(2)
   last_modified_user_id?: string;    // Char(5)
   last_modified_date_time?: Date;    // Date
   active: boolean;                   // Boolean
@@ -41,6 +43,18 @@ const ProductStatusTransitionMasterSchema: Schema = new Schema({
   seq_no: {
     type: Number,
     required: true,
+    min: 0,
+    max: 99,
+  },
+  no_of_days_min: {
+    type: Number,
+    required: false,
+    min: 0,
+    max: 99,
+  },
+  no_of_days_max: {
+    type: Number,
+    required: false,
     min: 0,
     max: 99,
   },

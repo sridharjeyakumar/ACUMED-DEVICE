@@ -22,6 +22,8 @@ export interface IMaterialMaster extends Document {
   active: boolean; // Boolean
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
+  vendor_id?: string;
+  core_weight?: number; // N(6,3)
 }
 
 const MaterialMasterSchema: Schema = new Schema({
@@ -144,6 +146,16 @@ const MaterialMasterSchema: Schema = new Schema({
   },
   last_modified_date_time: {
     type: Date,
+    required: false,
+  },
+  vendor_id: {
+    type: String,
+    required: false,
+    maxlength: 5,
+    trim: true,
+  },
+  core_weight: {
+    type: Number,
     required: false,
   },
 }, {

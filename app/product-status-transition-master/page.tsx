@@ -37,6 +37,8 @@ interface ProductStatusTransition {
     sterilization_required: string;
     approval_required: string;
     seq_no: number;
+    no_of_days_min?: number;
+    no_of_days_max?: number;
     last_modified_user_id?: string;
     last_modified_date_time?: Date;
     active: boolean;
@@ -84,6 +86,8 @@ export default function ProductStatusTransitionMasterPage() {
         sterilization_required: "N",
         approval_required: "N",
         seq_no: "",
+        no_of_days_min: "",
+        no_of_days_max: "",
         active: true,
     });
 
@@ -93,6 +97,8 @@ export default function ProductStatusTransitionMasterPage() {
         sterilization_required: "N",
         approval_required: "N",
         seq_no: "",
+        no_of_days_min: "",
+        no_of_days_max: "",
         active: true,
     };
 
@@ -188,6 +194,8 @@ export default function ProductStatusTransitionMasterPage() {
                 sterilization_required: formData.sterilization_required,
                 approval_required: formData.approval_required,
                 seq_no: parseInt(formData.seq_no) || 0,
+                no_of_days_min: formData.no_of_days_min !== "" ? parseInt(formData.no_of_days_min) : undefined,
+                no_of_days_max: formData.no_of_days_max !== "" ? parseInt(formData.no_of_days_max) : undefined,
                 active: true,
                 last_modified_user_id: "ADMIN",
             });
@@ -245,6 +253,8 @@ export default function ProductStatusTransitionMasterPage() {
             sterilization_required: transition.sterilization_required,
             approval_required: transition.approval_required,
             seq_no: transition.seq_no.toString(),
+            no_of_days_min: transition.no_of_days_min?.toString() ?? "",
+            no_of_days_max: transition.no_of_days_max?.toString() ?? "",
             active: transition.active,
         });
         setIsEditModalOpen(true);
@@ -275,6 +285,8 @@ export default function ProductStatusTransitionMasterPage() {
                 sterilization_required: formData.sterilization_required,
                 approval_required: formData.approval_required,
                 seq_no: parseInt(formData.seq_no) || 0,
+                no_of_days_min: formData.no_of_days_min !== "" ? parseInt(formData.no_of_days_min) : undefined,
+                no_of_days_max: formData.no_of_days_max !== "" ? parseInt(formData.no_of_days_max) : undefined,
                 active: formData.active,
                 last_modified_user_id: "ADMIN",
             });
@@ -620,6 +632,8 @@ export default function ProductStatusTransitionMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Sterilization Required</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Approval Required</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Seq No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">No. of Days Min</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">No. of Days Max</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
@@ -690,6 +704,12 @@ export default function ProductStatusTransitionMasterPage() {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm font-mono text-foreground">{transition.seq_no}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm font-mono text-foreground">{transition.no_of_days_min ?? "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm font-mono text-foreground">{transition.no_of_days_max ?? "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
@@ -921,6 +941,40 @@ export default function ProductStatusTransitionMasterPage() {
                                             />
                                             <p className="text-xs text-muted-foreground mt-1">Order in which transitions should be considered</p>
                                         </div>
+
+                                        {/* No. of Days */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    No. of Days Min
+                                                </label>
+                                                <Input
+                                                    name="no_of_days_min"
+                                                    type="number"
+                                                    value={formData.no_of_days_min}
+                                                    onChange={handleInputChange}
+                                                    placeholder="0-99"
+                                                    min={0}
+                                                    max={99}
+                                                    className="max-w-xs"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    No. of Days Max
+                                                </label>
+                                                <Input
+                                                    name="no_of_days_max"
+                                                    type="number"
+                                                    value={formData.no_of_days_max}
+                                                    onChange={handleInputChange}
+                                                    placeholder="0-99"
+                                                    min={0}
+                                                    max={99}
+                                                    className="max-w-xs"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
@@ -1043,6 +1097,40 @@ export default function ProductStatusTransitionMasterPage() {
                                                 max={99}
                                                 className="max-w-xs"
                                             />
+                                        </div>
+
+                                        {/* No. of Days */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    No. of Days Min
+                                                </label>
+                                                <Input
+                                                    name="no_of_days_min"
+                                                    type="number"
+                                                    value={formData.no_of_days_min}
+                                                    onChange={handleInputChange}
+                                                    placeholder="0-99"
+                                                    min={0}
+                                                    max={99}
+                                                    className="max-w-xs"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    No. of Days Max
+                                                </label>
+                                                <Input
+                                                    name="no_of_days_max"
+                                                    type="number"
+                                                    value={formData.no_of_days_max}
+                                                    onChange={handleInputChange}
+                                                    placeholder="0-99"
+                                                    min={0}
+                                                    max={99}
+                                                    className="max-w-xs"
+                                                />
+                                            </div>
                                         </div>
 
                                         {/* Active Status */}

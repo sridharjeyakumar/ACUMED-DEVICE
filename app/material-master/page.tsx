@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { coaChecklistAPI, materialAPI, materialCategoryAPI, uomAPI } from "@/services/api";
+import { coaChecklistAPI, materialAPI, materialCategoryAPI, uomAPI, vendorAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 
@@ -34,6 +34,8 @@ interface Material {
     coa_checklist_id?: string;
     material_image?: string;
     material_image_icon?: string;
+    vendor_id?: string;
+    core_weight?: number;
     last_modified_user_id?: string;
     last_modified_date_time?: Date;
     active?: boolean;
@@ -55,6 +57,12 @@ interface MaterialCategory {
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
     active?: boolean;
+}
+interface Vendor {
+    vendor_id: string;
+    vendor_name: string;
+    vendor_short_name: string;
+    active: boolean;
 }
 // Helper function to format dates consistently
 function formatDateTime(date: Date | string | undefined): string {
@@ -92,6 +100,7 @@ export default function MaterialMasterPage() {
     const [checklists, setChecklists] = useState<any[]>([]);
     const [uoms, setUOMs] = useState<UOM[]>([]);
     const [categories, setCategories] = useState<MaterialCategory[]>([]);
+    const [vendors, setVendors] = useState<Vendor[]>([]);
     
     const [isDuplicateId, setIsDuplicateId] = useState(false);
     
@@ -117,6 +126,8 @@ export default function MaterialMasterPage() {
         material_image: "",
         material_image_icon: "",
         active: true,
+        vendor_id: "",
+        core_weight: "",
     });
     const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -189,6 +200,17 @@ useEffect(() => {
     };
     loadProducts();
 }, []);
+useEffect(() => {
+    const loadVendors = async () => {
+        try {
+            const data = await vendorAPI.getAll();
+            setVendors(data);
+        } catch (error) {
+            console.error("Failed to load vendors", error);
+        }
+    };
+    loadVendors();
+}, []);
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -212,6 +234,9 @@ useEffect(() => {
                 material_image: "",
                 material_image_icon: "",
                 active: true,
+                vendor_id: "",
+                core_weight: "",
+
             });
         }
     }, [isAddModalOpen]);
@@ -316,6 +341,8 @@ useEffect(() => {
                 material_image_icon: formData.material_image_icon || undefined,
                 active: formData.active,
                 last_modified_user_id: "ADMIN",
+                vendor_id: formData.vendor_id || undefined,
+                core_weight: formData.core_weight ? Number(formData.core_weight) : undefined,
             };
 
             await materialAPI.create(formattedData);
@@ -344,6 +371,9 @@ useEffect(() => {
                 material_image: "",
                 material_image_icon: "",
                 active: true,
+                vendor_id: "",
+                core_weight: "",
+
             });
             loadMaterials();
         } catch (error: any) {
@@ -379,6 +409,8 @@ useEffect(() => {
             material_image: material.material_image || "",
             material_image_icon: material.material_image_icon || "",
             active: material.active !== undefined ? material.active : true,
+            vendor_id: material.vendor_id || "",
+            core_weight: material.core_weight?.toString() || "",
         });
         setIsEditModalOpen(true);
     };
@@ -410,6 +442,8 @@ useEffect(() => {
                 material_image_icon: formData.material_image_icon || undefined,
                 active: formData.active,
                 last_modified_user_id: "ADMIN",
+                vendor_id: formData.vendor_id || undefined,
+                core_weight: formData.core_weight ? Number(formData.core_weight) : undefined,
             };
 
             await materialAPI.update(selectedMaterial!.material_id, formattedData);
@@ -769,6 +803,8 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">COA Checklist ID</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Image</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Image Icon</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Vendor ID</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Core Weight</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Last Modified User ID</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Last Modified Date & Time</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Active</th>
@@ -883,9 +919,28 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
             </div>
           ) : "-"}
         </td>
-        <td className="px-4 py-3 text-sm">{<img src={material.material_image} className="w-8 h-8 rounded-full" />}</td>
-        <td className="px-4 py-3 text-sm">{<img src={material.material_image_icon } className="w-8 h-8 rounded-full" />}</td>
- 
+        <td className="px-4 py-3 text-sm">
+          {material.material_image ? (
+            <img src={material.material_image} className="w-8 h-8 rounded-full object-cover" alt="Material" />
+          ) : "-"}
+        </td>
+        <td className="px-4 py-3 text-sm">
+          {material.material_image_icon ? (
+            <img src={material.material_image_icon} className="w-8 h-8 rounded-full object-cover" alt="Icon" />
+          ) : "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.vendor_id ? (
+            <span className="inline-flex px-2 py-1 rounded-md bg-indigo-50 text-indigo-600 font-mono text-xs">
+              {material.vendor_id}
+            </span>
+          ) : "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.core_weight ?? "-"}
+        </td>
 
         {/* LAST MODIFIED USER */}
         <td className="px-4 py-3 text-sm">
@@ -1132,7 +1187,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         <option value="">Select a category</option>
         {categories.filter((category) => category.active !== false).map(category => (
             <option key={category.material_category_id} value={category.material_category_id}>
-            {category.material_category_id}
+            {category.material_category_id} - {category.material_category_name}
             </option>
         ))}
     </select>
@@ -1153,6 +1208,42 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                                 <option value="PM">Packing Material (PM)</option>
                                             </select>
                                         </div>
+
+                                        {/* Vendor ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Vendor ID
+                                            </label>
+                                            <select
+                                                name="vendor_id"
+                                                value={formData.vendor_id}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="">Select a vendor</option>
+                                                {vendors.filter((v) => v.active !== false).map(v => (
+                                                    <option key={v.vendor_id} value={v.vendor_id}>
+                                                        {v.vendor_id} - {v.vendor_name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Core Weight */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Core Weight
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="core_weight"
+                                                value={formData.core_weight}
+                                                onChange={handleInputChange}
+                                                placeholder="0.000"
+                                                step="0.001"
+                                            />
+                                        </div>
+
 
                                         {/* Specifications Section */}
                                         <div className="col-span-2 mt-4">
@@ -1574,6 +1665,42 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                             </select>
                                         </div>
 
+                                        {/* Vendor ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Vendor ID
+                                            </label>
+                                            <select
+                                                name="vendor_id"
+                                                value={formData.vendor_id}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="">Select a vendor</option>
+                                                {vendors.filter((v) => v.active !== false).map(v => (
+                                                    <option key={v.vendor_id} value={v.vendor_id}>
+                                                        {v.vendor_id} - {v.vendor_name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Core Weight */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Core Weight
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="core_weight"
+                                                value={formData.core_weight}
+                                                onChange={handleInputChange}
+                                                placeholder="0.000"
+                                                step="0.001"
+                                            />
+                                        </div>
+
+
                                         {/* Specifications Section */}
                                         <div className="col-span-2 mt-4">
                                             <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-4 border-b pb-2">
@@ -1756,30 +1883,72 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                             </h3>
                                         </div>
 
-                                        {/* Material Image */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Material Image
-                                            </label>
-                                            <Input
-                                                name="material_image"
-                                                value={formData.material_image}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter image URL or path"
-                                            />
-                                        </div>
+                                        <div className="col-span-2">
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+    {/* Material Image */}
+    <div className="space-y-2">
+        <label className="block text-sm font-semibold text-foreground">
+            Material Image
+        </label>
+        <div className="flex flex-col gap-3">
+            {formData.material_image && (
+                <div className="relative w-24 h-24 border rounded-md overflow-hidden group">
+                    <img
+                        src={formData.material_image}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setFormData({...formData, material_image: ""})}
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <X className="w-3 h-3" />
+                    </button>
+                </div>
+            )}
+            <Input
+                type="file"
+                name="material_image"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="cursor-pointer"
+            />
+        </div>
+    </div>
 
-                                        {/* Material Image Icon */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Material Image Icon
-                                            </label>
-                                            <Input
-                                                name="material_image_icon"
-                                                value={formData.material_image_icon}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter icon URL or path"
-                                            />
+    {/* Material Image Icon */}
+    <div className="space-y-2">
+        <label className="block text-sm font-semibold text-foreground">
+            Material Image Icon
+        </label>
+        <div className="flex flex-col gap-3">
+            {formData.material_image_icon && (
+                <div className="relative w-12 h-12 border rounded-full overflow-hidden group">
+                    <img
+                        src={formData.material_image_icon}
+                        alt="Icon Preview"
+                        className="w-full h-full object-cover"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setFormData({...formData, material_image_icon: ""})}
+                        className="absolute inset-0 bg-black/40 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <X className="w-3 h-3" />
+                    </button>
+                </div>
+            )}
+            <Input
+                type="file"
+                name="material_image_icon"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="cursor-pointer"
+            />
+        </div>
+    </div>
+</div>
                                         </div>
 
                                         {/* Status Section */}

@@ -27,6 +27,11 @@ export interface IEmployeeMaster extends Document {
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
   email?: string; // Char(100) - Employee Email
+  official_email_id?: string; // Char(25)
+  marriage_date?: Date; // Date
+  spouse_name?: string; // Char(50)
+  spouse_contact_no?: string; // Char(10)
+  emergency_contact_no?: string; // Char(10)
 }
 
 const EmployeeMasterSchema: Schema = new Schema({
@@ -181,6 +186,34 @@ const EmployeeMasterSchema: Schema = new Schema({
     maxlength: 100,
     trim: true,
     unique: true,
+  },
+  official_email_id: {
+    type: String,
+    required: false,
+    maxlength: 25,
+    trim: true,
+  },
+  marriage_date: {
+    type: Date,
+    required: false,
+  },
+  spouse_name: {
+    type: String,
+    required: false,
+    maxlength: 50,
+    trim: true,
+  },
+  spouse_contact_no: {
+    type: String,
+    required: false,
+    maxlength: 10,
+    trim: true,
+  },
+  emergency_contact_no: {
+    type: String,
+    required: false,
+    maxlength: 10,
+    trim: true,
   },
 }, {
   timestamps: true,

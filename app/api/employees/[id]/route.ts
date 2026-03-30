@@ -182,14 +182,11 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     
-    // Parse dates if provided
+    // Parse dates if provided (HTML date inputs always send YYYY-MM-DD ISO format)
     const parseDate = (dateStr: string | undefined) => {
       if (!dateStr) return undefined;
-      if (dateStr.includes('-') && dateStr.length === 10) {
-        const [day, month, year] = dateStr.split('-');
-        return new Date(`${year}-${month}-${day}`);
-      }
-      return new Date(dateStr);
+      const date = new Date(dateStr);
+      return isNaN(date.getTime()) ? undefined : date;
     };
 
     // Remove emp_id from update data to prevent changing it
@@ -211,11 +208,16 @@ export async function PUT(
       blood_group: updateBody.blood_group || undefined,
       education: updateBody.education || undefined,
       emp_photo: updateBody.emp_photo || undefined,
-      
+      official_email_id: updateBody.official_email_id || undefined,
+      spouse_name: updateBody.spouse_name || undefined,
+      spouse_contact_no: updateBody.spouse_contact_no || undefined,
+      emergency_contact_no: updateBody.emergency_contact_no || undefined,
+
       // Parse dates
       doj: updateBody.doj ? parseDate(updateBody.doj) : undefined,
       dol: updateBody.dol ? parseDate(updateBody.dol) : undefined,
       dob: updateBody.dob ? parseDate(updateBody.dob) : undefined,
+      marriage_date: updateBody.marriage_date ? parseDate(updateBody.marriage_date) : undefined,
       
       // Convert to Number
       age: updateBody.age ? Number(updateBody.age) : undefined,

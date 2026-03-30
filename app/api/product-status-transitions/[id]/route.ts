@@ -80,6 +80,8 @@ export async function PUT(
     if (body.sterilization_required !== undefined) updateData.sterilization_required = body.sterilization_required;
     if (body.approval_required !== undefined) updateData.approval_required = body.approval_required;
     if (body.seq_no !== undefined) updateData.seq_no = body.seq_no;
+    if (body.no_of_days_min !== undefined) updateData.no_of_days_min = body.no_of_days_min !== null && body.no_of_days_min !== '' ? Number(body.no_of_days_min) : undefined;
+    if (body.no_of_days_max !== undefined) updateData.no_of_days_max = body.no_of_days_max !== null && body.no_of_days_max !== '' ? Number(body.no_of_days_max) : undefined;
     if (body.active !== undefined) updateData.active = body.active;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
