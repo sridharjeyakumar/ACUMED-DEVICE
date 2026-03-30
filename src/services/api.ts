@@ -290,6 +290,15 @@ export const materialAPI = {
   delete: (id: string) => fetchAPI(`/materials/${id}`, { method: 'DELETE' }),
 };
 
+// Vendor Master API
+export const vendorAPI = {
+  getAll: () => fetchAPI('/vendors'),
+  getById: (id: string) => fetchAPI(`/vendors/${id}`),
+  create: (data: any) => fetchAPI('/vendors', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => fetchAPI(`/vendors/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/vendors/${id}`, { method: 'DELETE' }),
+};
+
 // Product Master API
 // export const productAPI = {
 //   getAll: () => fetchAPI('/products'),

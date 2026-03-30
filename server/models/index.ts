@@ -14,3 +14,5 @@ export type { IUserMaster } from './UserMaster';
 export { default as UserLoginHistory } from './UserLoginHistory';
 export type { IUserLoginHistory } from './UserLoginHistory';
 
+export { default as VendorMaster } from './VendorMaster';
+export type { IVendorMaster } from './VendorMaster';

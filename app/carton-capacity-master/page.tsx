@@ -22,7 +22,6 @@ interface CartonCapacityRecord {
     packSizeId: string;
     packMatlId: string;
     cartonTypeId: string;
-    cartonMaterialId: string;
     packsPerCarton: number;
     lastModifiedUserId?: string;
     lastModifiedDateTime?: string;
@@ -102,7 +101,6 @@ export default function CartonCapacityMasterPage() {
         packSizeId: "",
         packMatlId: "",
         cartonTypeId: "",
-        cartonMaterialId: "",
         packsPerCarton: "",
         active: true,
     });
@@ -118,7 +116,6 @@ export default function CartonCapacityMasterPage() {
             packSizeId: data.pack_size_id,
             packMatlId: data.pack_matl_id,
             cartonTypeId: data.carton_type_id,
-            cartonMaterialId: data.carton_material_id,
             packsPerCarton: data.packs_per_carton,
             lastModifiedUserId: data.last_modified_user_id || "",
             lastModifiedDateTime: data.last_modified_date_time ? new Date(data.last_modified_date_time).toLocaleString() : "",
@@ -136,7 +133,6 @@ export default function CartonCapacityMasterPage() {
             pack_size_id: data.packSizeId,
             pack_matl_id: data.packMatlId,
             carton_type_id: data.cartonTypeId,
-            carton_material_id: data.cartonMaterialId,
             packs_per_carton: Number(data.packsPerCarton),
             active: data.active !== false,
         };
@@ -206,7 +202,6 @@ useEffect(() => {
                 packSizeId: "",
                 packMatlId: "",
                 cartonTypeId: "",
-                cartonMaterialId: "",
                 packsPerCarton: "",
                 active: true,
             });
@@ -286,7 +281,6 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                 packSizeId: "",
                 packMatlId: "",
                 cartonTypeId: "",
-                cartonMaterialId: "",
                 packsPerCarton: "",
                 active: true,
             });
@@ -328,7 +322,6 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
             packSizeId: capacity.packSizeId,
             packMatlId: capacity.packMatlId,
             cartonTypeId: capacity.cartonTypeId,
-            cartonMaterialId: capacity.cartonMaterialId,
             packsPerCarton: capacity.packsPerCarton.toString(),
             active: capacity.active,
         });
@@ -355,7 +348,6 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                 packSizeId: "",
                 packMatlId: "",
                 cartonTypeId: "",
-                cartonMaterialId: "",
                 packsPerCarton: "",
                 active: true,
             });
@@ -622,12 +614,12 @@ const confirmCancelItem = async () => {
     <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
       Carton Type Id
     </th>
-    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+    {/* <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
       <div className="flex flex-col">
         <span>Carton</span>
         <span>Material Id</span>
       </div>
-    </th>
+    </th> */}
     <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
       <div className="flex flex-col">
         <span>Packs Per</span>
@@ -708,11 +700,11 @@ const confirmCancelItem = async () => {
             {item.cartonTypeId}
           </span>
         </td>
-        <td className="px-6 py-6 text-center align-middle">
+        {/* <td className="px-6 py-6 text-center align-middle">
           <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
             {item.cartonMaterialId}
           </span>
-        </td>
+        </td> */}
 
         {/* Other fields */}
         <td className="px-6 py-6 text-center align-middle">
@@ -999,7 +991,7 @@ const confirmCancelItem = async () => {
 
   
                                         {/* Carton Material ID */}
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Carton Material ID
                                             </label>
@@ -1011,7 +1003,7 @@ const confirmCancelItem = async () => {
                                                 maxLength={5}
 
                                             />
-                                        </div>
+                                        </div> */}
 
                                         {/* Packs Per Carton */}
                                         <div>
@@ -1208,7 +1200,7 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Carton Material ID */}
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Carton Material ID
                                             </label>
@@ -1219,7 +1211,7 @@ const confirmCancelItem = async () => {
                                                 placeholder="PM004" 
                                                 maxLength={5}
                                             />
-                                        </div>
+                                        </div> */}
 
                                         {/* Packs Per Carton */}
                                         <div>

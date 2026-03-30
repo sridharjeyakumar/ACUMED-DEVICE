@@ -56,6 +56,7 @@ const navSections: NavSection[] = [
     items: [
       { icon: Package, label: "Product Master", href: "/product-master" },
       { icon: Layers, label: "Material Master", href: "/material-master" },
+      { icon: Truck, label: "Vendor Master", href: "/vendor-master" },
       { icon: Box, label: "Pack Size Master", href: "/pack-size-master" },
       { icon: Truck, label: "Carton Type Master", href: "/carton-type-master" },
       { icon: FileText, label: "Product BOM", href: "/product-bom" },

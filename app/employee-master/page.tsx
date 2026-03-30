@@ -17,6 +17,11 @@ import { getSessionUser } from "@/lib/auth";
 
 interface EmployeeRecord {
     email: string;
+    officialEmailId: string;
+    marriageDate: string;
+    spouseName: string;
+    spouseContactNo: string;
+    emergencyContactNo: string;
     active: boolean;
     id: string;
     empId: string;
@@ -86,6 +91,11 @@ export default function EmployeeMasterPage() {
         status: "Active",
         active: true,
         email: "",
+        official_email_id: "",
+        marriage_date: "",
+        spouse_name: "",
+        spouse_contact_no: "",
+        emergency_contact_no: "",
     });
 
     const loadEmployees = useCallback(async () => {
@@ -119,6 +129,11 @@ export default function EmployeeMasterPage() {
                 status: emp.active !== false ? "Active" : "Exited",
                 active: emp.active !== false,
                 email: emp.email || "",
+                officialEmailId: emp.official_email_id || "",
+                marriageDate: emp.marriage_date ? new Date(emp.marriage_date).toLocaleDateString('en-GB') : "",
+                spouseName: emp.spouse_name || "",
+                spouseContactNo: emp.spouse_contact_no || "",
+                emergencyContactNo: emp.emergency_contact_no || "",
             }));
             setRecords(mappedRecords);
         } catch (error: any) {
@@ -198,7 +213,11 @@ export default function EmployeeMasterPage() {
                 status: "Active",
                 active: true,
                 email: "",
-
+                official_email_id: "",
+                marriage_date: "",
+                spouse_name: "",
+                spouse_contact_no: "",
+                emergency_contact_no: "",
             });
         }
     }, [isAddModalOpen]);
@@ -262,6 +281,11 @@ export default function EmployeeMasterPage() {
                 active: Boolean(formData.active),
                 last_modified_user_id: "ADMIN",
                 email: formData.email || undefined,
+                official_email_id: formData.official_email_id || undefined,
+                marriage_date: formData.marriage_date || undefined,
+                spouse_name: formData.spouse_name || undefined,
+                spouse_contact_no: formData.spouse_contact_no || undefined,
+                emergency_contact_no: formData.emergency_contact_no || undefined,
             };
 
             await employeeAPI.create(formattedData);
@@ -310,6 +334,11 @@ export default function EmployeeMasterPage() {
                 status: empData.status || "Active",
                 active: empData.active !== undefined ? empData.active : true,
                 email: empData.email || "",
+                official_email_id: empData.official_email_id || "",
+                marriage_date: empData.marriage_date ? new Date(empData.marriage_date).toISOString().split('T')[0] : "",
+                spouse_name: empData.spouse_name || "",
+                spouse_contact_no: empData.spouse_contact_no || "",
+                emergency_contact_no: empData.emergency_contact_no || "",
             });
             setIsEditModalOpen(true);
         } catch (error: any) {
@@ -353,6 +382,11 @@ export default function EmployeeMasterPage() {
                 active: Boolean(formData.active),
                 last_modified_user_id: "ADMIN",
                 email: formData.email || undefined,
+                official_email_id: formData.official_email_id || undefined,
+                marriage_date: formData.marriage_date || undefined,
+                spouse_name: formData.spouse_name || undefined,
+                spouse_contact_no: formData.spouse_contact_no || undefined,
+                emergency_contact_no: formData.emergency_contact_no || undefined,
             };
 
             await employeeAPI.update(selectedEmployee.empId, formattedData);
@@ -612,7 +646,12 @@ const confirmDelete = async () => {
     <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
     <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Address</th>
     <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Mobile Number</th>
-    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Email</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Personal Email</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Official Email ID</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Marriage Date</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Spouse Name</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Spouse Contact No.</th>
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Emergency Contact No.</th>
     <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Date of Birth</th>
     <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Age</th>
     <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Marital Status</th>
@@ -661,6 +700,11 @@ const confirmDelete = async () => {
         <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.address || "-"}</td>
         <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.mobileNo || "-"}</td>
         <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.email || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.officialEmailId || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.marriageDate || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.spouseName || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.spouseContactNo || "-"}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.emergencyContactNo || "-"}</td>
         <td className="px-6 py-4 align-middle text-sm  text-foreground whitespace-nowrap">{item.dob || "-"}</td>
         <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.age || "-"}</td>
         <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.married || "-"}</td>
@@ -1129,7 +1173,7 @@ const confirmDelete = async () => {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Email
+                                              Personal  Email
                                             </label>
                                             <Input 
                                                 name="email" 
@@ -1137,6 +1181,75 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="employee@example.com"
                                                 maxLength={100}
+                                            />
+                                        </div>
+
+                                        {/* Official Email ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Official Email ID
+                                            </label>
+                                            <Input
+                                                name="official_email_id"
+                                                value={formData.official_email_id}
+                                                onChange={handleInputChange}
+                                                placeholder="official@company.com"
+                                                maxLength={25}
+                                            />
+                                        </div>
+
+                                        {/* Emergency Contact No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Emergency Contact No.
+                                            </label>
+                                            <Input
+                                                name="emergency_contact_no"
+                                                value={formData.emergency_contact_no}
+                                                onChange={handleInputChange}
+                                                placeholder="XXXXXXXXXX"
+                                                maxLength={10}
+                                            />
+                                        </div>
+
+                                        {/* Marriage Date */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Marriage Date
+                                            </label>
+                                            <Input
+                                                type="date"
+                                                name="marriage_date"
+                                                value={formData.marriage_date}
+                                                onChange={handleInputChange}
+                                            />
+                                        </div>
+
+                                        {/* Spouse Name */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Spouse Name
+                                            </label>
+                                            <Input
+                                                name="spouse_name"
+                                                value={formData.spouse_name}
+                                                onChange={handleInputChange}
+                                                placeholder="Spouse full name"
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* Spouse Contact No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Spouse Contact No.
+                                            </label>
+                                            <Input
+                                                name="spouse_contact_no"
+                                                value={formData.spouse_contact_no}
+                                                onChange={handleInputChange}
+                                                placeholder="XXXXXXXXXX"
+                                                maxLength={10}
                                             />
                                         </div>
 
@@ -1583,7 +1696,7 @@ const confirmDelete = async () => {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Email
+                                              Personal  Email
                                             </label>
                                             <Input 
                                                 name="email" 
@@ -1591,6 +1704,75 @@ const confirmDelete = async () => {
                                                 onChange={handleInputChange} 
                                                 placeholder="employee@example.com"
                                                 maxLength={100}
+                                            />
+                                        </div>
+
+                                        {/* Official Email ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Official Email ID
+                                            </label>
+                                            <Input
+                                                name="official_email_id"
+                                                value={formData.official_email_id}
+                                                onChange={handleInputChange}
+                                                placeholder="official@company.com"
+                                                maxLength={25}
+                                            />
+                                        </div>
+
+                                        {/* Emergency Contact No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Emergency Contact No.
+                                            </label>
+                                            <Input
+                                                name="emergency_contact_no"
+                                                value={formData.emergency_contact_no}
+                                                onChange={handleInputChange}
+                                                placeholder="XXXXXXXXXX"
+                                                maxLength={10}
+                                            />
+                                        </div>
+
+                                        {/* Marriage Date */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Marriage Date
+                                            </label>
+                                            <Input
+                                                type="date"
+                                                name="marriage_date"
+                                                value={formData.marriage_date}
+                                                onChange={handleInputChange}
+                                            />
+                                        </div>
+
+                                        {/* Spouse Name */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Spouse Name
+                                            </label>
+                                            <Input
+                                                name="spouse_name"
+                                                value={formData.spouse_name}
+                                                onChange={handleInputChange}
+                                                placeholder="Spouse full name"
+                                                maxLength={50}
+                                            />
+                                        </div>
+
+                                        {/* Spouse Contact No */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Spouse Contact No.
+                                            </label>
+                                            <Input
+                                                name="spouse_contact_no"
+                                                value={formData.spouse_contact_no}
+                                                onChange={handleInputChange}
+                                                placeholder="XXXXXXXXXX"
+                                                maxLength={10}
                                             />
                                         </div>
 

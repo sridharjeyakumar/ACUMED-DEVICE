@@ -8,7 +8,7 @@ export interface ICartonCapacityMaster extends Document {
   pack_size_id: string; // Char(10) - FK to PackSizeMaster (e.g., "PK24")
   pack_matl_id: string; // Char(10) - FK to MaterialMaster (e.g., "PM001")
   carton_type_id: string; // Char(2) - FK to CartonTypeMaster (e.g., "ST", "SH")
-  carton_material_id: string; // Char(10) - FK to MaterialMaster (e.g., "PM004")
+  carton_material_id?: string; // Char(10) - FK to MaterialMaster (e.g., "PM004")
   packs_per_carton: number; // N(10) (e.g., 206, 412, 824)
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
@@ -67,10 +67,9 @@ const CartonCapacityMasterSchema: Schema = new Schema({
   },
   carton_material_id: {
     type: String,
-    required: true,
+    required: false,
     maxlength: 10,
     trim: true,
-    index: true,
   },
   packs_per_carton: {
     type: Number,
