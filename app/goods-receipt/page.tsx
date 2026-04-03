@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { employeeAPI, goodsReceiptHeaderAPI, goodsReceiptDetailAPI, goodsReceiptUnitsAPI, materialStatusAPI, materialAPI, materialStockAPI } from "@/services/api";
+import { employeeAPI, goodsReceiptHeaderAPI, goodsReceiptDetailAPI, goodsReceiptUnitsAPI, materialStatusAPI, materialAPI, materialStockAPI, purchaseOrderAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -222,6 +222,7 @@ export default function GoodsReceiptHeaderPage() {
     const [records,      setRecords]      = useState<EmployeeRecord[]>([]);
     const [statuses,     setStatuses]     = useState<MaterialStatus[]>([]);
     const [materials,    setMaterials]    = useState<Material[]>([]);
+    const [purchaseOrders, setPurchaseOrders] = useState<{ po_no: string; vendor_id: string; po_date: string; status: string }[]>([]);
 
     // ── Material grid state ──────────────────────────────────────────────────
     const makeUnit = (sno: number): UnitRow => ({
@@ -272,6 +273,7 @@ export default function GoodsReceiptHeaderPage() {
     useEffect(() => { employeeAPI.getAll().then(setRecords).catch(console.error); }, []);
     useEffect(() => { materialStatusAPI.getAll().then(setStatuses).catch(console.error); }, []);
     useEffect(() => { materialAPI.getAll().then(setMaterials).catch(console.error); }, []);
+    useEffect(() => { purchaseOrderAPI.getAll().then(setPurchaseOrders).catch(console.error); }, []);
 
     const loadItems = useCallback(async () => {
         try {
@@ -838,8 +840,13 @@ export default function GoodsReceiptHeaderPage() {
                         <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">PO No. *</label>
-                                <Input name="po_no" value={formData.po_no} onChange={handleInputChange} placeholder="PO-..." maxLength={10}
-                                    className={`h-9 text-xs border-slate-200 ${fieldErrors.po_no ? "border-red-500 bg-red-50" : ""}`} />
+                                <select name="po_no" value={formData.po_no} onChange={handleInputChange}
+                                    className={`h-9 text-xs border border-slate-200 rounded-md w-full px-2 bg-background focus:ring-2 focus:ring-blue-500 outline-none ${fieldErrors.po_no ? "border-red-500 bg-red-50" : ""}`}>
+                                    <option value="">Select PO No.</option>
+                                    {purchaseOrders.filter(po => po.status === 'E' || po.status === 'A').map(po => (
+                                        <option key={po.po_no} value={po.po_no}>{po.po_no}</option>
+                                    ))}
+                                </select>
                                 {fieldErrors.po_no && <p className="text-red-500 text-[10px] mt-0.5">{fieldErrors.po_no}</p>}
                             </div>
                             <div>

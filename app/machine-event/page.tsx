@@ -368,7 +368,7 @@ export default function MachineEventPage() {
                 product_id: addForm.product_id,
                 machine_event_type_id: addForm.machine_event_type_id,
                 event_date: getCurrentDate(),
-                event_time: `${addForm.event_time}:00`,
+                event_time: `${getCurrentTime()}:00`,
                 batch_status_id: addForm.batch_status_id || "",
                 machine_stop_reason_id: addForm.stop_reason_id || "",
                 remarks: addForm.remarks || "",
@@ -430,7 +430,7 @@ export default function MachineEventPage() {
                 machine_stop_reason_id: editForm.machine_stop_reason_id || "",
                 remarks: editForm.remarks || "",
                 done_by_emp_id: editForm.done_by_emp_id,
-                event_time: editForm.event_time.length === 5 ? `${editForm.event_time}:00` : editForm.event_time,
+                event_time: `${getCurrentTime()}:00`,
                 last_modified_user_id: "ADMIN",
             });
             setLastAction({ type: "edit", data: previousData });
@@ -573,9 +573,12 @@ export default function MachineEventPage() {
                             <Clock className="w-3.5 h-3.5 inline mr-1 text-muted-foreground" />
                             Event Time <span className="text-red-500">*</span>
                         </label>
-                        <Input type="time" value={editForm.event_time}
-                            onChange={e => setEditForm(prev => ({ ...prev, event_time: e.target.value }))} required />
-                        <p className="text-xs text-muted-foreground mt-1">Within last 60 minutes</p>
+                       <Input 
+    value={getCurrentTime()} 
+    disabled 
+    className="bg-muted/40 text-muted-foreground text-sm font-mono" 
+/>
+<p className="text-xs text-muted-foreground mt-1">Auto-set to current time</p>
                     </div>
                     {/* Done By */}
                     <div>
@@ -974,15 +977,20 @@ export default function MachineEventPage() {
                                                     </div>
 
                                                     {/* Event Time */}
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-foreground mb-1.5">
-                                                            <Clock className="w-3.5 h-3.5 inline mr-1 text-muted-foreground" />
-                                                            Event Time <span className="text-red-500">*</span>
-                                                        </label>
-                                                        <Input type="time" value={addForm.event_time}
-                                                            onChange={e => setAddForm(prev => ({ ...prev, event_time: e.target.value }))} required />
-                                                        <p className="text-xs text-muted-foreground mt-1">Within last 60 minutes</p>
-                                                    </div>
+                                                {/* Event Time */}
+<div>
+    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
+        <Clock className="w-3.5 h-3.5 inline mr-1 text-muted-foreground" />
+        Event Time
+    </label>
+    <Input 
+        type="text" 
+        value={addForm.event_time} 
+        readOnly 
+        className="bg-muted/40 text-muted-foreground text-sm cursor-not-allowed" 
+    />
+    <p className="text-xs text-muted-foreground mt-1">Auto-set to current time</p>
+</div>
 
                                                     {/* Done By */}
                                                     <div>

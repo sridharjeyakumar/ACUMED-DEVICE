@@ -1125,10 +1125,10 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                                 Last Modified
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                Current Batch Event Type ID
+                                                Current Machine Event Type ID
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
-                                                Status
+                                                Current Batch Status ID
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
                                                 Actions

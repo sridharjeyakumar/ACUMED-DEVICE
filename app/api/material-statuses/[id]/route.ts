@@ -71,6 +71,10 @@ export async function PUT(
     if (body.effect_in_stock !== undefined) updateData.effect_in_stock = body.effect_in_stock || '';
     if (body.seq_no !== undefined) updateData.seq_no = body.seq_no;
     if (body.active !== undefined) updateData.active = body.active !== false;
+    if (body.goods_movement !== undefined) updateData.goods_movement = body.goods_movement || '';
+    if (body.against_gr !== undefined) updateData.against_gr = body.against_gr || '';
+    if (body.unit_split_allowed !== undefined) updateData.unit_split_allowed = body.unit_split_allowed || '';
+    if (body.approval_required !== undefined) updateData.approval_required = body.approval_required || '';
     if (body.location_id !== undefined) updateData.location_id = body.location_id || '';
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();

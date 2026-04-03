@@ -803,6 +803,16 @@ export const goodsReceiptUnitsAPI = {
             )
         );
     },
+
+    /**
+     * Fetch available rolls for a material (status='A', balance_qty>0).
+     * Optionally filter by material_doc_no.
+     */
+    getAvailable: (materialId: string, docNo?: string) => {
+        let url = `/goods-receipt-units?material_id=${encodeURIComponent(materialId)}&available=true`;
+        if (docNo) url += `&material_doc_no=${encodeURIComponent(docNo)}`;
+        return fetchAPI(url);
+    },
 };
 
 // ── Add this block to the END of your existing services/api.ts ──
@@ -957,6 +967,33 @@ export const productStatusTransitionAPI = {
 // Add this at the end of your api.ts file
 
 // Product Movement API
+export const goodsMovementAPI = {
+    getAll: () => fetchAPI('/goods-movements'),
+    getById: (id: string) => fetchAPI(`/goods-movements/${id}`),
+    create: (data: any) => fetchAPI('/goods-movements', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => fetchAPI(`/goods-movements/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchAPI(`/goods-movements/${id}`, { method: 'DELETE' }),
+};
+
+export const goodsMovementUnitsAPI = {
+    getByGmNo: (gmNo: string) =>
+        fetchAPI(`/goods-movement-units?gm_no=${encodeURIComponent(gmNo)}`),
+    create: (data: any) =>
+        fetchAPI('/goods-movement-units', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) =>
+        fetchAPI(`/goods-movement-units/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) =>
+        fetchAPI(`/goods-movement-units/${id}`, { method: 'DELETE' }),
+};
+
+export const purchaseOrderAPI = {
+    getAll: () => fetchAPI('/purchase-orders'),
+    getById: (id: string) => fetchAPI(`/purchase-orders/${id}`),
+    create: (data: any) => fetchAPI('/purchase-orders', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => fetchAPI(`/purchase-orders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchAPI(`/purchase-orders/${id}`, { method: 'DELETE' }),
+};
+
 export const productMovementAPI = {
     getAll: (params?: { batchNo?: string; status?: string; year?: string }) => {
         let url = '/product-movements';
