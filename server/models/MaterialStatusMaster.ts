@@ -7,7 +7,11 @@ export interface IMaterialStatusMaster extends Document {
   effect_in_stock?: string; // Char(1) - + or - dropdown
   seq_no: number; // N(2)
   active: boolean;
-  location_id?: string; 
+  goods_movement?: string; // Char(1)
+  against_gr?: string; // Char(1)
+  unit_split_allowed?: string; // Char(1)
+  approval_required?: string; // Char(1)
+  location_id?: string; // Char(2) - FK
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
 }
@@ -39,6 +43,30 @@ const MaterialStatusMasterSchema: Schema = new Schema({
     maxlength: 1,
     trim: true,
     enum: ['+', '-', ''],
+  },
+  goods_movement: {
+    type: String,
+    required: false,
+    maxlength: 1,
+    trim: true,
+  },
+  against_gr: {
+    type: String,
+    required: false,
+    maxlength: 1,
+    trim: true,
+  },
+  unit_split_allowed: {
+    type: String,
+    required: false,
+    maxlength: 1,
+    trim: true,
+  },
+  approval_required: {
+    type: String,
+    required: false,
+    maxlength: 1,
+    trim: true,
   },
   seq_no: {
     type: Number,

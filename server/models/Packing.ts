@@ -9,6 +9,9 @@ export interface IPacking extends Document {
     no_of_packs: number;
     no_of_sachets: number;
     total_machine_time_in_min: number;
+    product_status_id: string;
+    carton_type_id: string;
+    packing_material_id: string;
     remarks: string;
     entered_by_user_id: string;
     entered_date_time: Date;
@@ -55,6 +58,21 @@ const PackingSchema: Schema = new Schema({
     total_machine_time_in_min: { 
         type: Number, 
         max: 9999 // N (4)
+    },
+    product_status_id: { 
+        type: String, 
+        required: true,
+        maxlength: 2 // Char (2)
+    },
+    carton_type_id: { 
+        type: String, 
+        required: true,
+        maxlength: 2 // Char (2)
+    },
+    packing_material_id: { 
+        type: String, 
+        required: true,
+        maxlength: 5 // Char (5)
     },
     remarks: { 
         type: String, 

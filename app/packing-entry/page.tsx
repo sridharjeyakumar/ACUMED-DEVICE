@@ -26,6 +26,9 @@ interface Packing {
     no_of_packs: number;
     no_of_sachets: number;
     total_machine_time_in_min: number;
+    product_status_id?: string;
+    carton_type_id?: string;
+    packing_material_id?: string;
     remarks: string;
     entered_by_user_id: string;
     entered_date_time: string | Date;
@@ -137,11 +140,16 @@ export default function PackingMasterPage() {
         no_of_packs: "",
         no_of_sachets: "",
         total_machine_time_in_min: "",
+        product_status_id: "",
+        carton_type_id: "",
+        packing_material_id: "",
         remarks: "",
         entered_by_user_id: "ADMIN",
         approval_remarks: "",
         status: "E",
     });
+    // Derived status data loaded once at page mount
+    const [derivedStatusData, setDerivedStatusData] = useState<{ productStatusId: string; cartonTypeId: string } | null>(null);
     const [approvalData, setApprovalData] = useState({
         approval_remarks: "",
         status: "A",
@@ -213,6 +221,9 @@ useEffect(() => {
                 no_of_packs: "",
                 no_of_sachets: "",
                 total_machine_time_in_min: "",
+                product_status_id: "",
+                carton_type_id: "",
+                packing_material_id: "",
                 remarks: "",
                 entered_by_user_id: "ADMIN",
                 approval_remarks: "",
@@ -220,6 +231,52 @@ useEffect(() => {
             });
         }
     }, [isAddModalOpen]);
+
+    // ── Load derived status data (product_status_id + carton_type_id) once at mount ──
+    useEffect(() => {
+        const loadDerivedStatusData = async () => {
+            try {
+                const productStatusList = await productStatusAPI.getByMovementType('I');
+                if (productStatusList?.length > 0) {
+                    const fromStatus = productStatusList[0];
+                    const transitions = await productStatusTransitionAPI.getByFromStatus(fromStatus.prod_status_id);
+                    if (transitions?.length > 0) {
+                        setDerivedStatusData({
+                            productStatusId: transitions[0].product_status_id,
+                            cartonTypeId: fromStatus.carton_type_id || '',
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load status derivation data", err);
+            }
+        };
+        loadDerivedStatusData();
+    }, []);
+
+    // ── Auto-derive packing_material_id when product_id + packsize_id + cartonTypeId are all known ──
+    useEffect(() => {
+        const lookupPackMaterial = async () => {
+            const pid = formData.product_id;
+            const psid = formData.packsize_id;
+            const ctid = derivedStatusData?.cartonTypeId;
+            if (pid && psid && ctid) {
+                try {
+                    const caps = await cartonCapacityAPI.getAll({ productId: pid, packSizeId: psid, cartonTypeId: ctid, active: true });
+                    setFormData(prev => ({
+                        ...prev,
+                        product_status_id: derivedStatusData?.productStatusId || '',
+                        carton_type_id: ctid,
+                        packing_material_id: caps[0]?.pack_matl_id || '',
+                    }));
+                } catch {
+                    // silent — leave values empty if lookup fails
+                }
+            }
+        };
+        lookupPackMaterial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.product_id, formData.packsize_id, derivedStatusData]);
 
     const loadPackings = useCallback(async () => {
         try {
@@ -388,6 +445,9 @@ const handleBatchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
                 no_of_packs: parseInt(formData.no_of_packs) || 0,
                 no_of_sachets: parseInt(formData.no_of_sachets) || 0,
                 total_machine_time_in_min: parseInt(formData.total_machine_time_in_min) || 0,
+                product_status_id: formData.product_status_id,
+                carton_type_id: formData.carton_type_id,
+                packing_material_id: formData.packing_material_id,
                 remarks: formData.remarks,
                 entered_by_user_id: formData.entered_by_user_id,
                 entered_date_time: new Date(),
@@ -450,6 +510,9 @@ const handleBatchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
             no_of_packs: packing.no_of_packs.toString(),
             no_of_sachets: packing.no_of_sachets.toString(),
             total_machine_time_in_min: packing.total_machine_time_in_min.toString(),
+            product_status_id: packing.product_status_id || "",
+            carton_type_id: packing.carton_type_id || "",
+            packing_material_id: packing.packing_material_id || "",
             remarks: packing.remarks || "",
             entered_by_user_id: packing.entered_by_user_id,
             approval_remarks: packing.approval_remarks || "",
@@ -476,6 +539,9 @@ const handleBatchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     no_of_packs: parseInt(formData.no_of_packs) || 0,
     no_of_sachets: parseInt(formData.no_of_sachets) || 0,
     total_machine_time_in_min: parseInt(formData.total_machine_time_in_min) || 0,
+    product_status_id: formData.product_status_id,
+    carton_type_id: formData.carton_type_id,
+    packing_material_id: formData.packing_material_id,
     remarks: formData.remarks,
 });
             
@@ -996,6 +1062,15 @@ const handleUndo = async () => {
                                                 Machine Time (min)
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                Product Status
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                Carton Type
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                Packing Material
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 Entered By
                                             </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
@@ -1012,13 +1087,13 @@ const handleUndo = async () => {
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={13} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={16} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading Packing records...
                                                 </td>
                                             </tr>
                                         ) : filteredPackings.length === 0 ? (
                                             <tr>
-                                                <td colSpan={13} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={16} className="px-6 py-4 text-center text-muted-foreground">
                                                     No Packing records found
                                                 </td>
                                             </tr>
@@ -1071,6 +1146,21 @@ const handleUndo = async () => {
                                                         </td>
                                                         <td className="px-6 py-6 text-sm text-foreground align-middle text-right">
                                                             {item.total_machine_time_in_min}
+                                                        </td>
+                                                        <td className="px-6 py-6 text-sm align-middle">
+                                                            {item.product_status_id
+                                                                ? <span className="inline-flex px-2 py-1 rounded-md bg-blue-50 text-blue-700 font-mono text-xs">{item.product_status_id}</span>
+                                                                : <span className="text-muted-foreground">—</span>}
+                                                        </td>
+                                                        <td className="px-6 py-6 text-sm align-middle">
+                                                            {item.carton_type_id
+                                                                ? <span className="inline-flex px-2 py-1 rounded-md bg-purple-50 text-purple-700 font-mono text-xs">{item.carton_type_id}</span>
+                                                                : <span className="text-muted-foreground">—</span>}
+                                                        </td>
+                                                        <td className="px-6 py-6 text-sm align-middle">
+                                                            {item.packing_material_id
+                                                                ? <span className="inline-flex px-2 py-1 rounded-md bg-amber-50 text-amber-700 font-mono text-xs">{item.packing_material_id}</span>
+                                                                : <span className="text-muted-foreground">—</span>}
                                                         </td>
                                                         <td className="px-6 py-6 text-sm text-foreground align-middle">
                                                             {item.entered_by_user_id}
@@ -1138,7 +1228,7 @@ const handleUndo = async () => {
                                                     {/* ── Stock expanded row ── */}
 {isExpanded && (
     <tr>
-        <td colSpan={13} className="p-0 border-b border-slate-100">
+        <td colSpan={16} className="p-0 border-b border-slate-100">
             <div className="px-6 py-4 bg-slate-50/60">
                 <div className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
                     {/* Header bar */}
@@ -1357,6 +1447,51 @@ const handleUndo = async () => {
     )}
 </div>
 
+                                        {/* Product Status ID — auto-derived */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Status ID
+                                            </label>
+                                            <Input
+                                                value={formData.product_status_id}
+                                                readOnly
+                                                disabled
+                                                className="bg-gray-100 cursor-not-allowed uppercase"
+                                                placeholder="Auto-derived"
+                                            />
+                                        </div>
+
+                                        {/* Carton Type ID — auto-derived */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Carton Type ID
+                                            </label>
+                                            <Input
+                                                value={formData.carton_type_id}
+                                                readOnly
+                                                disabled
+                                                className="bg-gray-100 cursor-not-allowed uppercase"
+                                                placeholder="Auto-derived"
+                                            />
+                                        </div>
+
+                                        {/* Packing Material ID — auto-derived from CartonCapacityMaster */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Packing Material ID
+                                            </label>
+                                            <Input
+                                                value={formData.packing_material_id}
+                                                readOnly
+                                                disabled
+                                                className="bg-gray-100 cursor-not-allowed uppercase"
+                                                placeholder="Auto-derived from product + packsize + carton type"
+                                            />
+                                            {formData.product_id && formData.packsize_id && formData.carton_type_id && !formData.packing_material_id && (
+                                                <p className="text-xs text-amber-500 mt-1">No carton capacity record found for this combination.</p>
+                                            )}
+                                        </div>
+
                                         {/* No of Packs */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
@@ -1521,6 +1656,48 @@ const handleUndo = async () => {
                                                 maxLength={4}
                                                 required
                                                 className="uppercase"
+                                            />
+                                        </div>
+
+                                        {/* Product Status ID — read-only, stored from creation */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Status ID
+                                            </label>
+                                            <Input
+                                                value={formData.product_status_id}
+                                                readOnly
+                                                disabled
+                                                className="bg-gray-100 cursor-not-allowed uppercase"
+                                                placeholder="Auto-derived"
+                                            />
+                                        </div>
+
+                                        {/* Carton Type ID — read-only */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Carton Type ID
+                                            </label>
+                                            <Input
+                                                value={formData.carton_type_id}
+                                                readOnly
+                                                disabled
+                                                className="bg-gray-100 cursor-not-allowed uppercase"
+                                                placeholder="Auto-derived"
+                                            />
+                                        </div>
+
+                                        {/* Packing Material ID — read-only */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Packing Material ID
+                                            </label>
+                                            <Input
+                                                value={formData.packing_material_id}
+                                                readOnly
+                                                disabled
+                                                className="bg-gray-100 cursor-not-allowed uppercase"
+                                                placeholder="Auto-derived"
                                             />
                                         </div>
 

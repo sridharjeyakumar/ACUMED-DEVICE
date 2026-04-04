@@ -37,7 +37,7 @@ async function ensureDbConnection() {
 }
 
 // GET /api/packing-entry - Get all packing records
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     await ensureDbConnection();
     const records = await (Packing as any).find().sort({ packing_id: -1 });
@@ -111,6 +111,9 @@ export async function POST(request: NextRequest) {
       no_of_packs: body.no_of_packs || 0,
       no_of_sachets: body.no_of_sachets || 0,
       total_machine_time_in_min: body.total_machine_time_in_min || 0,
+      product_status_id: body.product_status_id || '',
+      carton_type_id: body.carton_type_id || '',
+      packing_material_id: body.packing_material_id || '',
       remarks: body.remarks || '',
       entered_by_user_id: body.entered_by_user_id || 'ADMIN',
       entered_date_time: new Date(),

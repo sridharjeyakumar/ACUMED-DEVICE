@@ -30,15 +30,19 @@ export async function POST(request: NextRequest) {
   try {
     await ensureConnection();
     const body = await request.json();
-    const status = new MaterialStatusMaster({ 
+    const status = new MaterialStatusMaster({
       matl_status_id: body.matl_status_id,
       material_status: body.material_status,
       stock_movement: body.stock_movement || '',
       effect_in_stock: body.effect_in_stock || '',
       seq_no: body.seq_no,
       active: body.active !== false,
-      last_modified_user_id: body.last_modified_user_id || 'ADMIN',
+      goods_movement: body.goods_movement || '',
+      against_gr: body.against_gr || '',
+      unit_split_allowed: body.unit_split_allowed || '',
+      approval_required: body.approval_required || '',
       location_id: body.location_id || '',
+      last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
     });
     await status.save();

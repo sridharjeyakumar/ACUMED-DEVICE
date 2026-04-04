@@ -12,11 +12,12 @@ export interface ITransactionTable extends Document {
   total_sterilization_cartons?: number;
   total_shipper_cartons?: number;
   total_rejected_qty_kg?: number;
-  remarks?: string;               
+  remarks?: string;   
+  completed_remarks?: string;            
   last_modified_user_id?: string; 
   last_modified_date_time?: Date;
   current_batch_event_type_id?: string;
-  current_batch_status_id: 'P' | 'R' | 'W' | 'C';
+  current_batch_status_id: 'P' | 'I' | 'W' | 'C';
   active: boolean;
 }
 
@@ -48,6 +49,7 @@ const TransactionTableSchema: Schema = new Schema({
   total_shipper_cartons: { type: Number, max: 99999 },
   total_rejected_qty_kg: { type: Number },
   remarks: { type: String, maxlength: 100 },
+  completed_remarks: { type: String, maxlength: 100 },
   last_modified_user_id: { type: String, maxlength: 5 },
   last_modified_date_time: { type: Date, default: Date.now },
   current_batch_event_type_id: { type: String, maxlength: 2 },

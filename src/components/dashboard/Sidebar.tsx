@@ -103,17 +103,18 @@ const navSections: NavSection[] = [
     {
     title: "TRANSACTIONS",
     items: [
+      { icon: FileText, label: "Purchase Orders", href: "/purchase-orders" },
+      { icon: FileText, label: "Goods Movement", href: "/goods-movement" },
       { icon: TableProperties, label: "Goods Receipt", href: "/goods-receipt" },
-      { icon: Factory, label: "Production", href: "/production" },
+      { icon: Factory, label: "Production Entry", href: "/production" },
       { icon: TableProperties, label: "Production Plan", href: "/transaction-table" },
       { icon: Activity, label: "Machine Event", href: "/machine-event" },
+      { icon: Activity, label: "Production Rejected Entry", href: "/production-rejected" },
       { icon: Factory, label: "Packing Entry", href: "/packing-entry" },
       { icon: Factory, label: "Packing Approval", href: "/packing-entry-approval" },
       { icon: Factory, label: "Product Movement", href: "/product-movements" },
       { icon: Factory, label: "Product Movement Special", href: "/product-movement-special" },
       { icon: Factory, label: "Product Movement Approval", href: "/product-movement-approval" },
-
-
     ],
   },
 ];

@@ -11,7 +11,7 @@ export interface IProduction {
   gross_weight_kgs?: number;
   net_weight_kgs?: number;
   calculated_total_qty?: number;
-  machine_count_qty?: number;
+  // machine_count_qty?: number;
   remarks?: string;
   last_modified_user_id: string;
   last_modified_date_time: Date;
@@ -32,7 +32,7 @@ const ProductionSchema = new Schema<IProductionDocument>({
   gross_weight_kgs: { type: Number },
   net_weight_kgs: { type: Number },
   calculated_total_qty: { type: Number },
-  machine_count_qty: { type: Number },
+  // machine_count_qty: { type: Number },
   remarks: { type: String, maxlength: 100 },
   last_modified_user_id: { type: String, maxlength: 5 },
   last_modified_date_time: { type: Date, default: Date.now },

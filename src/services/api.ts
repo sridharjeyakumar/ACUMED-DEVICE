@@ -404,6 +404,12 @@ export const collectionBinAPI = {
   delete: (id: string) => fetchAPI(`/collection-bins/${id}`, { method: 'DELETE' }),
 };
 
+// Machine Status API
+export const machineStatusAPI = {
+  getAll: () => fetchAPI('/machine-statuses'),
+  getById: (machineId: string) => fetchAPI(`/machine-statuses/${machineId}`),
+};
+
 // COA Checklist Master API
 export const coaChecklistAPI = {
   getAll: () => fetchAPI('/coa-checklists'),
@@ -529,7 +535,7 @@ export const transactionAPI = {
         return response.json();
     },
     
-    updateStatus: async (batchNo: string, status: 'P' | 'R' | 'W' | 'C') => {
+    updateStatus: async (batchNo: string, status: 'P' | 'I' | 'W' | 'C') => {
         const response = await fetch(`/api/transactions/${batchNo}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -617,6 +623,79 @@ export const productionPlanDetailAPI = {
         }
         return response.json();
     }
+};
+
+export const productionRejectedAPI = {
+    getByBatchNo: async (batchNo: string) => {
+        const response = await fetch(`/api/production-rejected?batch_no=${batchNo}`);
+        if (!response.ok) throw new Error('Failed to fetch production rejected records');
+        return response.json();
+    },
+
+    closeBatch: async (batchNo: string) => {
+        const response = await fetch(`/api/production-rejected/close-batch/${batchNo}`, {
+            method: 'PATCH',
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to close production rejected records');
+        }
+        return response.json();
+    },
+      getAll: async () => {
+    const response = await fetch('/api/production-rejected');
+    if (!response.ok) throw new Error('Failed to fetch rejection records');
+    return response.json();
+  },
+  
+  getById: async (id: string) => {
+    const response = await fetch(`/api/production-rejected/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch rejection record');
+    return response.json();
+  },
+  
+  getLastByYear: async (year: number) => {
+    const response = await fetch(`/api/production-rejected/last?year=${year}`);
+    if (!response.ok) throw new Error('Failed to fetch last rejection');
+    return response.json();
+  },
+  
+  create: async (data: any) => {
+    const response = await fetch('/api/production-rejected', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create rejection record');
+    }
+    return response.json();
+  },
+  
+  update: async (id: string, data: any) => {
+    const response = await fetch(`/api/production-rejected/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update rejection record');
+    }
+    return response.json();
+  },
+  
+  delete: async (id: string) => {
+    const response = await fetch(`/api/production-rejected/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete rejection record');
+    }
+    return response.json();
+  }
 };
 
 
@@ -803,6 +882,16 @@ export const goodsReceiptUnitsAPI = {
             )
         );
     },
+
+    /**
+     * Fetch available rolls for a material (status='A', balance_qty>0).
+     * Optionally filter by material_doc_no.
+     */
+    getAvailable: (materialId: string, docNo?: string) => {
+        let url = `/goods-receipt-units?material_id=${encodeURIComponent(materialId)}&available=true`;
+        if (docNo) url += `&material_doc_no=${encodeURIComponent(docNo)}`;
+        return fetchAPI(url);
+    },
 };
 
 // ── Add this block to the END of your existing services/api.ts ──
@@ -957,6 +1046,33 @@ export const productStatusTransitionAPI = {
 // Add this at the end of your api.ts file
 
 // Product Movement API
+export const goodsMovementAPI = {
+    getAll: () => fetchAPI('/goods-movements'),
+    getById: (id: string) => fetchAPI(`/goods-movements/${id}`),
+    create: (data: any) => fetchAPI('/goods-movements', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => fetchAPI(`/goods-movements/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchAPI(`/goods-movements/${id}`, { method: 'DELETE' }),
+};
+
+export const goodsMovementUnitsAPI = {
+    getByGmNo: (gmNo: string) =>
+        fetchAPI(`/goods-movement-units?gm_no=${encodeURIComponent(gmNo)}`),
+    create: (data: any) =>
+        fetchAPI('/goods-movement-units', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) =>
+        fetchAPI(`/goods-movement-units/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) =>
+        fetchAPI(`/goods-movement-units/${id}`, { method: 'DELETE' }),
+};
+
+export const purchaseOrderAPI = {
+    getAll: () => fetchAPI('/purchase-orders'),
+    getById: (id: string) => fetchAPI(`/purchase-orders/${id}`),
+    create: (data: any) => fetchAPI('/purchase-orders', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => fetchAPI(`/purchase-orders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchAPI(`/purchase-orders/${id}`, { method: 'DELETE' }),
+};
+
 export const productMovementAPI = {
     getAll: (params?: { batchNo?: string; status?: string; year?: string }) => {
         let url = '/product-movements';

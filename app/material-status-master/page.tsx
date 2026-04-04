@@ -31,7 +31,11 @@ interface MaterialStatus {
     effect_in_stock?: string; // Char(1) - dropdown (+ / -) - can be empty
     seq_no: number; // N(2)
     active: boolean;
-    location_id?: string; // Char(5) - can be empty
+    goods_movement?: string; // Char(1)
+    against_gr?: string; // Char(1)
+    unit_split_allowed?: string; // Char(1)
+    approval_required?: string; // Char(1)
+    location_id?: string; // Char(2) - FK
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
 }
@@ -77,6 +81,10 @@ export default function MaterialStatusMasterPage() {
         effect_in_stock: "",
         seq_no: "",
         active: true,
+        goods_movement: "",
+        against_gr: "",
+        unit_split_allowed: "",
+        approval_required: "",
         location_id: "",
     });
 
@@ -90,6 +98,10 @@ export default function MaterialStatusMasterPage() {
                 effect_in_stock: "",
                 seq_no: "",
                 active: true,
+                goods_movement: "",
+                against_gr: "",
+                unit_split_allowed: "",
+                approval_required: "",
                 location_id: "",
             });
         }
@@ -170,6 +182,10 @@ export default function MaterialStatusMasterPage() {
                 effect_in_stock: formData.effect_in_stock || '',
                 seq_no: parseInt(formData.seq_no) || 0,
                 active: true, // Always set to true for new statuses
+                goods_movement: formData.goods_movement || '',
+                against_gr: formData.against_gr || '',
+                unit_split_allowed: formData.unit_split_allowed || '',
+                approval_required: formData.approval_required || '',
                 last_modified_user_id: "ADMIN",
                 location_id: formData.location_id || '',
             });
@@ -185,6 +201,10 @@ export default function MaterialStatusMasterPage() {
                 effect_in_stock: "",
                 seq_no: "",
                 active: true,
+                goods_movement: "",
+                against_gr: "",
+                unit_split_allowed: "",
+                approval_required: "",
                 location_id: "",
             });
             loadStatuses();
@@ -236,6 +256,10 @@ export default function MaterialStatusMasterPage() {
             effect_in_stock: status.effect_in_stock || "",
             seq_no: status.seq_no.toString(),
             active: status.active,
+            goods_movement: status.goods_movement || "",
+            against_gr: status.against_gr || "",
+            unit_split_allowed: status.unit_split_allowed || "",
+            approval_required: status.approval_required || "",
             location_id: status.location_id || "",
         });
         setIsEditModalOpen(true);
@@ -270,6 +294,10 @@ export default function MaterialStatusMasterPage() {
                 effect_in_stock: formData.effect_in_stock || '',
                 seq_no: parseInt(formData.seq_no) || 0,
                 active: formData.active,
+                goods_movement: formData.goods_movement || '',
+                against_gr: formData.against_gr || '',
+                unit_split_allowed: formData.unit_split_allowed || '',
+                approval_required: formData.approval_required || '',
                 last_modified_user_id: "ADMIN",
                 location_id: formData.location_id || '',
             });
@@ -295,6 +323,10 @@ export default function MaterialStatusMasterPage() {
                 effect_in_stock: "",
                 seq_no: "",
                 active: true,
+                goods_movement: "",
+                against_gr: "",
+                unit_split_allowed: "",
+                approval_required: "",
                 location_id: "",
             });
             loadStatuses();
@@ -321,6 +353,10 @@ export default function MaterialStatusMasterPage() {
                     effect_in_stock: lastAction.data.effect_in_stock || '',
                     seq_no: lastAction.data.seq_no,
                     active: lastAction.data.active,
+                    goods_movement: lastAction.data.goods_movement || '',
+                    against_gr: lastAction.data.against_gr || '',
+                    unit_split_allowed: lastAction.data.unit_split_allowed || '',
+                    approval_required: lastAction.data.approval_required || '',
                     last_modified_user_id: "ADMIN",
                     location_id: lastAction.data.location_id || '',
                 });
@@ -365,6 +401,10 @@ export default function MaterialStatusMasterPage() {
                 effect_in_stock: statusToCancel.effect_in_stock || '',
                 seq_no: statusToCancel.seq_no,
                 active: false, // Set to inactive
+                goods_movement: statusToCancel.goods_movement || '',
+                against_gr: statusToCancel.against_gr || '',
+                unit_split_allowed: statusToCancel.unit_split_allowed || '',
+                approval_required: statusToCancel.approval_required || '',
                 last_modified_user_id: "ADMIN",
                 location_id: statusToCancel.location_id || '',
             });
@@ -397,11 +437,11 @@ export default function MaterialStatusMasterPage() {
     const confirmCancel = () => {
         if (cancelModalType === 'add') {
             setIsAddModalOpen(false);
-            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true, location_id: "" });
+            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true, goods_movement: "", against_gr: "", unit_split_allowed: "", approval_required: "", location_id: "" });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
             setSelectedStatus(null);
-            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true, location_id: "" });
+            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true, goods_movement: "", against_gr: "", unit_split_allowed: "", approval_required: "", location_id: "" });
         }
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
@@ -595,6 +635,10 @@ export default function MaterialStatusMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Material Status</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Stock Movement</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Effect In Stock</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Goods Movement</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Against GR</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Unit Split Allowed</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Approval Required</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Location Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Seq No.</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
@@ -616,13 +660,13 @@ export default function MaterialStatusMasterPage() {
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={14} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading material statuses...
                                                 </td>
                                             </tr>
                                         ) : filteredStatuses.length === 0 ? (
                                             <tr>
-                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={14} className="px-6 py-4 text-center text-muted-foreground">
                                                     No material statuses found
                                                 </td>
                                             </tr>
@@ -646,6 +690,18 @@ export default function MaterialStatusMasterPage() {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground font-semibold">{status.effect_in_stock || "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className="text-sm text-foreground font-mono">{status.goods_movement || "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className="text-sm text-foreground font-mono">{status.against_gr || "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className="text-sm text-foreground font-mono">{status.unit_split_allowed || "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className="text-sm text-foreground font-mono">{status.approval_required || "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{status.location_id || "-"}</span>
@@ -846,6 +902,58 @@ export default function MaterialStatusMasterPage() {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Goods Movement
+                                            </label>
+                                            <Input
+                                                name="goods_movement"
+                                                value={formData.goods_movement}
+                                                onChange={handleInputChange}
+                                                maxLength={1}
+                                                placeholder="Y / N"
+                                                className="uppercase"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Against GR Only
+                                            </label>
+                                            <Input
+                                                name="against_gr"
+                                                value={formData.against_gr}
+                                                onChange={handleInputChange}
+                                                maxLength={1}
+                                                placeholder="Y / N"
+                                                className="uppercase"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Unit Split Allowed
+                                            </label>
+                                            <Input
+                                                name="unit_split_allowed"
+                                                value={formData.unit_split_allowed}
+                                                onChange={handleInputChange}
+                                                maxLength={1}
+                                                placeholder="Y / N"
+                                                className="uppercase"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Approval Required
+                                            </label>
+                                            <Input
+                                                name="approval_required"
+                                                value={formData.approval_required}
+                                                onChange={handleInputChange}
+                                                maxLength={1}
+                                                placeholder="Y / N"
+                                                className="uppercase"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Location Id <span className="text-red-500">*</span>
                                             </label>
                                             <Input
@@ -983,6 +1091,58 @@ export default function MaterialStatusMasterPage() {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Goods Movement
+                                            </label>
+                                            <Input
+                                                name="goods_movement"
+                                                value={formData.goods_movement}
+                                                onChange={handleInputChange}
+                                                maxLength={1}
+                                                placeholder="Y / N"
+                                                className="uppercase"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Against GR Only
+                                            </label>
+                                            <Input
+                                                name="against_gr"
+                                                value={formData.against_gr}
+                                                onChange={handleInputChange}
+                                                maxLength={1}
+                                                placeholder="Y / N"
+                                                className="uppercase"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Unit Split Allowed
+                                            </label>
+                                            <Input
+                                                name="unit_split_allowed"
+                                                value={formData.unit_split_allowed}
+                                                onChange={handleInputChange}
+                                                maxLength={1}
+                                                placeholder="Y / N"
+                                                className="uppercase"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Approval Required
+                                            </label>
+                                            <Input
+                                                name="approval_required"
+                                                value={formData.approval_required}
+                                                onChange={handleInputChange}
+                                                maxLength={1}
+                                                placeholder="Y / N"
+                                                className="uppercase"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Location Id <span className="text-red-500">*</span>
                                             </label>
                                             <Input
@@ -991,7 +1151,6 @@ export default function MaterialStatusMasterPage() {
                                                 onChange={handleInputChange}
                                                 required
                                                 maxLength={2}
-                                                // disabled
                                             />
                                         </div>
                                         <div>

@@ -36,7 +36,7 @@ interface Production {
     gross_weight_kgs?: number;
     net_weight_kgs?: number;
     calculated_total_qty?: number;
-    machine_count_qty?: number;
+    // machine_count_qty?: number;
     remarks?: string;
     last_modified_user_id?: string;
     last_modified_date_time?: string;
@@ -149,7 +149,7 @@ export default function ProductionPage() {
     const emptyEditForm = {
         production_id: "", production_date: "", machine_id: "", batch_no: "",
         product_id: "", collection_bin_no: "", tare_weight_kgs: "", gross_weight_kgs: "",
-        net_weight_kgs: "", calculated_total_qty: "", machine_count_qty: "",
+        net_weight_kgs: "", calculated_total_qty: "", // machine_count_qty: "",
         remarks: "", status: "W",
     };
     const [editFormData, setEditFormData] = useState({ ...emptyEditForm });
@@ -187,7 +187,7 @@ export default function ProductionPage() {
         // Reset all add form fields
         setAddMachineId(""); setAddBatchNo(""); setAddProductId("");
         setAddMachineError(""); setAddSelectedBin(null); setAddTareWeight(0);
-        setAddGrossWeight(""); setAddGrossError(""); setAddMachineCountQty("");
+        setAddGrossWeight(""); setAddGrossError(""); 
         setAddRemarks(""); setAddStatus("W"); setAddWeightPerPiece(0);
     }, [isAddModalOpen]);
 
@@ -269,7 +269,7 @@ export default function ProductionPage() {
                 gross_weight_kgs: parseFloat(addGrossWeight) || undefined,
                 net_weight_kgs: addNetWeight || undefined,
                 calculated_total_qty: addCalcQty || undefined,
-                machine_count_qty: addMachineCountQty ? Number(addMachineCountQty) : undefined,
+                // machine_count_qty: addMachineCountQty ? Number(addMachineCountQty) : undefined,
                 remarks: addRemarks || '',
                 status: addStatus,
                 last_modified_user_id: "ADMIN",
@@ -320,7 +320,7 @@ export default function ProductionPage() {
             gross_weight_kgs: item.gross_weight_kgs !== undefined ? String(item.gross_weight_kgs) : "",
             net_weight_kgs: item.net_weight_kgs !== undefined ? String(item.net_weight_kgs) : "",
             calculated_total_qty: item.calculated_total_qty !== undefined ? String(item.calculated_total_qty) : "",
-            machine_count_qty: item.machine_count_qty !== undefined ? String(item.machine_count_qty) : "",
+            // machine_count_qty: item.machine_count_qty !== undefined ? String(item.machine_count_qty) : "",
             remarks: item.remarks || '',
             status: item.status || 'W',
         });
@@ -335,7 +335,7 @@ export default function ProductionPage() {
         const previousData = { ...selectedItem };
         try {
             await productionAPI.update(selectedItem._id, {
-                machine_count_qty: editFormData.machine_count_qty ? Number(editFormData.machine_count_qty) : undefined,
+                // machine_count_qty: editFormData.machine_count_qty ? Number(editFormData.machine_count_qty) : undefined,
                 gross_weight_kgs: editFormData.gross_weight_kgs ? Number(editFormData.gross_weight_kgs) : undefined,
                 net_weight_kgs: editFormData.net_weight_kgs ? Number(editFormData.net_weight_kgs) : undefined,
                 calculated_total_qty: editFormData.calculated_total_qty ? Number(editFormData.calculated_total_qty) : undefined,
@@ -364,7 +364,7 @@ export default function ProductionPage() {
         if (!lastAction?.data._id) return;
         try {
             await productionAPI.update(lastAction.data._id, {
-                machine_count_qty: lastAction.data.machine_count_qty,
+                // machine_count_qty: lastAction.data.machine_count_qty,
                 gross_weight_kgs: lastAction.data.gross_weight_kgs,
                 net_weight_kgs: lastAction.data.net_weight_kgs,
                 calculated_total_qty: lastAction.data.calculated_total_qty,
@@ -525,7 +525,7 @@ export default function ProductionPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Gross Wt (kg)</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Net Wt (kg)</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Calc Qty</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Machine Qty</th>
+                                            {/* <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Machine Qty</th> */}
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
@@ -561,7 +561,7 @@ export default function ProductionPage() {
                                                     <td className="px-6 py-4 text-right"><span className="text-sm text-foreground">{item.gross_weight_kgs !== undefined ? item.gross_weight_kgs.toFixed(3) : "-"}</span></td>
                                                     <td className="px-6 py-4 text-right"><span className="text-sm text-foreground">{item.net_weight_kgs !== undefined ? item.net_weight_kgs.toFixed(3) : "-"}</span></td>
                                                     <td className="px-6 py-4 text-right"><span className="text-sm text-foreground">{item.calculated_total_qty ?? "-"}</span></td>
-                                                    <td className="px-6 py-4 text-right"><span className="text-sm text-foreground">{item.machine_count_qty ?? "-"}</span></td>
+                                                    {/* <td className="px-6 py-4 text-right"><span className="text-sm text-foreground">{item.machine_count_qty ?? "-"}</span></td> */}
                                                     <td className="px-6 py-4"><span className="text-sm text-foreground">{item.remarks || "-"}</span></td>
                                                     <td className="px-6 py-4">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${item.status === 'W' ? "bg-yellow-100 text-yellow-800" : item.status === 'C' ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
@@ -767,7 +767,7 @@ export default function ProductionPage() {
                                                     <p className="text-[10px] text-red-500 mt-1">Must be &gt; 0</p>
                                                 )}
                                             </div>
-                                            <div>
+                                            {/* <div>
                                                 <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Machine Count Qty</p>
                                                 <input
                                                     type="number"
@@ -776,7 +776,7 @@ export default function ProductionPage() {
                                                     placeholder="Enter count"
                                                     className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
                                                 />
-                                            </div>
+                                            </div> */}
                                         </div>
 
                                         {/* Calc Qty (hidden row — auto value shown inline) */}
@@ -934,7 +934,7 @@ export default function ProductionPage() {
                                                     className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
                                                 />
                                             </div>
-                                            <div>
+                                            {/* <div>
                                                 <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Machine Count Qty</p>
                                                 <input
                                                     type="number"
@@ -943,7 +943,7 @@ export default function ProductionPage() {
                                                     placeholder="Enter count"
                                                     className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
                                                 />
-                                            </div>
+                                            </div> */}
                                         </div>
 
                                         {/* Net Weight + Calc Qty */}
