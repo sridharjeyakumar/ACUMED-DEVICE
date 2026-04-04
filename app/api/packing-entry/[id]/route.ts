@@ -59,7 +59,7 @@ async function findPackingRecord(id: string) {
 
 // GET /api/packing-entry/[id]
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -107,6 +107,9 @@ export async function PUT(
     if (body.no_of_packs !== undefined) updateData.no_of_packs = body.no_of_packs;
     if (body.no_of_sachets !== undefined) updateData.no_of_sachets = body.no_of_sachets;
     if (body.total_machine_time_in_min !== undefined) updateData.total_machine_time_in_min = body.total_machine_time_in_min;
+    if (body.product_status_id !== undefined) updateData.product_status_id = body.product_status_id;
+    if (body.carton_type_id !== undefined) updateData.carton_type_id = body.carton_type_id;
+    if (body.packing_material_id !== undefined) updateData.packing_material_id = body.packing_material_id;
     if (body.remarks !== undefined) updateData.remarks = body.remarks;
     if (body.approval_remarks !== undefined) updateData.approval_remarks = body.approval_remarks;
     if (body.status !== undefined) updateData.status = body.status;
@@ -137,7 +140,7 @@ export async function PUT(
 
 // DELETE /api/packing-entry/[id]
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {

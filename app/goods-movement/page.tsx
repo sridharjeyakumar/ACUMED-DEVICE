@@ -816,7 +816,7 @@ export default function GoodsMovementPage() {
                                 </Button>
                             </div>
                             {gmUnits.length === 0 ? (
-                                <p className="text-sm text-muted-foreground py-2">No rolls added yet. Click 'Add Roll' to select available rolls.</p>
+                                <p className="text-sm text-muted-foreground py-2">No rolls added yet. Click Add Roll to select available rolls.</p>
                             ) : (
                                 <table className="w-full text-sm border rounded-lg overflow-hidden">
                                     <thead>

@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { cartonCapacityAPI, packSizeAPI, productAPI, transactionAPI, productionPlanDetailAPI } from "@/services/api";
+import { cartonCapacityAPI, packSizeAPI, productAPI, transactionAPI, productionPlanDetailAPI, productionRejectedAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 interface Transaction {
@@ -34,7 +34,7 @@ interface Transaction {
     last_modified_user_id?: string;
     last_modified_date_time?: Date;
     current_batch_event_type_id?: string;
-    current_batch_status_id: 'P' | 'R' | 'W' | 'C';
+    current_batch_status_id: 'P' | 'I' | 'W' | 'C';
     createdAt?: string;
     updatedAt?: string;
 }
@@ -112,7 +112,7 @@ interface ProductDetail {
 
 const statusConfig = {
     'P': { label: 'Planned', color: 'bg-blue-50 text-blue-600', icon: Play },
-    'R': { label: 'Running', color: 'bg-green-50 text-green-600', icon: Play },
+    'I': { label: 'In Progress', color: 'bg-green-50 text-green-600', icon: Play },
     'W': { label: 'Waiting', color: 'bg-yellow-50 text-yellow-600', icon: Pause },
     'C': { label: 'Completed', color: 'bg-gray-50 text-gray-600', icon: CheckCircle },
 };
@@ -159,11 +159,6 @@ export default function TransactionTablePage() {
     const [batchDetails, setBatchDetails] = useState<Map<string, ProductDetail[]>>(new Map());
     const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set());
     
-    // Edit Production Detail Modal States
-    const [isEditDetailModalOpen, setIsEditDetailModalOpen] = useState(false);
-    const [selectedDetail, setSelectedDetail] = useState<ProductDetail | null>(null);
-    const [editingBatchNo, setEditingBatchNo] = useState<string>('');
-    
     const [formData, setFormData] = useState({
         batch_no: "",
         product_id: "",
@@ -182,8 +177,9 @@ export default function TransactionTablePage() {
         actual_total_shipper_cartons: "",
         total_rejected_qty_kg: "",
         remarks: "",
+        completed_remarks: "",
         current_batch_event_type_id: "NB",
-        current_batch_status_id: "P" as 'P' | 'R' | 'W' | 'C',
+        current_batch_status_id: "P" as 'P' | 'I' | 'W' | 'C',
     });
     
     const isSubmittingRef = useRef(false);
@@ -201,6 +197,17 @@ export default function TransactionTablePage() {
         no_of_packs: '',
         remarks: ''
     });
+
+    // Edit modal: status-based access control
+    const [initialTotalSachets, setInitialTotalSachets] = useState<number>(0);
+    const [editPacksizeDetails, setEditPacksizeDetails] = useState<ProductDetail[]>([]);
+    const [editNewRows, setEditNewRows] = useState<ProductDetail[]>([]);
+    const [editNewRow, setEditNewRow] = useState({ packsize_id: '', no_of_packs: '' });
+
+    // Close (status='C') confirmation
+    const [showCloseConfirmDialog, setShowCloseConfirmDialog] = useState(false);
+    const [completedRemarks, setCompletedRemarks] = useState('');
+    const [plannedSachetsSum, setPlannedSachetsSum] = useState<number>(0);
 
     // Reset form data when Add modal opens
     useEffect(() => {
@@ -221,6 +228,7 @@ export default function TransactionTablePage() {
                 actual_total_shipper_cartons: "",
                 total_rejected_qty_kg: "",
                 remarks: "",
+                completed_remarks: "",
                 current_batch_event_type_id: "NB",
                 current_batch_status_id: "P",
             });
@@ -574,93 +582,41 @@ const getPacksPerCartonByTypeForProduct = (packsize_id: string, cartonType: stri
     
     return capacityRecord ? capacityRecord.packs_per_carton : 0;
 };
-    // Edit detail handler - FIXED
-// Edit detail handler - WITH STATUS CHECK
-const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
-    // Find the batch to check its status
-    const batch = transactions.find(t => t.batch_no === batchNo);
-    
-    // Prevent editing if status is not 'P'
-    if (batch && batch.current_batch_status_id !== 'P') {
-        toast({
-            title: "Editing Disabled",
-            description: `Cannot edit production details for batches with status "${statusConfig[batch.current_batch_status_id].label}"`,
-            variant: "destructive",
-        });
-        return;
-    }
-    
-    setSelectedDetail(detail);
-    setEditingBatchNo(batchNo);
-    
-    // Find the product for this batch
-    const product = products.find(p => p.product_id === batch?.product_id);
-    setSelectedProduct(product || null);
-    
-    setCurrentProductDetail({
-        packsize_id: detail.packsize_id,
-        no_of_packs: detail.no_of_packs.toString(),
-        remarks: detail.remarks || ''
-    });
-    setIsEditDetailModalOpen(true);
+
+// Helper: carton capacity lookup by product_id (used in Edit modal pack size editing)
+const getPacksPerCartonForProduct = (product_id: string, packsize_id: string, cartonType: string) => {
+    if (!product_id || !packsize_id) return 0;
+    const cap = records.find(r =>
+        r.product_id === product_id &&
+        r.pack_size_id === packsize_id &&
+        r.carton_type_id === cartonType &&
+        r.active === true
+    );
+    return cap ? cap.packs_per_carton : 0;
 };
 
-    // Update detail handler - FIXED
-    const handleUpdateDetail = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedDetail || !editingBatchNo) return;
-        
-        try {
-            // Calculate all the values based on current selections
-            const updatedDetail = {
-                ...selectedDetail,
-                packsize_id: currentProductDetail.packsize_id,
-                no_of_packs: parseInt(currentProductDetail.no_of_packs),
-                remarks: currentProductDetail.remarks,
-                no_of_sachets: calculateSachets(currentProductDetail),
-                packs_per_steri_carton: getPacksPerCartonByType('ST'),
-                sterilization_cartons: calculateCartons('ST'),
-                packs_per_shipper_carton: getPacksPerCartonByType('SH'),
-                shipper_cartons: calculateCartons('SH'),
-                last_modified_user_id: "ADMIN",
-                last_modified_date_time: new Date()
-            };
-
-            await productionPlanDetailAPI.update(
-                editingBatchNo, 
-                selectedDetail.sno || 0, 
-                updatedDetail
-            );
-
-            // Update local state
-            const updatedDetails = batchDetails.get(editingBatchNo)?.map(d => 
-                d.sno === selectedDetail.sno ? updatedDetail : d
-            ) || [];
-            
-            setBatchDetails(new Map(batchDetails).set(editingBatchNo, updatedDetails));
-            
-            toast({
-                title: "Success",
-                description: "Production plan detail updated successfully",
-            });
-            
-            setIsEditDetailModalOpen(false);
-            setSelectedDetail(null);
-            setEditingBatchNo('');
-            setCurrentProductDetail({
-                packsize_id: '',
-                no_of_packs: '',
-                remarks: ''
-            });
-            setSelectedProduct(null);
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to update production plan detail",
-                variant: "destructive",
-            });
+// Update an editPacksizeDetails row by index, auto-recalculate sachets/cartons
+const handleEditPacksizeChange = (index: number, field: string, value: string) => {
+    if (!selectedTransaction) return;
+    setEditPacksizeDetails(prev => {
+        const next = [...prev];
+        const d = { ...next[index], [field]: field === 'no_of_packs' ? parseInt(value) || 0 : value };
+        if (field === 'packsize_id' || field === 'no_of_packs') {
+            const psId = field === 'packsize_id' ? value : next[index].packsize_id;
+            const packs = field === 'no_of_packs' ? parseInt(value) || 0 : next[index].no_of_packs;
+            const ps = packSizes.find(p => p.pack_size_id === psId);
+            const steriPer = getPacksPerCartonForProduct(selectedTransaction.product_id, psId, 'ST');
+            const shipPer = getPacksPerCartonForProduct(selectedTransaction.product_id, psId, 'SH');
+            d.no_of_sachets = ps ? packs * ps.qty_per_carton : 0;
+            d.packs_per_steri_carton = steriPer;
+            d.no_of_sterilization_cartons = steriPer > 0 ? Math.ceil(packs / steriPer) : 0;
+            d.packs_per_shipper_carton = shipPer;
+            d.no_of_shipper_cartons = shipPer > 0 ? Math.ceil(packs / shipPer) : 0;
         }
-    };
+        next[index] = d;
+        return next;
+    });
+};
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -806,7 +762,7 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
         }
     };
 
-    const handleEdit = (transaction: Transaction) => {
+    const handleEdit = async (transaction: Transaction) => {
         setSelectedTransaction(transaction);
         setFormData({
             batch_no: transaction.batch_no,
@@ -824,14 +780,86 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
             actual_total_shipper_cartons: transaction.actual_total_shipper_cartons?.toString() || "",
             total_rejected_qty_kg: transaction.total_rejected_qty_kg?.toString() || "",
             remarks: transaction.remarks || "",
-            current_batch_event_type_id: "NB", 
+            completed_remarks: "",
+            current_batch_event_type_id: transaction.current_batch_event_type_id || "NB",
             current_batch_status_id: transaction.current_batch_status_id,
         });
-        
+
+        // Capture original total sachets for validation in 'I' and 'W' modes
+        setInitialTotalSachets(transaction.total_sachets || 0);
+        setEditNewRows([]);
+        setEditNewRow({ packsize_id: '', no_of_packs: '' });
+        setCompletedRemarks('');
+
         const product = products.find(p => p.product_id === transaction.product_id);
         setSelectedProduct(product || null);
-        
+
+        // Load existing packsize rows for all statuses
+        try {
+            const details = await productionPlanDetailAPI.getByBatchNo(transaction.batch_no);
+            setEditPacksizeDetails(details);
+        } catch {
+            setEditPacksizeDetails([]);
+        }
+
         setIsEditModalOpen(true);
+    };
+
+    // Calculate sachets for a given packsize_id + no_of_packs (used in edit new rows)
+    const calcEditRowSachets = (packsize_id: string, no_of_packs: string) => {
+        if (!packsize_id || !no_of_packs) return 0;
+        const ps = packSizes.find(p => p.pack_size_id === packsize_id);
+        return ps ? parseInt(no_of_packs) * ps.qty_per_carton : 0;
+    };
+
+    const getEditRowCartons = (packsize_id: string, no_of_packs: string, cartonType: string) => {
+        if (!packsize_id || !no_of_packs || !selectedProduct) return 0;
+        const cap = records.find(r =>
+            r.product_id === selectedProduct.product_id &&
+            r.pack_size_id === packsize_id &&
+            r.carton_type_id === cartonType &&
+            r.active === true
+        );
+        if (!cap || cap.packs_per_carton === 0) return 0;
+        return Math.ceil(parseInt(no_of_packs) / cap.packs_per_carton);
+    };
+
+    const handleAddEditRow = () => {
+        if (!editNewRow.packsize_id || !editNewRow.no_of_packs) {
+            toast({ title: "Validation Error", description: "Select pack size and enter number of packs", variant: "destructive" });
+            return;
+        }
+        const newSachets = calcEditRowSachets(editNewRow.packsize_id, editNewRow.no_of_packs);
+        const existingSachetsSum = editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
+        const newRowsSachetsSum = editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
+        if (existingSachetsSum + newRowsSachetsSum + newSachets > initialTotalSachets) {
+            toast({
+                title: "Sachets Limit Exceeded",
+                description: `Adding this row would make total sachets (${existingSachetsSum + newRowsSachetsSum + newSachets}) exceed the planned total (${initialTotalSachets}).`,
+                variant: "destructive",
+            });
+            return;
+        }
+        const steriPerPack = getEditRowCartons(editNewRow.packsize_id, editNewRow.no_of_packs, 'ST');
+        const shipperPerPack = getEditRowCartons(editNewRow.packsize_id, editNewRow.no_of_packs, 'SH');
+        const ps = packSizes.find(p => p.pack_size_id === editNewRow.packsize_id);
+        const steriCartons = ps && steriPerPack > 0 ? Math.ceil(parseInt(editNewRow.no_of_packs) / steriPerPack) : 0;
+        const shipperCartons = ps && shipperPerPack > 0 ? Math.ceil(parseInt(editNewRow.no_of_packs) / shipperPerPack) : 0;
+        setEditNewRows(prev => [...prev, {
+            packsize_id: editNewRow.packsize_id,
+            no_of_packs: parseInt(editNewRow.no_of_packs),
+            remarks: '',
+            no_of_sachets: newSachets,
+            packs_per_steri_carton: steriPerPack,
+            sterilization_cartons: steriCartons,
+            packs_per_shipper_carton: shipperPerPack,
+            shipper_cartons: shipperCartons,
+            no_of_shipper_cartons: shipperCartons,
+            no_of_sterilization_cartons: steriCartons,
+            last_modified_user_id: "",
+            last_modified_date_time: undefined,
+        }]);
+        setEditNewRow({ packsize_id: '', no_of_packs: '' });
     };
 
     const handleEditSubmit = async (e: React.FormEvent) => {
@@ -839,28 +867,78 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
         e.stopPropagation();
         if (isSubmittingRef.current) return;
         if (!selectedTransaction) return;
-        isSubmittingRef.current = true;
-        
+
+        const currentStatus = selectedTransaction.current_batch_status_id;
+
+        // Status 'I': only save new packsize rows, no TransactionTable changes
+        if (currentStatus === 'I') {
+            isSubmittingRef.current = true;
+            try {
+                await saveEditNewRows();
+                toast({ title: "Success", description: "New pack size rows saved." });
+                setIsEditModalOpen(false);
+                setSelectedTransaction(null);
+                loadTransactions();
+            } catch (error: any) {
+                toast({ title: "Error", description: error.message || "Failed to save", variant: "destructive" });
+            } finally {
+                isSubmittingRef.current = false;
+            }
+            return;
+        }
+
+        // Status 'W': only status change to 'C' is allowed, plus new packsize rows
+        if (currentStatus === 'W') {
+            if (formData.current_batch_status_id === 'C') {
+                isSubmittingRef.current = true;
+                try {
+                    const details = await productionPlanDetailAPI.getByBatchNo(selectedTransaction.batch_no);
+                    const sum = details.reduce((s: number, d: any) => s + (d.no_of_sachets || 0), 0);
+                    setPlannedSachetsSum(sum);
+                    setShowCloseConfirmDialog(true);
+                } catch {
+                    setShowCloseConfirmDialog(true);
+                } finally {
+                    isSubmittingRef.current = false;
+                }
+            } else {
+                isSubmittingRef.current = true;
+                try {
+                    await saveEditNewRows();
+                    toast({ title: "Success", description: "New pack size rows saved." });
+                    setIsEditModalOpen(false);
+                    setSelectedTransaction(null);
+                    loadTransactions();
+                } catch (error: any) {
+                    toast({ title: "Error", description: error.message || "Failed to save", variant: "destructive" });
+                } finally {
+                    isSubmittingRef.current = false;
+                }
+            }
+            return;
+        }
+
+        // Status 'P': full edit — validate status transition (only P→P or P→I)
+        if (!['P', 'I'].includes(formData.current_batch_status_id)) {
+            toast({ title: "Invalid Status", description: "From Planned, status can only move to In Progress or stay Planned.", variant: "destructive" });
+            return;
+        }
+
         if (formData.batch_no && formData.month_year) {
-            const exists = transactions.some(t => 
-                t.product_id === formData.product_id && 
+            const exists = transactions.some(t =>
+                t.product_id === formData.product_id &&
                 t.month_year === formData.month_year &&
                 t._id !== selectedTransaction._id
             );
-            
             if (exists) {
-                toast({
-                    title: "Duplicate Batch",
-                    description: `Batch ${formData.batch_no} already exists for ${formatMonthYear(formData.month_year)}.`,
-                    variant: "destructive",
-                });
-                isSubmittingRef.current = false;
+                toast({ title: "Duplicate Batch", description: `Batch ${formData.batch_no} already exists for ${formatMonthYear(formData.month_year)}.`, variant: "destructive" });
                 return;
             }
         }
-        
+
+        isSubmittingRef.current = true;
         const previousData = { ...selectedTransaction };
-        
+
         try {
             await transactionAPI.update(selectedTransaction.batch_no, {
                 product_id: formData.product_id.toUpperCase(),
@@ -882,27 +960,101 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                 last_modified_user_id: "ADMIN",
                 last_modified_date_time: new Date(),
             });
-            
+
+            // Save updated existing rows and create new rows
+            const existingDetailRows = editPacksizeDetails.filter(d => d.sno);
+            const newDetailRows = editPacksizeDetails.filter(d => !d.sno);
+
+            for (const detail of existingDetailRows) {
+                await productionPlanDetailAPI.update(selectedTransaction.batch_no, detail.sno!, {
+                    ...detail,
+                    last_modified_user_id: 'ADMIN',
+                    last_modified_date_time: new Date(),
+                });
+            }
+
+            if (newDetailRows.length > 0) {
+                const maxSno = existingDetailRows.length > 0 ? Math.max(...existingDetailRows.map(d => d.sno || 0)) : 0;
+                const toCreate = newDetailRows.map((row, idx) => ({
+                    batch_no: selectedTransaction.batch_no,
+                    sno: maxSno + idx + 1,
+                    product_id: selectedTransaction.product_id,
+                    packsize_id: row.packsize_id,
+                    no_of_packs: row.no_of_packs,
+                    no_of_sachets: row.no_of_sachets,
+                    packs_per_steri_carton: row.packs_per_steri_carton,
+                    no_of_sterilization_cartons: row.no_of_sterilization_cartons,
+                    packs_per_shipper_carton: row.packs_per_shipper_carton,
+                    no_of_shipper_cartons: row.no_of_shipper_cartons,
+                    remarks: row.remarks || '',
+                    last_modified_user_id: 'ADMIN',
+                    last_modified_date_time: new Date(),
+                }));
+                await productionPlanDetailAPI.createMany(toCreate);
+            }
+
             setLastAction({ type: 'edit', data: previousData });
-            
             toast({
                 title: "Success",
                 description: "Batch updated successfully",
-                action: (
-                    <ToastAction altText="Undo" onClick={handleUndo}>
-                        Undo
-                    </ToastAction>
-                ),
+                action: <ToastAction altText="Undo" onClick={handleUndo}>Undo</ToastAction>,
             });
             setIsEditModalOpen(false);
             setSelectedTransaction(null);
             loadTransactions();
         } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to update batch",
-                variant: "destructive",
+            toast({ title: "Error", description: error.message || "Failed to update batch", variant: "destructive" });
+        } finally {
+            isSubmittingRef.current = false;
+        }
+    };
+
+    // Save new packsize rows added during 'I' or 'W' edit
+    const saveEditNewRows = async () => {
+        if (!selectedTransaction || editNewRows.length === 0) return;
+        const existingDetails = await productionPlanDetailAPI.getByBatchNo(selectedTransaction.batch_no);
+        const nextSno = (existingDetails.length > 0 ? Math.max(...existingDetails.map((d: any) => d.sno || 0)) : 0) + 1;
+        const toCreate = editNewRows.map((row, idx) => ({
+            batch_no: selectedTransaction.batch_no,
+            sno: nextSno + idx,
+            product_id: selectedTransaction.product_id,
+            packsize_id: row.packsize_id,
+            no_of_packs: row.no_of_packs,
+            no_of_sachets: row.no_of_sachets,
+            packs_per_steri_carton: row.packs_per_steri_carton,
+            no_of_sterilization_cartons: row.no_of_sterilization_cartons,
+            packs_per_shipper_carton: row.packs_per_shipper_carton,
+            no_of_shipper_cartons: row.no_of_shipper_cartons,
+            remarks: row.remarks || '',
+            last_modified_user_id: "ADMIN",
+            last_modified_date_time: new Date(),
+        }));
+        await productionPlanDetailAPI.createMany(toCreate);
+        setEditNewRows([]);
+    };
+
+    // Confirm closing batch: status 'W' → 'C'
+    const handleConfirmClose = async () => {
+        if (!selectedTransaction) return;
+        isSubmittingRef.current = true;
+        try {
+            await saveEditNewRows();
+            await transactionAPI.update(selectedTransaction.batch_no, {
+                current_batch_status_id: 'C',
+                completed_remarks: completedRemarks,
+                actual_end_date: new Date(),
+                last_modified_user_id: "ADMIN",
+                last_modified_date_time: new Date(),
             });
+            await productionRejectedAPI.closeBatch(selectedTransaction.batch_no);
+            toast({ title: "Batch Closed", description: `Batch ${selectedTransaction.batch_no} marked as Completed.` });
+            setShowCloseConfirmDialog(false);
+            setIsEditModalOpen(false);
+            setSelectedTransaction(null);
+            setCompletedRemarks('');
+            loadTransactions();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to close batch", variant: "destructive" });
         } finally {
             isSubmittingRef.current = false;
         }
@@ -969,7 +1121,7 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                             >
                                 <Plus className="w-5 h-5" />
-                                Create New Transaction
+                                Create Production Plan
                             </Button>
                         </div>
                     </motion.div>
@@ -1233,6 +1385,7 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                                             </td>
                                                             <td className="px-6 py-4 align-middle">
                                                                 <div className="flex items-center justify-center gap-2">
+                                                                    {item.current_batch_status_id !== 'C' && (
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
                                                                         className="text-blue-600 hover:text-blue-800 p-1 rounded"
@@ -1240,6 +1393,7 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                                                     >
                                                                         <Pencil className="w-4 h-4" />
                                                                     </button>
+                                                                    )}
                                                                     {isSuperAdmin && (
                                                                         <button
                                                                             onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
@@ -1286,7 +1440,6 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Remarks</th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Last Modified User ID</th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Last Modified Date & Time</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -1295,7 +1448,7 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                         <td className="px-4 py-2 text-sm">{detail.batch_no}</td>
                                         <td className="px-4 py-2 text-sm">{detail.sno || idx + 1}</td>
                                         <td className="px-4 py-2 text-sm">{detail.product_id}</td>
-                                        <td className="px-4 py-2 text-sm">{detail.packsize_id}</td>
+                                        <td className="px-4 py-2 text-sm">{packSizes.find(p => p.pack_size_id === detail.packsize_id)?.pack_size_name || detail.packsize_id}</td>
                                         <td className="px-4 py-2 text-sm font-mono">{detail.no_of_packs}</td>
                                         <td className="px-4 py-2 text-sm font-mono">{detail.no_of_sachets}</td>
                                         <td className="px-4 py-2 text-sm">{detail.packs_per_steri_carton}</td>
@@ -1305,24 +1458,6 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                         <td className="px-4 py-2 text-sm">{detail.remarks || '-'}</td>
                                         <td className="px-4 py-2 text-sm font-mono">{detail.last_modified_user_id}</td>
                                         <td className="px-4 py-2 text-sm font-mono">{formatDateTime(detail.last_modified_date_time)}</td>
-                                        <td className="px-4 py-2 text-sm">
-                                            {item.current_batch_status_id === 'P' ? (
-                                                <button
-                                                    onClick={() => handleEditDetail(detail, item.batch_no)}
-                                                    className="text-blue-600 hover:text-blue-800 mr-2"
-                                                    title="Edit"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                            ) : (
-                                                <span 
-                                                    className="text-gray-300 cursor-not-allowed inline-block"
-                                                    title={`Editing disabled - Batch status is ${statusConfig[item.current_batch_status_id].label}`}
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </span>
-                                            )}
-                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -1334,9 +1469,14 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${statusConfig[item.current_batch_status_id].color}`}>
                                 {statusConfig[item.current_batch_status_id].label}
                             </span>
-                            {item.current_batch_status_id !== 'P' && (
+                            {item.current_batch_status_id !== 'P' && item.current_batch_status_id !== 'C' && (
                                 <span className="ml-2 text-amber-600">
-                                    ⚠️ Editing is only allowed when status is Planned
+                                    ⚠ Existing rows are locked. Use Edit Batch to add new pack size rows.
+                                </span>
+                            )}
+                            {item.current_batch_status_id === 'C' && (
+                                <span className="ml-2 text-gray-500">
+                                    Batch is Completed — no further changes allowed.
                                 </span>
                             )}
                         </div>
@@ -1754,7 +1894,7 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                                                                     className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
                                                                 >
                                                                     <option value="">Select Pack Size</option>
-                                                                    {packSizes.map((size) => (
+                                                                    {packSizes.filter((p)=>p.active).map((size) => (
                                                                         <option key={size.pack_size_id} value={size.pack_size_id}>
                                                                             {size.pack_size_name} ({size.qty_per_carton} {size.uom})
                                                                         </option>
@@ -1870,273 +2010,530 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
-                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Edit Batch</h2>
-                                    <button
-                                        onClick={() => setIsEditModalOpen(false)}
-                                        className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
-                                    >
-                                        <X className="w-6 h-6" />
-                                    </button>
+                            <div className="bg-[#f8fafc] rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden">
+                                {/* Header */}
+                                <div className="flex justify-between items-center p-6 border-b border-slate-200 bg-white">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-[#3b82f6] p-2 rounded-lg text-white shadow-lg">
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h1 className="text-2xl font-bold text-[#1e293b]">Edit Production Plan</h1>
+                                            <p className="text-sm text-slate-400 font-medium">Manufacturing Execution System</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsEditModalOpen(false)}
+                                            className="text-sm font-semibold text-slate-500 hover:text-slate-800 px-4 py-2"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleEditSubmit}
+                                            disabled={isSubmittingRef.current || isDuplicateBatch}
+                                            className="bg-[#3b82f6] hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 text-sm font-bold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                            </svg>
+                                            {isSubmittingRef.current ? 'Saving...' :
+                                             selectedTransaction?.current_batch_status_id === 'I' ? 'Save New Rows' :
+                                             selectedTransaction?.current_batch_status_id === 'W' ? 'Save / Close Batch' :
+                                             'Update Plan'}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-3 gap-6">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Batch No <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input
-                                                name="batch_no"
-                                                value={formData.batch_no}
-                                                disabled
-                                                className="bg-gray-50"
-                                            />
+                                    {/* Status banner */}
+                                    {selectedTransaction && selectedTransaction.current_batch_status_id !== 'P' && (
+                                        <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-medium border ${
+                                            selectedTransaction.current_batch_status_id === 'I' ? 'bg-green-50 text-green-700 border-green-200' :
+                                            selectedTransaction.current_batch_status_id === 'W' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : ''
+                                        }`}>
+                                            {selectedTransaction.current_batch_status_id === 'I' && 'Batch is In Progress — transaction fields are locked. You may add new pack size rows only (total sachets must remain unchanged).'}
+                                            {selectedTransaction.current_batch_status_id === 'W' && 'Batch is Waiting — transaction fields are locked. You may add new pack size rows or change status to Completed.'}
+                                        </div>
+                                    )}
+
+                                    {/* MAIN CARDS GRID */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                                        {/* 1. PLAN INFORMATION */}
+                                        <div className="lg:col-span-3 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                            <div className="flex items-center gap-2 mb-6">
+                                                <span className="bg-blue-50 text-blue-500 rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">i</span>
+                                                <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Plan Information</h2>
+                                            </div>
+                                            <div className="space-y-5">
+                                                {/* Batch No — always read-only */}
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Batch No.</label>
+                                                    <div className="relative">
+                                                        <input
+                                                            type="text"
+                                                            value={formData.batch_no}
+                                                            readOnly
+                                                            className="w-full bg-[#f1f5f9] border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 cursor-not-allowed"
+                                                        />
+                                                        <svg className="w-4 h-4 absolute right-4 top-3 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </div>
+                                                </div>
+                                                {/* Product — editable if P, locked otherwise */}
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Product <span className="text-red-500">*</span></label>
+                                                    {selectedTransaction?.current_batch_status_id === 'P' ? (
+                                                        <select name="product_id" value={formData.product_id} onChange={handleInputChange}
+                                                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100" required>
+                                                            <option value="">Select Product Master</option>
+                                                            {products.filter(p => p.active).map((p) => (
+                                                                <option key={p.product_id} value={p.product_id}>{p.product_name}</option>
+                                                            ))}
+                                                        </select>
+                                                    ) : (
+                                                        <input
+                                                            type="text"
+                                                            value={products.find(p => p.product_id === formData.product_id)?.product_name || formData.product_id}
+                                                            readOnly
+                                                            className="w-full bg-[#f1f5f9] border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 cursor-not-allowed"
+                                                        />
+                                                    )}
+                                                </div>
+                                                {/* Month-Year — editable if P, locked otherwise */}
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Month Year <span className="text-red-500">*</span></label>
+                                                    {selectedTransaction?.current_batch_status_id === 'P' ? (
+                                                        <>
+                                                            <select name="month_year" value={formData.month_year} onChange={handleInputChange}
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100" required>
+                                                                <option value="">Select Month-Year</option>
+                                                                {generateMonthYearOptions().map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                                            </select>
+                                                            {isDuplicateBatch && (
+                                                                <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+                                                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                                                                    {duplicateMessage}
+                                                                </p>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <input
+                                                            type="text"
+                                                            value={formatMonthYear(formData.month_year)}
+                                                            readOnly
+                                                            className="w-full bg-[#f1f5f9] border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 cursor-not-allowed"
+                                                        />
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Product Name <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                name="product_id"
-                                                value={formData.product_id}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                required
-                                            >
-                                                <option value="">Select a product</option>
-                                                {products.map((product) => (
-                                                    <option key={product.product_id} value={product.product_id}>
-                                                        {product.product_name} ({product.product_id})
-                                                    </option>
-                                                ))}
-                                            </select>
+                                        {/* 2. SCHEDULE */}
+                                        <div className="lg:col-span-3 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                            <div className="flex items-center gap-2 mb-6">
+                                                <span className="text-blue-500">📅</span>
+                                                <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Schedule</h2>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Planned Start</label>
+                                                    <input type="date" name="planned_start_date" value={formData.planned_start_date}
+                                                        onChange={handleInputChange}
+                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
+                                                        className={`w-full border border-slate-200 rounded-xl px-2 py-2 text-xs text-center outline-none focus:ring-2 focus:ring-blue-100 ${selectedTransaction?.current_batch_status_id !== 'P' ? 'bg-[#f1f5f9] text-slate-400 cursor-not-allowed' : ''}`}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Planned End</label>
+                                                    <input type="date" name="planned_end_date" value={formData.planned_end_date}
+                                                        onChange={handleInputChange}
+                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
+                                                        className={`w-full border border-slate-200 rounded-xl px-2 py-2 text-xs text-center outline-none focus:ring-2 focus:ring-blue-100 ${selectedTransaction?.current_batch_status_id !== 'P' ? 'bg-[#f1f5f9] text-slate-400 cursor-not-allowed' : ''}`}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Actual Start</label>
+                                                    <input type="date" name="actual_start_date" value={formData.actual_start_date}
+                                                        onChange={handleInputChange}
+                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
+                                                        className={`w-full border border-slate-200 rounded-xl px-2 py-2 text-xs text-center outline-none focus:ring-2 focus:ring-blue-100 ${selectedTransaction?.current_batch_status_id !== 'P' ? 'bg-[#f1f5f9] text-slate-400 cursor-not-allowed' : ''}`}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Actual End</label>
+                                                    <input type="date" name="actual_end_date" value={formData.actual_end_date}
+                                                        onChange={handleInputChange}
+                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
+                                                        className={`w-full border border-slate-200 rounded-xl px-2 py-2 text-xs text-center outline-none focus:ring-2 focus:ring-blue-100 ${selectedTransaction?.current_batch_status_id !== 'P' ? 'bg-[#f1f5f9] text-slate-400 cursor-not-allowed' : ''}`}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Remarks</label>
+                                                <textarea
+                                                    name="remarks"
+                                                    value={formData.remarks}
+                                                    onChange={handleInputChange}
+                                                    disabled={selectedTransaction?.current_batch_status_id !== 'P'}
+                                                    placeholder="Enter remarks..."
+                                                    className={`w-full border border-slate-200 rounded-xl px-4 py-2 text-sm min-h-[72px] resize-none outline-none focus:ring-2 focus:ring-blue-100 ${selectedTransaction?.current_batch_status_id !== 'P' ? 'bg-[#f1f5f9] text-slate-400 cursor-not-allowed' : ''}`}
+                                                />
+                                            </div>
                                         </div>
 
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Month-Year <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                name="month_year"
-                                                value={formData.month_year}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                required
-                                            >
-                                                <option value="">Select Month-Year</option>
-                                                {generateMonthYearOptions().map((option) => (
-                                                    <option key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            {isDuplicateBatch && (
-                                                <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
-                                                    <X className="w-3 h-3" /> {duplicateMessage}
-                                                </p>
+                                        {/* 3. PRODUCTION SUMMARY */}
+                                        <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                            <div className="flex justify-between items-center mb-6">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-blue-500">📊</span>
+                                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Production Summary</h2>
+                                                </div>
+                                            </div>
+                                            {/* Planned totals */}
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Planned</p>
+                                            <div className="grid grid-cols-3 gap-3 mb-4">
+                                                <div className="bg-[#f8fafc] p-3 rounded-xl">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Total Sachets</span>
+                                                    <input type="number" name="total_sachets" value={formData.total_sachets}
+                                                        onChange={handleInputChange}
+                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
+                                                        className={`text-xl font-black bg-transparent w-full outline-none ${selectedTransaction?.current_batch_status_id !== 'P' ? 'text-slate-400 cursor-not-allowed' : 'text-slate-800'}`}
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div className="bg-[#f8fafc] p-3 rounded-xl">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Steri. Cartons</span>
+                                                    <input type="number" name="total_sterilization_cartons" value={formData.total_sterilization_cartons}
+                                                        onChange={handleInputChange}
+                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
+                                                        className={`text-xl font-black bg-transparent w-full outline-none ${selectedTransaction?.current_batch_status_id !== 'P' ? 'text-slate-400 cursor-not-allowed' : 'text-slate-800'}`}
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div className="bg-[#f8fafc] p-3 rounded-xl">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Shipper Cartons</span>
+                                                    <input type="number" name="total_shipper_cartons" value={formData.total_shipper_cartons}
+                                                        onChange={handleInputChange}
+                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
+                                                        className={`text-xl font-black bg-transparent w-full outline-none ${selectedTransaction?.current_batch_status_id !== 'P' ? 'text-slate-400 cursor-not-allowed' : 'text-slate-800'}`}
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                            {/* Actual totals */}
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Actual</p>
+                                            <div className="grid grid-cols-4 gap-3 mb-4">
+                                                <div className="bg-[#f8fafc] p-3 rounded-xl">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Sachets</span>
+                                                    <input type="number" name="actual_total_sachets" value={formData.actual_total_sachets}
+                                                        onChange={handleInputChange}
+                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
+                                                        className={`text-xl font-black bg-transparent w-full outline-none ${selectedTransaction?.current_batch_status_id !== 'P' ? 'text-slate-400 cursor-not-allowed' : 'text-slate-800'}`}
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div className="bg-[#f8fafc] p-3 rounded-xl">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Steri. Cartons</span>
+                                                    <input type="number" name="actual_total_sterilization_cartons" value={formData.actual_total_sterilization_cartons}
+                                                        onChange={handleInputChange}
+                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
+                                                        className={`text-xl font-black bg-transparent w-full outline-none ${selectedTransaction?.current_batch_status_id !== 'P' ? 'text-slate-400 cursor-not-allowed' : 'text-slate-800'}`}
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div className="bg-[#f8fafc] p-3 rounded-xl">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Shipper Cartons</span>
+                                                    <input type="number" name="actual_total_shipper_cartons" value={formData.actual_total_shipper_cartons}
+                                                        onChange={handleInputChange}
+                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
+                                                        className={`text-xl font-black bg-transparent w-full outline-none ${selectedTransaction?.current_batch_status_id !== 'P' ? 'text-slate-400 cursor-not-allowed' : 'text-slate-800'}`}
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div className="bg-[#fffbeb] p-3 rounded-xl border border-amber-100">
+                                                    <span className="text-[10px] font-bold text-amber-600 uppercase block mb-1">Rejected (KG)</span>
+                                                    <input type="number" step="0.01" name="total_rejected_qty_kg" value={formData.total_rejected_qty_kg}
+                                                        onChange={handleInputChange}
+                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
+                                                        className={`text-xl font-black bg-transparent w-full outline-none ${selectedTransaction?.current_batch_status_id !== 'P' ? 'text-amber-300 cursor-not-allowed' : 'text-amber-700'}`}
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
+                                            </div>
+                                            {/* Event Type & Status */}
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block">Event Type ID</label>
+                                                    {selectedTransaction?.current_batch_status_id === 'P' ? (
+                                                        <input type="text" name="current_batch_event_type_id" value={formData.current_batch_event_type_id}
+                                                            onChange={handleInputChange} maxLength={2}
+                                                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                                                        />
+                                                    ) : (
+                                                        <div className="bg-[#f8fafc] border border-slate-200 rounded-xl px-4 py-2 text-sm font-medium text-slate-500">
+                                                            {formData.current_batch_event_type_id || '—'}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block">Status <span className="text-red-500">*</span></label>
+                                                    {selectedTransaction?.current_batch_status_id === 'P' && (
+                                                        <select name="current_batch_status_id" value={formData.current_batch_status_id} onChange={handleInputChange}
+                                                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-100" required>
+                                                            <option value="P">P — Planned</option>
+                                                            <option value="I">I — In Progress</option>
+                                                        </select>
+                                                    )}
+                                                    {selectedTransaction?.current_batch_status_id === 'I' && (
+                                                        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-2 text-sm font-medium text-green-700">
+                                                            I — In Progress
+                                                        </div>
+                                                    )}
+                                                    {selectedTransaction?.current_batch_status_id === 'W' && (
+                                                        <select name="current_batch_status_id" value={formData.current_batch_status_id} onChange={handleInputChange}
+                                                            className="w-full bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-yellow-200" required>
+                                                            <option value="W">W — Waiting</option>
+                                                            <option value="C">C — Completed</option>
+                                                        </select>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Product Plan Details — editable for status 'P' */}
+                                    {selectedTransaction?.current_batch_status_id === 'P' && (
+                                        <div className="mt-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                            <div className="flex items-center justify-between mb-6">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-blue-500">📋</span>
+                                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Product Plan Details</h2>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditPacksizeDetails(prev => [...prev, {
+                                                        packsize_id: '',
+                                                        no_of_packs: 0,
+                                                        remarks: '',
+                                                        no_of_sachets: 0,
+                                                        packs_per_steri_carton: 0,
+                                                        sterilization_cartons: 0,
+                                                        packs_per_shipper_carton: 0,
+                                                        shipper_cartons: 0,
+                                                        no_of_shipper_cartons: 0,
+                                                        no_of_sterilization_cartons: 0,
+                                                        last_modified_user_id: 'ADMIN',
+                                                        last_modified_date_time: new Date(),
+                                                    }])}
+                                                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all"
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                    Add New Row
+                                                </button>
+                                            </div>
+                                            {editPacksizeDetails.length > 0 ? (
+                                                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                                    <table className="min-w-full divide-y divide-slate-200">
+                                                        <thead className="bg-slate-50">
+                                                            <tr>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sno</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Pack Size *</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Packs *</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sachets</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Steri/Pack</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Steri Cartons</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Shipper/Pack</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Shipper Cartons</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Remarks</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="bg-white divide-y divide-slate-200">
+                                                            {editPacksizeDetails.map((detail, index) => {
+                                                                const displaySno = detail.sno ?? `New`;
+                                                                const selectedPackSize = packSizes.find(ps => ps.pack_size_id === detail.packsize_id);
+                                                                const isNew = !detail.sno;
+                                                                return (
+                                                                    <tr key={index} className={`hover:bg-slate-50 ${isNew ? 'bg-blue-50' : ''}`}>
+                                                                        <td className="px-4 py-3 text-sm font-mono">
+                                                                            {isNew ? <span className="text-blue-500 italic text-xs">New</span> : displaySno}
+                                                                        </td>
+
+                                                                        {/* Pack Size */}
+                                                                        <td className="px-4 py-3">
+                                                                            {detail.packsize_id ? (
+                                                                                <div className="flex items-center justify-between gap-2">
+                                                                                    <span className="text-sm font-medium text-slate-700">
+                                                                                        {selectedPackSize?.pack_size_name || detail.packsize_id}
+                                                                                    </span>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => handleEditPacksizeChange(index, 'packsize_id', '')}
+                                                                                        className="text-blue-500 hover:text-blue-700"
+                                                                                        title="Change pack size"
+                                                                                    >
+                                                                                        <Pencil className="w-3 h-3" />
+                                                                                    </button>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <select
+                                                                                    value=""
+                                                                                    onChange={(e) => handleEditPacksizeChange(index, 'packsize_id', e.target.value)}
+                                                                                    className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
+                                                                                >
+                                                                                    <option value="">Select Pack Size</option>
+                                                                                    {packSizes.filter(p => p.active).map(size => (
+                                                                                        <option key={size.pack_size_id} value={size.pack_size_id}>
+                                                                                            {size.pack_size_name} ({size.qty_per_carton} {size.uom})
+                                                                                        </option>
+                                                                                    ))}
+                                                                                </select>
+                                                                            )}
+                                                                        </td>
+
+                                                                        {/* No. of Packs */}
+                                                                        <td className="px-4 py-3">
+                                                                            <input
+                                                                                type="number"
+                                                                                min="0"
+                                                                                value={detail.no_of_packs || ''}
+                                                                                onChange={(e) => handleEditPacksizeChange(index, 'no_of_packs', e.target.value)}
+                                                                                className="w-20 px-2 py-1 border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                                            />
+                                                                        </td>
+
+                                                                        {/* Auto-calculated */}
+                                                                        <td className="px-4 py-3 text-sm font-mono text-slate-600">{detail.no_of_sachets}</td>
+                                                                        <td className="px-4 py-3 text-sm text-slate-600">{detail.packs_per_steri_carton}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono text-slate-600">{detail.no_of_sterilization_cartons}</td>
+                                                                        <td className="px-4 py-3 text-sm text-slate-600">{detail.packs_per_shipper_carton}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono text-slate-600">{detail.no_of_shipper_cartons}</td>
+
+                                                                        {/* Remarks */}
+                                                                        <td className="px-4 py-3">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={detail.remarks || ''}
+                                                                                onChange={(e) => handleEditPacksizeChange(index, 'remarks', e.target.value)}
+                                                                                maxLength={100}
+                                                                                placeholder="Remarks"
+                                                                                className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                                            />
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-8 text-slate-400 text-sm">No product plan details yet. Click Add New Row to add one.</div>
                                             )}
                                         </div>
+                                    )}
 
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Planned Start Date
-                                            </label>
-                                            <Input
-                                                type="date"
-                                                name="planned_start_date"
-                                                value={formData.planned_start_date}
-                                                onChange={handleInputChange}
-                                                min={todayDate}
-                                            />
+                                    {/* Pack Size Details for 'I' and 'W' */}
+                                    {(selectedTransaction?.current_batch_status_id === 'I' || selectedTransaction?.current_batch_status_id === 'W') && (
+                                        <div className="mt-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-blue-500">📋</span>
+                                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Pack Size Details</h2>
+                                                </div>
+                                                <p className="text-xs text-slate-500">
+                                                    Planned: <span className="font-mono font-bold text-slate-700">{initialTotalSachets}</span>
+                                                    {' · '}Used: <span className="font-mono font-bold text-slate-700">
+                                                        {editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) + editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0)}
+                                                    </span>
+                                                    {' · '}Remaining: <span className={`font-mono font-bold ${
+                                                        initialTotalSachets - editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) - editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0) < 0 ? 'text-red-600' : 'text-green-600'
+                                                    }`}>
+                                                        {initialTotalSachets - editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) - editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0)}
+                                                    </span>
+                                                </p>
+                                            </div>
+
+                                            {/* Existing + new rows table */}
+                                            {(editPacksizeDetails.length > 0 || editNewRows.length > 0) && (
+                                                <div className="overflow-x-auto rounded-xl border border-slate-200 mb-4">
+                                                    <table className="min-w-full divide-y divide-slate-200 text-xs">
+                                                        <thead className="bg-slate-50">
+                                                            <tr>
+                                                                <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-wider">S.No</th>
+                                                                <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-wider">Pack Size</th>
+                                                                <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-wider">Packs</th>
+                                                                <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-wider">Sachets</th>
+                                                                <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-wider">Steri Cartons</th>
+                                                                <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-wider">Shipper Cartons</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="bg-white divide-y divide-slate-100">
+                                                            {editPacksizeDetails.map((d, i) => (
+                                                                <tr key={i} className="text-slate-600 hover:bg-slate-50">
+                                                                    <td className="px-4 py-3 font-mono">{d.sno || i + 1}</td>
+                                                                    <td className="px-4 py-3">{packSizes.find(ps => ps.pack_size_id === d.packsize_id)?.pack_size_name || d.packsize_id}</td>
+                                                                    <td className="px-4 py-3 font-mono">{d.no_of_packs}</td>
+                                                                    <td className="px-4 py-3 font-mono">{d.no_of_sachets}</td>
+                                                                    <td className="px-4 py-3 font-mono">{d.no_of_sterilization_cartons}</td>
+                                                                    <td className="px-4 py-3 font-mono">{d.no_of_shipper_cartons}</td>
+                                                                </tr>
+                                                            ))}
+                                                            {editNewRows.map((d, i) => (
+                                                                <tr key={`new-${i}`} className="bg-blue-50 text-blue-700">
+                                                                    <td className="px-4 py-3 italic font-mono">New</td>
+                                                                    <td className="px-4 py-3">{packSizes.find(ps => ps.pack_size_id === d.packsize_id)?.pack_size_name || d.packsize_id}</td>
+                                                                    <td className="px-4 py-3 font-mono">{d.no_of_packs}</td>
+                                                                    <td className="px-4 py-3 font-mono">{d.no_of_sachets}</td>
+                                                                    <td className="px-4 py-3 font-mono">{d.no_of_sterilization_cartons}</td>
+                                                                    <td className="px-4 py-3 font-mono">{d.no_of_shipper_cartons}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+
+                                            {/* Add new row input */}
+                                            <div className="flex items-end gap-3 bg-slate-50 rounded-xl p-4 border border-slate-200">
+                                                <div className="flex-1">
+                                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Pack Size</label>
+                                                    <select value={editNewRow.packsize_id}
+                                                        onChange={(e) => setEditNewRow(prev => ({ ...prev, packsize_id: e.target.value }))}
+                                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white">
+                                                        <option value="">Select Pack Size</option>
+                                                        {packSizes.filter(p => p.active).map(ps => (
+                                                            <option key={ps.pack_size_id} value={ps.pack_size_id}>{ps.pack_size_name} ({ps.qty_per_carton} {ps.uom})</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="w-32">
+                                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">No. of Packs</label>
+                                                    <input type="number" min="1" value={editNewRow.no_of_packs}
+                                                        onChange={(e) => setEditNewRow(prev => ({ ...prev, no_of_packs: e.target.value }))}
+                                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                        placeholder="0" />
+                                                </div>
+                                                <div className="w-28 text-center">
+                                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Sachets</label>
+                                                    <div className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-mono text-slate-600">
+                                                        {calcEditRowSachets(editNewRow.packsize_id, editNewRow.no_of_packs)}
+                                                    </div>
+                                                </div>
+                                                <button type="button" onClick={handleAddEditRow}
+                                                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all">
+                                                    <Plus className="w-4 h-4" /> Add Row
+                                                </button>
+                                            </div>
                                         </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Planned End Date
-                                            </label>
-                                            <Input
-                                                type="date"
-                                                name="planned_end_date"
-                                                value={formData.planned_end_date}
-                                                onChange={handleInputChange}
-                                                min={getMinDateForEndDate(formData.planned_start_date)}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Actual Start Date
-                                            </label>
-                                            <Input
-                                                type="date"
-                                                name="actual_start_date"
-                                                value={formData.actual_start_date}
-                                                onChange={handleInputChange}
-                                                min={todayDate}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Actual End Date
-                                            </label>
-                                            <Input
-                                                type="date"
-                                                name="actual_end_date"
-                                                value={formData.actual_end_date}
-                                                onChange={handleInputChange}
-                                                min={getMinDateForEndDate(formData.actual_start_date)}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Planned Sachets
-                                            </label>
-                                            <Input
-                                                type="number"
-                                                name="total_sachets"
-                                                value={formData.total_sachets}
-                                                onChange={handleInputChange}
-                                                max={99999999}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Planned Steri. Cartons
-                                            </label>
-                                            <Input
-                                                type="number"
-                                                name="total_sterilization_cartons"
-                                                value={formData.total_sterilization_cartons}
-                                                onChange={handleInputChange}
-                                                max={99999}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Planned Shipper Cartons
-                                            </label>
-                                            <Input
-                                                type="number"
-                                                name="total_shipper_cartons"
-                                                value={formData.total_shipper_cartons}
-                                                onChange={handleInputChange}
-                                                max={99999}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Actual Sachets
-                                            </label>
-                                            <Input
-                                                type="number"
-                                                name="actual_total_sachets"
-                                                value={formData.actual_total_sachets}
-                                                onChange={handleInputChange}
-                                                max={99999999}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Actual Steri. Cartons
-                                            </label>
-                                            <Input
-                                                type="number"
-                                                name="actual_total_sterilization_cartons"
-                                                value={formData.actual_total_sterilization_cartons}
-                                                onChange={handleInputChange}
-                                                max={99999}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Actual Shipper Cartons
-                                            </label>
-                                            <Input
-                                                type="number"
-                                                name="actual_total_shipper_cartons"
-                                                value={formData.actual_total_shipper_cartons}
-                                                onChange={handleInputChange}
-                                                max={99999}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Rejected Qty (KG)
-                                            </label>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                name="total_rejected_qty_kg"
-                                                value={formData.total_rejected_qty_kg}
-                                                onChange={handleInputChange}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Event Type ID
-                                            </label>
-                                            <Input
-                                                name="current_batch_event_type_id"
-                                                value={formData.current_batch_event_type_id}
-                                                onChange={handleInputChange}
-                                                maxLength={2}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Status <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                name="current_batch_status_id"
-                                                value={formData.current_batch_status_id}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                required
-                                            >
-                                                <option value="P">Planned</option>
-                                                <option value="R">Running</option>
-                                                <option value="W">Waiting</option>
-                                                <option value="C">Completed</option>
-                                            </select>
-                                        </div>
-
-                                        <div className="col-span-3">
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Remarks
-                                            </label>
-                                            <Input
-                                                name="remarks"
-                                                value={formData.remarks}
-                                                onChange={handleInputChange}
-                                                maxLength={100}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <Button 
-                                            type="submit" 
-                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6" 
-                                            disabled={isSubmittingRef.current || isDuplicateBatch}
-                                        >
-                                            Update Batch
-                                        </Button>
-                                    </div>
+                                    )}
                                 </form>
                             </div>
                         </motion.div>
@@ -2144,221 +2541,48 @@ const handleEditDetail = (detail: ProductDetail, batchNo: string) => {
                 )}
             </AnimatePresence>
 
-            {/* Edit Production Plan Detail Modal - FIXED with live calculations */}
+            {/* Close Batch Confirmation Dialog */}
             <AnimatePresence>
-                {isEditDetailModalOpen && (
+                {showCloseConfirmDialog && (
                     <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/50 z-50"
-                            onClick={() => {
-                                setIsEditDetailModalOpen(false);
-                                setSelectedProduct(null);
-                            }}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-                                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-2xl font-bold">Edit Production Plan Detail</h2>
-                                    <button
-                                        onClick={() => {
-                                            setIsEditDetailModalOpen(false);
-                                            setSelectedProduct(null);
-                                        }}
-                                        className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors"
-                                    >
-                                        <X className="w-6 h-6" />
-                                    </button>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-[70]"
+                            onClick={() => setShowCloseConfirmDialog(false)} />
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                            className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+                                <h2 className="text-lg font-bold text-gray-900 mb-2">Close Batch</h2>
+
+                                {plannedSachetsSum < initialTotalSachets && (
+                                    <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+                                        ⚠ Actual Production ({plannedSachetsSum}) is less than Planned ({initialTotalSachets}). Proceed to Close?
+                                    </div>
+                                )}
+
+                                <div className="mb-4">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                        Completed Remarks <span className="text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                        value={completedRemarks}
+                                        onChange={(e) => setCompletedRemarks(e.target.value)}
+                                        placeholder="Enter completion remarks..."
+                                        maxLength={100}
+                                        rows={3}
+                                        className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                    />
                                 </div>
 
-                                <form onSubmit={handleUpdateDetail} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {/* Batch No - Read Only */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Batch No
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={editingBatchNo}
-                                                readOnly
-                                                disabled
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                            />
-                                        </div>
-
-                                        {/* Sno - Read Only */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                S.No
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={selectedDetail?.sno || ''}
-                                                readOnly
-                                                disabled
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                            />
-                                        </div>
-
-                                        {/* Product ID - Read Only */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Product ID
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={selectedDetail?.product_id || ''}
-                                                readOnly
-                                                disabled
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                            />
-                                        </div>
-
-                                        {/* Pack Size Selection */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Pack Size <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                value={currentProductDetail.packsize_id}
-                                                onChange={(e) => handleProductDetailChange('packsize_id', e.target.value)}
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                required
-                                            >
-                                                <option value="">Select Pack Size</option>
-                                                {packSizes.map((size) => (
-                                                    <option key={size.pack_size_id} value={size.pack_size_id}>
-                                                        {size.pack_size_name} ({size.qty_per_carton} {size.uom})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        {/* No. of Packs */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                No. of Packs <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                value={currentProductDetail.no_of_packs}
-                                                onChange={(e) => handleProductDetailChange('no_of_packs', e.target.value)}
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                required
-                                            />
-                                        </div>
-
-                                        {/* No. of Sachets - Display only */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                No. of Sachets <span className="text-gray-400 text-xs">(Auto-calculated)</span>
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={calculateSachets(currentProductDetail)}
-                                                readOnly
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                            />
-                                        </div>
-
-                                        {/* No. of Packs per Steri Carton - Display only */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                No. of Packs per Steri Carton <span className="text-gray-400 text-xs">(From carton capacity)</span>
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={getPacksPerCartonByType('ST')}
-                                                readOnly
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                            />
-                                        </div>
-
-                                        {/* No. of Sterilization Cartons - Display only */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                No. of Sterilization Cartons <span className="text-gray-400 text-xs">(Auto-calculated)</span>
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={calculateCartons('ST')}
-                                                readOnly
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                            />
-                                        </div>
-
-                                        {/* No. of Packs per Shipper Carton - Display only */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                No. of Packs per Shipper Carton <span className="text-gray-400 text-xs">(From carton capacity)</span>
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={getPacksPerCartonByType('SH')}
-                                                readOnly
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                            />
-                                        </div>
-
-                                        {/* No. of Shipper Cartons - Display only */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                No. of Shipper Cartons <span className="text-gray-400 text-xs">(Auto-calculated)</span>
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={calculateCartons('SH')}
-                                                readOnly
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-gray-100 text-gray-600 text-sm"
-                                            />
-                                        </div>
-
-                                        {/* Remarks */}
-                                        <div className="col-span-2">
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Remarks
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={currentProductDetail.remarks}
-                                                onChange={(e) => handleProductDetailChange('remarks', e.target.value)}
-                                                placeholder="Enter remarks"
-                                                maxLength={100}
-                                                className="w-full px-3 py-2 border border-border rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                        </div>
-                                    </div>
-
-                                 
-
-                                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setIsEditDetailModalOpen(false);
-                                                setSelectedProduct(null);
-                                            }}
-                                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-border rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                            Update Detail
-                                        </button>
-                                    </div>
-                                </form>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => setShowCloseConfirmDialog(false)}
+                                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+                                        Cancel
+                                    </button>
+                                    <button onClick={handleConfirmClose} disabled={!completedRemarks.trim() || isSubmittingRef.current}
+                                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        {isSubmittingRef.current ? 'Closing...' : 'Confirm Close'}
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </>

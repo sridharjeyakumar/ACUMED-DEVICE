@@ -17,7 +17,7 @@ export interface ITransactionTable extends Document {
   last_modified_user_id?: string; 
   last_modified_date_time?: Date;
   current_batch_event_type_id?: string;
-  current_batch_status_id: 'P' | 'R' | 'W' | 'C';
+  current_batch_status_id: 'P' | 'I' | 'W' | 'C';
   active: boolean;
 }
 

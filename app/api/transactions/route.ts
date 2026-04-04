@@ -106,10 +106,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate status
-    const validStatuses = ['P', 'R', 'W', 'C'];
+    const validStatuses = ['P', 'I', 'W', 'C'];
     if (!validStatuses.includes(body.current_batch_status_id)) {
       return NextResponse.json(
-        { error: 'Invalid status. Must be P, R, W, or C' },
+        { error: 'Invalid status. Must be P, I, W, or C' },
         { status: 400 }
       );
     }
