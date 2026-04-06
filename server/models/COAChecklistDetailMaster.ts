@@ -5,6 +5,9 @@ export interface ICOAChecklistDetailMaster extends Document {
   checklist_sno: number; // N(3) - Part of composite PK
   checklist_parameter: string; // Char(200)
   expected_result: string; // Char(200)
+  expected_value_1:number;// N(6,3),
+  expected_value_2:number;// N(6,3),
+  expected_text:string;// Char(25)
   active: boolean; // Boolean
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
@@ -35,6 +38,21 @@ const COAChecklistDetailMasterSchema: Schema = new Schema({
     maxlength: 200,
     trim: true,
   },
+  expected_value_1: {
+    type: Number,
+    required: false,
+  },
+  expected_value_2: {
+    type: Number,
+    required: false,
+  },
+  expected_text: {
+    type: String,
+    required: false,
+    maxlength: 25,
+    trim: true,
+  },
+
   active: {
     type: Boolean,
     required: true,

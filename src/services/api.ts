@@ -1096,7 +1096,17 @@ export const productMovementAPI = {
         method: 'PUT', 
         body: JSON.stringify(data) 
     }),
-    delete: (id: number) => fetchAPI(`/product-movements/${id}`, { 
-        method: 'DELETE' 
+    delete: (id: number) => fetchAPI(`/product-movements/${id}`, {
+        method: 'DELETE'
     }),
+};
+
+// COA Generation API
+export const coaGenerationAPI = {
+  getAll: () => fetchAPI('/coa-generation'),
+  getById: (coaNo: string) => fetchAPI(`/coa-generation/${encodeURIComponent(coaNo)}`),
+  create: (data: any) => fetchAPI('/coa-generation', { method: 'POST', body: JSON.stringify(data) }),
+  update: (coaNo: string, data: any) => fetchAPI(`/coa-generation/${encodeURIComponent(coaNo)}`, { method: 'PUT', body: JSON.stringify(data) }),
+  getCompletedBatches: () => fetchAPI('/coa-generation/batches'),
+  getBatchInfo: (batchNo: string) => fetchAPI(`/coa-generation/batch-info/${encodeURIComponent(batchNo)}`),
 };

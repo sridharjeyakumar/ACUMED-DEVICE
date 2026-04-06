@@ -115,6 +115,8 @@ const navSections: NavSection[] = [
       { icon: Factory, label: "Product Movement", href: "/product-movements" },
       { icon: Factory, label: "Product Movement Special", href: "/product-movement-special" },
       { icon: Factory, label: "Product Movement Approval", href: "/product-movement-approval" },
+      { icon: Factory, label: "COA Generation", href: "/coa-generation" },
+
     ],
   },
 ];
