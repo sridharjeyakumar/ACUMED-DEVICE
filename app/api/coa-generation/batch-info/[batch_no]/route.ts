@@ -25,7 +25,7 @@ export async function GET(
     if (!tx) return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
 
     // Check if COA already generated for this batch
-    const existingCOA = await COAHeader.findOne({ batch_no }).lean();
+    const existingCOA = await (COAHeader as any).findOne({ batch_no }).lean();
     if (existingCOA) {
       return NextResponse.json(
         { error: `COA ${(existingCOA as any).coa_no} already generated for this Batch` },

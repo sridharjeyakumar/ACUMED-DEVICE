@@ -15,9 +15,9 @@ export async function GET(
   try {
     const { id } = await params;
     await ensureConnection();
-    const header = await COAHeader.findOne({ coa_no: id }).lean();
+    const header = await (COAHeader as any).findOne({ coa_no: id }).lean();
     if (!header) return NextResponse.json({ error: 'COA not found' }, { status: 404 });
-    const details = await COADetail.find({ coa_no: id }).lean().sort({ checklist_sno: 1 });
+    const details = await (COADetail as any).find({ coa_no: id }).lean().sort({ checklist_sno: 1 });
     return NextResponse.json({ header, details });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to fetch COA' }, { status: 500 });
@@ -35,28 +35,26 @@ export async function PUT(
     const body = await request.json();
     const { details, mode, ...headerData } = body;
 
-    const existing = await COAHeader.findOne({ coa_no: id });
+    const existing = await (COAHeader as any).findOne({ coa_no: id });
     if (!existing) return NextResponse.json({ error: 'COA not found' }, { status: 404 });
     if (existing.status !== 'E') {
       return NextResponse.json({ error: 'Only Entered (E) records can be modified' }, { status: 400 });
     }
 
     if (mode === 'approval') {
-      // Approval: update approval fields + status only
-      await COAHeader.updateOne(
+      await (COAHeader as any).updateOne(
         { coa_no: id },
         {
           $set: {
             approval_remarks: headerData.approval_remarks,
             approved_by_user_id: headerData.approved_by_user_id,
             approved_date_time: new Date(),
-            status: headerData.status, // 'A' or 'X'
+            status: headerData.status,
           },
         }
       );
     } else {
-      // Edit: update header + replace details
-      await COAHeader.updateOne(
+      await (COAHeader as any).updateOne(
         { coa_no: id },
         {
           $set: {
@@ -67,7 +65,7 @@ export async function PUT(
       );
 
       if (Array.isArray(details)) {
-        await COADetail.deleteMany({ coa_no: id });
+        await (COADetail as any).deleteMany({ coa_no: id });
         if (details.length > 0) {
           const detailDocs = details.map((d: any) => ({
             coa_no: id,
@@ -76,7 +74,7 @@ export async function PUT(
             actual_text: d.actual_text,
             actual_result: d.actual_result,
           }));
-          await COADetail.insertMany(detailDocs);
+          await (COADetail as any).insertMany(detailDocs);
         }
       }
     }

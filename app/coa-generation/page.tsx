@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, ChevronDown, ChevronUp, X, CheckCircle2 } from "lucide-react";
+import { Search, Plus, ChevronDown, ChevronUp, X, CheckCircle2, Printer } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { coaGenerationAPI } from "@/services/api";
@@ -137,6 +137,10 @@ export default function COAGenerationPage() {
   const [isAddModalOpen,      setIsAddModalOpen]      = useState(false);
   const [isEditModalOpen,     setIsEditModalOpen]     = useState(false);
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [isPrintModalOpen,    setIsPrintModalOpen]    = useState(false);
+  const [printCOA,            setPrintCOA]            = useState<COAHeader | null>(null);
+  const [printDetails,        setPrintDetails]        = useState<any[]>([]);
+  const [printMetaMap,        setPrintMetaMap]        = useState<Record<number, any>>({});
   const [selectedCOA,         setSelectedCOA]         = useState<COAHeader | null>(null);
 
   // Add / edit form state
@@ -311,12 +315,12 @@ export default function COAGenerationPage() {
       entered_by_user_id: coa.entered_by_user_id,
     });
     try {
-      const [res, info] = await Promise.all([
+      const [res, items] = await Promise.all([
         coaGenerationAPI.getById(coa.coa_no),
-        coaGenerationAPI.getBatchInfo(coa.batch_no).catch(() => null),
+        coaGenerationAPI.getChecklistItems(coa.coa_checklist_id).catch(() => []),
       ]);
       const metaMap: Record<number, any> = {};
-      (info?.checklist_items || []).forEach((item: any) => { metaMap[item.checklist_sno] = item; });
+      (Array.isArray(items) ? items : []).forEach((item: any) => { metaMap[item.checklist_sno] = item; });
       setDetailRows((res.details || []).map((d: any) => {
         const m = metaMap[d.checklist_sno] || {};
         return {
@@ -373,12 +377,12 @@ export default function COAGenerationPage() {
     setSelectedCOA(coa);
     setApprovalRemarks('');
     try {
-      const [res, info] = await Promise.all([
+      const [res, items] = await Promise.all([
         coaGenerationAPI.getById(coa.coa_no),
-        coaGenerationAPI.getBatchInfo(coa.batch_no).catch(() => null),
+        coaGenerationAPI.getChecklistItems(coa.coa_checklist_id).catch(() => []),
       ]);
       const metaMap: Record<number, any> = {};
-      (info?.checklist_items || []).forEach((item: any) => { metaMap[item.checklist_sno] = item; });
+      (Array.isArray(items) ? items : []).forEach((item: any) => { metaMap[item.checklist_sno] = item; });
       setApprovalDetails((res.details || []).map((d: any) => {
         const m = metaMap[d.checklist_sno] || {};
         return {
@@ -424,6 +428,31 @@ export default function COAGenerationPage() {
     } catch (err: any) {
       toast({ title: 'Error', description: err.message || 'Failed to update', variant: 'destructive' });
     }
+  };
+
+  // ── Open Print ─────────────────────────────────────────────────────────────
+
+  const handleOpenPrint = async (coa: COAHeader) => {
+    setPrintCOA(coa);
+    setPrintDetails([]);
+    setPrintMetaMap({});
+    try {
+      const [res, items] = await Promise.all([
+        coaGenerationAPI.getById(coa.coa_no),
+        coaGenerationAPI.getChecklistItems(coa.coa_checklist_id).catch(() => []),
+      ]);
+      const meta: Record<number, any> = {};
+      (Array.isArray(items) ? items : []).forEach((item: any) => { meta[item.checklist_sno] = item; });
+      setPrintMetaMap(meta);
+      setPrintDetails(res.details || []);
+    } catch {
+      setPrintDetails([]);
+    }
+    setIsPrintModalOpen(true);
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   // ── Filter / Pagination ─────────────────────────────────────────────────────
@@ -749,24 +778,33 @@ export default function COAGenerationPage() {
                             </span>
                           </td>
                           <td className="px-4 py-4 text-center">
-                            {coa.status === 'E' && (
-                              <div className="flex items-center justify-center gap-1">
-                                <Button
-                                  variant="ghost" size="sm"
-                                  onClick={() => handleOpenEdit(coa)}
-                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs px-2 h-7"
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="ghost" size="sm"
-                                  onClick={() => handleOpenApproval(coa)}
-                                  className="text-green-600 hover:text-green-700 hover:bg-green-50 text-xs px-2 h-7 flex items-center gap-1"
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5" /> Approve
-                                </Button>
-                              </div>
-                            )}
+                            <div className="flex items-center justify-center gap-1">
+                              {coa.status === 'E' && (
+                                <>
+                                  <Button
+                                    variant="ghost" size="sm"
+                                    onClick={() => handleOpenEdit(coa)}
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs px-2 h-7"
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    variant="ghost" size="sm"
+                                    onClick={() => handleOpenApproval(coa)}
+                                    className="text-green-600 hover:text-green-700 hover:bg-green-50 text-xs px-2 h-7 flex items-center gap-1"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                                  </Button>
+                                </>
+                              )}
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => handleOpenPrint(coa)}
+                                className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 text-xs px-2 h-7 flex items-center gap-1"
+                              >
+                                <Printer className="w-3.5 h-3.5" /> Print
+                              </Button>
+                            </div>
                           </td>
                         </motion.tr>
 
@@ -996,6 +1034,216 @@ export default function COAGenerationPage() {
                       <CheckCircle2 className="w-4 h-4" /> Approve COA
                     </Button>
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── PRINT MODAL ──────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isPrintModalOpen && printCOA && (
+          <>
+            {/* Print CSS */}
+            <style>{`
+              @media print {
+                body * { visibility: hidden !important; }
+                #coa-print-content, #coa-print-content * { visibility: visible !important; }
+                #coa-print-content {
+                  position: fixed !important;
+                  top: 0; left: 0;
+                  width: 100%; height: auto;
+                  padding: 28px 32px;
+                  background: white;
+                  font-family: Arial, sans-serif;
+                }
+              }
+            `}</style>
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 z-50" onClick={() => setIsPrintModalOpen(false)} />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-6">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[94vh] flex flex-col overflow-hidden">
+
+                {/* Modal toolbar */}
+                <div className="bg-gray-800 text-white px-6 py-4 flex items-center justify-between flex-shrink-0 rounded-t-xl">
+                  <h2 className="text-base font-bold flex items-center gap-2">
+                    <Printer className="w-5 h-5" /> Print Preview — {printCOA.coa_no}
+                  </h2>
+                  <button onClick={() => setIsPrintModalOpen(false)} className="text-white hover:bg-gray-700 rounded-lg p-1.5 transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Scrollable preview area */}
+                <div className="flex-1 overflow-y-auto bg-gray-200 p-6">
+                  <div
+                    id="coa-print-content"
+                    className="bg-white mx-auto shadow-md"
+                    style={{ width: '100%', maxWidth: '720px', padding: '28px 32px', fontFamily: 'Arial, sans-serif', fontSize: '12px', color: '#000', lineHeight: '1.4' }}
+                  >
+                    {/* ── Company header ── */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ width: '28%', border: '1px solid #000', padding: '10px 12px', verticalAlign: 'middle', textAlign: 'center' }}>
+                            <div style={{ width: '90px', height: '56px', border: '1px solid #aaa', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', fontSize: '10px', color: '#777' }}>
+                              Company Logo
+                            </div>
+                          </td>
+                          <td style={{ border: '1px solid #000', padding: '10px 12px', textAlign: 'center', verticalAlign: 'middle' }}>
+                            <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>&lt; COMPANY NAME &gt;</div>
+                            <div style={{ fontSize: '11px', color: '#444' }}>&lt; Address line 1 &gt;</div>
+                            <div style={{ fontSize: '11px', color: '#444' }}>&lt; Address line 2 &gt;</div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* ── Title ── */}
+                    <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '15px', border: '1px solid #000', padding: '8px 12px', marginBottom: '12px', letterSpacing: '2px' }}>
+                      CERTIFICATE OF ANALYSIS
+                    </div>
+
+                    {/* ── Header fields ── */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '12px' }}>
+                      <tbody>
+                        {[
+                          { l1: 'COA No.', v1: printCOA.coa_no, l2: 'COA Date', v2: fmt(printCOA.coa_date) },
+                          { l1: 'Product', v1: printCOA.product_id, l2: 'Batch No.', v2: printCOA.batch_no },
+                          { l1: 'Checklist', v1: printCOA.coa_checklist_id, l2: 'Overall Result', v2: printCOA.coa_overall_result === 'P' ? 'Pass' : 'Fail', v2Bold: true, v2Color: printCOA.coa_overall_result === 'P' ? '#166534' : '#991b1b' },
+                          { l1: 'Manufactured Date', v1: fmt(printCOA.manufactured_date), l2: 'Expiry Date', v2: fmt(printCOA.expiry_date) },
+                        ].map((row, i) => (
+                          <tr key={i}>
+                            <td style={{ width: '20%', padding: '5px 8px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{row.l1}</td>
+                            <td style={{ width: '30%', border: '1px solid #000', padding: '5px 8px', background: '#fff9e6' }}>{row.v1}</td>
+                            <td style={{ width: '20%', padding: '5px 8px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{row.l2}</td>
+                            <td style={{ width: '30%', border: '1px solid #000', padding: '5px 8px', background: '#fff9e6', fontWeight: (row as any).v2Bold ? 'bold' : 'normal', color: (row as any).v2Color || '#000' }}>{row.v2}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* ── Detail table ── */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '12px' }}>
+                      <thead>
+                        <tr style={{ background: '#d1d5db' }}>
+                          <th style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center', width: '8%', fontWeight: 'bold' }}>Checklist Sno</th>
+                          <th style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center', width: '32%', fontWeight: 'bold' }}>Checklist Parameter</th>
+                          <th style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center', width: '22%', fontWeight: 'bold' }}>Expected Result</th>
+                          <th style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center', width: '22%', fontWeight: 'bold' }}>Actual Result</th>
+                          <th style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center', width: '16%', fontWeight: 'bold' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {printDetails.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} style={{ border: '1px solid #000', padding: '12px', textAlign: 'center', color: '#777' }}>No detail records</td>
+                          </tr>
+                        ) : printDetails.map((d: any) => {
+                          const meta = printMetaMap[d.checklist_sno] || {};
+                          const er = (meta.expected_result || '').toUpperCase();
+
+                          let expectedDisplay = '';
+                          if (er === 'P') expectedDisplay = 'Pass / Fail';
+                          else if (er === 'E') expectedDisplay = `= ${meta.expected_value_1 ?? ''}`;
+                          else if (er === 'R') expectedDisplay = `${meta.expected_value_1 ?? ''} to ${meta.expected_value_2 ?? ''}`;
+                          else if (er === 'T') expectedDisplay = meta.expected_text || '';
+                          else expectedDisplay = meta.expected_result || '';
+
+                          let actualDisplay = '';
+                          if (er === 'E' || er === 'R') actualDisplay = d.actual_value !== undefined ? String(d.actual_value) : '-';
+                          else if (er === 'T') actualDisplay = d.actual_text || '-';
+                          else actualDisplay = d.actual_result === 'P' ? 'Pass' : d.actual_result === 'F' ? 'Fail' : d.actual_result || '-';
+
+                          const passed = d.actual_result === 'P';
+                          return (
+                            <tr key={d.checklist_sno}>
+                              <td style={{ border: '1px solid #000', padding: '5px 8px', textAlign: 'center' }}>{d.checklist_sno}</td>
+                              <td style={{ border: '1px solid #000', padding: '5px 8px' }}>{meta.checklist_parameter || '-'}</td>
+                              <td style={{ border: '1px solid #000', padding: '5px 8px', textAlign: 'center' }}>{expectedDisplay}</td>
+                              <td style={{ border: '1px solid #000', padding: '5px 8px', textAlign: 'center' }}>{actualDisplay}</td>
+                              <td style={{ border: '1px solid #000', padding: '5px 8px', textAlign: 'center', fontWeight: 'bold', color: passed ? '#166534' : '#991b1b' }}>
+                                {passed ? 'Pass' : 'Fail'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+
+                    {/* ── Remarks ── */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '4px' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ padding: '5px 8px', fontWeight: 'bold', width: '18%', whiteSpace: 'nowrap' }}>Remarks :</td>
+                          <td style={{ border: '1px solid #000', padding: '5px 8px', minHeight: '24px' }}>{printCOA.remarks || '\u00A0'}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* ── Approval Remarks ── */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
+                      <tbody>
+                        <tr>
+                          <td colSpan={2} style={{ border: '1px solid #000', padding: '6px 8px', background: '#fde8c8', fontWeight: 'bold', fontSize: '12px' }}>
+                            Approval Remarks
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan={2} style={{ border: '1px solid #000', padding: '6px 8px', background: '#fef3e2', minHeight: '28px' }}>
+                            {printCOA.approval_remarks || '\u00A0'}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* ── Signature section ── */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ width: '33.3%', border: '1px solid #000', padding: '5px 10px', textAlign: 'center', fontWeight: 'bold', background: '#f3f4f6' }}>Executed By :</td>
+                          <td style={{ width: '33.3%', border: '1px solid #000', padding: '5px 10px', textAlign: 'center', fontWeight: 'bold', background: '#f3f4f6' }}>Reviewed By :</td>
+                          <td style={{ width: '33.4%', border: '1px solid #000', padding: '5px 10px', textAlign: 'center', fontWeight: 'bold', background: '#f3f4f6' }}>Approved By :</td>
+                        </tr>
+                        <tr>
+                          <td style={{ border: '1px solid #000', padding: '10px 12px', verticalAlign: 'top' }}>
+                            <div style={{ marginBottom: '6px', fontSize: '11px' }}>Name :</div>
+                            <div style={{ border: '1px solid #aaa', padding: '4px 8px', background: '#fff9e6', marginBottom: '10px', minHeight: '22px' }}>{printCOA.entered_by_user_id}</div>
+                            <div style={{ marginBottom: '6px', fontSize: '11px' }}>Date :</div>
+                            <div style={{ border: '1px solid #aaa', padding: '4px 8px', background: '#fff9e6', minHeight: '22px' }}>{fmt(printCOA.entered_date_time)}</div>
+                          </td>
+                          <td style={{ border: '1px solid #000', padding: '10px 12px', verticalAlign: 'top' }}>
+                            <div style={{ marginBottom: '6px', fontSize: '11px' }}>Name :</div>
+                            <div style={{ border: '1px solid #aaa', padding: '4px 8px', marginBottom: '10px', minHeight: '22px' }}>&nbsp;</div>
+                            <div style={{ marginBottom: '6px', fontSize: '11px' }}>Date :</div>
+                            <div style={{ border: '1px solid #aaa', padding: '4px 8px', minHeight: '22px' }}>&nbsp;</div>
+                          </td>
+                          <td style={{ border: '1px solid #000', padding: '10px 12px', verticalAlign: 'top' }}>
+                            <div style={{ marginBottom: '6px', fontSize: '11px' }}>Name :</div>
+                            <div style={{ border: '1px solid #aaa', padding: '4px 8px', background: '#fff9e6', marginBottom: '10px', minHeight: '22px' }}>{printCOA.approved_by_user_id || '\u00A0'}</div>
+                            <div style={{ marginBottom: '6px', fontSize: '11px' }}>Date :</div>
+                            <div style={{ border: '1px solid #aaa', padding: '4px 8px', background: '#fff9e6', minHeight: '22px' }}>{printCOA.approved_date_time ? fmt(printCOA.approved_date_time) : '\u00A0'}</div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* ── Footer ── */}
+                    <div style={{ fontSize: '10px', fontStyle: 'italic', color: '#666', marginTop: '6px' }}>
+                      * This is a system generated COA
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-white flex-shrink-0 rounded-b-xl">
+                  <Button variant="outline" onClick={() => setIsPrintModalOpen(false)} className="px-5">
+                    <X className="w-4 h-4 mr-2" /> Cancel
+                  </Button>
+                  <Button onClick={handlePrint} className="bg-gray-800 hover:bg-gray-900 text-white px-6 flex items-center gap-2">
+                    <Printer className="w-4 h-4" /> Print / Save as PDF
+                  </Button>
                 </div>
               </div>
             </motion.div>

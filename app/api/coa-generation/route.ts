@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     await ensureConnection();
-    const headers = await COAHeader.find().lean().sort({ entered_date_time: -1 });
+    const headers = await (COAHeader as any).find().lean().sort({ entered_date_time: -1 });
     return NextResponse.json(headers);
   } catch (error: any) {
     console.error('Error fetching COA headers:', error);
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const prefix = `COA/${yy}/`;
 
     // Find max running sno for current year
-    const lastRecord = await COAHeader
+    const lastRecord = await (COAHeader as any)
       .findOne({ coa_no: { $regex: `^COA\\/${yy}\\/` } })
       .sort({ coa_no: -1 })
       .lean();
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const coaNo = `${prefix}${String(nextSno).padStart(3, '0')}`;
 
     // Build header
-    const header = new COAHeader({
+    const header = new (COAHeader as any)({
       ...headerData,
       coa_no: coaNo,
       coa_date: now,
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         actual_text: d.actual_text,
         actual_result: d.actual_result,
       }));
-      await COADetail.insertMany(detailDocs);
+      await (COADetail as any).insertMany(detailDocs);
     }
 
     return NextResponse.json({ coa_no: coaNo }, { status: 201 });
