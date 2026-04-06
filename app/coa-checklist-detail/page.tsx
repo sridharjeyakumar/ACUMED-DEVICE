@@ -19,6 +19,9 @@ interface ChecklistDetailRecord {
     checklistSno: number;
     checklistParameter: string;
     expectedResult: string;
+    expectedValue1?: number;
+    expectedValue2?: number;
+    expectedText?: string;
     lastModifiedUserId?: string;
     lastModifiedDateTime?: string;
     active: boolean;
@@ -42,6 +45,9 @@ export default function COAChecklistDetailPage() {
         checklistSno: "",
         checklistParameter: "",
         expectedResult: "",
+        expectedValue1: "",
+        expectedValue2: "",
+        expectedText: "",
     });
 
     // Helper function to convert snake_case to camelCase
@@ -52,6 +58,9 @@ export default function COAChecklistDetailPage() {
             checklistSno: data.checklist_sno,
             checklistParameter: data.checklist_parameter,
             expectedResult: data.expected_result,
+            expectedValue1: data.expected_value_1,
+            expectedValue2: data.expected_value_2,
+            expectedText: data.expected_text,
             lastModifiedUserId: data.last_modified_user_id || "",
             lastModifiedDateTime: data.last_modified_date_time ? new Date(data.last_modified_date_time).toLocaleString() : "",
             active: data.active !== false,
@@ -65,6 +74,9 @@ export default function COAChecklistDetailPage() {
             checklist_sno: safeInteger(data.checklistSno) || 1,
             checklist_parameter: data.checklistParameter,
             expected_result: data.expectedResult,
+            expected_value_1: data.expectedValue1 !== "" ? Number(data.expectedValue1) : undefined,
+            expected_value_2: data.expectedValue2 !== "" ? Number(data.expectedValue2) : undefined,
+            expected_text: data.expectedText,
             active: data.active !== false,
         };
     };
@@ -122,6 +134,9 @@ export default function COAChecklistDetailPage() {
                 checklistSno: "",
                 checklistParameter: "",
                 expectedResult: "",
+                expectedValue1: "",
+                expectedValue2: "",
+                expectedText: "",
             });
         }
     }, [isAddModalOpen, filterChecklistId]);
@@ -154,6 +169,9 @@ export default function COAChecklistDetailPage() {
                 checklistSno: "",
                 checklistParameter: "",
                 expectedResult: "",
+                expectedValue1: "",
+                expectedValue2: "",
+                expectedText: "",
             });
             loadRecords();
         } catch (error: any) {
@@ -172,6 +190,9 @@ export default function COAChecklistDetailPage() {
             checklistSno: detail.checklistSno.toString(),
             checklistParameter: detail.checklistParameter,
             expectedResult: detail.expectedResult,
+            expectedValue1: detail.expectedValue1 !== undefined ? String(detail.expectedValue1) : "",
+            expectedValue2: detail.expectedValue2 !== undefined ? String(detail.expectedValue2) : "",
+            expectedText: detail.expectedText || "",
         });
         setIsEditModalOpen(true);
     };
@@ -193,6 +214,9 @@ export default function COAChecklistDetailPage() {
                 checklistSno: "",
                 checklistParameter: "",
                 expectedResult: "",
+                expectedValue1: "",
+                expectedValue2: "",
+                expectedText: "",
             });
             loadRecords();
         } catch (error: any) {
@@ -396,6 +420,21 @@ export default function COAChecklistDetailPage() {
       Expected Result
     </th>
 
+    {/* Expected Value 1 */}
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Expected Value 1
+    </th>
+
+    {/* Expected Value 2 */}
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+      Expected Value 2
+    </th>
+
+    {/* Expected Text */}
+    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+      Expected Text
+    </th>
+
     {/* Uncomment this if Actions column is needed */}
     {/* <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Actions</th> */}
   </tr>
@@ -447,6 +486,27 @@ export default function COAChecklistDetailPage() {
         <td className="px-6 py-6 align-middle">
           <span className="text-sm  text-foreground">
             {item.expectedResult}
+          </span>
+        </td>
+
+        {/* Expected Value 1 */}
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="text-sm text-foreground">
+            {item.expectedValue1 !== undefined ? item.expectedValue1 : "-"}
+          </span>
+        </td>
+
+        {/* Expected Value 2 */}
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="text-sm text-foreground">
+            {item.expectedValue2 !== undefined ? item.expectedValue2 : "-"}
+          </span>
+        </td>
+
+        {/* Expected Text */}
+        <td className="px-6 py-6 align-middle">
+          <span className="text-sm text-foreground">
+            {item.expectedText || "-"}
           </span>
         </td>
 
@@ -567,9 +627,24 @@ export default function COAChecklistDetailPage() {
                                         <Input name="checklistParameter" value={formData.checklistParameter} onChange={handleInputChange} placeholder="e.g., Perforation, Color, Weight" required  maxLength={50}/>
                                     </div>
 
-                                    <div className="mb-6">
+                                    <div className="mb-4">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Expected Result <span className="text-red-500">*</span></label>
                                         <Input name="expectedResult" value={formData.expectedResult} onChange={handleInputChange} placeholder="e.g., Ok, Pass" required maxLength={25} />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Expected Value 1</label>
+                                        <Input type="number" step="0.001" name="expectedValue1" value={formData.expectedValue1} onChange={handleInputChange} placeholder="e.g., 1.500" />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Expected Value 2</label>
+                                        <Input type="number" step="0.001" name="expectedValue2" value={formData.expectedValue2} onChange={handleInputChange} placeholder="e.g., 2.500" />
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Expected Text</label>
+                                        <Input name="expectedText" value={formData.expectedText} onChange={handleInputChange} placeholder="e.g., NLT 98.0%" maxLength={25} />
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
@@ -626,9 +701,24 @@ export default function COAChecklistDetailPage() {
                                         <Input name="checklistParameter" value={formData.checklistParameter} onChange={handleInputChange} required maxLength={50}/>
                                     </div>
 
-                                    <div className="mb-6">
+                                    <div className="mb-4">
                                         <label className="block text-sm font-semibold text-foreground mb-2">Expected Result <span className="text-red-500">*</span></label>
                                         <Input name="expectedResult" value={formData.expectedResult} onChange={handleInputChange} required maxLength={25}/>
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Expected Value 1</label>
+                                        <Input type="number" step="0.001" name="expectedValue1" value={formData.expectedValue1} onChange={handleInputChange} placeholder="e.g., 1.500" />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Expected Value 2</label>
+                                        <Input type="number" step="0.001" name="expectedValue2" value={formData.expectedValue2} onChange={handleInputChange} placeholder="e.g., 2.500" />
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">Expected Text</label>
+                                        <Input name="expectedText" value={formData.expectedText} onChange={handleInputChange} placeholder="e.g., NLT 98.0%" maxLength={25} />
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">

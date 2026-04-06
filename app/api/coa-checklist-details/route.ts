@@ -87,6 +87,9 @@ export async function PUT(request: NextRequest) {
       const updateData: any = {};
       if (body.checklist_parameter !== undefined) updateData.checklist_parameter = body.checklist_parameter;
       if (body.expected_result !== undefined) updateData.expected_result = body.expected_result;
+      if (body.expected_value_1 !== undefined) updateData.expected_value_1 = body.expected_value_1;
+      if (body.expected_value_2 !== undefined) updateData.expected_value_2 = body.expected_value_2;
+      if (body.expected_text !== undefined) updateData.expected_text = body.expected_text;
       if (body.active !== undefined) updateData.active = body.active !== false;
       updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
       updateData.last_modified_date_time = new Date();
