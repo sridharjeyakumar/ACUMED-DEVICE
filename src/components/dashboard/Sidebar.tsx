@@ -119,6 +119,12 @@ const navSections: NavSection[] = [
 
     ],
   },
+  {
+    title: "REPORTS",
+    items: [
+      { icon: FileText, label: "Product Stock Report", href: "/product-stock-report" },
+    ],
+  },
 ];
 
 interface SidebarProps {
