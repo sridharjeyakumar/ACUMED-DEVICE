@@ -132,6 +132,7 @@ export default function MaterialMasterPage() {
     const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [materialToDelete, setMaterialToDelete] = useState<Material | null>(null);
+    
     // Load materials from API
     const loadMaterials = async () => {
         try {
@@ -189,6 +190,7 @@ useEffect(() => {
     };
     loadProducts();
 }, []);
+
 useEffect(() => {
     const loadProducts = async () => {
         try {
@@ -240,7 +242,12 @@ useEffect(() => {
             });
         }
     }, [isAddModalOpen]);
-
+// Helper function to get combined category display
+const getCategoryDisplay = (categoryId: string) => {
+    if (!categoryId) return "-";
+    const category = categories.find(c => c.material_category_id === categoryId);
+    return category ? `${category.material_category_id} - ${category.material_category_name}` : categoryId;
+};
     const filteredMaterials = materials.filter((material) => {
         const matchesSearch = material.material_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             material.material_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -842,21 +849,12 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
           {material.uom || "-"}
         </td>
 
-        {/* MATERIAL CATEGORY */}
+   
         <td className="px-4 py-3 text-sm">
-          {material.material_category_id ? (
-            <div className="flex flex-col gap-1">
-              <span className="inline-flex px-2 py-1 rounded-md bg-blue-50 text-blue-600 font-mono text-xs w-fit">
-                {material.material_category_id}
-              </span>
-              {materialCategoryMap.get(material.material_category_id) && (
-                <span className="text-xs text-muted-foreground">
-                  {materialCategoryMap.get(material.material_category_id)}
-                </span>
-              )}
-            </div>
-          ) : "-"}
-        </td>
+            <span className="inline-flex px-2 py-1 rounded-md bg-blue-50 text-blue-600 font-mono text-xs w-fit">
+  {getCategoryDisplay(material.material_category_id)|| "-"}
+</span>
+</td>
 
         <td className="px-4 py-3 text-sm">
           {material.material_type || "-"}

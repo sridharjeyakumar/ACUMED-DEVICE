@@ -4,6 +4,8 @@ export interface IRoleMaster extends Document {
   roll_id: string; // Char(3) - PK
   roll_description: string; // Char(50)
   remarks: string; // Char(100)
+  idle_session_timeout?: string; // Char(1) ('Y' or 'N')
+  idle_session_in_minutes?: number; // Number (if idle_session_timeout is 'Y') N(2)
   active: boolean;
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
@@ -28,6 +30,21 @@ const RoleMasterSchema: Schema = new Schema({
     required: false,
     maxlength: 100,
     trim: true,
+  },
+  idle_session_timeout: {
+    type: String,
+    required: false,
+    enum: ['Y', 'N'],
+    maxlength: 1,
+    trim: true,
+    default: 'N',
+  },
+  idle_session_in_minutes: {
+    type: Number,
+    required: false,
+    min: 0,
+    max: 99,
+    default: 0,
   },
   active: {
     type: Boolean,

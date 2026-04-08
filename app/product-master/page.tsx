@@ -816,7 +816,7 @@ const confirmCancelItem = async () => {
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Product Specification</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Weight per Piece</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Weight UOM</th>
-    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Wipes per Kg</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">No of sachets per KG</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Shelf Life (Months)</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Storage Condition</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Safety Stock Quantity</th>
@@ -1253,7 +1253,7 @@ const confirmCancelItem = async () => {
                                         {/* Wipes Per KG */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Wipes Per KG
+                                               No of sachets per KG
                                             </label>
                                             <Input
                                                 type="number"
@@ -1691,7 +1691,7 @@ const confirmCancelItem = async () => {
                                         {/* Wipes Per KG */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Wipes Per KG
+                                                No of sachets per KG
                                             </label>
                                             <Input
                                                 type="number"

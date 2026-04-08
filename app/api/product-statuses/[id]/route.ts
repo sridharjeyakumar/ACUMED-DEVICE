@@ -78,6 +78,7 @@ export async function PUT(
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
     updateData.location_id = body.location_id || '';
+    updateData.material_status_id = body.material_status_id || '';
     updateData.carton_type_id = body.carton_type_id || '';
     
     const status = await ProductStatusMaster.findOneAndUpdate(

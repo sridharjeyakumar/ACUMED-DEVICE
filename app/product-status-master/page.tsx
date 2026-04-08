@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { cartonTypeAPI, productStatusAPI } from "@/services/api";
+import { cartonTypeAPI, locationAPI, materialStatusAPI, productStatusAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
@@ -30,14 +30,15 @@ interface ProductStatus {
     stock_movement?: string; // Char(3) - dropdown (IN / OUT) - can be empty
     carton_type_id?: string; // Char(2) - FK to CartonTypeMaster
     movement_type?: string; // Char(1) - N (Normal) / S (Special)
-    stock_origin?: string; // Char(1) - Y / N
-    from_prod_status_id?: string; // Char(2) - FK
+    // stock_origin?: string; // Char(1) - Y / N
+    // from_prod_status_id?: string; // Char(2) - FK
     prod_status_icon?: string; // image (base64 or URL)
     seq_no: number; // N(2)
     active: boolean;
     location_id?: string; // Char(2)
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
+    material_status_id?: string; 
 }
 interface CartonType {
     carton_type_id: string; // Char(2) - PK
@@ -46,6 +47,29 @@ interface CartonType {
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
     active: boolean; // Boolean
+}
+interface Location {
+    location_id: string; // Char(2) - PK
+    location_name: string; // Char(25)
+    last_modified_user_id?: string; // Char(5)
+    location_icon?: string; // image
+    last_modified_date_time?: Date; // Date
+    active: boolean;
+}
+interface MaterialStatus {
+    matl_status_id: string; // Char(3) - PK
+    material_status: string; // Char(30)
+    stock_movement?: string; // Char(3) - dropdown (IN / OUT) - can be empty
+    effect_in_stock?: string; // Char(1) - dropdown (+ / -) - can be empty
+    seq_no: number; // N(2)
+    active: boolean;
+    goods_movement?: string; // Char(1)
+    against_gr?: string; // Char(1)
+    unit_split_allowed?: string; // Char(1)
+    approval_required?: string; // Char(1)
+    location_id?: string; // Char(2) - FK
+    last_modified_user_id?: string; // Char(5)
+    last_modified_date_time?: Date; // Date
 }
 // Helper function to format dates consistently (prevents hydration errors)
 function formatDateTime(date: Date | string): string {
@@ -84,19 +108,22 @@ export default function ProductStatusMasterPage() {
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [cartonTypes, setCartonTypes] = useState<CartonType[]>([]);
+    const [locations, setLocations] = useState<Location[]>([]);
+    const [mstatuses, setMstatuses] = useState<MaterialStatus[]>([]);
     
     const [formData, setFormData] = useState({
         prod_status_id: "",
         product_status: "",
         stock_movement: "",
         movement_type: "",
-        stock_origin: "",
-        from_prod_status_id: "",
+        // stock_origin: "",
+        // from_prod_status_id: "",
         prod_status_icon: "",
         seq_no: "",
         active: true,
         location_id: "",
         carton_type_id: "",
+        material_status_id:""
     });
 
     const emptyForm = {
@@ -104,12 +131,13 @@ export default function ProductStatusMasterPage() {
         product_status: "",
         stock_movement: "",
         movement_type: "",
-        stock_origin: "",
-        from_prod_status_id: "",
+        // stock_origin: "",
+        // from_prod_status_id: "",
         prod_status_icon: "",
         seq_no: "",
         active: true,
         location_id: "",
+        material_status_id: "",
         carton_type_id: "",
     };
     useEffect(() => {
@@ -130,6 +158,29 @@ export default function ProductStatusMasterPage() {
             if (addIconInputRef.current) addIconInputRef.current.value = "";
         }
     }, [isAddModalOpen]);
+        useEffect(() => {
+            const loadProducts = async () => {
+                try {
+                    const data = await locationAPI.getAll();
+                    setLocations(data);
+                } catch (error) {
+                    console.error("Failed to load locations", error);
+                }
+            };
+            loadProducts();
+        }, []);
+
+                useEffect(() => {
+            const loadProducts = async () => {
+                try {
+                    const data = await materialStatusAPI.getAll();
+                    setMstatuses(data);
+                } catch (error) {
+                    console.error("Failed to load material statuses", error);
+                }
+            };
+            loadProducts();
+        }, []);
 
     const loadStatuses = useCallback(async () => {
         try {
@@ -214,13 +265,14 @@ export default function ProductStatusMasterPage() {
                 product_status: formData.product_status,
                 stock_movement: formData.stock_movement || '',
                 movement_type: formData.movement_type || '',
-                stock_origin: formData.stock_origin || '',
-                from_prod_status_id: formData.from_prod_status_id || '',
+                // stock_origin: formData.stock_origin || '',
+                // from_prod_status_id: formData.from_prod_status_id || '',
                 prod_status_icon: formData.prod_status_icon || '',
                 seq_no: parseInt(formData.seq_no) || 0,
                 active: true,
                 last_modified_user_id: "ADMIN",
                 location_id: formData.location_id || '',
+                material_status_id: formData.material_status_id || '',
                 carton_type_id: formData.carton_type_id || '',
             });
             toast({
@@ -275,12 +327,13 @@ export default function ProductStatusMasterPage() {
             product_status: status.product_status,
             stock_movement: status.stock_movement || "",
             movement_type: status.movement_type || "",
-            stock_origin: status.stock_origin || "",
-            from_prod_status_id: status.from_prod_status_id || "",
+            // stock_origin: status.stock_origin || "",
+            // from_prod_status_id: status.from_prod_status_id || "",
             prod_status_icon: status.prod_status_icon || "",
             seq_no: status.seq_no.toString(),
             active: status.active,
             location_id: status.location_id || "",
+            material_status_id: status.material_status_id || "",
             carton_type_id: status.carton_type_id || "",
         });
         setIsEditModalOpen(true);
@@ -313,13 +366,14 @@ export default function ProductStatusMasterPage() {
                 product_status: formData.product_status,
                 stock_movement: formData.stock_movement || '',
                 movement_type: formData.movement_type || '',
-                stock_origin: formData.stock_origin || '',
-                from_prod_status_id: formData.from_prod_status_id || '',
+                // stock_origin: formData.stock_origin || '',
+                // from_prod_status_id: formData.from_prod_status_id || '',
                 prod_status_icon: formData.prod_status_icon || '',
                 seq_no: parseInt(formData.seq_no) || 0,
                 active: formData.active,
                 last_modified_user_id: "ADMIN",
                 location_id: formData.location_id || '',
+                material_status_id: formData.material_status_id || '',
                 carton_type_id: formData.carton_type_id || '',
             });
             
@@ -360,13 +414,14 @@ export default function ProductStatusMasterPage() {
                     product_status: lastAction.data.product_status,
                     stock_movement: lastAction.data.stock_movement || '',
                     movement_type: lastAction.data.movement_type || '',
-                    stock_origin: lastAction.data.stock_origin || '',
-                    from_prod_status_id: lastAction.data.from_prod_status_id || '',
+                    // stock_origin: lastAction.data.stock_origin || '',
+                    // from_prod_status_id: lastAction.data.from_prod_status_id || '',
                     prod_status_icon: lastAction.data.prod_status_icon || '',
                     seq_no: lastAction.data.seq_no,
                     active: lastAction.data.active,
                     last_modified_user_id: "ADMIN",
                     location_id: lastAction.data.location_id || '',
+                    material_status_id: lastAction.data.material_status_id || '',
                     carton_type_id: lastAction.data.carton_type_id || '',
                 });
                 toast({
@@ -408,13 +463,14 @@ export default function ProductStatusMasterPage() {
                 product_status: statusToCancel.product_status,
                 stock_movement: statusToCancel.stock_movement || '',
                 movement_type: statusToCancel.movement_type || '',
-                stock_origin: statusToCancel.stock_origin || '',
-                from_prod_status_id: statusToCancel.from_prod_status_id || '',
+                // stock_origin: statusToCancel.stock_origin || '',
+                // from_prod_status_id: statusToCancel.from_prod_status_id || '',
                 prod_status_icon: statusToCancel.prod_status_icon || '',
                 seq_no: statusToCancel.seq_no,
                 active: false,
                 last_modified_user_id: "ADMIN",
                 location_id: statusToCancel.location_id || '',
+                material_status_id: statusToCancel.material_status_id || '',
                     carton_type_id: statusToCancel.carton_type_id || '',
             });
             
@@ -634,8 +690,9 @@ export default function ProductStatusMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Movement Type</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Carton Type Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Location Id</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Material Status Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Seq No.</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Icon</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Product Status Icon</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
                                                     <span>Last Modified</span>
@@ -684,13 +741,16 @@ export default function ProductStatusMasterPage() {
                                                     </td>
                                                   
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground">{status.stock_movement || "-"}</span>
+                                                        <span className="text-sm text-foreground">{status.movement_type || "-"}</span>
                                                     </td>
                                                      <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{status.carton_type_id || "-"}</span>
                                                     </td>
                                                         <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground font-semibold">{status.location_id || "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.material_status_id || "-"}</span>
                                                     </td>
                                                       <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{status.seq_no}</span>
@@ -874,7 +934,7 @@ export default function ProductStatusMasterPage() {
                                                 maxLength={30}
                                             />
                                         </div>
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Stock Movement
                                             </label>
@@ -888,7 +948,7 @@ export default function ProductStatusMasterPage() {
                                                 <option value="IN">IN</option>
                                                 <option value="OUT">OUT</option>
                                             </select>
-                                        </div>
+                                        </div> */}
                                    
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
@@ -928,7 +988,7 @@ export default function ProductStatusMasterPage() {
     ))}
             </select>
         </div>
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Stock Origin
                                             </label>
@@ -942,8 +1002,8 @@ export default function ProductStatusMasterPage() {
                                                 <option value="Y">Y</option>
                                                 <option value="N">N</option>
                                             </select>
-                                        </div>
-                                        <div>
+                                        </div> */}
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 From Prod Status Id
                                             </label>
@@ -954,8 +1014,8 @@ export default function ProductStatusMasterPage() {
                                                 placeholder="e.g. PP"
                                                 maxLength={2}
                                             />
-                                        </div>
-                                        <div>
+                                        </div> */}
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Location Id <span className="text-red-500">*</span>
                                             </label>
@@ -967,7 +1027,46 @@ export default function ProductStatusMasterPage() {
                                                 required
                                                 maxLength={2}
                                             />
-                                        </div>
+                                        </div> */}
+                                                                            <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Location Id <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="location_id"
+        value={formData.location_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a location</option>
+        {locations.filter(location => location.active).map(location => (
+            <option key={location.location_id} value={location.location_id}>
+                {location.location_id} - {location.location_name}
+            </option>
+        ))}
+    </select>
+</div>
+                                                                            <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Material Status Id <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="material_status_id"
+        value={formData.material_status_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a material status</option>
+        {mstatuses.filter(status => status.active).map(status => (
+            <option key={status.matl_status_id} value={status.matl_status_id}>
+                {status.matl_status_id}
+            </option>
+        ))}
+    </select>
+</div>
+
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Seq No. <span className="text-red-500">*</span>
@@ -1119,7 +1218,7 @@ export default function ProductStatusMasterPage() {
                                                 maxLength={30}
                                             />
                                         </div>
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Stock Movement
                                             </label>
@@ -1133,7 +1232,7 @@ export default function ProductStatusMasterPage() {
                                                 <option value="IN">IN</option>
                                                 <option value="OUT">OUT</option>
                                             </select>
-                                        </div>
+                                        </div> */}
                                   
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
@@ -1171,7 +1270,7 @@ export default function ProductStatusMasterPage() {
     ))}
             </select>
         </div>
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Stock Origin
                                             </label>
@@ -1185,8 +1284,8 @@ export default function ProductStatusMasterPage() {
                                                 <option value="Y">Y</option>
                                                 <option value="N">N</option>
                                             </select>
-                                        </div>
-                                        <div>
+                                        </div> */}
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 From Prod Status Id
                                             </label>
@@ -1197,8 +1296,8 @@ export default function ProductStatusMasterPage() {
                                                 placeholder="e.g. PP"
                                                 maxLength={2}
                                             />
-                                        </div>
-                                        <div>
+                                        </div> */}
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Location Id <span className="text-red-500">*</span>
                                             </label>
@@ -1209,7 +1308,46 @@ export default function ProductStatusMasterPage() {
                                                 required
                                                 disabled
                                             />
-                                        </div>
+                                        </div> */}
+                                                                                                                    <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Location Id <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="location_id"
+        value={formData.location_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a location</option>
+        {locations.filter(location => location.active).map(location => (
+            <option key={location.location_id} value={location.location_id}>
+                {location.location_id} - {location.location_name}
+            </option>
+        ))}
+    </select>
+</div>
+                                                                            <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Material Status Id <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="material_status_id"
+        value={formData.material_status_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a material status</option>
+        {mstatuses.filter(status => status.active).map(status => (
+            <option key={status.matl_status_id} value={status.matl_status_id}>
+                {status.matl_status_id}
+            </option>
+        ))}
+    </select>
+</div>
+
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Seq No. <span className="text-red-500">*</span>

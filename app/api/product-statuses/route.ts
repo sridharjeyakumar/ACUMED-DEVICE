@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
       last_modified_date_time: new Date(),
       location_id: body.location_id || '',
       carton_type_id: body.carton_type_id || '',
+      material_status_id: body.material_status_id || '',
     });
     
     await status.save();

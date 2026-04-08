@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { materialStatusAPI } from "@/services/api";
+import { locationAPI, materialStatusAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
@@ -39,7 +39,14 @@ interface MaterialStatus {
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date; // Date
 }
-
+interface Location {
+    location_id: string; // Char(2) - PK
+    location_name: string; // Char(25)
+    last_modified_user_id?: string; // Char(5)
+    location_icon?: string; // image
+    last_modified_date_time?: Date; // Date
+    active: boolean;
+}
 // Helper function to format dates consistently (prevents hydration errors)
 function formatDateTime(date: Date | string): string {
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -87,6 +94,7 @@ export default function MaterialStatusMasterPage() {
         approval_required: "",
         location_id: "",
     });
+    const [locations, setLocations] = useState<Location[]>([]);
 
     // Reset form data when Add modal opens
     useEffect(() => {
@@ -106,7 +114,17 @@ export default function MaterialStatusMasterPage() {
             });
         }
     }, [isAddModalOpen]);
-
+        useEffect(() => {
+            const loadProducts = async () => {
+                try {
+                    const data = await locationAPI.getAll();
+                    setLocations(data);
+                } catch (error) {
+                    console.error("Failed to load locations", error);
+                }
+            };
+            loadProducts();
+        }, []);
     const loadStatuses = useCallback(async () => {
         try {
             setLoading(true);
@@ -952,19 +970,25 @@ export default function MaterialStatusMasterPage() {
                                                 className="uppercase"
                                             />
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Location Id <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input
-                                                name="location_id"
-                                                value={formData.location_id}
-                                                onChange={handleInputChange}
-                                                required
-                                                maxLength={2}
-                                                placeholder="e.g. 01"
-                                            />
-                                        </div>
+                                                                                                                  <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Location Id <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="location_id"
+        value={formData.location_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a location</option>
+        {locations.filter(location => location.active).map(location => (
+            <option key={location.location_id} value={location.location_id}>
+                {location.location_id} - {location.location_name}
+            </option>
+        ))}
+    </select>
+</div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Seq No. <span className="text-red-500">*</span>
@@ -1141,18 +1165,25 @@ export default function MaterialStatusMasterPage() {
                                                 className="uppercase"
                                             />
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Location Id <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input
-                                                name="location_id"
-                                                value={formData.location_id}
-                                                onChange={handleInputChange}
-                                                required
-                                                maxLength={2}
-                                            />
-                                        </div>
+                                                                                                               <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Location Id <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="location_id"
+        value={formData.location_id}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a location</option>
+        {locations.filter(location => location.active).map(location => (
+            <option key={location.location_id} value={location.location_id}>
+                {location.location_id} - {location.location_name}
+            </option>
+        ))}
+    </select>
+</div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Seq No. <span className="text-red-500">*</span>

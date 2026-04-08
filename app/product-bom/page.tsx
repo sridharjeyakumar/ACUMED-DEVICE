@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { materialAPI, productAPI, productBOMAPI } from "@/services/api";
+import { materialAPI, productAPI, productBOMAPI, uomAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 import { safeNumber } from "@/utils/numberUtils";
 
@@ -76,6 +76,17 @@ interface Material {
     last_modified_date_time?: Date;
     active?: boolean;
 }
+interface UOM {
+    _id?: string; // MongoDB ID
+    uom_id: string; // Primary Key - max 10 chars
+    uom_desc: string; // Description - max 200 chars
+    uom_short_name: string; // Short name - max 200 chars
+    active: boolean;
+    last_modified_user_id?: string; // max 5 chars
+    last_modified_date_time?: Date;
+    createdAt?: string;
+    updatedAt?: string;
+}
 export default function ProductBOMPage() {
     const { toast } = useToast();
     const isSuperAdmin = getSessionUser()?.super_admin === true;
@@ -94,7 +105,8 @@ export default function ProductBOMPage() {
     const [records, setRecords] = useState<BOMRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [products, setProducts] = useState<Product[]>([]);
-        const [materials, setMaterials] = useState<Material[]>([]);
+    const [materials, setMaterials] = useState<Material[]>([]);
+        const [uoms, setUOMs] = useState<UOM[]>([]);
     
     const [isDuplicateId, setIsDuplicateId] = useState(false);
     const [formData, setFormData] = useState({
@@ -165,6 +177,17 @@ export default function ProductBOMPage() {
     useEffect(() => {
         loadRecords();
     }, [loadRecords]);
+    useEffect(() => {
+        const loadProducts = async () => {
+            try {
+                const data = await uomAPI.getAll();
+                setUOMs(data);
+            } catch (error) {
+                console.error("Failed to load products", error);
+            }
+        };
+        loadProducts();
+    }, []);
 useEffect(() => {
     const loadProducts = async () => {
         try {
@@ -206,7 +229,16 @@ useEffect(() => {
     }, [isAddModalOpen]);
 
 
-
+const getProductDisplay = (productId: string) => {
+    if (!productId) return "-";
+    const product = products.find(p => p.product_id === productId);
+    return product ? `${product.product_id} - ${product.product_name}` : productId;
+};
+const getMaterialDisplay = (materialId: string) => {
+    if (!materialId) return "-";
+    const material = materials.find(m => m.material_id === materialId);
+    return material ? `${material.material_id} - ${material.material_name}` : materialId;
+};
     const filteredRecords = records.filter((item) => {
         const matchesSearch = item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.bomId.toLowerCase().includes(searchQuery.toLowerCase());
@@ -645,7 +677,7 @@ const confirmCancelItem = async () => {
         {/* Product Id with pill style */}
         <td className="px-6 py-6 text-sm text-center align-middle">
           <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-            {item.productId}
+            {getProductDisplay(item.productId)}
           </span>
         </td>
 
@@ -662,7 +694,7 @@ const confirmCancelItem = async () => {
         {/* Material Id with pill style */}
         <td className="px-6 py-6 text-center align-middle">
           <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-            {item.materialId}
+            {getMaterialDisplay(item.materialId)}
           </span>
         </td>
 
@@ -888,7 +920,7 @@ const confirmCancelItem = async () => {
         <option value="">Select a product</option>
         {products.filter(product => product.active).map(product => (
             <option key={product.product_id} value={product.product_id}>
-                {product.product_id}
+                {product.product_id} - {product.product_name}
             </option>
         ))}
     </select>
@@ -909,7 +941,7 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Output UOM */}
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Output UOM <span className="text-red-500">*</span>
                                             </label>
@@ -921,6 +953,26 @@ const confirmCancelItem = async () => {
                                                 required
                                                 maxLength={3}
                                             />
+                                        </div> */}
+                                                                                                                                                          <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Output UOM <span className="text-red-500">*</span>
+                                            </label>
+                                      
+                                                <select
+        name="outputUom"
+        value={formData.outputUom}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a uom</option>
+        {uoms.filter((uom) => uom.active !== false||uom.uom_id===formData.outputUom).map(product => (
+            <option key={product.uom_id} value={product.uom_id}>
+                {product.uom_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Material ID */}
@@ -937,9 +989,9 @@ const confirmCancelItem = async () => {
         required
     >
         <option value="">Select a material</option>
-        {materials.filter(material => material.active).map(material => (
+        {materials.filter(material => material.active && material.material_type === "RM").map(material => (
             <option key={material.material_id} value={material.material_id}>
-                {material.material_id}
+                {material.material_id} - {material.material_name}
             </option>
         ))}
     </select>
@@ -960,7 +1012,7 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Input UOM */}
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Input UOM <span className="text-red-500">*</span>
                                             </label>
@@ -972,6 +1024,26 @@ const confirmCancelItem = async () => {
                                                 required
                                                 maxLength={3}
                                             />
+                                        </div> */}
+                                                                                                                  <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Input UOM <span className="text-red-500">*</span>
+                                            </label>
+                                      
+                                                <select
+        name="inputUom"
+        value={formData.inputUom}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a uom</option>
+        {uoms.filter((uom) => uom.active !== false||uom.uom_id===formData.inputUom).map(product => (
+            <option key={product.uom_id} value={product.uom_id}>
+                {product.uom_id}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Active */}
@@ -1088,7 +1160,8 @@ const confirmCancelItem = async () => {
         <option value="">Select a product</option>
         {products.filter(product => product.active).map(product => (
             <option key={product.product_id} value={product.product_id}>
-                {product.product_id}
+                {product.product_id} - {product.product_name}
+
             </option>
         ))}
     </select>
@@ -1137,9 +1210,9 @@ const confirmCancelItem = async () => {
         required
     >
         <option value="">Select a material</option>
-        {materials.filter(material => material.active).map(material => (
+        {materials.filter(material => material.active && material.material_type === "RM").map(material => (
             <option key={material.material_id} value={material.material_id}>
-                {material.material_id}
+                {material.material_id} - {material.material_name}
             </option>
         ))}
     </select>

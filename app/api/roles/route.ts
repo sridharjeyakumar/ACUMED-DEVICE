@@ -36,6 +36,9 @@ export async function POST(request: NextRequest) {
       roll_description, 
       remarks, 
       active: active !== false,
+      idle_session_timeout: body.idle_session_timeout || "N",
+      idle_session_in_minutes: body.idle_session_in_minutes || 0,
+
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
     });
