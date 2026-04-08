@@ -916,9 +916,9 @@ export default function ProductStatusMasterPage() {
                                                 name="prod_status_id"
                                                 value={formData.prod_status_id}
                                                 onChange={handleInputChange}
-                                                placeholder="e.g., MFD, IQC"
+                                                placeholder="e.g., PR, PK"
                                                 required
-                                                maxLength={3}
+                                                maxLength={2}
                                             />
                                         </div>
                                         <div>
