@@ -23,7 +23,7 @@ const ProductStatusMasterSchema: Schema = new Schema({
     type: String,
     required: true,
     unique: true,
-    maxlength: 3,
+    maxlength: 2,
     trim: true,
   },
   product_status: {
