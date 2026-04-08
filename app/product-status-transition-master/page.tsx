@@ -929,7 +929,7 @@ export default function ProductStatusTransitionMasterPage() {
                                                     required
                                                 >
                                                     <option value="Y">Yes - Lock Quantity Change</option>
-                                                    <option value="N">No - Don't Lock Quantity Change</option>
+                                                    <option value="N">No - Do Not Lock Quantity Change</option>
                                                 </select>
                                             </div>
                                             <div>
@@ -1121,7 +1121,7 @@ export default function ProductStatusTransitionMasterPage() {
                                                     required
                                                 >
                                                     <option value="Y">Yes - Lock Quantity Change</option>
-                                                    <option value="N">No - Don't Lock Quantity Change</option>
+                                                    <option value="N">No - Do Not Lock Quantity Change</option>
                                                 </select>
                                             </div>
                                             <div>
