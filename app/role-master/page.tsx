@@ -28,6 +28,8 @@ interface Role {
     roll_id: string;
     roll_description: string;
     remarks: string;
+    idle_session_timeout?: string;
+    idle_session_in_minutes?: number;
     active: boolean;
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date | string; // Date
@@ -70,13 +72,15 @@ export default function RoleMasterPage() {
         roll_id: "",
         roll_description: "",
         remarks: "",
+        idle_session_timeout: "N",
+        idle_session_in_minutes: 0,
         active: true,
     });
 
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({ roll_id: "", roll_description: "", remarks: "", active: true });
+            setFormData({ roll_id: "", roll_description: "", remarks: "", idle_session_timeout: "N", idle_session_in_minutes: 0, active: true });
         }
     }, [isAddModalOpen]);
 
@@ -123,9 +127,10 @@ export default function RoleMasterPage() {
         setCurrentPage(1);
     }, [searchQuery, filterActive, rowsPerPage]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
         setFormData({ ...formData, [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value });
+
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -137,7 +142,7 @@ export default function RoleMasterPage() {
                 description: "Role created successfully",
             });
             setIsAddModalOpen(false);
-            setFormData({ roll_id: "", roll_description: "", remarks: "", active: true });
+            setFormData({ roll_id: "", roll_description: "", remarks: "", idle_session_timeout: "N", idle_session_in_minutes: 0, active: true });
             loadRoles();
         } catch (error: any) {
             toast({
@@ -173,6 +178,8 @@ export default function RoleMasterPage() {
             roll_id: role.roll_id,
             roll_description: role.roll_description,
             remarks: role.remarks || "",
+            idle_session_timeout: role.idle_session_timeout || "N",
+            idle_session_in_minutes: role.idle_session_in_minutes || 0,
             active: role.active,
         });
         setIsEditModalOpen(true);
@@ -190,6 +197,9 @@ export default function RoleMasterPage() {
                 roll_description: formData.roll_description,
                 remarks: formData.remarks,
                 active: formData.active,
+                idle_session_timeout: formData.idle_session_timeout,
+                idle_session_in_minutes: formData.idle_session_in_minutes,
+
             });
             
             // Store last action for undo
@@ -206,7 +216,7 @@ export default function RoleMasterPage() {
             });
             setIsEditModalOpen(false);
             setSelectedRole(null);
-            setFormData({ roll_id: "", roll_description: "", remarks: "", active: true });
+            setFormData({ roll_id: "", roll_description: "", remarks: "", idle_session_timeout: "N", idle_session_in_minutes: 0, active: true });
             loadRoles();
         } catch (error: any) {
             toast({
@@ -225,11 +235,11 @@ export default function RoleMasterPage() {
     const confirmCancel = () => {
         if (cancelModalType === 'add') {
             setIsAddModalOpen(false);
-            setFormData({ roll_id: "", roll_description: "", remarks: "", active: true });
+            setFormData({ roll_id: "", roll_description: "", remarks: "", idle_session_timeout: "N", idle_session_in_minutes: 0, active: true });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
             setSelectedRole(null);
-            setFormData({ roll_id: "", roll_description: "", remarks: "", active: true });
+            setFormData({ roll_id: "", roll_description: "", remarks: "", idle_session_timeout: "N", idle_session_in_minutes: 0, active: true });
         }
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
@@ -245,6 +255,8 @@ export default function RoleMasterPage() {
                     roll_description: lastAction.data.roll_description,
                     remarks: lastAction.data.remarks,
                     active: lastAction.data.active,
+                    idle_session_timeout: lastAction.data.idle_session_timeout,
+                    idle_session_in_minutes: lastAction.data.idle_session_in_minutes,
                 });
                 toast({
                     title: "Undone",
@@ -433,6 +445,8 @@ export default function RoleMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Roll Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Roll Description</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Idle Session Timeout</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Idle Session in Minutes</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
@@ -485,6 +499,16 @@ export default function RoleMasterPage() {
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-foreground">
                                                         {role.remarks || "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground">
+                                                        {role.idle_session_timeout === "Y" ? "TRUE" : "FALSE"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-foreground">
+                                                        {role.idle_session_in_minutes !== undefined ? role.idle_session_in_minutes : "-"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-left">
@@ -654,6 +678,34 @@ export default function RoleMasterPage() {
                                                 />
                                             </div>
                                             <div className="mb-6">
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Idle Session Timeout
+                                                </label>
+                                                <select
+                                                    name="idle_session_timeout"
+                                                    value={formData.idle_session_timeout}
+                                                    onChange={handleInputChange}
+                                                    className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                >
+                                                    <option value="N">No</option>
+                                                    <option value="Y">Yes</option>
+                                                </select>
+                                            </div>
+                                            <div className="mb-6">
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Idle Session in Minutes
+                                                </label>
+                                                <Input
+                                                    type="number"
+                                                    name="idle_session_in_minutes"
+                                                    value={formData.idle_session_in_minutes}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter idle session time in minutes"
+                                                    min={0}
+                                                    max={99}
+                                                />
+                                            </div>
+                                            <div className="mb-6">
                                                 <label className="flex items-center gap-2 cursor-pointer">
                                                     <input
                                                         type="checkbox"
@@ -746,6 +798,34 @@ export default function RoleMasterPage() {
                                                     rows={4}
                                                     maxLength={100}
                                                     className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                                                />
+                                            </div>
+                                            <div className="mb-6">
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Idle Session Timeout
+                                                </label>
+                                                <select
+                                                    name="idle_session_timeout"
+                                                    value={formData.idle_session_timeout}
+                                                    onChange={handleInputChange}
+                                                    className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                >
+                                                    <option value="N">No</option>
+                                                    <option value="Y">Yes</option>
+                                                </select>
+                                            </div>
+                                            <div className="mb-6">
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Idle Session in Minutes
+                                                </label>
+                                                <Input
+                                                    type="number"
+                                                    name="idle_session_in_minutes"
+                                                    value={formData.idle_session_in_minutes}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter idle session time in minutes"
+                                                    min={0}
+                                                    max={99}
                                                 />
                                             </div>
                                             <div className="mb-6">

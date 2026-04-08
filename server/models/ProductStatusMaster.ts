@@ -7,14 +7,15 @@ export interface IProductStatusMaster extends Document {
   // effect_in_stock?: string; // Char(1) - + or - dropdown
   movement_type?: string; // Char(1) - N (Normal) / S (Special)
   carton_type_id?: string; // Char(2) - FK to CartonTypeMaster
-  stock_origin?: string; // Char(1) - Y / N
-  from_prod_status_id?: string; // Char(2) - FK to prod_status_id
+  // stock_origin?: string; // Char(1) - Y / N
+  // from_prod_status_id?: string; // Char(2) - FK to prod_status_id
   prod_status_icon?: string; // image (base64 or URL)
   seq_no: number; // N(2)
   active: boolean;
   location_id?: string; // Char(2)
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
+  material_status_id?: string; // Virtual field to determine material status based on stock_movement and effect_in_stock
 }
 
 const ProductStatusMasterSchema: Schema = new Schema({
@@ -58,19 +59,19 @@ const ProductStatusMasterSchema: Schema = new Schema({
     maxlength: 2,
     trim: true,
   },
-  stock_origin: {
-    type: String,
-    required: false,
-    maxlength: 1,
-    trim: true,
-    enum: ['Y', 'N', ''],
-  },
-  from_prod_status_id: {
-    type: String,
-    required: false,
-    maxlength: 2,
-    trim: true,
-  },
+  // stock_origin: {
+  //   type: String,
+  //   required: false,
+  //   maxlength: 1,
+  //   trim: true,
+  //   enum: ['Y', 'N', ''],
+  // },
+  // from_prod_status_id: {
+  //   type: String,
+  //   required: false,
+  //   maxlength: 2,
+  //   trim: true,
+  // },
   prod_status_icon: {
     type: String,
     required: false,
@@ -87,6 +88,14 @@ const ProductStatusMasterSchema: Schema = new Schema({
     maxlength: 2,
     trim: true,
   },
+  material_status_id: {
+    type: String,
+    maxlength: 2,
+    required: false,
+    trim: true,
+
+  },
+
   active: {
     type: Boolean,
     required: true,

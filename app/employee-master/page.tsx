@@ -12,7 +12,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { employeeAPI, departmentAPI, employeeGradeAPI } from "@/services/api";
+import { employeeAPI, departmentAPI, employeeGradeAPI, companyAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 interface EmployeeRecord {
@@ -47,7 +47,29 @@ interface EmployeeRecord {
     empPhoto: string;
     status: "Active" | "Exited";
 }
-
+interface Company {
+    comp_id: string; // Char(4) - PK
+    company_name: string; // Char(100)
+    company_short_name?: string; // Char(50)
+    address_1?: string; // Char(100)
+    address_2?: string; // Char(100)
+    city?: string; // Char(50)
+    state?: string; // Char(50)
+    pincode?: number; // N(6)
+    gst_no?: string; // Char(15)
+    cin_no?: string; // Char(21)
+    pan_no?: string; // Char(15)
+    tan_no?: string; // Char(15)
+    factory_license_no?: string; // Char(20)
+    email_id?: string; // Char(50)
+    website?: string; // Char(50)
+    contact_person?: string; // Char(50)
+    contact_no?: number; // N(10)
+    logo?: string; // image (URL or base64)
+    last_modified_user_id?: string; // Char(5) - user ID
+    last_modified_date_time?: Date; // Date
+    active?: boolean;
+}
 export default function EmployeeMasterPage() {
     const { toast } = useToast();
     const isSuperAdmin = getSessionUser()?.super_admin === true;
@@ -97,6 +119,7 @@ export default function EmployeeMasterPage() {
         spouse_contact_no: "",
         emergency_contact_no: "",
     });
+    const [companies, setCompanies] = useState<Company[]>([]);
 
     const loadEmployees = useCallback(async () => {
         try {
@@ -161,7 +184,17 @@ export default function EmployeeMasterPage() {
             setGrades(data.filter((g) => g.active !== false))
         ).catch(() => {});
     }, []);
-
+    useEffect(() => {
+        const loadProducts = async () => {
+            try {
+                const data = await companyAPI.getAll();
+                setCompanies(data);
+            } catch (error) {
+                console.error("Failed to load products", error);
+            }
+        };
+        loadProducts();
+    }, []);
     const filteredRecords = records.filter((item) => {
         const matchesSearch = item.empName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.empId.toLowerCase().includes(searchQuery.toLowerCase());
@@ -1006,7 +1039,7 @@ const confirmDelete = async () => {
                                         </div>
 
                                         {/* Location */}
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Location <span className="text-red-500">*</span>
                                             </label>
@@ -1018,7 +1051,26 @@ const confirmDelete = async () => {
                                                 required
                                                 maxLength={6}
                                             />
-                                        </div>
+                                        </div> */}
+                                        <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Location <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="location"
+        value={formData.location}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a location</option>
+        {companies.filter(company => company.active).map(company => (
+            <option key={company.comp_id} value={company.comp_id}>
+                {company.comp_id} - {company.company_name}
+            </option>
+        ))}
+    </select>
+</div>
 
                                         {/* Department ID */}
                                         <div>
@@ -1529,7 +1581,7 @@ const confirmDelete = async () => {
                                         </div>
 
                                         {/* Location */}
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Location <span className="text-red-500">*</span>
                                             </label>
@@ -1541,8 +1593,26 @@ const confirmDelete = async () => {
                                                 required
                                                 maxLength={6}
                                             />
-                                        </div>
-
+                                        </div> */}
+                                        <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">
+        Location <span className="text-red-500">*</span>
+    </label>
+    <select
+        name="location"
+        value={formData.location}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a location</option>
+        {companies.filter(company => company.active).map(company => (
+            <option key={company.comp_id} value={company.comp_id}>
+                {company.comp_id} - {company.company_name}
+            </option>
+        ))}
+    </select>
+</div>
                                         {/* Department ID */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">

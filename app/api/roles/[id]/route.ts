@@ -76,6 +76,9 @@ export async function PUT(
     if (roll_description !== undefined && roll_description !== null) updateData.roll_description = roll_description;
     if (remarks !== undefined && remarks !== null) updateData.remarks = remarks;
     if (active !== undefined) updateData.active = active !== false;
+    if (body.idle_session_timeout !== undefined) updateData.idle_session_timeout = body.idle_session_timeout;
+    if (body.idle_session_in_minutes !== undefined) updateData.idle_session_in_minutes = body.idle_session_in_minutes;
+
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
     

@@ -68,6 +68,8 @@ export async function PUT(
     if (body.batch_status_name !== undefined) updateData.batch_status_name = body.batch_status_name;
     if (body.remarks !== undefined) updateData.remarks = body.remarks || '';
     if (body.seq_no !== undefined) updateData.seq_no = body.seq_no;
+    if (body.status_seq_no !== undefined) updateData.status_seq_no = body.status_seq_no;
+    if (body.machine_event_allowed !== undefined) updateData.machine_event_allowed = body.machine_event_allowed;
     if (body.active !== undefined) updateData.active = body.active !== false;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();

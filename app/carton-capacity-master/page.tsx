@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { cartonCapacityAPI, cartonTypeAPI, packSizeAPI, productAPI } from "@/services/api";
+import { cartonCapacityAPI, cartonTypeAPI, materialAPI, packSizeAPI, productAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 interface CartonCapacityRecord {
@@ -70,6 +70,31 @@ interface PackSize {
     last_modified_date_time?: Date;
     active?: boolean;
 }
+interface Material {
+    gr_tolerance_percent?: number; 
+    material_id: string;
+    material_name: string;
+    material_short_name: string;
+    uom: string;
+    material_category_id?: string;
+    material_type: string; // "RM" or "PM"
+    material_spec?: string;
+    safety_stock_qty?: number;
+    re_order_qty?: number;
+    min_order_qty?: number;
+    lead_time_days_min?: number | string; // Can be number or "??"
+    lead_time_days_max?: number | string; // Can be number or "??"
+    shelf_life_in_months?: number;
+    qc_required?: boolean;
+    coa_checklist_id?: string;
+    material_image?: string;
+    material_image_icon?: string;
+    vendor_id?: string;
+    core_weight?: number;
+    last_modified_user_id?: string;
+    last_modified_date_time?: Date;
+    active?: boolean;
+}
 export default function CartonCapacityMasterPage() {
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
@@ -91,6 +116,7 @@ export default function CartonCapacityMasterPage() {
     const [cartonTypes, setCartonTypes] = useState<CartonType[]>([]);
     const [packSizes, setPackSizes] = useState<PackSize[]>([]);
     const [isDuplicateId, setIsDuplicateId] = useState(false);
+    const [materials, setMaterials] = useState<Material[]>([]);
     
     
     const [formData, setFormData] = useState({
@@ -165,6 +191,17 @@ useEffect(() => {
             setProducts(data);
         } catch (error) {
             console.error("Failed to load products", error);
+        }
+    };
+    loadProducts();
+}, []);
+useEffect(() => {
+    const loadProducts = async () => {
+        try {
+            const data = await materialAPI.getAll();
+            setMaterials(data);
+        } catch (error) {
+            console.error("Failed to load materials", error);
         }
     };
     loadProducts();
@@ -327,7 +364,16 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
         });
         setIsEditModalOpen(true);
     };
-
+const getProductDisplay = (productId: string) => {
+    if (!productId) return "-";
+    const product = products.find(p => p.product_id === productId);
+    return product ? `${product.product_id} - ${product.product_name}` : productId;
+};
+const getCartonTypeDisplay = (cartonTypeId: string) => {
+    if (!cartonTypeId) return "-";
+    const cartonType = cartonTypes.find(c => c.carton_type_id === cartonTypeId);
+    return cartonType ? `${cartonType.carton_type_id} - ${cartonType.carton_type_name}` : cartonTypeId;
+};
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedCapacity) return;
@@ -682,7 +728,7 @@ const confirmCancelItem = async () => {
         </td>
         <td className="px-6 py-6 text-center align-middle">
           <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-            {item.productId}
+            {getProductDisplay(item.productId)}
           </span>
         </td>
         <td className="px-6 py-6 text-center align-middle">
@@ -697,7 +743,7 @@ const confirmCancelItem = async () => {
         </td>
         <td className="px-6 py-6 text-center align-middle">
           <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-            {item.cartonTypeId}
+            {getCartonTypeDisplay(item.cartonTypeId)}
           </span>
         </td>
         {/* <td className="px-6 py-6 text-center align-middle">
@@ -924,7 +970,7 @@ const confirmCancelItem = async () => {
         <option value="">Select a product</option>
         {products.filter((product) => product.active).map(product => (
             <option key={product.product_id} value={product.product_id}>
-                {product.product_id}
+                {product.product_id} - {product.product_name}
             </option>
         ))}
     </select>
@@ -953,7 +999,7 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Pack Matl ID */}
-                                        <div>
+                                        {/* <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Pack Matl ID <span className="text-red-500">*</span>
                                             </label>
@@ -965,6 +1011,26 @@ const confirmCancelItem = async () => {
                                                 maxLength={5}
                                             />
 
+                                        </div> */}
+                                                                          <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Pack Matl ID <span className="text-red-500">*</span>
+                                            </label>
+                     
+                                                                                                                                      <select
+        name="packMatlId"
+        value={formData.packMatlId}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a Pack Size</option>
+        {materials.filter((material) => material.active && material.material_type==="PM").map(product => (
+            <option key={product.material_id} value={product.material_id}>
+                {product.material_id}-{product.material_name}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Carton Type ID */}
@@ -983,7 +1049,7 @@ const confirmCancelItem = async () => {
         <option value="">Select a Carton Type</option>
         {cartonTypes.filter((cartonType) => cartonType.active).map(product => (
             <option key={product.carton_type_id} value={product.carton_type_id}>
-                {product.carton_type_id}
+                {product.carton_type_id} - {product.carton_type_name}
             </option>
         ))}
     </select>
@@ -1134,7 +1200,7 @@ const confirmCancelItem = async () => {
         <option value="">Select a product</option>
         {products.filter((product) => product.active).map(product => (
             <option key={product.product_id} value={product.product_id}>
-                {product.product_id}
+                {product.product_id} - {product.product_name}
             </option>
         ))}
     </select>
@@ -1163,18 +1229,25 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Pack Matl ID */}
-                                        <div>
+                                                                                                               <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Pack Matl ID
+                                                Pack Matl ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="packMatlId" 
-                                                value={formData.packMatlId} 
-                                                onChange={handleInputChange} 
-                                                placeholder="PM001" 
-                                                maxLength={5}
-
-                                            />
+                     
+                                                                                                                                      <select
+        name="packMatlId"
+        value={formData.packMatlId}
+        onChange={handleInputChange}
+        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+        required
+    >
+        <option value="">Select a Pack Size</option>
+        {materials.filter((material) => material.active && material.material_type==="PM").map(product => (
+            <option key={product.material_id} value={product.material_id}>
+                {product.material_id}-{product.material_name}
+            </option>
+        ))}
+    </select>
                                         </div>
 
                                         {/* Carton Type ID */}
@@ -1193,7 +1266,7 @@ const confirmCancelItem = async () => {
         <option value="">Select a Carton Type</option>
         {cartonTypes.filter((cartonType) => cartonType.active).map(product => (
             <option key={product.carton_type_id} value={product.carton_type_id}>
-                {product.carton_type_id}
+                {product.carton_type_id} - {product.carton_type_name}
             </option>
         ))}
     </select>

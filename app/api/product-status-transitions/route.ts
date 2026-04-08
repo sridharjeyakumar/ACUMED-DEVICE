@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       sterilization_required: body.sterilization_required || 'N',
       approval_required: body.approval_required || 'N',
       seq_no: body.seq_no,
+      lock_qty_change: body.lock_qty_change || 'N',
       no_of_days_min: body.no_of_days_min !== undefined ? Number(body.no_of_days_min) : undefined,
       no_of_days_max: body.no_of_days_max !== undefined ? Number(body.no_of_days_max) : undefined,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',

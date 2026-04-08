@@ -35,6 +35,7 @@ interface ProductStatusTransition {
     product_status_id: string;
     from_product_status_id: string;
     sterilization_required: string;
+    lock_qty_change?: string;
     approval_required: string;
     seq_no: number;
     no_of_days_min?: number;
@@ -84,6 +85,7 @@ export default function ProductStatusTransitionMasterPage() {
         product_status_id: "",
         from_product_status_id: "",
         sterilization_required: "N",
+        lock_qty_change: "N",
         approval_required: "N",
         seq_no: "",
         no_of_days_min: "",
@@ -95,6 +97,7 @@ export default function ProductStatusTransitionMasterPage() {
         product_status_id: "",
         from_product_status_id: "",
         sterilization_required: "N",
+        lock_qty_change: "N",
         approval_required: "N",
         seq_no: "",
         no_of_days_min: "",
@@ -192,6 +195,7 @@ export default function ProductStatusTransitionMasterPage() {
                 product_status_id: formData.product_status_id,
                 from_product_status_id: formData.from_product_status_id,
                 sterilization_required: formData.sterilization_required,
+                lock_qty_change: formData.lock_qty_change,
                 approval_required: formData.approval_required,
                 seq_no: parseInt(formData.seq_no) || 0,
                 no_of_days_min: formData.no_of_days_min !== "" ? parseInt(formData.no_of_days_min) : undefined,
@@ -251,6 +255,7 @@ export default function ProductStatusTransitionMasterPage() {
             product_status_id: transition.product_status_id,
             from_product_status_id: transition.from_product_status_id,
             sterilization_required: transition.sterilization_required,
+            lock_qty_change: transition.lock_qty_change,
             approval_required: transition.approval_required,
             seq_no: transition.seq_no.toString(),
             no_of_days_min: transition.no_of_days_min?.toString() ?? "",
@@ -283,6 +288,7 @@ export default function ProductStatusTransitionMasterPage() {
         try {
             await productStatusTransitionAPI.update(selectedTransition._id!, {
                 sterilization_required: formData.sterilization_required,
+                lock_qty_change: formData.lock_qty_change,
                 approval_required: formData.approval_required,
                 seq_no: parseInt(formData.seq_no) || 0,
                 no_of_days_min: formData.no_of_days_min !== "" ? parseInt(formData.no_of_days_min) : undefined,
@@ -324,6 +330,7 @@ export default function ProductStatusTransitionMasterPage() {
             if (lastAction.type === 'edit') {
                 await productStatusTransitionAPI.update(lastAction.data._id!, {
                     sterilization_required: lastAction.data.sterilization_required,
+                    lock_qty_change: lastAction.data.lock_qty_change,
                     approval_required: lastAction.data.approval_required,
                     seq_no: lastAction.data.seq_no,
                     active: lastAction.data.active,
@@ -632,6 +639,7 @@ export default function ProductStatusTransitionMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Sterilization Required</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Approval Required</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Seq No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Lock Quantity Change</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">No. of Days Min</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">No. of Days Max</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
@@ -704,6 +712,9 @@ export default function ProductStatusTransitionMasterPage() {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm font-mono text-foreground">{transition.seq_no}</span>
+                                                    </td>
+                                                     <td className="px-6 py-4">
+                                                        <span className="text-sm font-mono text-foreground">{transition.lock_qty_change ?? "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm font-mono text-foreground">{transition.no_of_days_min ?? "-"}</span>
@@ -906,6 +917,21 @@ export default function ProductStatusTransitionMasterPage() {
                                                     <option value="N">No - Sterilization Not Required</option>
                                                 </select>
                                             </div>
+                                              <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Lock Quantity Change <span className="text-red-500">*</span>
+                                                </label>
+                                                <select
+                                                    name="lock_qty_change"
+                                                    value={formData.lock_qty_change}
+                                                    onChange={handleInputChange}
+                                                    className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                    required
+                                                >
+                                                    <option value="Y">Yes - Lock Quantity Change</option>
+                                                    <option value="N">No - Don't Lock Quantity Change</option>
+                                                </select>
+                                            </div>
                                             <div>
                                                 <label className="block text-sm font-semibold text-foreground mb-2">
                                                     Approval Required <span className="text-red-500">*</span>
@@ -974,6 +1000,24 @@ export default function ProductStatusTransitionMasterPage() {
                                                     className="max-w-xs"
                                                 />
                                             </div>
+                                              <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Active
+                                            </label>
+                                            <div className="flex items-center gap-4 mt-2">
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="active"
+                                                        checked={formData.active}
+                                                        onChange={handleInputChange}
+                                                        className="w-4 h-4 text-blue-600"
+                                                        disabled
+                                                    />
+                                                    <span className="text-sm">Active (default)</span>
+                                                </label>
+                                            </div>
+                                        </div>
                                         </div>
                                     </div>
 
@@ -1063,6 +1107,21 @@ export default function ProductStatusTransitionMasterPage() {
                                                 >
                                                     <option value="Y">Yes - Sterilization Required</option>
                                                     <option value="N">No - Sterilization Not Required</option>
+                                                </select>
+                                            </div>
+                                               <div>
+                                                <label className="block text-sm font-semibold text-foreground mb-2">
+                                                    Lock Quantity Change <span className="text-red-500">*</span>
+                                                </label>
+                                                <select
+                                                    name="lock_qty_change"
+                                                    value={formData.lock_qty_change}
+                                                    onChange={handleInputChange}
+                                                    className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                    required
+                                                >
+                                                    <option value="Y">Yes - Lock Quantity Change</option>
+                                                    <option value="N">No - Don't Lock Quantity Change</option>
                                                 </select>
                                             </div>
                                             <div>

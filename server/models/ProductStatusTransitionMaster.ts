@@ -6,6 +6,7 @@ export interface IProductStatusTransitionMaster extends Document {
   sterilization_required: string;    // Char(1) - Y/N
   approval_required: string;         // Char(1) - Y/N
   seq_no: number;                    // N(2)
+  lock_qty_change?: string;          // Char(1) - Y/N
   no_of_days_min?: number;           // N(2)
   no_of_days_max?: number;           // N(2)
   last_modified_user_id?: string;    // Char(5)
@@ -29,6 +30,13 @@ const ProductStatusTransitionMasterSchema: Schema = new Schema({
   sterilization_required: {
     type: String,
     required: true,
+    maxlength: 1,
+    enum: ['Y', 'N'],
+    default: 'N',
+  },
+  lock_qty_change:{
+    type: String,
+    required: false,
     maxlength: 1,
     enum: ['Y', 'N'],
     default: 'N',

@@ -29,6 +29,8 @@ interface BatchStatus {
     batch_status_name: string;      // Char(25)
     remarks?: string;               // Char(100)
     seq_no: number;                 // N(2)
+    status_seq_no?: number;            // N(2)
+    machine_event_allowed:string;      // Char(1) - 'Y' or 'N'
     active: boolean;
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date;
@@ -71,6 +73,8 @@ export default function BatchStatusMasterPage() {
         batch_status_name: "",
         remarks: "",
         seq_no: "",
+        status_seq_no: "",
+        machine_event_allowed: "N",
         active: true,
     });
 
@@ -81,6 +85,8 @@ export default function BatchStatusMasterPage() {
                 batch_status_name: "",
                 remarks: "",
                 seq_no: "",
+                status_seq_no: "",
+                machine_event_allowed: "N",
                 active: true,
             });
         }
@@ -152,6 +158,8 @@ export default function BatchStatusMasterPage() {
                 batch_status_name: formData.batch_status_name,
                 remarks: formData.remarks || '',
                 seq_no: parseInt(formData.seq_no) || 0,
+                status_seq_no: parseInt(formData.status_seq_no) || 0,
+                machine_event_allowed: formData.machine_event_allowed,
                 active: true,
                 last_modified_user_id: "ADMIN",
             });
@@ -160,7 +168,7 @@ export default function BatchStatusMasterPage() {
                 description: "Batch status created successfully",
             });
             setIsAddModalOpen(false);
-            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", active: true });
+            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", status_seq_no: "", machine_event_allowed: "N", active: true });
             loadStatuses();
         } catch (error: any) {
             toast({
@@ -207,6 +215,8 @@ export default function BatchStatusMasterPage() {
             remarks: status.remarks || "",
             seq_no: status.seq_no.toString(),
             active: status.active,
+            status_seq_no: status.status_seq_no ? status.status_seq_no.toString() : "",
+            machine_event_allowed: status.machine_event_allowed || "N",
         });
         setIsEditModalOpen(true);
     };
@@ -235,6 +245,8 @@ export default function BatchStatusMasterPage() {
                 batch_status_name: formData.batch_status_name,
                 remarks: formData.remarks || '',
                 seq_no: parseInt(formData.seq_no) || 0,
+                status_seq_no: parseInt(formData.status_seq_no) || 0,
+                machine_event_allowed: formData.machine_event_allowed,
                 active: formData.active,
                 last_modified_user_id: "ADMIN",
             });
@@ -252,7 +264,7 @@ export default function BatchStatusMasterPage() {
             });
             setIsEditModalOpen(false);
             setSelectedStatus(null);
-            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", active: true });
+            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", status_seq_no: "", machine_event_allowed: "N", active: true });
             loadStatuses();
         } catch (error: any) {
             toast({
@@ -273,6 +285,8 @@ export default function BatchStatusMasterPage() {
                     batch_status_name: lastAction.data.batch_status_name,
                     remarks: lastAction.data.remarks || '',
                     seq_no: lastAction.data.seq_no,
+                    status_seq_no: lastAction.data.status_seq_no || 0,
+                    machine_event_allowed: lastAction.data.machine_event_allowed || "N",
                     active: lastAction.data.active,
                     last_modified_user_id: "ADMIN",
                 });
@@ -309,6 +323,8 @@ export default function BatchStatusMasterPage() {
                 batch_status_name: statusToCancel.batch_status_name,
                 remarks: statusToCancel.remarks || '',
                 seq_no: statusToCancel.seq_no,
+                status_seq_no: statusToCancel.status_seq_no || 0,
+                machine_event_allowed: statusToCancel.machine_event_allowed || "N",
                 active: false,
                 last_modified_user_id: "ADMIN",
             });
@@ -336,11 +352,11 @@ export default function BatchStatusMasterPage() {
     const confirmCancel = () => {
         if (cancelModalType === 'add') {
             setIsAddModalOpen(false);
-            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", active: true });
+            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", status_seq_no: "", machine_event_allowed: "N", active: true });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
             setSelectedStatus(null);
-            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", active: true });
+            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", status_seq_no: "", machine_event_allowed: "N", active: true });
         }
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
@@ -473,6 +489,8 @@ export default function BatchStatusMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Batch Status Name</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Seq No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status Seq No.</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Machine Event Allowed</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
@@ -522,6 +540,12 @@ export default function BatchStatusMasterPage() {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{status.seq_no}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.status_seq_no}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.machine_event_allowed}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
@@ -682,6 +706,49 @@ export default function BatchStatusMasterPage() {
                                             />
                                         </div>
                                         <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Status Seq No. <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="status_seq_no"
+                                                type="number"
+                                                value={formData.status_seq_no}
+                                                onChange={handleInputChange}
+                                                required
+                                                min={0}
+                                                max={99}
+                                                placeholder="e.g. 1"
+                                            />
+                                        </div>
+<div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Machine Event Allowed <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="flex items-center gap-4 pt-2">
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="machine_event_allowed"
+                                                        checked={formData.machine_event_allowed === "Y"}
+                                                        onChange={() => setFormData({ ...formData, machine_event_allowed: "Y" })}
+                                                        className="text-blue-600"
+                                                    />
+                                                    <span className="text-sm">Yes</span>
+                                                </label>
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="machine_event_allowed"
+                                                        checked={formData.machine_event_allowed === "N"}
+                                                        onChange={() => setFormData({ ...formData, machine_event_allowed: "N" })}
+                                                        className="text-blue-600"
+                                                    />
+                                                    <span className="text-sm">No</span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Active Status</label>
                                             <div className="flex items-center gap-4 pt-2">
                                                 <label className="flex items-center gap-2 cursor-pointer">
@@ -784,6 +851,48 @@ export default function BatchStatusMasterPage() {
                                                 min={1}
                                                 max={99}
                                             />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Status Seq No. <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                name="status_seq_no"
+                                                type="number"
+                                                value={formData.status_seq_no}
+                                                onChange={handleInputChange}
+                                                required
+                                                min={0}
+                                                max={99}
+                                                placeholder="e.g. 1"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Machine Event Allowed <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="flex items-center gap-4 pt-2">
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="machine_event_allowed"
+                                                        checked={formData.machine_event_allowed === "Y"}
+                                                        onChange={() => setFormData({ ...formData, machine_event_allowed: "Y" })}
+                                                        className="text-blue-600"
+                                                    />
+                                                    <span className="text-sm">Yes</span>
+                                                </label>
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="machine_event_allowed"
+                                                        checked={formData.machine_event_allowed === "N"}
+                                                        onChange={() => setFormData({ ...formData, machine_event_allowed: "N" })}
+                                                        className="text-blue-600"
+                                                    />
+                                                    <span className="text-sm">No</span>
+                                                </label>
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Active Status</label>

@@ -34,6 +34,8 @@ export async function POST(request: NextRequest) {
       batch_status_name: body.batch_status_name,
       remarks: body.remarks || '',
       seq_no: body.seq_no,
+      status_seq_no: body.status_seq_no,
+      machine_event_allowed: body.machine_event_allowed || 'N',
       active: body.active !== false,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
