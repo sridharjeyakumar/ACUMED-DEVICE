@@ -194,6 +194,11 @@ const getCartonTypeDisplay = (cartonTypeId: string) => {
     const cartonType = cartonTypes.find(c => c.carton_type_id === cartonTypeId);
     return cartonType ? `${cartonType.carton_type_id} - ${cartonType.carton_type_name}` : cartonTypeId;
 };
+const getLocationDisplay = (locationId: string) => {
+    if (!locationId) return "-";
+    const location = locations.find(l => l.location_id === locationId);
+    return location ? `${location.location_id} - ${location.location_name}` : locationId;
+};
     const loadStatuses = useCallback(async () => {
         try {
             setLoading(true);
@@ -759,7 +764,7 @@ const getCartonTypeDisplay = (cartonTypeId: string) => {
                                                         <span className="text-sm text-foreground">{getCartonTypeDisplay(status.carton_type_id)}</span>
                                                     </td>
                                                         <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground font-semibold">{status.location_id || "-"}</span>
+                                                        <span className="text-sm text-foreground font-semibold">{getLocationDisplay(status.location_id)}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{getMaterialStatusDisplay(status.material_status_id)}</span>

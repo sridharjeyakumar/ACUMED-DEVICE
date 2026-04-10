@@ -464,7 +464,11 @@ export default function MaterialStatusMasterPage() {
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
     };
-
+const getLocationDisplay = (locationId: string) => {
+    if (!locationId) return "-";
+    const location = locations.find(l => l.location_id === locationId);
+    return location ? `${location.location_id} - ${location.location_name}` : locationId;
+};
     return (
         <div className="flex min-h-screen bg-background">
             <Sidebar />
@@ -722,7 +726,7 @@ export default function MaterialStatusMasterPage() {
                                                         <span className="text-sm text-foreground font-mono">{status.approval_required || "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground">{status.location_id || "-"}</span>
+                                                        <span className="text-sm text-foreground">{getLocationDisplay(status.location_id)}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{status.seq_no}</span>

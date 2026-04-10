@@ -237,7 +237,26 @@ useEffect(() => {
             });
         }
     }, [isAddModalOpen]);
+// Helper function for Product Category
+const getProductCategoryDisplay = (categoryId: string) => {
+    if (!categoryId) return "-";
+    const category = categories.find(c => c.product_category_id === categoryId);
+    return category ? `${category.product_category_id} - ${category.product_category_name}` : categoryId;
+};
 
+// Helper function for Pack Size
+const getPackSizeDisplay = (packSizeId: string) => {
+    if (!packSizeId) return "-";
+    const packSize = packSizes.find(ps => ps.pack_size_id === packSizeId);
+    return packSize ? `${packSize.pack_size_id} - ${packSize.pack_size_name}` : packSizeId;
+};
+
+// Helper function for Checklist (COA)
+const getChecklistDisplay = (checklistId: string) => {
+    if (!checklistId) return "-";
+    const checklist = checklists.find(c => c.checklist_id === checklistId);
+    return checklist ? `${checklist.checklist_id} - ${checklist.checklist_description}` : checklistId;
+};
     const filteredProducts = products.filter((product) => {
         const matchesSearch = product.product_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             product.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -859,18 +878,9 @@ const confirmCancelItem = async () => {
 
         {/* PRODUCT CATEGORY ID (ID + Name Styled) */}
         <td className="px-4 py-3 text-sm">
-          {product.product_category_id ? (
-            <div className="flex flex-col gap-1">
               <span className="inline-flex px-2 py-1 rounded-md bg-blue-50 text-blue-600 font-mono text-xs w-fit">
-                {product.product_category_id}
+                {getProductCategoryDisplay(product.product_category_id)}
               </span>
-              {productCategoryMap.get(product.product_category_id) && (
-                <span className="text-xs text-muted-foreground">
-                  {productCategoryMap.get(product.product_category_id)}
-                </span>
-              )}
-            </div>
-          ) : "-"}
         </td>
 
         <td className="px-4 py-3 text-sm">{product.product_spec || "-"}</td>
@@ -883,18 +893,9 @@ const confirmCancelItem = async () => {
 
         {/* DEFAULT PACK SIZE ID */}
         <td className="px-4 py-3 text-sm">
-          {product.default_pack_size_id ? (
-            <div className="flex flex-col gap-1">
               <span className="inline-flex px-2 py-1 rounded-md bg-purple-50 text-purple-600 font-mono text-xs w-fit">
-                {product.default_pack_size_id}
-              </span>
-              {packSizeMap.get(product.default_pack_size_id) && (
-                <span className="text-xs text-muted-foreground">
-                  {packSizeMap.get(product.default_pack_size_id)}
-                </span>
-              )}
-            </div>
-          ) : "-"}
+                 {getPackSizeDisplay(product.default_pack_size_id)}
+              </span>      
         </td>
 
         <td className="px-4 py-3 text-sm">{product.batch_prefix || "-"}</td>
@@ -916,18 +917,9 @@ const confirmCancelItem = async () => {
 
         {/* COA CHECKLIST ID */}
         <td className="px-4 py-3 text-sm">
-          {product.coa_checklist_id ? (
-            <div className="flex flex-col gap-1">
               <span className="inline-flex px-2 py-1 rounded-md bg-yellow-50 text-yellow-600 font-mono text-xs w-fit">
-                {product.coa_checklist_id}
+                {getChecklistDisplay(product.coa_checklist_id)}
               </span>
-              {coaChecklistMap.get(product.coa_checklist_id) && (
-                <span className="text-xs text-muted-foreground">
-                  {coaChecklistMap.get(product.coa_checklist_id)}
-                </span>
-              )}
-            </div>
-          ) : "-"}
         </td>
 
         {/* STERILIZATION BADGE */}
@@ -1397,7 +1389,7 @@ const confirmCancelItem = async () => {
         <option value="">Enter COA checklist ID</option>
         {checklists.filter((data) => data.active !== false).map(product => (
             <option key={product.checklist_id} value={product.checklist_id}>
-                {product.checklist_id}
+                {product.checklist_id} - {product.checklist_description}
             </option>
         ))}
     </select>
@@ -1835,7 +1827,7 @@ const confirmCancelItem = async () => {
     >
         {checklists.filter((data) => data.active !== false).map(product => (
             <option key={product.checklist_id} value={product.checklist_id}>
-                {product.checklist_id}
+                {product.checklist_id} - {product.checklist_description}
             </option>
         ))}
     </select>

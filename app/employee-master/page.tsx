@@ -254,7 +254,25 @@ export default function EmployeeMasterPage() {
             });
         }
     }, [isAddModalOpen]);
+// Helper function for Company
+const getCompanyDisplay = (companyId: string) => {
+    if (!companyId) return "-";
+    const company = companies.find(c => c.comp_id === companyId);
+    return company ? `${company.comp_id} - ${company.company_name}` : companyId;
+};
 
+// Helper function for Department
+const getDepartmentDisplay = (departmentId: string) => {
+    if (!departmentId) return "-";
+    const department = departments.find(d => d.dept_id === departmentId);
+    return department ? `${department.dept_id} - ${department.department_name}` : departmentId;
+};
+// Helper function for Grade
+const getGradeDisplay = (gradeId: string) => {
+    if (!gradeId) return "-";
+    const grade = grades.find(g => g.grade_id === gradeId);
+    return grade ? `${grade.grade_id} - ${grade.grade_name}` : gradeId;
+};
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -719,10 +737,10 @@ const confirmDelete = async () => {
         </td>
 
         <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.empName}</td>
-        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.location}</td>
-        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.deptId}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{getCompanyDisplay(item.location)}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{getDepartmentDisplay(item.deptId)}</td>
         <td className="px-6 py-4 text-center align-middle text-sm  text-foreground">{item.gender}</td>
-        <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.gradeId}</td>
+        <td className="px-6 py-4 align-middle text-sm  text-foreground">{getGradeDisplay(item.gradeId)}</td>
         <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.team}</td>
         <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.category}</td>
         <td className="px-6 py-4 align-middle text-sm  text-foreground">{item.pfNo || "-"}</td>

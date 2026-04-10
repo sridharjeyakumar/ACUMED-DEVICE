@@ -256,7 +256,12 @@ export default function PurchaseOrdersPage() {
         setOrderToDelete(order);
         setIsDeleteDialogOpen(true);
     };
-
+// Helper function for Vendor
+const getVendorDisplay = (vendorId: string) => {
+    if (!vendorId) return "-";
+    const vendor = vendors.find(v => v.vendor_id === vendorId);
+    return vendor ? `${vendor.vendor_id} - ${vendor.vendor_name}` : vendorId;
+};
     const confirmDelete = async () => {
         if (!orderToDelete) return;
         try {
@@ -454,7 +459,7 @@ export default function PurchaseOrdersPage() {
                                                     <td className="px-4 py-3 text-sm font-mono">{order.po_time || "-"}</td>
                                                     <td className="px-4 py-3 text-sm">
                                                         <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-                                                            {order.vendor_id}
+                                                            {getVendorDisplay(order.vendor_id)}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3 text-sm">{order.vendor_ref_doc_no || "-"}</td>
