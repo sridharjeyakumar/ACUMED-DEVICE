@@ -61,7 +61,7 @@ const navSections: NavSection[] = [
       { icon: Truck, label: "Carton Type Master", href: "/carton-type-master" },
       { icon: FileText, label: "Product BOM", href: "/product-bom" },
       { icon: CheckCircle2, label: "COA Checklist Master", href: "/coa-checklist-master" },
-      { icon: FileText, label: "COA Checklist Detail", href: "/coa-checklist-detail" },
+      // { icon: FileText, label: "COA Checklist Detail", href: "/coa-checklist-detail" },
       { icon: PackageOpen, label: "Product Category Master", href: "/product-category-master" },
       { icon: Layers, label: "Material Category Master", href: "/material-category-master" },
       { icon: MapPin, label: "Location Master", href: "/location-master" },

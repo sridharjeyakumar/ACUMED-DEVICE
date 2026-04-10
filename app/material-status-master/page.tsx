@@ -88,10 +88,10 @@ export default function MaterialStatusMasterPage() {
         effect_in_stock: "",
         seq_no: "",
         active: true,
-        goods_movement: "",
-        against_gr: "",
-        unit_split_allowed: "",
-        approval_required: "",
+        goods_movement: "N",
+        against_gr: "N",
+        unit_split_allowed: "N",
+        approval_required: "N",
         location_id: "",
     });
     const [locations, setLocations] = useState<Location[]>([]);
@@ -181,7 +181,7 @@ export default function MaterialStatusMasterPage() {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
         if (type === "checkbox") {
-            setFormData({ ...formData, [name]: (e.target as HTMLInputElement).checked });
+            setFormData({ ...formData, [name]: (e.target as HTMLInputElement).checked ? 'Y' : 'N' });
         } else {
             setFormData({ ...formData, [name]: value });
         }
@@ -455,11 +455,11 @@ export default function MaterialStatusMasterPage() {
     const confirmCancel = () => {
         if (cancelModalType === 'add') {
             setIsAddModalOpen(false);
-            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true, goods_movement: "", against_gr: "", unit_split_allowed: "", approval_required: "", location_id: "" });
+            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true, goods_movement: "N", against_gr: "N", unit_split_allowed: "N", approval_required: "N", location_id: "" });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
             setSelectedStatus(null);
-            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true, goods_movement: "", against_gr: "", unit_split_allowed: "", approval_required: "", location_id: "" });
+            setFormData({ matl_status_id: "", material_status: "", stock_movement: "", effect_in_stock: "", seq_no: "", active: true, goods_movement: "N", against_gr: "N", unit_split_allowed: "N", approval_required: "N", location_id: "" });
         }
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
@@ -871,8 +871,8 @@ export default function MaterialStatusMasterPage() {
                                                 value={formData.matl_status_id}
                                                 onChange={handleInputChange}
                                                 required
-                                                maxLength={3}
-                                                placeholder="e.g. REC"
+                                                maxLength={2}
+                                                placeholder="e.g. RE"
                                             />
                                         </div>
                                         <div>
@@ -922,53 +922,61 @@ export default function MaterialStatusMasterPage() {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Goods Movement
                                             </label>
-                                            <Input
-                                                name="goods_movement"
-                                                value={formData.goods_movement}
-                                                onChange={handleInputChange}
-                                                maxLength={1}
-                                                placeholder="Y / N"
-                                                className="uppercase"
-                                            />
+                                            <div className="flex items-center h-10">
+                                                <input
+                                                    type="checkbox"
+                                                    name="goods_movement"
+                                                    id="add_goods_movement"
+                                                    checked={formData.goods_movement === 'Y'}
+                                                    onChange={handleInputChange}
+                                                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                                />
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Against GR Only
                                             </label>
-                                            <Input
-                                                name="against_gr"
-                                                value={formData.against_gr}
-                                                onChange={handleInputChange}
-                                                maxLength={1}
-                                                placeholder="Y / N"
-                                                className="uppercase"
-                                            />
+                                            <div className="flex items-center h-10">
+                                                <input
+                                                    type="checkbox"
+                                                    name="against_gr"
+                                                    id="add_against_gr"
+                                                    checked={formData.against_gr === 'Y'}
+                                                    onChange={handleInputChange}
+                                                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                                />
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Unit Split Allowed
                                             </label>
-                                            <Input
-                                                name="unit_split_allowed"
-                                                value={formData.unit_split_allowed}
-                                                onChange={handleInputChange}
-                                                maxLength={1}
-                                                placeholder="Y / N"
-                                                className="uppercase"
-                                            />
+                                            <div className="flex items-center h-10">
+                                                <input
+                                                    type="checkbox"
+                                                    name="unit_split_allowed"
+                                                    id="add_unit_split_allowed"
+                                                    checked={formData.unit_split_allowed === 'Y'}
+                                                    onChange={handleInputChange}
+                                                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                                />
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Approval Required
                                             </label>
-                                            <Input
-                                                name="approval_required"
-                                                value={formData.approval_required}
-                                                onChange={handleInputChange}
-                                                maxLength={1}
-                                                placeholder="Y / N"
-                                                className="uppercase"
-                                            />
+                                            <div className="flex items-center h-10">
+                                                <input
+                                                    type="checkbox"
+                                                    name="approval_required"
+                                                    id="add_approval_required"
+                                                    checked={formData.approval_required === 'Y'}
+                                                    onChange={handleInputChange}
+                                                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                                />
+                                            </div>
                                         </div>
                                                                                                                   <div>
     <label className="block text-sm font-semibold text-foreground mb-2">
@@ -1067,6 +1075,7 @@ export default function MaterialStatusMasterPage() {
                                                 name="matl_status_id"
                                                 value={formData.matl_status_id}
                                                 onChange={handleInputChange}
+                                                maxLength={2}
                                                 required
                                                 disabled
                                             />
@@ -1117,53 +1126,61 @@ export default function MaterialStatusMasterPage() {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Goods Movement
                                             </label>
-                                            <Input
-                                                name="goods_movement"
-                                                value={formData.goods_movement}
-                                                onChange={handleInputChange}
-                                                maxLength={1}
-                                                placeholder="Y / N"
-                                                className="uppercase"
-                                            />
+                                            <div className="flex items-center h-10">
+                                                <input
+                                                    type="checkbox"
+                                                    name="goods_movement"
+                                                    id="edit_goods_movement"
+                                                    checked={formData.goods_movement === 'Y'}
+                                                    onChange={handleInputChange}
+                                                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                                />
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Against GR Only
                                             </label>
-                                            <Input
-                                                name="against_gr"
-                                                value={formData.against_gr}
-                                                onChange={handleInputChange}
-                                                maxLength={1}
-                                                placeholder="Y / N"
-                                                className="uppercase"
-                                            />
+                                            <div className="flex items-center h-10">
+                                                <input
+                                                    type="checkbox"
+                                                    name="against_gr"
+                                                    id="edit_against_gr"
+                                                    checked={formData.against_gr === 'Y'}
+                                                    onChange={handleInputChange}
+                                                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                                />
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Unit Split Allowed
                                             </label>
-                                            <Input
-                                                name="unit_split_allowed"
-                                                value={formData.unit_split_allowed}
-                                                onChange={handleInputChange}
-                                                maxLength={1}
-                                                placeholder="Y / N"
-                                                className="uppercase"
-                                            />
+                                            <div className="flex items-center h-10">
+                                                <input
+                                                    type="checkbox"
+                                                    name="unit_split_allowed"
+                                                    id="edit_unit_split_allowed"
+                                                    checked={formData.unit_split_allowed === 'Y'}
+                                                    onChange={handleInputChange}
+                                                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                                />
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Approval Required
                                             </label>
-                                            <Input
-                                                name="approval_required"
-                                                value={formData.approval_required}
-                                                onChange={handleInputChange}
-                                                maxLength={1}
-                                                placeholder="Y / N"
-                                                className="uppercase"
-                                            />
+                                            <div className="flex items-center h-10">
+                                                <input
+                                                    type="checkbox"
+                                                    name="approval_required"
+                                                    id="edit_approval_required"
+                                                    checked={formData.approval_required === 'Y'}
+                                                    onChange={handleInputChange}
+                                                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                                />
+                                            </div>
                                         </div>
                                                                                                                <div>
     <label className="block text-sm font-semibold text-foreground mb-2">

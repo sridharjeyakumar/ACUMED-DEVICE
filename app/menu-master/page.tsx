@@ -27,6 +27,7 @@ import {
 interface Menu {
     menu_id: string;
     menu_desc: string;
+    audit_trail_required?: string; // 'Y' or 'N'
     active: boolean;
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date | string; // Date
@@ -69,13 +70,14 @@ export default function MenuMasterPage() {
     const [formData, setFormData] = useState({
         menu_id: "",
         menu_desc: "",
+        audit_trail_required: "N" as string,
         active: true,
     });
 
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({ menu_id: "", menu_desc: "", active: true });
+            setFormData({ menu_id: "", menu_desc: "", audit_trail_required: "N", active: true });
         }
     }, [isAddModalOpen]);
 
@@ -138,7 +140,7 @@ export default function MenuMasterPage() {
                 description: "Menu created successfully",
             });
             setIsAddModalOpen(false);
-            setFormData({ menu_id: "", menu_desc: "", active: true });
+            setFormData({ menu_id: "", menu_desc: "", audit_trail_required: "N", active: true });
             loadMenus();
         } catch (error: any) {
             toast({
@@ -175,6 +177,7 @@ export default function MenuMasterPage() {
         setFormData({
             menu_id: menu.menu_id,
             menu_desc: menu.menu_desc,
+            audit_trail_required: menu.audit_trail_required || "N",
             active: menu.active,
         });
         setIsEditModalOpen(true);
@@ -193,6 +196,7 @@ export default function MenuMasterPage() {
         try {
             await menuAPI.update(selectedMenu.menu_id, {
                 menu_desc: formData.menu_desc,
+                audit_trail_required: formData.audit_trail_required,
                 active: formData.active,
             });
             
@@ -210,7 +214,7 @@ export default function MenuMasterPage() {
             });
             setIsEditModalOpen(false);
             setSelectedMenu(null);
-            setFormData({ menu_id: "", menu_desc: "", active: true });
+            setFormData({ menu_id: "", menu_desc: "", audit_trail_required: "N", active: true });
             loadMenus();
         } catch (error: any) {
             toast({
@@ -232,6 +236,7 @@ export default function MenuMasterPage() {
                 // Restore previous data
                 await menuAPI.update(lastAction.data.menu_id, {
                     menu_desc: lastAction.data.menu_desc,
+                    audit_trail_required: lastAction.data.audit_trail_required,
                     active: lastAction.data.active,
                 });
                 toast({
@@ -286,11 +291,11 @@ export default function MenuMasterPage() {
     const confirmCancel = () => {
         if (cancelModalType === 'add') {
             setIsAddModalOpen(false);
-            setFormData({ menu_id: "", menu_desc: "", active: true });
+            setFormData({ menu_id: "", menu_desc: "", audit_trail_required: "N", active: true });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
             setSelectedMenu(null);
-            setFormData({ menu_id: "", menu_desc: "", active: true });
+            setFormData({ menu_id: "", menu_desc: "", audit_trail_required: "N", active: true });
         }
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
@@ -437,6 +442,12 @@ export default function MenuMasterPage() {
                                         <tr className="bg-gray-100 border-b border-border">
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Menu Id</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Menu Desc</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Audit Trail</span>
+                                                    <span>Required</span>
+                                                </div>
+                                            </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Active</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
@@ -456,13 +467,13 @@ export default function MenuMasterPage() {
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading...
                                                 </td>
                                             </tr>
                                         ) : filteredMenus.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">
                                                     No menus found
                                                 </td>
                                             </tr>
@@ -484,6 +495,13 @@ export default function MenuMasterPage() {
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-foreground">
                                                         {menu.menu_desc}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-left">
+                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                                        menu.audit_trail_required === 'Y' ? "bg-blue-50 text-blue-600" : "bg-gray-50 text-gray-500"
+                                                    }`}>
+                                                        {menu.audit_trail_required === 'Y' ? "Yes" : "No"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-left">
@@ -656,6 +674,20 @@ export default function MenuMasterPage() {
                                         />
                                     </div>
                                     <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Audit Trail Required
+                                        </label>
+                                        <select
+                                            name="audit_trail_required"
+                                            value={formData.audit_trail_required}
+                                            onChange={(e) => setFormData({ ...formData, audit_trail_required: e.target.value })}
+                                            className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="N">No</option>
+                                            <option value="Y">Yes</option>
+                                        </select>
+                                    </div>
+                                    <div className="mb-6">
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
@@ -734,6 +766,20 @@ export default function MenuMasterPage() {
                                             required
                                             maxLength={100}
                                         />
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-semibold text-foreground mb-2">
+                                            Audit Trail Required
+                                        </label>
+                                        <select
+                                            name="audit_trail_required"
+                                            value={formData.audit_trail_required}
+                                            onChange={(e) => setFormData({ ...formData, audit_trail_required: e.target.value })}
+                                            className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="N">No</option>
+                                            <option value="Y">Yes</option>
+                                        </select>
                                     </div>
                                     <div className="mb-6">
                                         <label className="flex items-center gap-2 cursor-pointer">

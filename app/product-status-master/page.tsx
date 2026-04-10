@@ -181,7 +181,19 @@ export default function ProductStatusMasterPage() {
             };
             loadProducts();
         }, []);
+// Helper function for Material Status
+const getMaterialStatusDisplay = (statusId: string) => {
+    if (!statusId) return "-";
+    const status = mstatuses.find(s => s.matl_status_id === statusId);
+    return status ? `${status.matl_status_id} - ${status.material_status}` : statusId;
+};
 
+// Helper function for Carton Type (already have, but here's the complete version)
+const getCartonTypeDisplay = (cartonTypeId: string) => {
+    if (!cartonTypeId) return "-";
+    const cartonType = cartonTypes.find(c => c.carton_type_id === cartonTypeId);
+    return cartonType ? `${cartonType.carton_type_id} - ${cartonType.carton_type_name}` : cartonTypeId;
+};
     const loadStatuses = useCallback(async () => {
         try {
             setLoading(true);
@@ -744,13 +756,13 @@ export default function ProductStatusMasterPage() {
                                                         <span className="text-sm text-foreground">{status.movement_type || "-"}</span>
                                                     </td>
                                                      <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground">{status.carton_type_id || "-"}</span>
+                                                        <span className="text-sm text-foreground">{getCartonTypeDisplay(status.carton_type_id)}</span>
                                                     </td>
                                                         <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground font-semibold">{status.location_id || "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground">{status.material_status_id || "-"}</span>
+                                                        <span className="text-sm text-foreground">{getMaterialStatusDisplay(status.material_status_id)}</span>
                                                     </td>
                                                       <td className="px-6 py-4">
                                                         <span className="text-sm text-foreground">{status.seq_no}</span>
@@ -983,7 +995,7 @@ export default function ProductStatusMasterPage() {
                 {cartonTypes.filter((type) => type.active).map((type) => (
       <option key={type.carton_type_id} value={type.carton_type_id}>
         {/* If your API returns the name, show it; otherwise show the ID */}
-        {type.carton_type_id}
+        {type.carton_type_id} - {type.carton_type_name}
       </option>
     ))}
             </select>
@@ -1049,19 +1061,18 @@ export default function ProductStatusMasterPage() {
 </div>
                                                                             <div>
     <label className="block text-sm font-semibold text-foreground mb-2">
-        Material Status Id <span className="text-red-500">*</span>
+        Material Status Id
     </label>
     <select
         name="material_status_id"
         value={formData.material_status_id}
         onChange={handleInputChange}
         className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-        required
     >
         <option value="">Select a material status</option>
         {mstatuses.filter(status => status.active).map(status => (
             <option key={status.matl_status_id} value={status.matl_status_id}>
-                {status.matl_status_id}
+                {status.matl_status_id} - {status.material_status}
             </option>
         ))}
     </select>
@@ -1265,7 +1276,7 @@ export default function ProductStatusMasterPage() {
                 <option value="">Select Carton Type...</option>
                 {cartonTypes.filter((type) => type.active).map((type) => (
       <option key={type.carton_type_id} value={type.carton_type_id}>
-        {type.carton_type_id}
+        {type.carton_type_id} - {type.carton_type_name}
       </option>
     ))}
             </select>
@@ -1330,19 +1341,18 @@ export default function ProductStatusMasterPage() {
 </div>
                                                                             <div>
     <label className="block text-sm font-semibold text-foreground mb-2">
-        Material Status Id <span className="text-red-500">*</span>
+        Material Status Id
     </label>
     <select
         name="material_status_id"
         value={formData.material_status_id}
         onChange={handleInputChange}
         className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-        required
     >
         <option value="">Select a material status</option>
         {mstatuses.filter(status => status.active).map(status => (
             <option key={status.matl_status_id} value={status.matl_status_id}>
-                {status.matl_status_id}
+                {status.matl_status_id} - {status.material_status}
             </option>
         ))}
     </select>
