@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IMenuMaster extends Document {
   menu_id: string; // Char(3) - PK
   menu_desc: string; // Char(100)
+  audit_trail_required?: string; // Char(1)  'Y' or 'N'
   active: boolean;
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
@@ -20,6 +21,13 @@ const MenuMasterSchema: Schema = new Schema({
     type: String,
     required: true,
     maxlength: 100,
+    trim: true,
+  },
+  audit_trail_required: {
+    type: String,
+    required: false,
+    enum: ['Y', 'N'],
+    maxlength: 1,
     trim: true,
   },
   active: {

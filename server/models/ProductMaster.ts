@@ -77,7 +77,7 @@ const ProductMasterSchema: Schema = new Schema({
     required: false,
     maxlength: 10,
     trim: true,
-    enum: ['GMS', 'KG', 'MG', ''],
+    enum: ['GMS', 'KGS', 'MG', ''],
   },
   wipes_per_kg: {
     type: Number,

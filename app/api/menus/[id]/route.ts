@@ -84,10 +84,11 @@ export async function PUT(
     }
     await ensureDbConnection();
     const body = await request.json();
-    const { menu_desc, active } = body;
-    
+    const { menu_desc, audit_trail_required, active } = body;
+
     const updateData: any = {};
     if (menu_desc !== undefined && menu_desc !== null) updateData.menu_desc = menu_desc;
+    if (audit_trail_required !== undefined && audit_trail_required !== null) updateData.audit_trail_required = audit_trail_required;
     if (active !== undefined) updateData.active = active !== false;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();

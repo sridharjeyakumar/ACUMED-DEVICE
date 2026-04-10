@@ -694,11 +694,13 @@ export default function ProductStatusTransitionMasterPage() {
                                                 
                                                     <td className="px-6 py-4">
                                                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
-                                                            transition.sterilization_required === 'Y' 
-                                                                ? 'bg-yellow-100 text-yellow-800' 
+                                                            transition.sterilization_required === 'Y'
+                                                                ? 'bg-yellow-100 text-yellow-800'
+                                                                : transition.sterilization_required === 'B'
+                                                                ? 'bg-blue-100 text-blue-800'
                                                                 : 'bg-gray-100 text-gray-600'
                                                         }`}>
-                                                            {transition.sterilization_required === 'Y' ? 'Y' : 'N'}
+                                                            {transition.sterilization_required === 'Y' ? 'Y' : transition.sterilization_required === 'B' ? 'Both' : 'N'}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
@@ -913,8 +915,10 @@ export default function ProductStatusTransitionMasterPage() {
                                                     className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                                     required
                                                 >
-                                                    <option value="Y">Yes - Sterilization Required</option>
-                                                    <option value="N">No - Sterilization Not Required</option>
+                                                    <option value="Y">Yes</option>
+                                                    <option value="N">No</option>
+                                                    <option value="B">Both</option>
+
                                                 </select>
                                             </div>
                                               <div>
@@ -928,8 +932,8 @@ export default function ProductStatusTransitionMasterPage() {
                                                     className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                                     required
                                                 >
-                                                    <option value="Y">Yes - Lock Quantity Change</option>
-                                                    <option value="N">No - Do Not Lock Quantity Change</option>
+                                                    <option value="Y">Yes</option>
+                                                    <option value="N">No</option>
                                                 </select>
                                             </div>
                                             <div>
@@ -943,8 +947,8 @@ export default function ProductStatusTransitionMasterPage() {
                                                     className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                                     required
                                                 >
-                                                    <option value="Y">Yes - Approval Required</option>
-                                                    <option value="N">No - Approval Not Required</option>
+                                                    <option value="Y">Yes</option>
+                                                    <option value="N">No</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -1105,8 +1109,9 @@ export default function ProductStatusTransitionMasterPage() {
                                                     className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                                     required
                                                 >
-                                                    <option value="Y">Yes - Sterilization Required</option>
-                                                    <option value="N">No - Sterilization Not Required</option>
+                                                    <option value="Y">Yes</option>
+                                                    <option value="N">No</option>
+                                                    <option value="B">Both</option>
                                                 </select>
                                             </div>
                                                <div>
@@ -1120,8 +1125,8 @@ export default function ProductStatusTransitionMasterPage() {
                                                     className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                                     required
                                                 >
-                                                    <option value="Y">Yes - Lock Quantity Change</option>
-                                                    <option value="N">No - Do Not Lock Quantity Change</option>
+                                                    <option value="Y">Yes</option>
+                                                    <option value="N">No</option>
                                                 </select>
                                             </div>
                                             <div>
@@ -1135,8 +1140,8 @@ export default function ProductStatusTransitionMasterPage() {
                                                     className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                                     required
                                                 >
-                                                    <option value="Y">Yes - Approval Required</option>
-                                                    <option value="N">No - Approval Not Required</option>
+                                                    <option value="Y">Yes</option>
+                                                    <option value="N">No</option>
                                                 </select>
                                             </div>
                                         </div>

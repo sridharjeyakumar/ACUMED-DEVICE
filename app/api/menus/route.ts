@@ -45,10 +45,11 @@ export async function POST(request: NextRequest) {
   try {
     await ensureConnection();
     const body = await request.json();
-    const { menu_id, menu_desc, active } = body;
-    const menu = new MenuMaster({ 
-      menu_id, 
-      menu_desc, 
+    const { menu_id, menu_desc, audit_trail_required, active } = body;
+    const menu = new MenuMaster({
+      menu_id,
+      menu_desc,
+      audit_trail_required: audit_trail_required || 'N',
       active: active !== false,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),

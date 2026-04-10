@@ -31,7 +31,7 @@ const ProductStatusTransitionMasterSchema: Schema = new Schema({
     type: String,
     required: true,
     maxlength: 1,
-    enum: ['Y', 'N'],
+    enum: ['Y', 'N' ,"B"],
     default: 'N',
   },
   lock_qty_change:{
