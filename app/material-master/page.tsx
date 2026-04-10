@@ -274,7 +274,17 @@ const getCategoryDisplay = (categoryId: string) => {
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery, filterActive, filterType, filterCategory, rowsPerPage]);
-
+// Helper function for Vendor
+const getVendorDisplay = (vendorId: string) => {
+    if (!vendorId) return "-";
+    const vendor = vendors.find(v => v.vendor_id === vendorId);
+    return vendor ? `${vendor.vendor_id} - ${vendor.vendor_name}` : vendorId;
+};
+const getChecklistDisplay = (checklistId: string) => {
+    if (!checklistId) return "-";
+    const checklist = checklists.find(c => c.checklist_id === checklistId);
+    return checklist ? `${checklist.checklist_id} - ${checklist.checklist_description}` : checklistId;
+};
     const uniqueCategories = Array.from(new Set(materials.map(m => m.material_category_id).filter(c => c)));
 
     // const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -903,18 +913,11 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         </td>
 
         {/* COA CHECKLIST */}
-        <td className="px-4 py-3 text-sm">
+        <td className="px-3 py-3 text-sm">
           {material.coa_checklist_id ? (
-            <div className="flex flex-col gap-1">
               <span className="inline-flex px-2 py-1 rounded-md bg-yellow-50 text-yellow-600 font-mono text-xs w-fit">
-                {material.coa_checklist_id}
+                {getChecklistDisplay(material.coa_checklist_id)}
               </span>
-              {coaChecklistMap.get(material.coa_checklist_id) && (
-                <span className="text-xs text-muted-foreground">
-                  {coaChecklistMap.get(material.coa_checklist_id)}
-                </span>
-              )}
-            </div>
           ) : "-"}
         </td>
         <td className="px-4 py-3 text-sm">
@@ -931,7 +934,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         <td className="px-4 py-3 text-sm">
           {material.vendor_id ? (
             <span className="inline-flex px-2 py-1 rounded-md bg-indigo-50 text-indigo-600 font-mono text-xs">
-              {material.vendor_id}
+              {getVendorDisplay(material.vendor_id)}
             </span>
           ) : "-"}
         </td>

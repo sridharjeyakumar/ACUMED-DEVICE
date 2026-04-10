@@ -277,7 +277,12 @@ export default function GoodsMovementPage() {
             uom:                 "",
         }));
     };
-
+// Helper function for GM Status (Goods Movement Status)
+const getGMStatusDisplay = (statusId: string) => {
+    if (!statusId) return "-";
+    const status = gmStatuses.find(s => s.matl_status_id === statusId);
+    return status ? `${status.matl_status_id} - ${status.material_status}` : statusId;
+};
     // ── GR row selected from popup ───────────────────────────────────────────────
 
     const handleGRSelect = async (gr: GRHeader) => {
@@ -1066,7 +1071,7 @@ export default function GoodsMovementPage() {
                                                             </td>
                                                             <td className="px-4 py-3 text-sm">{formatDate(m.gm_date)}</td>
                                                             <td className="px-4 py-3 text-sm">
-                                                                <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">{m.material_status_id}</span>
+                                                                <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">{getGMStatusDisplay(m.material_status_id)}</span>
                                                             </td>
                                                             <td className="px-4 py-3 text-sm">
                                                                 {m.material_doc_no ? (

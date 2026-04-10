@@ -121,7 +121,7 @@ export default function ProductStatusTransitionMasterPage() {
                 productStatusAPI.getAll()
             ]);
             
-            setTransitions(transitionsData);
+            setTransitions([...transitionsData].sort((a, b) => a.seq_no - b.seq_no));
             setStatuses(statusesData);
         } catch (error: any) {
             toast({
@@ -183,7 +183,12 @@ export default function ProductStatusTransitionMasterPage() {
             setFormData({ ...formData, [name]: value });
         }
     };
-
+// Helper function for Product Status
+const getProductStatusDisplay = (statusId: string) => {
+    if (!statusId) return "-";
+    const status = statuses.find(s => s.prod_status_id === statusId);
+    return status ? `${status.prod_status_id} - ${status.product_status}` : statusId;
+};
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -682,12 +687,12 @@ export default function ProductStatusTransitionMasterPage() {
                                                 >
                                                         <td className="px-6 py-4">
                                                         <div className="text-sm">
-                                                            <span className="ftext-sm font-mono text-foreground">{transition.product_status_id}</span>
+                                                            <span className="ftext-sm font-mono text-foreground">{getProductStatusDisplay(transition.product_status_id)}</span>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <div className="text-sm">
-                                                            <span className="text-sm font-mono text-foreground">{transition.from_product_status_id}</span>
+                                                            <span className="text-sm font-mono text-foreground">{getProductStatusDisplay(transition.from_product_status_id)}</span>
                                                         </div>
                                                     </td>
                                                

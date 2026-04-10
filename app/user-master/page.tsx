@@ -417,7 +417,11 @@ export default function UserMasterPage() {
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
     };
-
+const getEmployeeDisplay = (employeeId: string) => {
+    if (!employeeId) return "-";
+    const employee = employees.find(e => (e.emp_id || e._id) === employeeId);
+    return employee ? `${employee.emp_id} - ${employee.emp_name || employee.empName || ''}` : employeeId;
+};
     return (
         <div className="flex min-h-screen bg-background">
             <Sidebar />
@@ -632,7 +636,7 @@ export default function UserMasterPage() {
                                                     <span className="text-sm font-mono text-foreground">{user.user_id}</span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-sm text-foreground">{user.employee_id}</span>
+                                                    <span className="text-sm text-foreground">{getEmployeeDisplay(user.employee_id)}</span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-muted-foreground font-mono">••••••••</span>

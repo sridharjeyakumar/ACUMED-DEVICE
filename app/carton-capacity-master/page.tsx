@@ -458,7 +458,17 @@ const confirmCancelItem = async () => {
     }
 };
 
+const getPackSizeDisplay = (packSizeId: string) => {
+    if (!packSizeId) return "-";
+    const packSize = packSizes.find(ps => ps.pack_size_id === packSizeId);
+    return packSize ? `${packSize.pack_size_id} - ${packSize.pack_size_name}` : packSizeId;
+};
 
+const getPMMaterialDisplay = (materialId: string) => {
+    if (!materialId) return "-";
+    const material = materials.find(m => m.material_id === materialId && m.material_type === "PM");
+    return material ? `${material.material_id} - ${material.material_name}` : materialId;
+};
 
     return (
         <div className="flex min-h-screen bg-background">
@@ -733,12 +743,12 @@ const confirmCancelItem = async () => {
         </td>
         <td className="px-6 py-6 text-center align-middle">
           <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-            {item.packSizeId}
+            {getPackSizeDisplay(item.packSizeId)}
           </span>
         </td>
         <td className="px-6 py-6 text-center align-middle">
           <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-            {item.packMatlId}
+            {getPMMaterialDisplay(item.packMatlId)}
           </span>
         </td>
         <td className="px-6 py-6 text-center align-middle">

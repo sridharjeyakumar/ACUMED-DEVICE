@@ -370,7 +370,12 @@ export default function MenuAccessMasterPage() {
         }
     };
 
-
+// Helper function for Role
+const getRoleDisplay = (roleId: string) => {
+    if (!roleId) return "-";
+    const role = roles.find(r => (r.roll_id || r.role_id) === roleId);
+    return role ? `${role.roll_id || role.role_id} - ${role.roll_description || role.role_description || ''}` : roleId;
+};
     const handleCancel = (access: MenuAccess) => {
         setAccessToCancel(access);
         setIsCancelItemDialogOpen(true);
@@ -716,8 +721,7 @@ export default function MenuAccessMasterPage() {
                                             >
                                                 <td className="px-6 py-4">
                                                     <div className="flex flex-col">
-                                                        <span className="text-sm font-mono text-foreground">{access.rold_id}</span>
-                                                        <span className="text-xs text-muted-foreground">{roleMap.get(access.rold_id) || "-"}</span>
+                                                        <span className="text-sm font-mono text-foreground">{getRoleDisplay(access.rold_id)}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
