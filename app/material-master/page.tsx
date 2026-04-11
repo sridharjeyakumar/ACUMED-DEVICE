@@ -353,7 +353,7 @@ const getChecklistDisplay = (checklistId: string) => {
                 shelf_life_in_months: formData.shelf_life_in_months ? Number(formData.shelf_life_in_months) : undefined,
                 gr_tolerance_percent: formData.gr_tolerance_percent ? Number(formData.gr_tolerance_percent) : undefined,
                 qc_required: formData.qc_required,
-                coa_checklist_id: formData.coa_checklist_id || undefined,
+                coa_checklist_id: formData.qc_required ? (formData.coa_checklist_id || undefined) : "",
                 material_image: formData.material_image || undefined,
                 material_image_icon: formData.material_image_icon || undefined,
                 active: formData.active,
@@ -454,7 +454,7 @@ const getChecklistDisplay = (checklistId: string) => {
                 shelf_life_in_months: formData.shelf_life_in_months ? Number(formData.shelf_life_in_months) : undefined,
                 gr_tolerance_percent: formData.gr_tolerance_percent ? Number(formData.gr_tolerance_percent) : undefined,
                 qc_required: formData.qc_required,
-                coa_checklist_id: formData.coa_checklist_id || undefined,
+                coa_checklist_id: formData.qc_required ? (formData.coa_checklist_id || undefined) : "",
                 material_image: formData.material_image || undefined,
                 material_image_icon: formData.material_image_icon || undefined,
                 active: formData.active,
@@ -1410,13 +1410,14 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         name="coa_checklist_id"
         value={formData.coa_checklist_id}
         onChange={handleInputChange}
-        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-        required
+        disabled={!formData.qc_required}
+        className={`w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none ${!formData.qc_required ? 'opacity-50 cursor-not-allowed' : ''}`}
+        required={formData.qc_required}
     >
         <option value="">Enter COA checklist ID</option>
         {checklists.filter((checklist) => checklist.active !== false).map(product => (
             <option key={product.checklist_id} value={product.checklist_id}>
-                {product.checklist_id}
+                {product.checklist_id} - {product.checklist_description}
             </option>
         ))}
     </select>
@@ -1427,8 +1428,6 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                             <h3 className="text-xs font-bold text-pink-600 uppercase tracking-wider mb-4 border-b pb-2">
                                                 Images
                                             </h3>
-                                        </div>
-
 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
     {/* Material Image */}
     <div className="space-y-2">
@@ -1443,7 +1442,8 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                         alt="Preview" 
                         className="w-full h-full object-cover" 
                     />
-                    <button 
+                    <button
+                        type="button"
                         onClick={() => setFormData({...formData, material_image: ""})}
                         className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
@@ -1469,12 +1469,13 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         <div className="flex flex-col gap-3">
             {formData.material_image_icon && (
                 <div className="relative w-12 h-12 border rounded-full overflow-hidden group">
-                    <img 
-                        src={formData.material_image_icon} 
-                        alt="Icon Preview" 
-                        className="w-full h-full object-cover" 
+                    <img
+                        src={formData.material_image_icon}
+                        alt="Icon Preview"
+                        className="w-full h-full object-cover"
                     />
-                    <button 
+                    <button
+                        type="button"
                         onClick={() => setFormData({...formData, material_image_icon: ""})}
                         className="absolute inset-0 bg-black/40 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
                     >
@@ -1492,6 +1493,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         </div>
     </div>
 </div>
+                                        </div>
 
                                         {/* Status Section */}
                                         <div className="col-span-2 mt-4">
@@ -1865,13 +1867,14 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         name="coa_checklist_id"
         value={formData.coa_checklist_id}
         onChange={handleInputChange}
-        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-        required
+        disabled={!formData.qc_required}
+        className={`w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none ${!formData.qc_required ? 'opacity-50 cursor-not-allowed' : ''}`}
+        required={formData.qc_required}
     >
         <option value="">Enter COA checklist ID</option>
         {checklists.filter((checklist) => checklist.active !== false).map(product => (
             <option key={product.checklist_id} value={product.checklist_id}>
-                {product.checklist_id}
+                {product.checklist_id} - {product.checklist_description}
             </option>
         ))}
     </select>
