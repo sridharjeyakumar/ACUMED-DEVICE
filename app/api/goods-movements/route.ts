@@ -4,6 +4,7 @@ import { ensureConnection } from '@/server/db/connection';
 import GoodsMovement from '@/server/models/GoodsMovement';
 import GoodsMovementUnits from '@/server/models/GoodsMovementUnits';
 import { applyApprovalStockUpdates } from '@/server/lib/goodsMovementHelpers';
+import { saveAudit } from '@/server/lib/AuditService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -86,6 +87,35 @@ export async function POST(request: NextRequest) {
         }
 
         await session.commitTransaction();
+
+        // ── Audit Trail ────────────────────────────────────────────────────────
+        try {
+            await saveAudit({
+                menu_id:            'GMV',
+                header_table_name:  'GoodsMovement',
+                documnet_no:        gm_no,
+                change_user_id:     (body.entered_by_user_id || 'ADMIN').slice(0, 5).toUpperCase(),
+                tables: [
+                    {
+                        table_name:      'GoodsMovement',
+                        pk_field_names:  'gm_no',
+                        pk_field_values: gm_no,
+                        old_data:        {},
+                        new_data:        record.toObject(),
+                    },
+                    ...units.map((u: any) => ({
+                        table_name:      'GoodsMovementUnits',
+                        pk_field_names:  'gm_no|roll_no',
+                        pk_field_values: `${gm_no}|${u.roll_no}`,
+                        old_data:        {},
+                        new_data:        { roll_no: u.roll_no, nett_qty: u.nett_qty, uom: u.uom, status: 'E' },
+                    })),
+                ],
+            });
+        } catch (auditErr) {
+            console.error('Audit save failed (non-blocking):', auditErr);
+        }
+
         return NextResponse.json(record, { status: 201 });
 
     } catch (error: any) {

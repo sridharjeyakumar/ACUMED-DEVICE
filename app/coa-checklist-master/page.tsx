@@ -35,6 +35,16 @@ interface ChecklistDetailRecord {
     active: boolean;
 }
 
+const EXPECTED_RESULT_OPTIONS = [
+    { value: 'P', label: 'P - Pass/Fail' },
+    { value: 'R', label: 'R - Range' },
+    { value: 'E', label: 'E - Equal' },
+    { value: 'G', label: 'G - Greater than' },
+    { value: 'L', label: 'L - Less than' },
+    { value: 'T', label: 'T - Text match' },
+] as const;
+
+
 export default function COAChecklistMasterPage() {
     const { toast } = useToast();
     const isSuperAdmin = getSessionUser()?.super_admin === true;
@@ -189,7 +199,7 @@ export default function COAChecklistMasterPage() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleDetailRowChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleDetailRowChange = (index: number, e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setDetailRows(prev => prev.map((row, i) => i === index ? { ...row, [e.target.name]: e.target.value } : row));
     };
 
@@ -697,7 +707,12 @@ export default function COAChecklistMasterPage() {
                                                     </div>
                                                     <div>
                                                         <label className="block text-sm font-semibold text-foreground mb-1">Expected Result <span className="text-red-500">*</span></label>
-                                                        <Input name="expectedResult" value={row.expectedResult} onChange={e => handleDetailRowChange(index, e)} placeholder="e.g., Ok, Pass" required maxLength={25} />
+                                                        <select name="expectedResult" value={row.expectedResult} onChange={e => handleDetailRowChange(index, e)} required className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring">
+                                                            <option value="">Select...</option>
+                                                            {EXPECTED_RESULT_OPTIONS.map(opt => (
+                                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                            ))}
+                                                        </select>
                                                     </div>
                                                     <div>
                                                         <label className="block text-sm font-semibold text-foreground mb-1">Expected Text</label>
@@ -801,7 +816,12 @@ export default function COAChecklistMasterPage() {
                                                     </div>
                                                     <div>
                                                         <label className="block text-sm font-semibold text-foreground mb-1">Expected Result <span className="text-red-500">*</span></label>
-                                                        <Input name="expectedResult" value={row.expectedResult} onChange={e => handleDetailRowChange(index, e)} required maxLength={25} />
+                                                        <select name="expectedResult" value={row.expectedResult} onChange={e => handleDetailRowChange(index, e)} required className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring">
+                                                            <option value="">Select...</option>
+                                                            {EXPECTED_RESULT_OPTIONS.map(opt => (
+                                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                            ))}
+                                                        </select>
                                                     </div>
                                                     <div>
                                                         <label className="block text-sm font-semibold text-foreground mb-1">Expected Text</label>
