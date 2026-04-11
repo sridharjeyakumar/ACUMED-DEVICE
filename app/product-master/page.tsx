@@ -454,12 +454,12 @@ const handleEditSubmit = async (e: React.FormEvent) => {
             product_image: formData.product_image || undefined,
             product_image_icon: formData.product_image_icon || undefined,
             qc_required: formData.qc_required,
-            coa_checklist_id: formData.coa_checklist_id || undefined,
+            coa_checklist_id: formData.qc_required ? (formData.coa_checklist_id || undefined) : "",
             sterilization_required: formData.sterilization_required,
             active: formData.active,
             last_modified_user_id: "ADMIN",
         };
-     Object.keys(formattedData).forEach(key => 
+     Object.keys(formattedData).forEach(key =>
             formattedData[key] === undefined && delete formattedData[key]
         );
         // Call API to update
@@ -488,7 +488,7 @@ const handleEditSubmit = async (e: React.FormEvent) => {
         : selectedProduct!.running_batch_sno,
             product_image: formattedData.product_image || selectedProduct!.product_image,
             product_image_icon: formattedData.product_image_icon || selectedProduct!.product_image_icon,
-            coa_checklist_id: formattedData.coa_checklist_id || selectedProduct!.coa_checklist_id,
+            coa_checklist_id: formattedData.qc_required ? (formattedData.coa_checklist_id || selectedProduct!.coa_checklist_id) : "",
         };
 
         // Update the products state
@@ -918,7 +918,7 @@ const confirmCancelItem = async () => {
         {/* COA CHECKLIST ID */}
         <td className="px-4 py-3 text-sm">
               <span className="inline-flex px-2 py-1 rounded-md bg-yellow-50 text-yellow-600 font-mono text-xs w-fit">
-                {getChecklistDisplay(product.coa_checklist_id)}
+                {product.qc_required ? getChecklistDisplay(product.coa_checklist_id) : '—'}
               </span>
         </td>
 

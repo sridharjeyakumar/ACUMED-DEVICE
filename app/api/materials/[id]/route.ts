@@ -86,7 +86,7 @@ export async function PUT(
     if (body.shelf_life_in_months !== undefined) updateData.shelf_life_in_months = safeNumber(body.shelf_life_in_months) || undefined;
     if (body.gr_tolerance_percent !== undefined) updateData.gr_tolerance_percent = safeNumber(body.gr_tolerance_percent) || undefined;
     if (body.qc_required !== undefined) updateData.qc_required = body.qc_required === true || body.qc_required === "true";
-    if (body.coa_checklist_id !== undefined) updateData.coa_checklist_id = cleanValue(body.coa_checklist_id);
+    if (body.coa_checklist_id !== undefined) updateData.coa_checklist_id = body.coa_checklist_id === '' ? '' : cleanValue(body.coa_checklist_id);
     if (body.vendor_id !== undefined) updateData.vendor_id = cleanValue(body.vendor_id);
     if (body.core_weight !== undefined) updateData.core_weight = safeNumber(body.core_weight) || undefined;
     if (body.material_image !== undefined) updateData.material_image = cleanValue(body.material_image);

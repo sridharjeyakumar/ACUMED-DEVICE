@@ -63,15 +63,21 @@ export default function COAChecklistMasterPage() {
     // Detail state
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [detailRecords, setDetailRecords] = useState<ChecklistDetailRecord[]>([]);
-    const [selectedDetailForEdit, setSelectedDetailForEdit] = useState<ChecklistDetailRecord | null>(null);
-    const [detailFormData, setDetailFormData] = useState({
-        checklistSno: "",
-        checklistParameter: "",
-        expectedResult: "",
-        expectedValue1: "",
-        expectedValue2: "",
-        expectedText: "",
+
+    interface DetailRow {
+        _id?: string;
+        checklistSno: string;
+        checklistParameter: string;
+        expectedResult: string;
+        expectedValue1: string;
+        expectedValue2: string;
+        expectedText: string;
+    }
+    const emptyDetailRow = (): DetailRow => ({
+        checklistSno: "", checklistParameter: "", expectedResult: "",
+        expectedValue1: "", expectedValue2: "", expectedText: ""
     });
+    const [detailRows, setDetailRows] = useState<DetailRow[]>([emptyDetailRow()]);
 
     // Master helpers
     const toCamelCase = (data: any): ChecklistRecord => ({
@@ -148,7 +154,7 @@ export default function COAChecklistMasterPage() {
     useEffect(() => {
         if (isAddModalOpen) {
             setFormData({ checklistId: "", checklistDescription: "", active: true });
-            setDetailFormData({ checklistSno: "", checklistParameter: "", expectedResult: "", expectedValue1: "", expectedValue2: "", expectedText: "" });
+            setDetailRows([emptyDetailRow()]);
         }
     }, [isAddModalOpen]);
 
@@ -183,19 +189,31 @@ export default function COAChecklistMasterPage() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleDetailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setDetailFormData({ ...detailFormData, [e.target.name]: e.target.value });
+    const handleDetailRowChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+        setDetailRows(prev => prev.map((row, i) => i === index ? { ...row, [e.target.name]: e.target.value } : row));
+    };
+
+    const addDetailRow = () => {
+        setDetailRows(prev => [...prev, { ...emptyDetailRow(), checklistSno: String(prev.length + 1) }]);
+    };
+
+    const removeDetailRow = (index: number) => {
+        setDetailRows(prev => prev.length > 1 ? prev.filter((_, i) => i !== index) : prev);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             await coaChecklistAPI.create(toSnakeCase(formData));
-            await coaChecklistDetailAPI.create(detailToSnakeCase(formData.checklistId, detailFormData));
+            for (const row of detailRows) {
+                if (row.checklistParameter) {
+                    await coaChecklistDetailAPI.create(detailToSnakeCase(formData.checklistId, row));
+                }
+            }
             toast({ title: "Success", description: "COA checklist created successfully" });
             setIsAddModalOpen(false);
             setFormData({ checklistId: "", checklistDescription: "", active: true });
-            setDetailFormData({ checklistSno: "", checklistParameter: "", expectedResult: "", expectedValue1: "", expectedValue2: "", expectedText: "" });
+            setDetailRows([emptyDetailRow()]);
             loadRecords();
             loadDetailRecords();
         } catch (error: any) {
@@ -210,16 +228,19 @@ export default function COAChecklistMasterPage() {
             checklistDescription: checklist.checklistDescription,
             active: checklist.active !== undefined ? checklist.active : true,
         });
-        const firstDetail = detailRecords.find(d => d.checklistId === checklist.checklistId);
-        setSelectedDetailForEdit(firstDetail || null);
-        setDetailFormData({
-            checklistSno: firstDetail ? String(firstDetail.checklistSno) : "",
-            checklistParameter: firstDetail?.checklistParameter || "",
-            expectedResult: firstDetail?.expectedResult || "",
-            expectedValue1: firstDetail?.expectedValue1 !== undefined ? String(firstDetail.expectedValue1) : "",
-            expectedValue2: firstDetail?.expectedValue2 !== undefined ? String(firstDetail.expectedValue2) : "",
-            expectedText: firstDetail?.expectedText || "",
-        });
+        const existing = detailRecords.filter(d => d.checklistId === checklist.checklistId);
+        setDetailRows(existing.length > 0
+            ? existing.map(d => ({
+                _id: d.id,
+                checklistSno: String(d.checklistSno),
+                checklistParameter: d.checklistParameter,
+                expectedResult: d.expectedResult,
+                expectedValue1: d.expectedValue1 !== undefined ? String(d.expectedValue1) : "",
+                expectedValue2: d.expectedValue2 !== undefined ? String(d.expectedValue2) : "",
+                expectedText: d.expectedText || "",
+            }))
+            : [emptyDetailRow()]
+        );
         setIsEditModalOpen(true);
     };
 
@@ -228,21 +249,23 @@ export default function COAChecklistMasterPage() {
         if (!selectedChecklist) return;
         try {
             await coaChecklistAPI.update(selectedChecklist.checklistId, toSnakeCase(formData));
-            if (selectedDetailForEdit) {
-                await coaChecklistDetailAPI.update(
-                    selectedDetailForEdit.checklistId,
-                    selectedDetailForEdit.checklistSno,
-                    detailToSnakeCase(selectedChecklist.checklistId, detailFormData)
-                );
-            } else if (detailFormData.checklistParameter) {
-                await coaChecklistDetailAPI.create(detailToSnakeCase(selectedChecklist.checklistId, detailFormData));
+            for (const row of detailRows) {
+                if (!row.checklistParameter) continue;
+                if (row._id) {
+                    await coaChecklistDetailAPI.update(
+                        selectedChecklist.checklistId,
+                        safeInteger(row.checklistSno) || 1,
+                        detailToSnakeCase(selectedChecklist.checklistId, row)
+                    );
+                } else {
+                    await coaChecklistDetailAPI.create(detailToSnakeCase(selectedChecklist.checklistId, row));
+                }
             }
             toast({ title: "Success", description: "COA checklist updated successfully" });
             setIsEditModalOpen(false);
             setSelectedChecklist(null);
-            setSelectedDetailForEdit(null);
             setFormData({ checklistId: "", checklistDescription: "", active: true });
-            setDetailFormData({ checklistSno: "", checklistParameter: "", expectedResult: "", expectedValue1: "", expectedValue2: "", expectedText: "" });
+            setDetailRows([emptyDetailRow()]);
             loadRecords();
             loadDetailRecords();
         } catch (error: any) {
@@ -650,33 +673,47 @@ export default function COAChecklistMasterPage() {
 
                                     {/* Detail Section */}
                                     <div className="mb-4">
-                                        <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4 pb-2 border-b border-blue-100">Checklist Detail</h3>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Checklist Sno <span className="text-red-500">*</span></label>
-                                                <Input type="number" name="checklistSno" value={detailFormData.checklistSno} onChange={handleDetailInputChange} placeholder="e.g., 1" min="1" required maxLength={2} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Checklist Parameter <span className="text-red-500">*</span></label>
-                                                <Input name="checklistParameter" value={detailFormData.checklistParameter} onChange={handleDetailInputChange} placeholder="e.g., Perforation, Color" required maxLength={50} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Expected Result <span className="text-red-500">*</span></label>
-                                                <Input name="expectedResult" value={detailFormData.expectedResult} onChange={handleDetailInputChange} placeholder="e.g., Ok, Pass" required maxLength={25} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Expected Value 1</label>
-                                                <Input type="number" step="0.001" name="expectedValue1" value={detailFormData.expectedValue1} onChange={handleDetailInputChange} placeholder="e.g., 1.500" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Expected Value 2</label>
-                                                <Input type="number" step="0.001" name="expectedValue2" value={detailFormData.expectedValue2} onChange={handleDetailInputChange} placeholder="e.g., 2.500" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Expected Text</label>
-                                                <Input name="expectedText" value={detailFormData.expectedText} onChange={handleDetailInputChange} placeholder="e.g., NLT 98.0%" maxLength={25} />
-                                            </div>
+                                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-blue-100">
+                                            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Checklist Detail</h3>
+                                            <button type="button" onClick={addDetailRow} className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold border border-blue-300 rounded px-2 py-1 hover:bg-blue-50">
+                                                <Plus className="w-3 h-3" /> Add Row
+                                            </button>
                                         </div>
+                                        {detailRows.map((row, index) => (
+                                            <div key={index} className="mb-4 p-3 border border-slate-200 rounded-lg bg-slate-50 relative">
+                                                {detailRows.length > 1 && (
+                                                    <button type="button" onClick={() => removeDetailRow(index)} className="absolute top-2 right-2 text-red-400 hover:text-red-600">
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-foreground mb-1">Sno <span className="text-red-500">*</span></label>
+                                                        <Input type="number" name="checklistSno" value={row.checklistSno} onChange={e => handleDetailRowChange(index, e)} placeholder={String(index + 1)} min="1" required />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-foreground mb-1">Parameter <span className="text-red-500">*</span></label>
+                                                        <Input name="checklistParameter" value={row.checklistParameter} onChange={e => handleDetailRowChange(index, e)} placeholder="e.g., Perforation, Color" required maxLength={50} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-foreground mb-1">Expected Result <span className="text-red-500">*</span></label>
+                                                        <Input name="expectedResult" value={row.expectedResult} onChange={e => handleDetailRowChange(index, e)} placeholder="e.g., Ok, Pass" required maxLength={25} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-foreground mb-1">Expected Text</label>
+                                                        <Input name="expectedText" value={row.expectedText} onChange={e => handleDetailRowChange(index, e)} placeholder="e.g., NLT 98.0%" maxLength={25} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-foreground mb-1">Value 1</label>
+                                                        <Input type="number" step="0.001" name="expectedValue1" value={row.expectedValue1} onChange={e => handleDetailRowChange(index, e)} placeholder="e.g., 1.500" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-foreground mb-1">Value 2</label>
+                                                        <Input type="number" step="0.001" name="expectedValue2" value={row.expectedValue2} onChange={e => handleDetailRowChange(index, e)} placeholder="e.g., 2.500" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-4 border-t border-border">
@@ -740,33 +777,47 @@ export default function COAChecklistMasterPage() {
 
                                     {/* Detail Section */}
                                     <div className="mb-4">
-                                        <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4 pb-2 border-b border-blue-100">Checklist Detail</h3>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Checklist Sno <span className="text-red-500">*</span></label>
-                                                <Input type="number" name="checklistSno" value={detailFormData.checklistSno} onChange={handleDetailInputChange} disabled maxLength={2} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Checklist Parameter <span className="text-red-500">*</span></label>
-                                                <Input name="checklistParameter" value={detailFormData.checklistParameter} onChange={handleDetailInputChange} required maxLength={50} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Expected Result <span className="text-red-500">*</span></label>
-                                                <Input name="expectedResult" value={detailFormData.expectedResult} onChange={handleDetailInputChange} required maxLength={25} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Expected Value 1</label>
-                                                <Input type="number" step="0.001" name="expectedValue1" value={detailFormData.expectedValue1} onChange={handleDetailInputChange} placeholder="e.g., 1.500" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Expected Value 2</label>
-                                                <Input type="number" step="0.001" name="expectedValue2" value={detailFormData.expectedValue2} onChange={handleDetailInputChange} placeholder="e.g., 2.500" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-foreground mb-2">Expected Text</label>
-                                                <Input name="expectedText" value={detailFormData.expectedText} onChange={handleDetailInputChange} placeholder="e.g., NLT 98.0%" maxLength={25} />
-                                            </div>
+                                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-blue-100">
+                                            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Checklist Detail</h3>
+                                            <button type="button" onClick={addDetailRow} className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold border border-blue-300 rounded px-2 py-1 hover:bg-blue-50">
+                                                <Plus className="w-3 h-3" /> Add Row
+                                            </button>
                                         </div>
+                                        {detailRows.map((row, index) => (
+                                            <div key={index} className="mb-4 p-3 border border-slate-200 rounded-lg bg-slate-50 relative">
+                                                {detailRows.length > 1 && (
+                                                    <button type="button" onClick={() => removeDetailRow(index)} className="absolute top-2 right-2 text-red-400 hover:text-red-600">
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-foreground mb-1">Sno <span className="text-red-500">*</span></label>
+                                                        <Input type="number" name="checklistSno" value={row.checklistSno} onChange={e => handleDetailRowChange(index, e)} disabled={!!row._id} required />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-foreground mb-1">Parameter <span className="text-red-500">*</span></label>
+                                                        <Input name="checklistParameter" value={row.checklistParameter} onChange={e => handleDetailRowChange(index, e)} required maxLength={50} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-foreground mb-1">Expected Result <span className="text-red-500">*</span></label>
+                                                        <Input name="expectedResult" value={row.expectedResult} onChange={e => handleDetailRowChange(index, e)} required maxLength={25} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-foreground mb-1">Expected Text</label>
+                                                        <Input name="expectedText" value={row.expectedText} onChange={e => handleDetailRowChange(index, e)} placeholder="e.g., NLT 98.0%" maxLength={25} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-foreground mb-1">Value 1</label>
+                                                        <Input type="number" step="0.001" name="expectedValue1" value={row.expectedValue1} onChange={e => handleDetailRowChange(index, e)} placeholder="e.g., 1.500" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-foreground mb-1">Value 2</label>
+                                                        <Input type="number" step="0.001" name="expectedValue2" value={row.expectedValue2} onChange={e => handleDetailRowChange(index, e)} placeholder="e.g., 2.500" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 pt-4 border-t border-border">

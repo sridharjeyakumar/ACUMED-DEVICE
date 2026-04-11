@@ -643,10 +643,10 @@ const getProductStatusDisplay = (statusId: string) => {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">From Product Status ID</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Sterilization Required</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Approval Required</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Seq No.</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Lock Quantity Change</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">No. of Days Min</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">No. of Days Max</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Seq No.</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
@@ -717,9 +717,7 @@ const getProductStatusDisplay = (statusId: string) => {
                                                             {transition.approval_required === 'Y' ? 'Y' : 'N'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-sm font-mono text-foreground">{transition.seq_no}</span>
-                                                    </td>
+                                                  
                                                      <td className="px-6 py-4">
                                                         <span className="text-sm font-mono text-foreground">{transition.lock_qty_change ?? "-"}</span>
                                                     </td>
@@ -728,6 +726,9 @@ const getProductStatusDisplay = (statusId: string) => {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm font-mono text-foreground">{transition.no_of_days_max ?? "-"}</span>
+                                                    </td>
+                                                      <td className="px-6 py-4">
+                                                        <span className="text-sm font-mono text-foreground">{transition.seq_no}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
