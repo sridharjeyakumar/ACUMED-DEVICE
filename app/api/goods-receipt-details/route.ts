@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import GoodsReceiptDetail from '@/server/models/GoodsReceiptDetail';
 import GoodsReceiptHeader from '@/server/models/GoodsReceiptHeader';
+import { saveAudit } from '@/server/lib/AuditService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -90,6 +91,26 @@ export async function POST(request: NextRequest) {
         });
 
         await detail.save();
+
+        // ── Audit Trail ──────────────────────────────────────────────────────
+        try {
+            await saveAudit({
+                menu_id:           'T12',
+                header_table_name: 'GoodsReceiptHeader',
+                documnet_no:       detail.material_doc_no,
+                change_user_id:    'ADMIN',
+                tables: [{
+                    table_name:      'GoodsReceiptDetail',
+                    pk_field_names:  'material_doc_no|material_id',
+                    pk_field_values: `${detail.material_doc_no}|${detail.material_id}`,
+                    old_data:        {},
+                    new_data:        detail.toObject(),
+                }],
+            });
+        } catch (auditErr) {
+            console.error('Audit save failed (non-blocking):', auditErr);
+        }
+
         return NextResponse.json(detail, { status: 201 });
 
     } catch (error: any) {

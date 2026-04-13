@@ -6,12 +6,14 @@ import { safeNumber } from '@/utils/numberUtils';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// GET /api/materials - Get all materials
-export async function GET() {
+// GET /api/materials - Get all materials (pass ?active=true to filter active only)
+export async function GET(request: NextRequest) {
   try {
     await ensureConnection();
-    // Use lean() for faster queries
-    const materials = await MaterialMaster.find().lean().sort({ material_id: 1 });
+    const { searchParams } = new URL(request.url);
+    const onlyActive = searchParams.get('active') === 'true';
+    const filter = onlyActive ? { active: true } : {};
+    const materials = await MaterialMaster.find(filter).lean().sort({ material_id: 1 });
     return NextResponse.json(materials, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',

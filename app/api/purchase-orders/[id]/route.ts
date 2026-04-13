@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import PurchaseOrder from '@/server/models/PurchaseOrder';
+import PurchaseOrderDetail from '@/server/models/PurchaseOrderDetail';
+import { saveAudit } from '@/server/lib/AuditService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -61,6 +63,11 @@ export async function PUT(
     await ensureDbConnection();
     const body = await request.json();
 
+    const existing = await PurchaseOrder.findOne({ po_no: id }).lean();
+    if (!existing) {
+      return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
+    }
+
     const cleanValue = (value: any) => (value === '' || value === null) ? undefined : value;
 
     const updateData: any = {};
@@ -87,6 +94,25 @@ export async function PUT(
 
     if (!order) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
+    }
+
+    // ── Audit Trail ──────────────────────────────────────────────────────────
+    try {
+      await saveAudit({
+        menu_id:           'T11',
+        header_table_name: 'PurchaseOrder',
+        documnet_no:       id,
+        change_user_id:    (body.approved_by_user_id || (existing as any).entered_by_user_id || 'ADMIN').slice(0, 5).toUpperCase(),
+        tables: [{
+          table_name:      'PurchaseOrder',
+          pk_field_names:  'po_no',
+          pk_field_values: id,
+          old_data:        existing as any,
+          new_data:        updateData,
+        }],
+      });
+    } catch (auditErr) {
+      console.error('Audit save failed (non-blocking):', auditErr);
     }
 
     return NextResponse.json(order);
@@ -127,6 +153,9 @@ export async function DELETE(
     if (!order) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
     }
+
+    // Cascade delete all detail rows for this PO
+    await PurchaseOrderDetail.deleteMany({ po_no: id });
 
     return NextResponse.json({ message: 'Purchase order deleted successfully' });
   } catch (error: any) {

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Pencil, ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { productMovementAPI, productStockAPI } from "@/services/api";
+import { productMovementAPI, productStockAPI, productStatusAPI, materialStatusAPI, materialAPI, goodsMovementAPI } from "@/services/api";
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -23,6 +23,8 @@ interface ProductMovementRecord {
     carton_type_id: string;
     carton_capacity_id: string;
     no_of_cartons: number;
+    from_no_of_cartons?: number;
+    packing_material_id?: string;
     no_of_packs: number;
     no_of_sachets: number;
     remarks: string;
@@ -114,29 +116,6 @@ export default function ProductMovementApprovalPage() {
 
     useEffect(() => { setCurrentPage(1); }, [searchQuery]);
 
-    // ── Update stock helper ───────────────────────────────────────────────────
-
-    const updateStock = async (mv: ProductMovementRecord) => {
-        await Promise.all([
-            productStockAPI.adjust(mv.batch_no, {
-                pack_size_id:        mv.pack_size_id,
-                product_status_id:   mv.to_prod_status_id,
-                packs_delta:         mv.no_of_packs,
-                sachets_delta:       mv.no_of_sachets,
-                product_id:          mv.product_id,
-                carton_type_id:      mv.carton_type_id,
-                total_no_of_cartons: mv.no_of_cartons,
-            }),
-            productStockAPI.adjust(mv.batch_no, {
-                pack_size_id:      mv.pack_size_id,
-                product_status_id: mv.from_prod_status_id,
-                packs_delta:       -mv.no_of_packs,
-                sachets_delta:     -mv.no_of_sachets,
-                product_id:        mv.product_id,
-            }),
-        ]);
-    };
-
     // ── Open approval modal ───────────────────────────────────────────────────
 
     const handleOpenApproval = (record: ProductMovementRecord) => {
@@ -164,13 +143,75 @@ export default function ProductMovementApprovalPage() {
         setSaving(true);
         setApprovalError(null);
         try {
-            await productMovementAPI.update(selectedRecord.prod_movement_id, {
+            const mv = selectedRecord;
+            const now = new Date().toISOString();
+
+            // 1. Update ProductMovement → status='A'
+            await productMovementAPI.update(mv.prod_movement_id, {
                 status:              'A',
                 approval_remarks:    approvalRemarks.trim(),
                 approved_by_user_id: 'ADMIN',
-                approved_date_time:  new Date().toISOString(),
+                approved_date_time:  now,
             });
-            await updateStock(selectedRecord);
+
+            // 2. Decrement FROM status stock (packs + sachets + cartons)
+            await productStockAPI.adjust(mv.batch_no, {
+                pack_size_id:      mv.pack_size_id,
+                product_status_id: mv.from_prod_status_id,
+                packs_delta:       -mv.no_of_packs,
+                sachets_delta:     -mv.no_of_sachets,
+                cartons_delta:     -(mv.from_no_of_cartons ?? 0),
+                product_id:        mv.product_id,
+            });
+
+            // 3. Increment TO status stock (packs + sachets + cartons) — upsert if new
+            await productStockAPI.adjust(mv.batch_no, {
+                pack_size_id:      mv.pack_size_id,
+                product_status_id: mv.to_prod_status_id,
+                packs_delta:       mv.no_of_packs,
+                sachets_delta:     mv.no_of_sachets,
+                cartons_delta:     mv.no_of_cartons,
+                product_id:        mv.product_id,
+                carton_type_id:    mv.carton_type_id,
+            });
+
+            // 4. If packing material is linked → create a GoodsMovement
+            if (mv.packing_material_id) {
+                // a. Get material_status_id from the TO ProductStatus
+                const toProdStatus = await productStatusAPI.getById(mv.to_prod_status_id);
+                const materialStatusId: string = toProdStatus?.material_status_id || '';
+
+                // b. Get stock_movement direction from MaterialStatus
+                let stockMovement = 'OUT';
+                if (materialStatusId) {
+                    const matStatus = await materialStatusAPI.getById(materialStatusId);
+                    stockMovement = matStatus?.stock_movement || 'OUT';
+                }
+
+                // c. Get uom from MaterialMaster
+                const material = await materialAPI.getById(mv.packing_material_id);
+                const uom: string = material?.uom || '';
+
+                // d. Sign the qty: OUT means material is consumed (negative), IN means received (positive)
+                const signedQty = stockMovement === 'IN' ? mv.no_of_cartons : -mv.no_of_cartons;
+
+                // e. Create GoodsMovement with status='A' (auto-triggers stock update server-side)
+                await goodsMovementAPI.create({
+                    gm_date:            mv.movement_date,
+                    material_status_id: materialStatusId,
+                    material_id:        mv.packing_material_id,
+                    total_nett_qty:     signedQty,
+                    uom,
+                    remarks:            mv.remarks || '',
+                    entered_by_user_id: 'ADMIN',
+                    entered_date_time:  now,
+                    approved_by_user_id: 'ADMIN',
+                    approved_date_time:  now,
+                    approval_remarks:   approvalRemarks.trim(),
+                    status:             'A',
+                });
+            }
+
             closeModal();
             fetchRecords();
         } catch (err: any) {
@@ -280,6 +321,8 @@ export default function ProductMovementApprovalPage() {
                                                     <th className="px-6 py-3 text-xs font-semibold text-left text-foreground whitespace-nowrap">Carton Type</th>
                                                     <th className="px-6 py-3 text-xs font-semibold text-left text-foreground whitespace-nowrap">Carton Cap.</th>
                                                     <th className="px-6 py-3 text-xs font-semibold text-right text-foreground whitespace-nowrap">Cartons</th>
+                                                    <th className="px-6 py-3 text-xs font-semibold text-right text-foreground whitespace-nowrap">From Cartons</th>
+                                                    <th className="px-6 py-3 text-xs font-semibold text-left text-foreground whitespace-nowrap">Pack Matl ID</th>
                                                     <th className="px-6 py-3 text-xs font-semibold text-right text-foreground whitespace-nowrap">Packs</th>
                                                     <th className="px-6 py-3 text-xs font-semibold text-right text-foreground whitespace-nowrap">Sachets</th>
                                                     <th className="px-6 py-3 text-xs font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
@@ -291,7 +334,7 @@ export default function ProductMovementApprovalPage() {
                                             <tbody className="divide-y divide-border">
                                                 {paginated.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={17} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                                                        <td colSpan={19} className="px-6 py-12 text-center text-sm text-muted-foreground">
                                                             No pending product movements found.
                                                         </td>
                                                     </tr>
@@ -321,6 +364,8 @@ export default function ProductMovementApprovalPage() {
                                                             <td className="px-6 py-4 text-sm text-foreground">{record.carton_type_id}</td>
                                                             <td className="px-6 py-4 text-sm text-foreground">{record.carton_capacity_id}</td>
                                                             <td className="px-6 py-4 text-sm text-right font-bold">{record.no_of_cartons?.toLocaleString()}</td>
+                                                            <td className="px-6 py-4 text-sm text-right font-bold">{record.from_no_of_cartons?.toLocaleString() ?? "-"}</td>
+                                                            <td className="px-6 py-4 text-sm text-foreground">{record.packing_material_id || "-"}</td>
                                                             <td className="px-6 py-4 text-sm text-right font-bold">{record.no_of_packs?.toLocaleString()}</td>
                                                             <td className="px-6 py-4 text-sm text-right font-bold">{record.no_of_sachets?.toLocaleString()}</td>
                                                             <td className="px-6 py-4 text-sm text-foreground max-w-[150px] truncate">{record.remarks || "—"}</td>
@@ -416,8 +461,10 @@ export default function ProductMovementApprovalPage() {
                                             ["To Status",      selectedRecord.to_prod_status_id],
                                             ["Carton Type",    selectedRecord.carton_type_id],
                                             ["Carton Cap.",    selectedRecord.carton_capacity_id],
-                                            ["No. of Cartons", selectedRecord.no_of_cartons],
-                                            ["No. of Packs",   selectedRecord.no_of_packs?.toLocaleString()],
+                                            ["No. of Cartons",      selectedRecord.no_of_cartons],
+                                            ["From No. of Cartons", selectedRecord.from_no_of_cartons?.toLocaleString() ?? "—"],
+                                            ["Packing Material ID", selectedRecord.packing_material_id || "—"],
+                                            ["No. of Packs",        selectedRecord.no_of_packs?.toLocaleString()],
                                             ["No. of Sachets", selectedRecord.no_of_sachets?.toLocaleString()],
                                             ["Remarks",        selectedRecord.remarks],
                                             ["Entered By",     selectedRecord.entered_by_user_id],

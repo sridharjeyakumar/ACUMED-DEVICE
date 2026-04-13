@@ -42,6 +42,9 @@ interface ProductMovementRecord {
     approval_remarks: string;
     approved_by_user_id: string;
     approved_date_time: string;
+    no_of_the_cartons?: number;
+    from_no_of_cartons?: number;
+    packing_material_id?: string;
     status: 'E' | 'A' | 'X';
     movement_type?: 'NORMAL' | 'SPECIAL_A' | 'SPECIAL_R';
 }
@@ -60,6 +63,7 @@ interface TransitionOption {
     from_product_status_id: string;
     sterilization_required: string;
     approval_required: string;
+    lock_qty_change?: string;
     active: boolean;
 }
 
@@ -94,20 +98,23 @@ function formatMovementId(id: number): string {
 const today = () => new Date().toISOString().slice(0, 10);
 
 const emptyForm = {
-    movement_date:      today(),
-    batch_no:           "",
-    product_id:         "",
-    pack_size_id:       "",
-    to_prod_status_id:  "",
-    from_prod_status_id:"",
-    carton_type_id:     "",
-    carton_capacity_id: "",
-    no_of_cartons:      "",
-    no_of_packs:        "",
-    no_of_sachets:      "",
-    remarks:            "",
-    entered_by_user_id: "ADMIN",    // TODO: replace with session user
-    status:             "E" as 'E' | 'A' | 'X',
+    movement_date:       today(),
+    batch_no:            "",
+    product_id:          "",
+    pack_size_id:        "",
+    to_prod_status_id:   "",
+    from_prod_status_id: "",
+    carton_type_id:      "",
+    carton_capacity_id:  "",
+    no_of_cartons:       "",
+    no_of_packs:         "",
+    no_of_sachets:       "",
+    no_of_the_cartons:   "",
+    from_no_of_cartons:  "",
+    packing_material_id: "",
+    remarks:             "",
+    entered_by_user_id:  "ADMIN",    // TODO: replace with session user
+    status:              "E" as 'E' | 'A' | 'X',
 };
 
 const emptyForm2 = {
@@ -132,6 +139,7 @@ const emptyForm2 = {
 
 export default function ProductMovementsPage() {
     // ── list state ────────────────────────────────────────────────────────────
+    const [allRecords, setAllRecords]     = useState<ProductMovementRecord[]>([]);
     const [records, setRecords]           = useState<ProductMovementRecord[]>([]);
     const [loading, setLoading]           = useState(true);
     const [saving, setSaving]             = useState(false);
@@ -155,6 +163,8 @@ export default function ProductMovementsPage() {
     const [packSizeInfo, setPackSizeInfo]                 = useState<any>(null);
     const [maxCartons, setMaxCartons]                     = useState<number>(9999);
     const [minMovementDate, setMinMovementDate]           = useState<string>("");
+    const [lockQtyChange, setLockQtyChange]               = useState<string>('N');
+    const [fromCartonCapInfo, setFromCartonCapInfo]       = useState<any>(null);
 
     // ── form state (Movement2 – stock adjustment) ─────────────────────────────
     const [isAdd2ModalOpen, setIsAdd2ModalOpen]           = useState(false);
@@ -178,7 +188,11 @@ export default function ProductMovementsPage() {
             const data = await productMovementAPI.getAll(
                 filterStatus !== "all" ? { status: filterStatus } : undefined
             );
-            setRecords(data);
+            setAllRecords(data as any[]);
+            // Only show NORMAL movements here; SPECIAL_A / SPECIAL_R belong to the Special page
+            setRecords((data as any[]).filter(
+                (r: any) => !r.movement_type || r.movement_type === 'NORMAL'
+            ));
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -206,7 +220,8 @@ export default function ProductMovementsPage() {
     const getNextId = (): number => {
         const yy     = new Date().getFullYear() % 100;   // 26 for 2026
         const prefix = yy * 100000;                       // 2600000
-        const yearRecords = records.filter(r =>
+        // Use allRecords (NORMAL + SPECIAL) so IDs never collide across pages
+        const yearRecords = allRecords.filter(r =>
             Math.floor(r.prod_movement_id / 100000) === yy
         );
         if (yearRecords.length === 0) return prefix + 1;
@@ -240,27 +255,37 @@ export default function ProductMovementsPage() {
         noOfCartons: number,
     ) => {
         const newStatus: 'E' | 'A' = transition.approval_required === 'Y' ? 'E' : 'A';
+        const fromProdStatusId = transition.from_product_status_id || stock.product_status_id;
+        const lockQty = transition.lock_qty_change || 'N';
+        setLockQtyChange(lockQty);
 
         setFormData(prev => ({
             ...prev,
             to_prod_status_id:   transition.product_status_id,
-            from_prod_status_id: transition.from_product_status_id || stock.product_status_id,
+            from_prod_status_id: fromProdStatusId,
             status:              newStatus,
             carton_type_id:      "",
             carton_capacity_id:  "",
             no_of_packs:         "",
             no_of_sachets:       "",
+            no_of_the_cartons:   "",
+            from_no_of_cartons:  "",
+            packing_material_id: "",
         }));
 
-        // carton_type_id from ProductStatusMaster (prod_status_id = to_prod_status_id)
-        const prodStatus: any = await productStatusAPI.getById(transition.product_status_id);
-        const cartonTypeId: string = prodStatus?.carton_type_id || "";
+        // carton_type_id from ProductStatusMaster for both TO and FROM status
+        const [prodStatus, fromProdStatus]: [any, any] = await Promise.all([
+            productStatusAPI.getById(transition.product_status_id),
+            productStatusAPI.getById(fromProdStatusId),
+        ]);
+        const cartonTypeId: string  = prodStatus?.carton_type_id || "";
+        const fCartonTypeId: string = fromProdStatus?.carton_type_id || "";
 
         setFormData(prev => ({ ...prev, carton_type_id: cartonTypeId }));
         if (!cartonTypeId) return;
 
-        // carton_capacity from CartonCapacityMaster
-        const [caps, ps] = await Promise.all([
+        // Fetch TO carton capacity, pack size, and FROM carton capacity in parallel
+        const [caps, ps, fromCaps] = await Promise.all([
             cartonCapacityAPI.getAll({
                 productId:    stock.product_id,
                 packSizeId:   stock.pack_size_id,
@@ -268,22 +293,53 @@ export default function ProductMovementsPage() {
                 active:       true,
             }),
             packSizeAPI.getById(stock.pack_size_id),
+            fCartonTypeId && fCartonTypeId !== cartonTypeId
+                ? cartonCapacityAPI.getAll({
+                    productId:    stock.product_id,
+                    packSizeId:   stock.pack_size_id,
+                    cartonTypeId: fCartonTypeId,
+                    active:       true,
+                  })
+                : Promise.resolve([]),
         ]);
 
-        const cap: any     = (caps as any[])[0] || null;
-        const packSize: any = ps || null;
+        const cap: any      = (caps as any[])[0] || null;
+        const packSize: any  = ps || null;
+        // If FROM and TO share the same carton type, reuse cap; otherwise use fromCaps
+        const fromCap: any   = fCartonTypeId === cartonTypeId ? cap : ((fromCaps as any[])[0] || null);
+
         setCartonCapacityInfo(cap);
         setPackSizeInfo(packSize);
+        setFromCartonCapInfo(fromCap);
 
         setFormData(prev => ({ ...prev, carton_capacity_id: cap?.carton_capacity_id || "" }));
 
         if (cap && packSize) {
             const noPacks   = noOfCartons * cap.packs_per_carton;
             const noSachets = noPacks * packSize.qty_per_carton;
+
+            // no_of_the_cartons default = int(noPacks / packs_per_carton) = noOfCartons
+            const noOfTheCartons = Math.floor(noPacks / cap.packs_per_carton);
+
+            // from_no_of_cartons
+            let fromNoOfCartons = 0;
+            if (fCartonTypeId === cartonTypeId) {
+                fromNoOfCartons = noOfCartons;
+            } else if (fromCap?.packs_per_carton > 0) {
+                fromNoOfCartons = Math.floor(noPacks / fromCap.packs_per_carton);
+            }
+
+            // packing_material_id: if to-status has material_status_id, use cap.pack_matl_id
+            const materialStatusId = prodStatus?.material_status_id;
+            const packMatlId = materialStatusId ? (cap?.pack_matl_id || "") : "";
+
             setFormData(prev => ({
                 ...prev,
-                no_of_packs:   String(noPacks),
-                no_of_sachets: String(noSachets),
+                no_of_packs:         String(noPacks),
+                no_of_sachets:       String(noSachets),
+                no_of_the_cartons:   String(noOfTheCartons),
+                from_no_of_cartons:  String(fromNoOfCartons),
+                packing_material_id: packMatlId,
             }));
         }
     };
@@ -364,18 +420,29 @@ export default function ProductMovementsPage() {
 
     const handleCartonsChange = (value: string) => {
         const n = Number(value) || 0;
-        let noPacks   = "";
-        let noSachets = "";
+        let noPacks = "", noSachets = "", noOfTheCartons = "", fromNoOfCartons = "";
         if (cartonCapacityInfo && packSizeInfo) {
             const packs = n * cartonCapacityInfo.packs_per_carton;
             noPacks   = String(packs);
             noSachets = String(packs * packSizeInfo.qty_per_carton);
+            // no_of_the_cartons: auto-follow when locked; keep user value when editable
+            if (lockQtyChange === 'Y') {
+                noOfTheCartons = String(Math.floor(packs / cartonCapacityInfo.packs_per_carton));
+            }
+            // from_no_of_cartons: recalculate based on FROM carton type
+            if (fromCartonCapInfo?.carton_type_id === cartonCapacityInfo.carton_type_id) {
+                fromNoOfCartons = String(n);
+            } else if (fromCartonCapInfo?.packs_per_carton > 0) {
+                fromNoOfCartons = String(Math.floor(packs / fromCartonCapInfo.packs_per_carton));
+            }
         }
         setFormData(prev => ({
             ...prev,
             no_of_cartons: value,
             no_of_packs:   noPacks,
             no_of_sachets: noSachets,
+            ...(lockQtyChange === 'Y' ? { no_of_the_cartons: noOfTheCartons } : {}),
+            ...(fromNoOfCartons ? { from_no_of_cartons: fromNoOfCartons } : {}),
         }));
     };
 
@@ -658,6 +725,8 @@ export default function ProductMovementsPage() {
         setTransitionOptions([]);
         setCartonCapacityInfo(null);
         setPackSizeInfo(null);
+        setFromCartonCapInfo(null);
+        setLockQtyChange('N');
         setMaxCartons(9999);
         setMinMovementDate(computeMinDate());
         setFormLoading(true);
@@ -687,6 +756,9 @@ export default function ProductMovementsPage() {
             no_of_cartons:       String(record.no_of_cartons ?? ""),
             no_of_packs:         String(record.no_of_packs ?? ""),
             no_of_sachets:       String(record.no_of_sachets ?? ""),
+            no_of_the_cartons:   String(record.no_of_the_cartons ?? ""),
+            from_no_of_cartons:  String(record.from_no_of_cartons ?? ""),
+            packing_material_id: record.packing_material_id || "",
             remarks:             record.remarks || "",
             entered_by_user_id:  record.entered_by_user_id,
             status:              record.status,
@@ -771,6 +843,9 @@ export default function ProductMovementsPage() {
                 no_of_cartons:       Number(formData.no_of_cartons) || 0,
                 no_of_packs:         Number(formData.no_of_packs),
                 no_of_sachets:       Number(formData.no_of_sachets),
+                no_of_the_cartons:   Number(formData.no_of_the_cartons) || 0,
+                from_no_of_cartons:  Number(formData.from_no_of_cartons) || 0,
+                packing_material_id: formData.packing_material_id || "",
                 remarks:             formData.remarks,
                 entered_by_user_id:  formData.entered_by_user_id,
                 entered_date_time:   new Date().toISOString(),
@@ -1034,6 +1109,58 @@ export default function ProductMovementsPage() {
                                 = cartons × {cartonCapacityInfo.packs_per_carton} packs/carton
                             </p>
                         )}
+                    </div>
+                </div>
+
+                {/* 5b. No. of The Cartons (entry or display) + From No. of Cartons (display) */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wide">
+                            No. of The Cartons {lockQtyChange !== 'Y' && <span className="text-red-500">*</span>}
+                        </label>
+                        {lockQtyChange === 'Y' ? (
+                            <div className="px-3 py-2 rounded-md border border-input bg-muted text-sm">
+                                {formData.no_of_the_cartons
+                                    ? Number(formData.no_of_the_cartons).toLocaleString()
+                                    : <span className="italic text-muted-foreground">Auto-calculated</span>}
+                            </div>
+                        ) : (
+                            <>
+                                <Input
+                                    type="number"
+                                    value={formData.no_of_the_cartons}
+                                    onChange={(e) => setFormData(p => ({ ...p, no_of_the_cartons: e.target.value }))}
+                                    min={1}
+                                    max={cartonCapacityInfo?.packs_per_carton > 0
+                                        ? Math.floor((Number(formData.no_of_packs) || 0) / cartonCapacityInfo.packs_per_carton)
+                                        : 9999}
+                                    placeholder="Enter cartons"
+                                    required
+                                    disabled={!formData.carton_capacity_id || formLoading}
+                                />
+                                {cartonCapacityInfo?.packs_per_carton > 0 && formData.no_of_packs && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Max: {Math.floor(Number(formData.no_of_packs) / cartonCapacityInfo.packs_per_carton)}
+                                    </p>
+                                )}
+                            </>
+                        )}
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wide">From No. of Cartons</label>
+                        <div className="px-3 py-2 rounded-md border border-input bg-muted text-sm">
+                            {formData.from_no_of_cartons
+                                ? Number(formData.from_no_of_cartons).toLocaleString()
+                                : <span className="italic text-muted-foreground">Auto-calculated</span>}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 5c. Packing Material ID (display) */}
+                <div className="mb-4">
+                    <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wide">Packing Material ID</label>
+                    <div className="px-3 py-2 rounded-md border border-input bg-muted text-sm">
+                        {formData.packing_material_id || <span className="italic text-muted-foreground">Auto-calculated</span>}
                     </div>
                 </div>
 
@@ -1495,6 +1622,9 @@ export default function ProductMovementsPage() {
                                                     <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Carton Type</th>
                                                     <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Carton Capacity</th>
                                                     <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Cartons</th>
+                                                    <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">No. of The Cartons</th>
+                                                    <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">From Cartons</th>
+                                                    <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Pack Matl ID</th>
                                                     <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Packs</th>
                                                     <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Sachets</th>
                                                     <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
@@ -1511,7 +1641,7 @@ export default function ProductMovementsPage() {
                                             <tbody className="divide-y divide-border">
                                                 {filteredRecords.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={21} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                                                        <td colSpan={24} className="px-6 py-12 text-center text-sm text-muted-foreground">
                                                             No product movements found.
                                                         </td>
                                                     </tr>
@@ -1540,6 +1670,9 @@ export default function ProductMovementsPage() {
                                                             <td className="px-6 py-4 text-sm text-foreground">{record.carton_type_id}</td>
                                                             <td className="px-6 py-4 text-sm text-foreground">{record.carton_capacity_id}</td>
                                                             <td className="px-6 py-4 text-sm text-right font-bold text-foreground">{record.no_of_cartons?.toLocaleString()}</td>
+                                                            <td className="px-6 py-4 text-sm text-right font-bold text-foreground">{record.no_of_the_cartons?.toLocaleString() ?? "-"}</td>
+                                                            <td className="px-6 py-4 text-sm text-right font-bold text-foreground">{record.from_no_of_cartons?.toLocaleString() ?? "-"}</td>
+                                                            <td className="px-6 py-4 text-sm text-foreground">{record.packing_material_id || "-"}</td>
                                                             <td className="px-6 py-4 text-sm text-right font-bold text-foreground">{record.no_of_packs?.toLocaleString()}</td>
                                                             <td className="px-6 py-4 text-sm text-right font-bold text-foreground">{record.no_of_sachets?.toLocaleString()}</td>
                                                             <td className="px-6 py-4 text-sm text-foreground">{record.remarks}</td>

@@ -13,6 +13,9 @@ export interface IProductMovement extends Document {
   no_of_cartons: number;             // N(4)
   no_of_packs: number;               // N(6)
   no_of_sachets: number;             // N(8)
+  no_of_the_cartons: number;          // N(4) - calculated field (not stored in DB)
+  from_no_of_cartons: number;           // N(4) - calculated field (not stored in DB)
+  packing_material_id?: string;          // Char(5) - optional, only for certain movement types
   remarks?: string;                  // Char(100)
   entered_by_user_id: string;        // Char(5)
   entered_date_time: Date;           // Date
@@ -124,6 +127,23 @@ const ProductMovementSchema: Schema = new Schema({
     type: Date,
     default: null,
   },
+  no_of_the_cartons: {
+    type: Number,
+    max: 9999,
+    default: 0,
+  },
+  from_no_of_cartons: {
+    type: Number,
+    max: 9999,
+    default: 0,
+  },
+  packing_material_id: {
+    type: String,
+    maxlength: 5,
+    trim: true,
+    default: '',
+  },
+
   status: {
     type: String,
     required: true,

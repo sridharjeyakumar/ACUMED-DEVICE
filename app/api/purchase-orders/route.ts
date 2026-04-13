@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import PurchaseOrder from '@/server/models/PurchaseOrder';
+import { saveAudit } from '@/server/lib/AuditService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,6 +41,26 @@ export async function POST(request: NextRequest) {
     });
 
     await order.save();
+
+    // ── Audit Trail ──────────────────────────────────────────────────────────
+    try {
+      await saveAudit({
+        menu_id:           'T11',
+        header_table_name: 'PurchaseOrder',
+        documnet_no:       order.po_no,
+        change_user_id:    (body.entered_by_user_id || 'ADMIN').slice(0, 5).toUpperCase(),
+        tables: [{
+          table_name:      'PurchaseOrder',
+          pk_field_names:  'po_no',
+          pk_field_values: order.po_no,
+          old_data:        {},
+          new_data:        order.toObject(),
+        }],
+      });
+    } catch (auditErr) {
+      console.error('Audit save failed (non-blocking):', auditErr);
+    }
+
     return NextResponse.json(order, { status: 201 });
   } catch (error: any) {
     console.error('Error creating purchase order:', error);

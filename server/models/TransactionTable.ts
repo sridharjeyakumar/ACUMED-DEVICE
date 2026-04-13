@@ -6,6 +6,8 @@ export interface ITransactionTable extends Document {
   month_year: string;
   planned_start_date?: Date;
   planned_end_date?: Date;
+  planned_no_of_working_days?: number;
+  planned_total_no_of_sachets?: number;
   actual_start_date?: Date;
   actual_end_date?: Date; 
   total_sachets?: number;
@@ -42,6 +44,8 @@ const TransactionTableSchema: Schema = new Schema({
   },
   planned_start_date: { type: Date },
   planned_end_date: { type: Date },
+  planned_no_of_working_days: { type: Number, max: 999 },
+  planned_total_no_of_sachets: { type: Number, max: 99999999 },
   actual_start_date: { type: Date },
   actual_end_date: { type: Date },
   total_sachets: { type: Number, max: 99999999 },
@@ -55,7 +59,7 @@ const TransactionTableSchema: Schema = new Schema({
   current_batch_event_type_id: { type: String, maxlength: 2 },
   current_batch_status_id: {
     type: String,
-    enum: ['P', 'R', 'W', 'C'],
+    enum: ['P', 'R', 'W', 'C',"I"],
     default: 'P',
     required: true
   },

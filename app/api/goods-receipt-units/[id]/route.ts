@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import GoodsReceiptUnits from '@/server/models/GoodsReceiptUnits';
+import { saveAudit } from '@/server/lib/AuditService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,6 +37,9 @@ export async function PUT(
         await ensureConnection();
         const body = await request.json();
 
+        // Fetch existing for audit (has pk fields: material_doc_no, material_id, sno)
+        const existing = await GoodsReceiptUnits.findById(params.id).lean() as any;
+
         // Strip PK fields
         delete body.material_doc_no;
         delete body.material_id;
@@ -61,12 +65,10 @@ export async function PUT(
 
         // Recompute balance if actual/consumed/rejected changed
         if (body.actual_qty != null || body.consumed_qty != null || body.rejected_qty != null) {
-            // Fetch current values to fill in unchanged fields
-            const current = await GoodsReceiptUnits.findById(params.id).lean() as any;
-            if (current) {
-                const actual   = updatePayload.actual_qty   ?? current.actual_qty;
-                const consumed = updatePayload.consumed_qty ?? current.consumed_qty;
-                const rejected = updatePayload.rejected_qty ?? current.rejected_qty;
+            if (existing) {
+                const actual   = updatePayload.actual_qty   ?? existing.actual_qty;
+                const consumed = updatePayload.consumed_qty ?? existing.consumed_qty;
+                const rejected = updatePayload.rejected_qty ?? existing.rejected_qty;
                 updatePayload.balance_qty = actual - consumed - rejected;
             }
         } else if (body.balance_qty != null) {
@@ -81,6 +83,29 @@ export async function PUT(
         ).lean();
 
         if (!updated) return NextResponse.json({ error: 'GR Unit not found.' }, { status: 404 });
+
+        // ── Audit Trail ──────────────────────────────────────────────────────
+        try {
+            const docNo      = existing?.material_doc_no || '';
+            const materialId = existing?.material_id     || '';
+            const sno        = existing?.sno             ?? '';
+            await saveAudit({
+                menu_id:           'T12',
+                header_table_name: 'GoodsReceiptHeader',
+                documnet_no:       docNo,
+                change_user_id:    'ADMIN',
+                tables: [{
+                    table_name:      'GoodsReceiptUnits',
+                    pk_field_names:  'material_doc_no|material_id|sno',
+                    pk_field_values: `${docNo}|${materialId}|${sno}`,
+                    old_data:        existing || {},
+                    new_data:        updatePayload,
+                }],
+            });
+        } catch (auditErr) {
+            console.error('Audit save failed (non-blocking):', auditErr);
+        }
+
         return NextResponse.json(updated);
 
     } catch (error: any) {

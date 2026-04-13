@@ -110,7 +110,7 @@ export async function DELETE(
 
 // PATCH /api/product-stock/[batchNo] - Adjust (upsert) stock by composite key
 // Body: { pack_size_id, product_status_id, packs_delta, sachets_delta,
-//         product_id?, carton_type_id?, total_no_of_cartons?, last_modified_user_id? }
+//         cartons_delta?, product_id?, carton_type_id?, last_modified_user_id? }
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ batchNo: string }> }
@@ -122,33 +122,35 @@ export async function PATCH(
 
     const now = new Date();
 
-    // Try exact match first (batch_no + pack_size_id + product_status_id)
-    let stock = await ProductStock.findOneAndUpdate(
-      { batch_no: batchNo, pack_size_id: body.pack_size_id, product_status_id: body.product_status_id },
-      {
-        $inc: { total_no_of_packs: body.packs_delta, total_no_of_sachets: body.sachets_delta },
-        $set: { last_modified_user_id: body.last_modified_user_id || 'ADMIN', last_modified_date_time: now },
-      },
-      { new: true }
-    );
-
-    // If not found, fall back to batch_no + pack_size_id only and also update product_status_id
-    if (!stock) {
-      stock = await ProductStock.findOneAndUpdate(
-        { batch_no: batchNo, pack_size_id: body.pack_size_id },
-        {
-          $inc: { total_no_of_packs: body.packs_delta, total_no_of_sachets: body.sachets_delta },
-          $set: {
-            product_status_id:       body.product_status_id,
-            last_modified_user_id:   body.last_modified_user_id || 'ADMIN',
-            last_modified_date_time: now,
-          },
-        },
-        { new: true }
-      );
+    const incObj: Record<string, number> = {
+      total_no_of_packs:   body.packs_delta   ?? 0,
+      total_no_of_sachets: body.sachets_delta  ?? 0,
+    };
+    if (body.cartons_delta !== undefined) {
+      incObj.total_no_of_cartons = body.cartons_delta;
     }
 
-    return NextResponse.json(stock ?? { message: 'No stock record found for this batch' });
+    // Upsert by composite key: batch_no + pack_size_id + product_status_id
+    const stock = await ProductStock.findOneAndUpdate(
+      { batch_no: batchNo, pack_size_id: body.pack_size_id, product_status_id: body.product_status_id },
+      {
+        $inc: incObj,
+        $set: {
+          last_modified_user_id:   body.last_modified_user_id || 'ADMIN',
+          last_modified_date_time: now,
+        },
+        $setOnInsert: {
+          batch_no:          batchNo,
+          product_id:        body.product_id       || '',
+          pack_size_id:      body.pack_size_id,
+          product_status_id: body.product_status_id,
+          carton_type_id:    body.carton_type_id   || '',
+        },
+      },
+      { new: true, upsert: true }
+    );
+
+    return NextResponse.json(stock);
   } catch (error: any) {
     console.error('Error adjusting product stock:', error);
     return NextResponse.json(

@@ -94,6 +94,8 @@ export async function PUT(
         ...(body.total_sterilization_cartons && { total_sterilization_cartons: Number(body.total_sterilization_cartons) }),
         ...(body.total_shipper_cartons && { total_shipper_cartons: Number(body.total_shipper_cartons) }),
         ...(body.total_rejected_qty_kg && { total_rejected_qty_kg: Number(body.total_rejected_qty_kg) }),
+        ...(body.planned_no_of_working_days != null && { planned_no_of_working_days: Number(body.planned_no_of_working_days) }),
+        ...(body.planned_total_no_of_sachets != null && { planned_total_no_of_sachets: Number(body.planned_total_no_of_sachets) }),
         last_modified_date_time: new Date() 
       },
       { new: true, runValidators: true }

@@ -66,6 +66,9 @@ export async function POST(request: NextRequest) {
       no_of_cartons: body.no_of_cartons || 0,
       no_of_packs: body.no_of_packs,
       no_of_sachets: body.no_of_sachets,
+      no_of_the_cartons: body.no_of_the_cartons || 0,
+      from_no_of_cartons: body.from_no_of_cartons || 0,
+      packing_material_id: body.packing_material_id || '',
       remarks: body.remarks || '',
       entered_by_user_id: body.entered_by_user_id,
       entered_date_time: body.entered_date_time,
@@ -73,6 +76,7 @@ export async function POST(request: NextRequest) {
       approved_by_user_id: body.approved_by_user_id || '',
       approved_date_time: body.approved_date_time || null,
       status: body.status || 'E',
+      movement_type: body.movement_type || 'NORMAL',
     });
     
     await movement.save();

@@ -104,7 +104,11 @@ const navSections: NavSection[] = [
     title: "TRANSACTIONS",
     items: [
       { icon: FileText, label: "Purchase Orders", href: "/purchase-orders" },
+      { icon: FileText, label: "Purchase Order Approval", href: "/purchase-order-approval" },
+
       { icon: FileText, label: "Goods Movement", href: "/goods-movement" },
+      { icon: FileText, label: "Goods Movement Approval", href: "/goods-movement-approval" },
+
       { icon: TableProperties, label: "Goods Receipt", href: "/goods-receipt" },
       { icon: Factory, label: "Production Entry", href: "/production" },
       { icon: TableProperties, label: "Production Plan", href: "/transaction-table" },

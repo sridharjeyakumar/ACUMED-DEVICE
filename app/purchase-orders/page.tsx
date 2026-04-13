@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { purchaseOrderAPI, vendorAPI } from "@/services/api";
+import { purchaseOrderAPI, vendorAPI, materialAPI, purchaseOrderDetailAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 interface PurchaseOrder {
@@ -37,6 +37,40 @@ interface Vendor {
     vendor_id: string;
     vendor_name: string;
     active?: boolean;
+}
+
+interface ActiveMaterial {
+    material_id: string;
+    material_name: string;
+    uom: string;
+    material_spec?: string;
+    min_order_qty?: number;
+}
+
+interface PODetail {
+    _id?: string;
+    po_no: string;
+    material_id: string;
+    sno: number;
+    po_qty: number;
+    uom: string;
+    material_spec?: string;
+    remarks?: string;
+    gr_qty: number;
+    balance_qty: number;
+}
+
+interface DetailRow {
+    _id?: string;
+    material_id: string;
+    po_qty: number | string;
+    uom: string;
+    material_spec: string;
+    remarks: string;
+    gr_qty: number;
+    balance_qty: number;
+    min_order_qty: number;
+    _deleted?: boolean;
 }
 
 function formatDate(dateStr: string | undefined): string {
@@ -71,6 +105,117 @@ function generatePoNo(existing: PurchaseOrder[]): string {
     return `${prefix}${String(maxSerial + 1).padStart(5, '0')}`;
 }
 
+// ── PODetailTable — defined outside the page to prevent unmount on parent re-render ──
+interface PODetailTableProps {
+    detailRows: DetailRow[];
+    activeMaterials: ActiveMaterial[];
+    onAddRow: () => void;
+    onMaterialChange: (idx: number, materialId: string) => void;
+    onChange: (idx: number, field: keyof DetailRow, value: any) => void;
+    onRemoveRow: (idx: number) => void;
+}
+
+function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange, onChange, onRemoveRow }: PODetailTableProps) {
+    const visibleRows = detailRows.filter(r => !r._deleted);
+    return (
+        <div className="col-span-2 mt-4">
+            <div className="flex items-center justify-between mb-3 border-b pb-2">
+                <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider">PO Details</h3>
+                <Button type="button" size="sm" onClick={onAddRow}
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 h-7">
+                    + Add Row
+                </Button>
+            </div>
+            <div className="overflow-x-auto border rounded-lg">
+                <table className="w-full text-xs">
+                    <thead>
+                        <tr className="bg-gray-100 border-b">
+                            <th className="px-3 py-2 text-left whitespace-nowrap w-10">SNO</th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap">Material ID <span className="text-red-500">*</span></th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap">PO Qty <span className="text-red-500">*</span></th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap">UOM</th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap">Material Spec</th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap">Remarks</th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap">GR Qty</th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap">Balance Qty</th>
+                            <th className="px-3 py-2 w-8"></th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                        {visibleRows.length === 0 ? (
+                            <tr>
+                                <td colSpan={9} className="px-4 py-6 text-center text-muted-foreground">
+                                    No items added. Click &quot;+ Add Row&quot; to add materials.
+                                </td>
+                            </tr>
+                        ) : (
+                            detailRows.map((row, idx) => {
+                                if (row._deleted) return null;
+                                const sno = detailRows.slice(0, idx + 1).filter(r => !r._deleted).length;
+                                return (
+                                    <tr key={idx} className="hover:bg-gray-50">
+                                        <td className="px-3 py-2 text-center font-mono text-gray-500 w-10">{sno}</td>
+                                        <td className="px-3 py-2">
+                                            <select
+                                                value={row.material_id}
+                                                onChange={e => onMaterialChange(idx, e.target.value)}
+                                                className="w-full min-w-[160px] px-2 py-1 border border-border rounded bg-background text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                required
+                                                disabled={!!row._id}
+                                            >
+                                                <option value="">Select material</option>
+                                                {activeMaterials.map(m => (
+                                                    <option
+                                                        key={m.material_id}
+                                                        value={m.material_id}
+                                                        disabled={detailRows.some((r, i) => i !== idx && !r._deleted && r.material_id === m.material_id)}
+                                                    >
+                                                        {m.material_id} - {m.material_name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <Input
+                                                type="number"
+                                                value={row.po_qty}
+                                                min={row.min_order_qty || 0}
+                                                step="0.001"
+                                                onChange={e => onChange(idx, 'po_qty', e.target.value)}
+                                                className="w-24 text-xs h-7 px-2"
+                                                required
+                                            />
+                                        </td>
+                                        <td className="px-3 py-2 font-mono text-gray-600 whitespace-nowrap">{row.uom || '-'}</td>
+                                        <td className="px-3 py-2 text-gray-500 max-w-[180px] truncate" title={row.material_spec}>{row.material_spec || '-'}</td>
+                                        <td className="px-3 py-2">
+                                            <Input
+                                                type="text"
+                                                value={row.remarks}
+                                                onChange={e => onChange(idx, 'remarks', e.target.value)}
+                                                maxLength={100}
+                                                className="w-28 text-xs h-7 px-2"
+                                            />
+                                        </td>
+                                        <td className="px-3 py-2 text-center text-gray-400">{row.gr_qty}</td>
+                                        <td className="px-3 py-2 text-center text-gray-400">{row.balance_qty}</td>
+                                        <td className="px-3 py-2">
+                                            <button type="button" onClick={() => onRemoveRow(idx)}
+                                                className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50">
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     E: { label: 'Entered',   color: 'bg-blue-50 text-blue-600' },
     A: { label: 'Active',    color: 'bg-green-50 text-green-600' },
@@ -103,6 +248,7 @@ export default function PurchaseOrdersPage() {
 
     const [orders, setOrders] = useState<PurchaseOrder[]>([]);
     const [vendors, setVendors] = useState<Vendor[]>([]);
+    const [activeMaterials, setActiveMaterials] = useState<ActiveMaterial[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -116,6 +262,12 @@ export default function PurchaseOrdersPage() {
     const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
 
     const [formData, setFormData] = useState({ ...emptyForm });
+    const [detailRows, setDetailRows] = useState<DetailRow[]>([]);
+
+    // Expand state
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+    const [expandedDetails, setExpandedDetails] = useState<Record<string, PODetail[]>>({});
+    const [detailsLoading, setDetailsLoading] = useState<Set<string>>(new Set());
 
     const loadOrders = useCallback(async () => {
         try {
@@ -132,10 +284,14 @@ export default function PurchaseOrdersPage() {
     useEffect(() => {
         const load = async () => {
             try {
-                const data = await vendorAPI.getAll();
-                setVendors(data);
+                const [vendorData, materialData] = await Promise.all([
+                    vendorAPI.getAll(),
+                    materialAPI.getActive(),
+                ]);
+                setVendors(vendorData);
+                setActiveMaterials(materialData);
             } catch {
-                console.error("Failed to load vendors");
+                console.error("Failed to load vendors/materials");
             }
         };
         load();
@@ -153,9 +309,32 @@ export default function PurchaseOrdersPage() {
                 po_time: new Date().toTimeString().slice(0, 8),
                 entered_by_user_id: getSessionUser()?.user_id || "ADMIN",
             });
+            setDetailRows([]);
         }
     }, [isAddModalOpen, orders]);
 
+    // ── Expand row helpers ────────────────────────────────────────────────────
+    const handleToggleExpand = async (poNo: string) => {
+        const isExpanded = expandedRows.has(poNo);
+        setExpandedRows(prev => {
+            const next = new Set(prev);
+            if (isExpanded) next.delete(poNo); else next.add(poNo);
+            return next;
+        });
+        if (!isExpanded && expandedDetails[poNo] === undefined) {
+            setDetailsLoading(prev => new Set(prev).add(poNo));
+            try {
+                const data = await purchaseOrderDetailAPI.getByPoNo(poNo);
+                setExpandedDetails(prev => ({ ...prev, [poNo]: data }));
+            } catch {
+                setExpandedDetails(prev => ({ ...prev, [poNo]: [] }));
+            } finally {
+                setDetailsLoading(prev => { const s = new Set(prev); s.delete(poNo); return s; });
+            }
+        }
+    };
+
+    // ── Filter / pagination ───────────────────────────────────────────────────
     const filteredOrders = orders.filter(o => {
         const matchesSearch =
             o.po_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -176,12 +355,68 @@ export default function PurchaseOrdersPage() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    // ── Detail row helpers ────────────────────────────────────────────────────
+    const handleAddDetailRow = () => {
+        setDetailRows(prev => [...prev, {
+            material_id: '', po_qty: '', uom: '', material_spec: '',
+            remarks: '', gr_qty: 0, balance_qty: 0, min_order_qty: 0,
+        }]);
+    };
+
+    const handleDetailMaterialChange = (idx: number, materialId: string) => {
+        const mat = activeMaterials.find(m => m.material_id === materialId);
+        setDetailRows(prev => prev.map((row, i) => i !== idx ? row : {
+            ...row,
+            material_id: materialId,
+            uom: mat?.uom || '',
+            material_spec: mat?.material_spec || '',
+            po_qty: mat?.min_order_qty ?? '',
+            min_order_qty: mat?.min_order_qty ?? 0,
+        }));
+    };
+
+    const handleDetailChange = (idx: number, field: keyof DetailRow, value: any) => {
+        setDetailRows(prev => prev.map((row, i) => i !== idx ? row : { ...row, [field]: value }));
+    };
+
+    const handleRemoveDetailRow = (idx: number) => {
+        const row = detailRows[idx];
+        if (row._id) {
+            setDetailRows(prev => prev.map((r, i) => i !== idx ? r : { ...r, _deleted: true }));
+        } else {
+            setDetailRows(prev => prev.filter((_, i) => i !== idx));
+        }
+    };
+
+    const validateDetailRows = (): boolean => {
+        const active = detailRows.filter(r => !r._deleted);
+        for (const row of active) {
+            if (!row.material_id) {
+                toast({ title: "Validation Error", description: "Please select a material for all detail rows.", variant: "destructive" });
+                return false;
+            }
+            const qty = Number(row.po_qty);
+            if (isNaN(qty) || qty <= 0) {
+                toast({ title: "Validation Error", description: `PO Qty for ${row.material_id} must be a positive number.`, variant: "destructive" });
+                return false;
+            }
+            if (qty < row.min_order_qty) {
+                toast({ title: "Validation Error", description: `PO Qty for ${row.material_id} must be ≥ ${row.min_order_qty} (min order qty).`, variant: "destructive" });
+                return false;
+            }
+        }
+        return true;
+    };
+
+    // ── Submit: Add ───────────────────────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (isSubmittingRef.current) return;
+        if (!validateDetailRows()) return;
+
         isSubmittingRef.current = true;
         try {
-            await purchaseOrderAPI.create({
+            const order = await purchaseOrderAPI.create({
                 ...formData,
                 po_date: formData.po_date ? new Date(formData.po_date) : new Date(),
                 vendor_ref_doc_date: formData.vendor_ref_doc_date || undefined,
@@ -189,8 +424,27 @@ export default function PurchaseOrdersPage() {
                 approved_date_time: formData.approved_date_time || undefined,
                 entered_date_time: new Date(),
             });
-            toast({ title: "Success", description: `Purchase Order ${formData.po_no} created successfully` });
+
+            const poNo = order.po_no || formData.po_no;
+            const activeRows = detailRows.filter(r => !r._deleted);
+            for (let i = 0; i < activeRows.length; i++) {
+                const row = activeRows[i];
+                await purchaseOrderDetailAPI.create({
+                    po_no: poNo,
+                    material_id: row.material_id,
+                    sno: i + 1,
+                    po_qty: Number(row.po_qty),
+                    uom: row.uom,
+                    material_spec: row.material_spec || undefined,
+                    remarks: row.remarks || undefined,
+                    gr_qty: 0,
+                    balance_qty: 0,
+                });
+            }
+
+            toast({ title: "Success", description: `Purchase Order ${poNo} created successfully` });
             setIsAddModalOpen(false);
+            setDetailRows([]);
             loadOrders();
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "Failed to create purchase order", variant: "destructive" });
@@ -199,7 +453,8 @@ export default function PurchaseOrdersPage() {
         }
     };
 
-    const handleEdit = (order: PurchaseOrder) => {
+    // ── Edit: open ────────────────────────────────────────────────────────────
+    const handleEdit = async (order: PurchaseOrder) => {
         setSelectedOrder(order);
         setFormData({
             po_no: order.po_no,
@@ -219,11 +474,34 @@ export default function PurchaseOrdersPage() {
             status: order.status,
         });
         setIsEditModalOpen(true);
+
+        try {
+            const details: PODetail[] = await purchaseOrderDetailAPI.getByPoNo(order.po_no);
+            setDetailRows(details.map(d => {
+                const mat = activeMaterials.find(m => m.material_id === d.material_id);
+                return {
+                    _id: d._id,
+                    material_id: d.material_id,
+                    po_qty: d.po_qty,
+                    uom: d.uom,
+                    material_spec: d.material_spec || '',
+                    remarks: d.remarks || '',
+                    gr_qty: d.gr_qty,
+                    balance_qty: d.balance_qty,
+                    min_order_qty: mat?.min_order_qty ?? 0,
+                };
+            }));
+        } catch {
+            setDetailRows([]);
+        }
     };
 
+    // ── Submit: Edit ──────────────────────────────────────────────────────────
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (isSubmittingRef.current || !selectedOrder) return;
+        if (!validateDetailRows()) return;
+
         isSubmittingRef.current = true;
         try {
             await purchaseOrderAPI.update(selectedOrder.po_no, {
@@ -241,9 +519,43 @@ export default function PurchaseOrdersPage() {
                 approved_date_time: formData.approved_date_time || undefined,
                 status: formData.status,
             });
+
+            // Patch details: Option B — update/insert/delete individually
+            let sno = 1;
+            for (const row of detailRows) {
+                if (row._deleted && row._id) {
+                    await purchaseOrderDetailAPI.delete(row._id);
+                } else if (!row._deleted && row._id) {
+                    await purchaseOrderDetailAPI.update(row._id, {
+                        sno,
+                        po_qty: Number(row.po_qty),
+                        uom: row.uom,
+                        material_spec: row.material_spec || undefined,
+                        remarks: row.remarks || undefined,
+                    });
+                    sno++;
+                } else if (!row._deleted && !row._id) {
+                    await purchaseOrderDetailAPI.create({
+                        po_no: selectedOrder.po_no,
+                        material_id: row.material_id,
+                        sno,
+                        po_qty: Number(row.po_qty),
+                        uom: row.uom,
+                        material_spec: row.material_spec || undefined,
+                        remarks: row.remarks || undefined,
+                        gr_qty: 0,
+                        balance_qty: 0,
+                    });
+                    sno++;
+                }
+            }
+
             toast({ title: "Success", description: "Purchase order updated successfully" });
             setIsEditModalOpen(false);
             setSelectedOrder(null);
+            setDetailRows([]);
+            // Invalidate cached expand details for this PO
+            setExpandedDetails(prev => { const n = { ...prev }; delete n[selectedOrder.po_no]; return n; });
             loadOrders();
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "Failed to update purchase order", variant: "destructive" });
@@ -256,12 +568,13 @@ export default function PurchaseOrdersPage() {
         setOrderToDelete(order);
         setIsDeleteDialogOpen(true);
     };
-// Helper function for Vendor
-const getVendorDisplay = (vendorId: string) => {
-    if (!vendorId) return "-";
-    const vendor = vendors.find(v => v.vendor_id === vendorId);
-    return vendor ? `${vendor.vendor_id} - ${vendor.vendor_name}` : vendorId;
-};
+
+    const getVendorDisplay = (vendorId: string) => {
+        if (!vendorId) return "-";
+        const vendor = vendors.find(v => v.vendor_id === vendorId);
+        return vendor ? `${vendor.vendor_id} - ${vendor.vendor_name}` : vendorId;
+    };
+
     const confirmDelete = async () => {
         if (!orderToDelete) return;
         try {
@@ -269,11 +582,13 @@ const getVendorDisplay = (vendorId: string) => {
             toast({ title: "Deleted", description: `${orderToDelete.po_no} permanently deleted` });
             setIsDeleteDialogOpen(false);
             setOrderToDelete(null);
+            setExpandedDetails(prev => { const n = { ...prev }; delete n[orderToDelete.po_no]; return n; });
             loadOrders();
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "Failed to delete", variant: "destructive" });
         }
     };
+
 
     if (loading) {
         return (
@@ -389,12 +704,7 @@ const getVendorDisplay = (vendorId: string) => {
                                             </div>
                                         </div>
                                         <div className="p-4 border-t border-border bg-muted/30">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="w-full"
-                                                onClick={() => setFilterStatus("all")}
-                                            >
+                                            <Button variant="outline" size="sm" className="w-full" onClick={() => setFilterStatus("all")}>
                                                 Clear Filters
                                             </Button>
                                         </div>
@@ -415,6 +725,7 @@ const getVendorDisplay = (vendorId: string) => {
                                 <table className="w-full">
                                     <thead className="sticky top-0 z-10">
                                         <tr className="bg-gray-100 border-b border-border">
+                                            <th className="px-2 py-3 w-8"></th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">PO No.</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">PO Date</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">PO Time</th>
@@ -437,93 +748,149 @@ const getVendorDisplay = (vendorId: string) => {
                                     <tbody className="divide-y divide-border">
                                         {paginatedOrders.length === 0 ? (
                                             <tr>
-                                                <td colSpan={17} className="px-4 py-8 text-center text-muted-foreground">
+                                                <td colSpan={18} className="px-4 py-8 text-center text-muted-foreground">
                                                     No purchase orders found
                                                 </td>
                                             </tr>
                                         ) : (
                                             paginatedOrders.map((order, index) => (
-                                                <motion.tr
-                                                    key={order._id || order.po_no}
-                                                    initial={{ opacity: 0, x: -20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                                                    className="hover:bg-muted/30 transition-colors"
-                                                >
-                                                    <td className="px-4 py-3 text-sm">
-                                                        <span className="inline-flex px-2 py-1 rounded-md bg-blue-50 text-blue-700 font-mono text-xs font-semibold">
-                                                            {order.po_no}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm">{formatDate(order.po_date)}</td>
-                                                    <td className="px-4 py-3 text-sm font-mono">{order.po_time || "-"}</td>
-                                                    <td className="px-4 py-3 text-sm">
-                                                        <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-                                                            {getVendorDisplay(order.vendor_id)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm">{order.vendor_ref_doc_no || "-"}</td>
-                                                    <td className="px-4 py-3 text-sm">{formatDate(order.vendor_ref_doc_date)}</td>
-                                                    <td className="px-4 py-3 text-sm">{order.delivery_text || "-"}</td>
-                                                    <td className="px-4 py-3 text-sm">{formatDate(order.shipping_instruction)}</td>
-                                                    <td className="px-4 py-3 text-sm">{order.terms_of_payment || "-"}</td>
-                                                    <td className="px-4 py-3 text-sm">{order.remarks || "-"}</td>
-                                                    <td className="px-4 py-3 text-sm">
-                                                        <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-                                                            {order.entered_by_user_id}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm">{formatDateTime(order.entered_date_time)}</td>
-                                                    <td className="px-4 py-3 text-sm">{order.approval_remarks || "-"}</td>
-                                                    <td className="px-4 py-3 text-sm">
-                                                        {order.approved_by_user_id ? (
-                                                            <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-                                                                {order.approved_by_user_id}
-                                                            </span>
-                                                        ) : "-"}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm">{formatDateTime(order.approved_date_time)}</td>
-                                                    <td className="px-4 py-3">
-                                                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${STATUS_LABELS[order.status]?.color || 'bg-gray-100 text-gray-600'}`}>
-                                                            {STATUS_LABELS[order.status]?.label || order.status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                disabled={order.status === 'X' || order.status === 'C'}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    if (order.status === 'X' || order.status === 'C') return;
-                                                                    handleEdit(order);
-                                                                }}
-                                                                className={`${
-                                                                    order.status !== 'X' && order.status !== 'C'
-                                                                        ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                                        : "text-gray-400 cursor-not-allowed"
-                                                                }`}
-                                                                title={order.status === 'X' || order.status === 'C' ? "Cannot edit cancelled/closed PO" : "Edit"}
+                                                <React.Fragment key={order._id || order.po_no}>
+                                                    <motion.tr
+                                                        initial={{ opacity: 0, x: -20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                                                        className="hover:bg-muted/30 transition-colors"
+                                                    >
+                                                        {/* Expand arrow */}
+                                                        <td className="px-2 py-3 text-center">
+                                                            <button
+                                                                onClick={() => handleToggleExpand(order.po_no)}
+                                                                className="p-1 rounded hover:bg-gray-200 transition-colors"
+                                                                title="Show PO details"
                                                             >
-                                                                <Pencil className="w-4 h-4" />
-                                                            </Button>
-                                                            {isSuperAdmin && (
+                                                                <ChevronDown
+                                                                    className={`w-4 h-4 text-blue-500 transition-transform duration-200 ${expandedRows.has(order.po_no) ? 'rotate-0' : '-rotate-90'}`}
+                                                                />
+                                                            </button>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            <span className="inline-flex px-2 py-1 rounded-md bg-blue-50 text-blue-700 font-mono text-xs font-semibold">
+                                                                {order.po_no}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">{formatDate(order.po_date)}</td>
+                                                        <td className="px-4 py-3 text-sm font-mono">{order.po_time || "-"}</td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+                                                                {getVendorDisplay(order.vendor_id)}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">{order.vendor_ref_doc_no || "-"}</td>
+                                                        <td className="px-4 py-3 text-sm">{formatDate(order.vendor_ref_doc_date)}</td>
+                                                        <td className="px-4 py-3 text-sm">{order.delivery_text || "-"}</td>
+                                                        <td className="px-4 py-3 text-sm">{formatDate(order.shipping_instruction)}</td>
+                                                        <td className="px-4 py-3 text-sm">{order.terms_of_payment || "-"}</td>
+                                                        <td className="px-4 py-3 text-sm">{order.remarks || "-"}</td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+                                                                {order.entered_by_user_id}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">{formatDateTime(order.entered_date_time)}</td>
+                                                        <td className="px-4 py-3 text-sm">{order.approval_remarks || "-"}</td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            {order.approved_by_user_id ? (
+                                                                <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
+                                                                    {order.approved_by_user_id}
+                                                                </span>
+                                                            ) : "-"}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">{formatDateTime(order.approved_date_time)}</td>
+                                                        <td className="px-4 py-3">
+                                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${STATUS_LABELS[order.status]?.color || 'bg-gray-100 text-gray-600'}`}>
+                                                                {STATUS_LABELS[order.status]?.label || order.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center justify-center gap-2">
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
+                                                                    disabled={order.status !== 'E'}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        handleDelete(order);
+                                                                        if (order.status !== 'E') return;
+                                                                        handleEdit(order);
                                                                     }}
-                                                                    className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+                                                                    className={`${order.status === 'E'
+                                                                        ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                                        : "text-gray-400 cursor-not-allowed"
+                                                                    }`}
+                                                                    title={order.status !== 'E' ? "Only Entered (E) POs can be edited" : "Edit"}
                                                                 >
-                                                                    <Trash2 className="w-4 h-4" />
+                                                                    <Pencil className="w-4 h-4" />
                                                                 </Button>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </motion.tr>
+                                                                {isSuperAdmin && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDelete(order);
+                                                                        }}
+                                                                        className="text-gray-500 hover:text-red-700 hover:bg-red-50"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </motion.tr>
+
+                                                    {/* Expanded detail sub-row */}
+                                                    {expandedRows.has(order.po_no) && (
+                                                        <tr>
+                                                            <td colSpan={18} className="p-0 bg-blue-50/40 border-b border-blue-100">
+                                                                <div className="px-8 py-4">
+                                                                    {detailsLoading.has(order.po_no) ? (
+                                                                        <p className="text-sm text-muted-foreground py-2">Loading details...</p>
+                                                                    ) : (expandedDetails[order.po_no] || []).length === 0 ? (
+                                                                        <p className="text-sm text-muted-foreground py-2">No detail items for this PO.</p>
+                                                                    ) : (
+                                                                        <table className="w-full text-xs border rounded-lg overflow-hidden">
+                                                                            <thead>
+                                                                                <tr className="bg-blue-100">
+                                                                                    <th className="px-3 py-2 text-left font-semibold">SNO</th>
+                                                                                    <th className="px-3 py-2 text-left font-semibold">Material ID</th>
+                                                                                    <th className="px-3 py-2 text-left font-semibold">PO Qty</th>
+                                                                                    <th className="px-3 py-2 text-left font-semibold">UOM</th>
+                                                                                    <th className="px-3 py-2 text-left font-semibold">Material Spec</th>
+                                                                                    <th className="px-3 py-2 text-left font-semibold">Remarks</th>
+                                                                                    <th className="px-3 py-2 text-left font-semibold">GR Qty</th>
+                                                                                    <th className="px-3 py-2 text-left font-semibold">Balance Qty</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody className="divide-y divide-blue-100">
+                                                                                {(expandedDetails[order.po_no] || []).map(detail => (
+                                                                                    <tr key={detail._id} className="bg-white hover:bg-blue-50/50">
+                                                                                        <td className="px-3 py-2">{detail.sno}</td>
+                                                                                        <td className="px-3 py-2 font-mono font-semibold text-blue-700">{detail.material_id}</td>
+                                                                                        <td className="px-3 py-2">{detail.po_qty}</td>
+                                                                                        <td className="px-3 py-2">{detail.uom}</td>
+                                                                                        <td className="px-3 py-2 max-w-[220px] truncate text-gray-500" title={detail.material_spec}>{detail.material_spec || '-'}</td>
+                                                                                        <td className="px-3 py-2">{detail.remarks || '-'}</td>
+                                                                                        <td className="px-3 py-2">{detail.gr_qty}</td>
+                                                                                        <td className="px-3 py-2">{detail.balance_qty}</td>
+                                                                                    </tr>
+                                                                                ))}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
                                             ))
                                         )}
                                     </tbody>
@@ -536,23 +903,15 @@ const getVendorDisplay = (vendorId: string) => {
                                     PAGE {currentPage} OF {totalPages || 1}
                                 </span>
                                 <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
+                                    <Button variant="outline" size="sm"
                                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                        disabled={currentPage === 1}
-                                    >
-                                        <ChevronLeft className="w-4 h-4 mr-1" />
-                                        Previous
+                                        disabled={currentPage === 1}>
+                                        <ChevronLeft className="w-4 h-4 mr-1" />Previous
                                     </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
+                                    <Button variant="outline" size="sm"
                                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                        disabled={currentPage >= totalPages}
-                                    >
-                                        Next
-                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                        disabled={currentPage >= totalPages}>
+                                        Next<ChevronRight className="w-4 h-4 ml-1" />
                                     </Button>
                                 </div>
                             </div>
@@ -561,7 +920,7 @@ const getVendorDisplay = (vendorId: string) => {
                 </div>
             </main>
 
-            {/* Add Modal */}
+            {/* ── Add Modal ── */}
             <AnimatePresence>
                 {isAddModalOpen && (
                     <>
@@ -576,7 +935,7 @@ const getVendorDisplay = (vendorId: string) => {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">New Purchase Order</h2>
                                     <button onClick={() => setIsAddModalOpen(false)} className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors">
@@ -585,13 +944,9 @@ const getVendorDisplay = (vendorId: string) => {
                                 </div>
                                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6">
-                                        {/* Section Header */}
                                         <div className="col-span-2">
-                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
-                                                PO Information
-                                            </h3>
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">PO Information</h3>
                                         </div>
-
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">PO No. <span className="text-red-500">*</span></label>
                                             <Input name="po_no" value={formData.po_no} disabled className="bg-gray-50 font-mono" />
@@ -601,7 +956,6 @@ const getVendorDisplay = (vendorId: string) => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">Status</label>
                                             <Input value="E - Entered" disabled className="bg-gray-50" />
                                         </div>
-
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">PO Date <span className="text-red-500">*</span></label>
                                             <Input type="date" name="po_date" value={formData.po_date} onChange={handleInputChange} required />
@@ -610,30 +964,19 @@ const getVendorDisplay = (vendorId: string) => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">PO Time <span className="text-red-500">*</span></label>
                                             <Input type="time" name="po_time" value={formData.po_time} onChange={handleInputChange} required step="1" />
                                         </div>
-
                                         <div className="col-span-2">
                                             <label className="block text-sm font-semibold text-foreground mb-2">Vendor ID <span className="text-red-500">*</span></label>
-                                            <select
-                                                name="vendor_id"
-                                                value={formData.vendor_id}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                                required
-                                            >
+                                            <select name="vendor_id" value={formData.vendor_id} onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none" required>
                                                 <option value="">Select a vendor</option>
                                                 {vendors.filter(v => v.active !== false).map(v => (
                                                     <option key={v.vendor_id} value={v.vendor_id}>{v.vendor_id} - {v.vendor_name}</option>
                                                 ))}
                                             </select>
                                         </div>
-
-                                        {/* Section Header */}
                                         <div className="col-span-2 mt-2">
-                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
-                                                Vendor Reference
-                                            </h3>
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">Vendor Reference</h3>
                                         </div>
-
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Vendor Ref. Doc. No.</label>
                                             <Input name="vendor_ref_doc_no" value={formData.vendor_ref_doc_no} onChange={handleInputChange} placeholder="REF001" maxLength={10} />
@@ -642,14 +985,9 @@ const getVendorDisplay = (vendorId: string) => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">Vendor Ref. Doc. Date</label>
                                             <Input type="date" name="vendor_ref_doc_date" value={formData.vendor_ref_doc_date} onChange={handleInputChange} />
                                         </div>
-
-                                        {/* Section Header */}
                                         <div className="col-span-2 mt-2">
-                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
-                                                Delivery & Terms
-                                            </h3>
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">Delivery & Terms</h3>
                                         </div>
-
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Delivery Text</label>
                                             <Input name="delivery_text" value={formData.delivery_text} onChange={handleInputChange} placeholder="Ex works" maxLength={10} />
@@ -666,11 +1004,20 @@ const getVendorDisplay = (vendorId: string) => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">Remarks</label>
                                             <Input name="remarks" value={formData.remarks} onChange={handleInputChange} maxLength={5} />
                                         </div>
-
                                         <div className="col-span-2">
                                             <label className="block text-sm font-semibold text-foreground mb-2">Entered By User ID <span className="text-red-500">*</span></label>
                                             <Input name="entered_by_user_id" value={formData.entered_by_user_id} onChange={handleInputChange} maxLength={5} required />
                                         </div>
+
+                                        {/* PO Details table */}
+                                        <PODetailTable
+                                            detailRows={detailRows}
+                                            activeMaterials={activeMaterials}
+                                            onAddRow={handleAddDetailRow}
+                                            onMaterialChange={handleDetailMaterialChange}
+                                            onChange={handleDetailChange}
+                                            onRemoveRow={handleRemoveDetailRow}
+                                        />
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
@@ -684,7 +1031,7 @@ const getVendorDisplay = (vendorId: string) => {
                 )}
             </AnimatePresence>
 
-            {/* Edit Modal */}
+            {/* ── Edit Modal ── */}
             <AnimatePresence>
                 {isEditModalOpen && (
                     <>
@@ -699,7 +1046,7 @@ const getVendorDisplay = (vendorId: string) => {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         >
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
                                 <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
                                     <h2 className="text-2xl font-bold">Edit Purchase Order — {selectedOrder?.po_no}</h2>
                                     <button onClick={() => setIsEditModalOpen(false)} className="text-white hover:bg-blue-700 rounded-lg p-2 transition-colors">
@@ -708,33 +1055,23 @@ const getVendorDisplay = (vendorId: string) => {
                                 </div>
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                                     <div className="grid grid-cols-2 gap-6">
-                                        {/* Section Header */}
                                         <div className="col-span-2">
-                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
-                                                PO Information
-                                            </h3>
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">PO Information</h3>
                                         </div>
-
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">PO No.</label>
                                             <Input value={formData.po_no} disabled className="bg-gray-50 font-mono" />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Status <span className="text-red-500">*</span></label>
-                                            <select
-                                                name="status"
-                                                value={formData.status}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                                required
-                                            >
+                                            <select name="status" value={formData.status} onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none" required>
                                                 <option value="E">E - Entered</option>
                                                 <option value="A">A - Active</option>
                                                 <option value="X">X - Cancelled</option>
                                                 <option value="C">C - Closed</option>
                                             </select>
                                         </div>
-
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">PO Date <span className="text-red-500">*</span></label>
                                             <Input type="date" name="po_date" value={formData.po_date} onChange={handleInputChange} required />
@@ -743,30 +1080,19 @@ const getVendorDisplay = (vendorId: string) => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">PO Time <span className="text-red-500">*</span></label>
                                             <Input type="time" name="po_time" value={formData.po_time} onChange={handleInputChange} required step="1" />
                                         </div>
-
                                         <div className="col-span-2">
                                             <label className="block text-sm font-semibold text-foreground mb-2">Vendor ID <span className="text-red-500">*</span></label>
-                                            <select
-                                                name="vendor_id"
-                                                value={formData.vendor_id}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                                required
-                                            >
+                                            <select name="vendor_id" value={formData.vendor_id} onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none" required>
                                                 <option value="">Select a vendor</option>
                                                 {vendors.filter(v => v.active !== false).map(v => (
                                                     <option key={v.vendor_id} value={v.vendor_id}>{v.vendor_id} - {v.vendor_name}</option>
                                                 ))}
                                             </select>
                                         </div>
-
-                                        {/* Section Header */}
                                         <div className="col-span-2 mt-2">
-                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
-                                                Vendor Reference
-                                            </h3>
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">Vendor Reference</h3>
                                         </div>
-
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Vendor Ref. Doc. No.</label>
                                             <Input name="vendor_ref_doc_no" value={formData.vendor_ref_doc_no} onChange={handleInputChange} maxLength={10} />
@@ -775,14 +1101,9 @@ const getVendorDisplay = (vendorId: string) => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">Vendor Ref. Doc. Date</label>
                                             <Input type="date" name="vendor_ref_doc_date" value={formData.vendor_ref_doc_date} onChange={handleInputChange} />
                                         </div>
-
-                                        {/* Section Header */}
                                         <div className="col-span-2 mt-2">
-                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
-                                                Delivery & Terms
-                                            </h3>
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">Delivery & Terms</h3>
                                         </div>
-
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Delivery Text</label>
                                             <Input name="delivery_text" value={formData.delivery_text} onChange={handleInputChange} maxLength={10} />
@@ -799,26 +1120,15 @@ const getVendorDisplay = (vendorId: string) => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">Remarks</label>
                                             <Input name="remarks" value={formData.remarks} onChange={handleInputChange} maxLength={5} />
                                         </div>
-
-                                        {/* Section Header */}
-                                        <div className="col-span-2 mt-2">
-                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">
-                                                Approval Information
-                                            </h3>
-                                        </div>
-
-                                        <div className="col-span-2">
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Approval Remarks</label>
-                                            <Input name="approval_remarks" value={formData.approval_remarks} onChange={handleInputChange} maxLength={100} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Approved By User ID</label>
-                                            <Input name="approved_by_user_id" value={formData.approved_by_user_id} onChange={handleInputChange} maxLength={5} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Approved Date</label>
-                                            <Input type="date" name="approved_date_time" value={formData.approved_date_time} onChange={handleInputChange} />
-                                        </div>
+                                        {/* PO Details table */}
+                                        <PODetailTable
+                                            detailRows={detailRows}
+                                            activeMaterials={activeMaterials}
+                                            onAddRow={handleAddDetailRow}
+                                            onMaterialChange={handleDetailMaterialChange}
+                                            onChange={handleDetailChange}
+                                            onRemoveRow={handleRemoveDetailRow}
+                                        />
                                     </div>
 
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
@@ -832,7 +1142,7 @@ const getVendorDisplay = (vendorId: string) => {
                 )}
             </AnimatePresence>
 
-            {/* Delete Confirmation */}
+            {/* ── Delete Confirmation ── */}
             <AnimatePresence>
                 {isDeleteDialogOpen && (
                     <>
@@ -847,7 +1157,7 @@ const getVendorDisplay = (vendorId: string) => {
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6">
                                 <h3 className="text-lg font-bold text-foreground mb-2">Delete Purchase Order</h3>
                                 <p className="text-muted-foreground mb-6">
-                                    Are you sure you want to permanently delete <span className="font-semibold text-foreground">{orderToDelete?.po_no}</span>? This cannot be undone.
+                                    Are you sure you want to permanently delete <span className="font-semibold text-foreground">{orderToDelete?.po_no}</span>? This will also delete all associated PO detail items. This cannot be undone.
                                 </p>
                                 <div className="flex justify-end gap-3">
                                     <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>

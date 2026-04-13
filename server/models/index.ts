@@ -16,3 +16,9 @@ export type { IUserLoginHistory } from './UserLoginHistory';
 
 export { default as VendorMaster } from './VendorMaster';
 export type { IVendorMaster } from './VendorMaster';
+
+export { default as PurchaseOrder } from './PurchaseOrder';
+export type { IPurchaseOrder } from './PurchaseOrder';
+
+export { default as PurchaseOrderDetail } from './PurchaseOrderDetail';
+export type { IPurchaseOrderDetail } from './PurchaseOrderDetail';

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import GoodsReceiptHeader from '@/server/models/GoodsReceiptHeader';
+import { saveAudit } from '@/server/lib/AuditService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -158,6 +159,26 @@ export async function POST(request: NextRequest) {
         });
 
         await header.save();
+
+        // ── Audit Trail ──────────────────────────────────────────────────────
+        try {
+            await saveAudit({
+                menu_id:           'T12',
+                header_table_name: 'GoodsReceiptHeader',
+                documnet_no:       header.material_doc_no,
+                change_user_id:    (body.last_modified_user_id || 'ADMIN').slice(0, 5).toUpperCase(),
+                tables: [{
+                    table_name:      'GoodsReceiptHeader',
+                    pk_field_names:  'material_doc_no',
+                    pk_field_values: header.material_doc_no,
+                    old_data:        {},
+                    new_data:        header.toObject(),
+                }],
+            });
+        } catch (auditErr) {
+            console.error('Audit save failed (non-blocking):', auditErr);
+        }
+
         return NextResponse.json(header, { status: 201 });
     } catch (error: any) {
         console.error('Error creating Goods Receipt Header:', error);
