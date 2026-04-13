@@ -78,7 +78,7 @@ export async function PUT(
     if (body.vendor_ref_doc_no !== undefined) updateData.vendor_ref_doc_no = cleanValue(body.vendor_ref_doc_no);
     if (body.vendor_ref_doc_date !== undefined) updateData.vendor_ref_doc_date = body.vendor_ref_doc_date ? new Date(body.vendor_ref_doc_date) : undefined;
     if (body.delivery_text !== undefined) updateData.delivery_text = cleanValue(body.delivery_text);
-    if (body.shipping_instruction !== undefined) updateData.shipping_instruction = body.shipping_instruction ? new Date(body.shipping_instruction) : undefined;
+    if (body.shipping_instruction !== undefined) updateData.shipping_instruction = body.shipping_instruction;
     if (body.terms_of_payment !== undefined) updateData.terms_of_payment = cleanValue(body.terms_of_payment);
     if (body.remarks !== undefined) updateData.remarks = cleanValue(body.remarks);
     if (body.approval_remarks !== undefined) updateData.approval_remarks = cleanValue(body.approval_remarks);

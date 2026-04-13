@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       ...body,
       po_date: body.po_date ? new Date(body.po_date) : new Date(),
       vendor_ref_doc_date: body.vendor_ref_doc_date ? new Date(body.vendor_ref_doc_date) : undefined,
-      shipping_instruction: body.shipping_instruction ? new Date(body.shipping_instruction) : undefined,
+      shipping_instruction: body.shipping_instruction,
       entered_date_time: new Date(),
       status: body.status || 'E',
     });
