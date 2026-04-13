@@ -302,8 +302,12 @@ const getChecklistDisplay = (checklistId: string) => {
     // 1. Handle Checkboxes and exit early
     if (type === 'checkbox') {
         const checked = (e.target as HTMLInputElement).checked;
-        setFormData(prev => ({ ...prev, [name]: checked }));
-        return; 
+        if (name === 'qc_required' && !checked) {
+            setFormData(prev => ({ ...prev, [name]: checked, coa_checklist_id: "" }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: checked }));
+        }
+        return;
     }
 
     // 2. RUN VALIDATION (Does not block typing)

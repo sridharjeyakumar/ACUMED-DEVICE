@@ -11,7 +11,7 @@ export interface IPurchaseOrder extends Document {
   vendor_ref_doc_no?: string;       // Char(10)
   vendor_ref_doc_date?: Date;       // Date
   delivery_text?: string;           // Char(10)
-  shipping_instruction?: Date;      // Date
+  shipping_instruction?: String;      // Date
   terms_of_payment?: string;        // Char(5) FK
   remarks?: string;                 // Char(5) FK
   entered_by_user_id: string;       // Char(5)
@@ -61,23 +61,24 @@ const PurchaseOrderSchema: Schema = new Schema({
   delivery_text: {
     type: String,
     required: false,
-    maxlength: 10,
+    maxlength: 100,
     trim: true,
   },
   shipping_instruction: {
-    type: Date,
+    type: String,
     required: false,
+    maxlength: 100,
   },
   terms_of_payment: {
     type: String,
     required: false,
-    maxlength: 5,
+    maxlength: 100,
     trim: true,
   },
   remarks: {
     type: String,
     required: false,
-    maxlength: 5,
+    maxlength: 100,
     trim: true,
   },
   entered_by_user_id: {

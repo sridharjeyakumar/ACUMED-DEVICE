@@ -63,6 +63,7 @@ interface PODetail {
 interface DetailRow {
     _id?: string;
     material_id: string;
+    _original_material_id?: string;
     po_qty: number | string;
     uom: string;
     material_spec: string;
@@ -123,7 +124,7 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                 <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider">PO Details</h3>
                 <Button type="button" size="sm" onClick={onAddRow}
                     className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 h-7">
-                    + Add Row
+                    + Add RowPO Details
                 </Button>
             </div>
             <div className="overflow-x-auto border rounded-lg">
@@ -161,7 +162,6 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                                                 onChange={e => onMaterialChange(idx, e.target.value)}
                                                 className="w-full min-w-[160px] px-2 py-1 border border-border rounded bg-background text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                 required
-                                                disabled={!!row._id}
                                             >
                                                 <option value="">Select material</option>
                                                 {activeMaterials.map(m => (
@@ -482,6 +482,7 @@ export default function PurchaseOrdersPage() {
                 return {
                     _id: d._id,
                     material_id: d.material_id,
+                    _original_material_id: d.material_id,
                     po_qty: d.po_qty,
                     uom: d.uom,
                     material_spec: d.material_spec || '',
@@ -526,13 +527,29 @@ export default function PurchaseOrdersPage() {
                 if (row._deleted && row._id) {
                     await purchaseOrderDetailAPI.delete(row._id);
                 } else if (!row._deleted && row._id) {
-                    await purchaseOrderDetailAPI.update(row._id, {
-                        sno,
-                        po_qty: Number(row.po_qty),
-                        uom: row.uom,
-                        material_spec: row.material_spec || undefined,
-                        remarks: row.remarks || undefined,
-                    });
+                    if (row.material_id !== row._original_material_id) {
+                        // material_id changed — delete old record and create new
+                        await purchaseOrderDetailAPI.delete(row._id);
+                        await purchaseOrderDetailAPI.create({
+                            po_no: selectedOrder.po_no,
+                            material_id: row.material_id,
+                            sno,
+                            po_qty: Number(row.po_qty),
+                            uom: row.uom,
+                            material_spec: row.material_spec || undefined,
+                            remarks: row.remarks || undefined,
+                            gr_qty: row.gr_qty,
+                            balance_qty: row.balance_qty,
+                        });
+                    } else {
+                        await purchaseOrderDetailAPI.update(row._id, {
+                            sno,
+                            po_qty: Number(row.po_qty),
+                            uom: row.uom,
+                            material_spec: row.material_spec || undefined,
+                            remarks: row.remarks || undefined,
+                        });
+                    }
                     sno++;
                 } else if (!row._deleted && !row._id) {
                     await purchaseOrderDetailAPI.create({
@@ -788,7 +805,7 @@ export default function PurchaseOrdersPage() {
                                                         <td className="px-4 py-3 text-sm">{order.vendor_ref_doc_no || "-"}</td>
                                                         <td className="px-4 py-3 text-sm">{formatDate(order.vendor_ref_doc_date)}</td>
                                                         <td className="px-4 py-3 text-sm">{order.delivery_text || "-"}</td>
-                                                        <td className="px-4 py-3 text-sm">{formatDate(order.shipping_instruction)}</td>
+                                                        <td className="px-4 py-3 text-sm">{order.shipping_instruction || "-"}</td>
                                                         <td className="px-4 py-3 text-sm">{order.terms_of_payment || "-"}</td>
                                                         <td className="px-4 py-3 text-sm">{order.remarks || "-"}</td>
                                                         <td className="px-4 py-3 text-sm">
@@ -990,19 +1007,19 @@ export default function PurchaseOrdersPage() {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Delivery Text</label>
-                                            <Input name="delivery_text" value={formData.delivery_text} onChange={handleInputChange} placeholder="Ex works" maxLength={10} />
+                                            <Input name="delivery_text" value={formData.delivery_text} onChange={handleInputChange} placeholder="Ex works" maxLength={100} />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Shipping Instruction</label>
-                                            <Input type="date" name="shipping_instruction" value={formData.shipping_instruction} onChange={handleInputChange} />
+                                            <Input  name="shipping_instruction" value={formData.shipping_instruction} onChange={handleInputChange} maxLength={100} />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Terms of Payment</label>
-                                            <Input name="terms_of_payment" value={formData.terms_of_payment} onChange={handleInputChange} placeholder="NET30" maxLength={5} />
+                                            <Input name="terms_of_payment" value={formData.terms_of_payment} onChange={handleInputChange} placeholder="NET30" maxLength={100} />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Remarks</label>
-                                            <Input name="remarks" value={formData.remarks} onChange={handleInputChange} maxLength={5} />
+                                            <Input name="remarks" value={formData.remarks} onChange={handleInputChange} maxLength={100} />
                                         </div>
                                         <div className="col-span-2">
                                             <label className="block text-sm font-semibold text-foreground mb-2">Entered By User ID <span className="text-red-500">*</span></label>
@@ -1106,19 +1123,19 @@ export default function PurchaseOrdersPage() {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Delivery Text</label>
-                                            <Input name="delivery_text" value={formData.delivery_text} onChange={handleInputChange} maxLength={10} />
+                                            <Input name="delivery_text" value={formData.delivery_text} onChange={handleInputChange} maxLength={100} />
                                         </div>
-                                        <div>
+                                            <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Shipping Instruction</label>
-                                            <Input type="date" name="shipping_instruction" value={formData.shipping_instruction} onChange={handleInputChange} />
+                                            <Input  name="shipping_instruction" value={formData.shipping_instruction} onChange={handleInputChange} maxLength={100} />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Terms of Payment</label>
-                                            <Input name="terms_of_payment" value={formData.terms_of_payment} onChange={handleInputChange} maxLength={5} />
+                                            <Input name="terms_of_payment" value={formData.terms_of_payment} onChange={handleInputChange} maxLength={100} />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Remarks</label>
-                                            <Input name="remarks" value={formData.remarks} onChange={handleInputChange} maxLength={5} />
+                                            <Input name="remarks" value={formData.remarks} onChange={handleInputChange} maxLength={100} />
                                         </div>
                                         {/* PO Details table */}
                                         <PODetailTable

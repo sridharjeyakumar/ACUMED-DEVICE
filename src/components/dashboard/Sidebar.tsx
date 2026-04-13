@@ -40,6 +40,7 @@ interface NavItem {
   label: string;
   active?: boolean;
   href?: string;
+  subtitle?: string;
 }
 
 interface NavSection {
@@ -54,14 +55,13 @@ const navSections: NavSection[] = [
   {
     title: "MASTER",
     items: [
-      { icon: Package, label: "Product Master", href: "/product-master" },
+      { icon: Package, label: "Product Master", href: "/product-master" ,subtitle: "Master"},
       { icon: Layers, label: "Material Master", href: "/material-master" },
       { icon: Truck, label: "Vendor Master", href: "/vendor-master" },
       { icon: Box, label: "Pack Size Master", href: "/pack-size-master" },
       { icon: Truck, label: "Carton Type Master", href: "/carton-type-master" },
       { icon: FileText, label: "Product BOM", href: "/product-bom" },
       { icon: CheckCircle2, label: "COA Checklist Master", href: "/coa-checklist-master" },
-      // { icon: FileText, label: "COA Checklist Detail", href: "/coa-checklist-detail" },
       { icon: PackageOpen, label: "Product Category Master", href: "/product-category-master" },
       { icon: Layers, label: "Material Category Master", href: "/material-category-master" },
       { icon: MapPin, label: "Location Master", href: "/location-master" },
@@ -76,7 +76,7 @@ const navSections: NavSection[] = [
   {
     title: "CONFIGURATION",
     items: [
-      { icon: Building2, label: "Company Master", href: "/company-master" },
+      { icon: Building2, label: "Company Master", href: "/company-master" ,subtitle: "Configuration"},
       { icon: CheckCircle2, label: "Product Status Master", href: "/product-status-master" },
       { icon: CheckCircle2, label: "Product Status Transition Master", href: "/product-status-transition-master" },
       { icon: Package, label: "Material Status Master", href: "/material-status-master" },
@@ -93,7 +93,7 @@ const navSections: NavSection[] = [
   {
     title: "SYSTEM",
     items: [
-      { icon: MenuIcon, label: "Menu Master", href: "/menu-master" },
+      { icon: MenuIcon, label: "Menu Master", href: "/menu-master",subtitle: "System" },
       { icon: Users, label: "Role Master", href: "/role-master" },
       { icon: Key, label: "Menu Access Master", href: "/menu-access-master" },
       { icon: UserCircle, label: "User Master", href: "/user-master" },
@@ -102,25 +102,28 @@ const navSections: NavSection[] = [
   },
     {
     title: "TRANSACTIONS",
+    
     items: [
-      { icon: FileText, label: "Purchase Orders", href: "/purchase-orders" },
+      { icon: FileText, label: "Purchase Orders", href: "/purchase-orders", subtitle: "Procurement" },
       { icon: FileText, label: "Purchase Order Approval", href: "/purchase-order-approval" },
-
+      { icon: TableProperties, label: "Goods Receipt", href: "/goods-receipt" },
       { icon: FileText, label: "Goods Movement", href: "/goods-movement" },
       { icon: FileText, label: "Goods Movement Approval", href: "/goods-movement-approval" },
 
-      { icon: TableProperties, label: "Goods Receipt", href: "/goods-receipt" },
-      { icon: Factory, label: "Production Entry", href: "/production" },
+
       { icon: TableProperties, label: "Production Plan", href: "/transaction-table" },
       { icon: Activity, label: "Machine Event", href: "/machine-event" },
+      { icon: Factory, label: "Production Entry", href: "/production", subtitle: "Production" },
       { icon: Activity, label: "Production Rejected Entry", href: "/production-rejected" },
-      { icon: Factory, label: "Packing Entry", href: "/packing-entry" },
+      { icon: Factory, label: "Packing Entry", href: "/packing-entry"},
       { icon: Factory, label: "Packing Approval", href: "/packing-entry-approval" },
-      { icon: Factory, label: "Product Movement", href: "/product-movements" },
+      { icon: Factory, label: "Product Movement", href: "/product-movements"},
       { icon: Factory, label: "Product Movement Special", href: "/product-movement-special" },
       { icon: Factory, label: "Product Movement Approval", href: "/product-movement-approval" },
-      { icon: Factory, label: "COA Generation", href: "/coa-generation" },
 
+
+
+      { icon: Factory, label: "COA Generation", href: "/coa-generation", subtitle: "Quality" },
     ],
   },
   {
@@ -278,10 +281,15 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
                     const isActive = activePathname === normalizedHref || (item.href === "/" && activePathname === "/");
                     const itemKey = `${section.title || 'root'}-${item.href || itemIndex}`;
                     return (
-                      <li 
+                      <li
                         key={itemKey}
                         ref={isActive ? activeItemRef : null}
                       >
+                        {item.subtitle && (
+                          <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">
+                            {item.subtitle}
+                          </p>
+                        )}
                         <Link
                           href={item.href || "#"}
                           className={cn(

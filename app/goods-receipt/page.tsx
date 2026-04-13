@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { employeeAPI, goodsReceiptHeaderAPI, goodsReceiptDetailAPI, goodsReceiptUnitsAPI, materialStatusAPI, materialAPI, materialStockAPI, purchaseOrderAPI } from "@/services/api";
+import { employeeAPI, goodsReceiptHeaderAPI, goodsReceiptDetailAPI, goodsReceiptUnitsAPI, materialStatusAPI, materialAPI, materialStockAPI, purchaseOrderAPI, purchaseOrderDetailAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -45,6 +45,7 @@ interface GoodsReceiptHeader {
 }
 
 interface EmployeeRecord {
+    emp_id:string;
     emp_name: string;
     email: string;
     active: boolean;
@@ -121,14 +122,18 @@ interface UnitRow {
 }
 
 interface MaterialRow {
-    existing_stock_qty: string;
-    existing_total_rolls: string;
     id: string;
+    sno: number;
     material_id: string;
-    invoice_total_nett_qty: string;
+    po_qty: string;
+    gr_qty: string;
+    balance_qty: string;
     uom: string;
+    invoice_total_nett_qty: string;
     total_pockets: string;
     total_rolls: string;
+    existing_stock_qty: string;
+    existing_total_rolls: string;
     expanded: boolean;
     units: UnitRow[];
 }
@@ -230,11 +235,14 @@ export default function GoodsReceiptHeaderPage() {
         uom: "", actual_qty: "", consumed_qty: "0.000",
         rejected_qty: "0.000", balance_qty: "0.000", status: "A",
     });
-    const makeMaterialRow = (): MaterialRow => ({
-        id: newId(), material_id: "", invoice_total_nett_qty: "",
-        uom: "", total_pockets: "", total_rolls: "",
-        expanded: true, units: [makeUnit(1)],
+    const makeMaterialRow = (overrides?: Partial<MaterialRow>): MaterialRow => ({
+        id: newId(), sno: 1, material_id: "",
+        po_qty: "", gr_qty: "", balance_qty: "",
+        uom: "", invoice_total_nett_qty: "",
+        total_pockets: "", total_rolls: "",
         existing_stock_qty: "", existing_total_rolls: "",
+        expanded: true, units: [makeUnit(1)],
+        ...overrides,
     });
     const [materialRows, setMaterialRows] = useState<MaterialRow[]>([]);
 
@@ -264,14 +272,23 @@ export default function GoodsReceiptHeaderPage() {
     // ── Effects ──────────────────────────────────────────────────────────────
     useEffect(() => {
         if (isAddModalOpen) {
-            setFormData({ ...emptyForm, material_doc_date: todayStr(), material_doc_time: nowTimeStr() });
+            const defaultStatus = statuses.find(s => s.seq_no === 1);
+            setFormData({ ...emptyForm, material_doc_date: todayStr(), material_doc_time: nowTimeStr(), material_status_id: defaultStatus?.matl_status_id ?? "" });
             setFieldErrors({});
             setMaterialRows([makeMaterialRow()]);
         }
     }, [isAddModalOpen]);
 
     useEffect(() => { employeeAPI.getAll().then(setRecords).catch(console.error); }, []);
-    useEffect(() => { materialStatusAPI.getAll().then(setStatuses).catch(console.error); }, []);
+    useEffect(() => {
+        materialStatusAPI.getAll().then(data => {
+            setStatuses(data);
+            const defaultStatus = data.find((s: MaterialStatus) => s.seq_no === 1);
+            if (defaultStatus) {
+                setFormData(prev => ({ ...prev, material_status_id: defaultStatus.matl_status_id }));
+            }
+        }).catch(console.error);
+    }, []);
     useEffect(() => { materialAPI.getAll().then(setMaterials).catch(console.error); }, []);
     useEffect(() => { purchaseOrderAPI.getAll().then(setPurchaseOrders).catch(console.error); }, []);
 
@@ -361,6 +378,34 @@ export default function GoodsReceiptHeaderPage() {
     // ── Form handlers ────────────────────────────────────────────────────────
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
+        if (name === "po_no") {
+            const selectedPO = purchaseOrders.find(po => po.po_no === value);
+            const poDate = selectedPO?.po_date ? new Date(selectedPO.po_date).toISOString().split("T")[0] : "";
+            setFormData(prev => ({ ...prev, po_no: value, po_date: poDate }));
+            setFieldErrors(prev => { const n = { ...prev }; delete n.po_no; delete n.po_date; return n; });
+            if (value) {
+                purchaseOrderDetailAPI.getByPoNo(value).then((details: any[]) => {
+                    if (details.length > 0) {
+                        setMaterialRows(details
+                            .sort((a, b) => a.sno - b.sno)
+                            .map(d => makeMaterialRow({
+                                sno:         d.sno,
+                                material_id: d.material_id || "",
+                                po_qty:      String(d.po_qty      ?? ""),
+                                gr_qty:      String(d.gr_qty      ?? ""),
+                                balance_qty: String(d.balance_qty ?? ""),
+                                uom:         d.uom || "",
+                            }))
+                        );
+                    } else {
+                        setMaterialRows([makeMaterialRow()]);
+                    }
+                }).catch(() => setMaterialRows([makeMaterialRow()]));
+            } else {
+                setMaterialRows([makeMaterialRow()]);
+            }
+            return;
+        }
         setFormData(prev => ({ ...prev, [name]: value }));
         setFieldErrors(prev => {
             const n = { ...prev };
@@ -577,9 +622,13 @@ export default function GoodsReceiptHeaderPage() {
                     return {
                         id:                     d._id || newId(),
                         _id:                    d._id,
+                        sno:                    d.sno ?? 1,
                         material_id:            d.material_id || "",
-                        invoice_total_nett_qty: String(d.invoice_total_nett_qty ?? ""),
+                        po_qty:                 String(d.po_qty      ?? ""),
+                        gr_qty:                 String(d.gr_qty      ?? ""),
+                        balance_qty:            String(d.balance_qty ?? ""),
                         uom:                    d.uom || "",
+                        invoice_total_nett_qty: String(d.invoice_total_nett_qty ?? ""),
                         total_pockets:          String(d.total_pockets ?? ""),
                         total_rolls:            String(d.total_rolls   ?? ""),
                         existing_stock_qty:     String(d.existing_stock_qty   ?? ""),
@@ -806,11 +855,12 @@ export default function GoodsReceiptHeaderPage() {
                         <div className="space-y-3">
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Doc Type</label>
-                                <select name="material_status_id" value={formData.material_status_id} onChange={handleInputChange}
-                                    className="w-full h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none">
-                                    <option value="">Select</option>
-                                    {statuses.filter(s => s.active).map(r => <option key={r.matl_status_id} value={r.matl_status_id}>{r.matl_status_id} -{ r.material_status}</option>)}
-                                </select>
+                                <div className="w-full h-9 px-2 border border-slate-200 rounded-md bg-slate-50 text-xs flex items-center text-slate-700">
+                                    {(() => {
+                                        const s = statuses.find(s => s.matl_status_id === formData.material_status_id);
+                                        return s ? `${s.matl_status_id} - ${s.material_status}` : formData.material_status_id || "-";
+                                    })()}
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
@@ -851,8 +901,9 @@ export default function GoodsReceiptHeaderPage() {
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">PO Date *</label>
-                                <Input type="date" name="po_date" value={formData.po_date as string} onChange={handleInputChange} max={today}
-                                    className={`h-9 text-xs border-slate-200 ${fieldErrors.po_date ? "border-red-500 bg-red-50" : ""}`} />
+                                <div className={`h-9 px-2 border rounded-md bg-slate-50 text-xs flex items-center text-slate-700 ${fieldErrors.po_date ? "border-red-500" : "border-slate-200"}`}>
+                                    {formData.po_date || "-"}
+                                </div>
                                 {fieldErrors.po_date && <p className="text-red-500 text-[10px] mt-0.5">{fieldErrors.po_date}</p>}
                             </div>
                             <div>
@@ -882,7 +933,7 @@ export default function GoodsReceiptHeaderPage() {
                                     <select name="received_by_emp_id" value={formData.received_by_emp_id} onChange={handleInputChange}
                                         className="w-full h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none">
                                         <option value="">Select</option>
-                                        {records.filter(r => r.active).map(r => <option key={r.id} value={r.empId}>{r.empId} {r.emp_name}</option>)}
+                                        {records.filter(r => r.active).map(r => <option key={r.id} value={r.emp_id}>{r.emp_id}-{r.emp_name}</option>)}
                                     </select>
                                 </div>
                                 <div>
@@ -890,7 +941,7 @@ export default function GoodsReceiptHeaderPage() {
                                     <select name="checked_by_emp_id" value={formData.checked_by_emp_id} onChange={handleInputChange}
                                         className="w-full h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none">
                                         <option value="">Select</option>
-                                        {records.filter(r => r.active).map(r => <option key={r.id} value={r.empId}>{r.empId} {r.emp_name}</option>)}
+                                        {records.filter(r => r.active).map(r => <option key={r.id} value={r.emp_id}>{r.emp_id}-{r.emp_name}</option>)}
                                     </select>
                                 </div>
                             </div>
@@ -926,23 +977,27 @@ export default function GoodsReceiptHeaderPage() {
                             <LayoutList size={14} className="text-slate-500" />
                             <span className="text-[11px] font-bold text-slate-600 tracking-widest uppercase">Materials Grid</span>
                         </div>
-                        <button type="button" onClick={addMaterialRow}
+                        {/* <button type="button" onClick={addMaterialRow}
                             className="flex items-center gap-1 text-blue-600 text-xs font-bold hover:text-blue-800 transition-colors">
                             <Plus size={13} /> Add Material Row
-                        </button>
+                        </button> */}
                     </div> 
 
                     {/* Material column headers */}
                     <div className="grid items-center px-4 py-2 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider"
-                        style={{ gridTemplateColumns: "32px 2fr 1.2fr 0.7fr 0.7fr 0.7fr 1fr 0.8fr 40px" }}>
+                        style={{ gridTemplateColumns: "28px 32px 2fr 0.7fr 0.7fr 0.7fr 0.6fr 0.9fr 0.6fr 0.6fr 0.8fr 0.8fr 36px" }}>
                         <div />
+                        <div className="text-center">S.No</div>
                         <div>Material ID / Description</div>
-                        <div className="text-right pr-2">Total Nett Qty</div>
+                        <div className="text-right pr-1">PO Qty</div>
+                        <div className="text-right pr-1">GR Qty</div>
+                        <div className="text-right pr-1">Bal Qty</div>
                         <div className="text-center">UOM</div>
+                        <div className="text-right pr-2">Nett Qty</div>
                         <div className="text-center">Pockets</div>
                         <div className="text-center">Rolls</div>
-                        <div className="text-center ">Exist. Stock Qty</div>
-                        <div className="text-center ">Exist. Tot Rolls</div>
+                        <div className="text-center">Exist. Stock</div>
+                        <div className="text-center">Exist. Rolls</div>
                         <div className="text-center">Del</div>
                     </div>
 
@@ -954,25 +1009,42 @@ export default function GoodsReceiptHeaderPage() {
 
                     {materialRows.map(row => (
                         <div key={row.id} className="border-b border-slate-100 last:border-0">
-                            <div className="grid items-center px-4 py-2.5 gap-x-3 hover:bg-slate-50/60 transition-colors"
-                                style={{ gridTemplateColumns: "32px 2fr 1.2fr 0.7fr 0.7fr 0.7fr 1fr 0.8fr 40px" }}>
+                            <div className="grid items-center px-4 py-2.5 gap-x-2 hover:bg-slate-50/60 transition-colors"
+                                style={{ gridTemplateColumns: "28px 32px 2fr 0.7fr 0.7fr 0.7fr 0.6fr 0.9fr 0.6fr 0.6fr 0.8fr 0.8fr 36px" }}>
                                 <button type="button" onClick={() => toggleExpand(row.id)}
                                     className="text-blue-500 hover:text-blue-700 flex items-center justify-center">
                                     {row.expanded ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
                                 </button>
-                                <div>
-                                    <select name="material_id" value={row.material_id}
-                                        onChange={e => handleMaterialSelect(row.id, e.target.value)}
-                                        className="w-full h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none">
-                                        <option value="">Select Material</option>
-                                        {materials.filter(m => m.active).map(r => <option key={r.material_id} value={r.material_id}>{r.material_id} - {r.material_name}</option>)}
-                                    </select>
+                                {/* S.No - display only */}
+                                <div className="h-9 flex items-center justify-center border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-500 font-mono select-none">
+                                    {row.sno}
+                                </div>
+                                {/* Material ID - display only */}
+                                <div className="h-9 flex flex-col justify-center border border-slate-100 rounded-md bg-slate-50 px-2 select-none overflow-hidden">
+                                    <span className="text-xs text-slate-700 font-mono truncate">{row.material_id || "—"}</span>
                                     {row.material_id && (
-                                        <p className="text-[9px] text-slate-400 truncate mt-0.5 px-1">
-                                            {materials.filter(m => m.active).find(m => m.material_id === row.material_id)?.material_name || ""}
-                                        </p>
+                                        <span className="text-[9px] text-slate-400 truncate">
+                                            {materials.find(m => m.material_id === row.material_id)?.material_name || ""}
+                                        </span>
                                     )}
                                 </div>
+                                {/* PO Qty - display only */}
+                                <div className="h-9 flex items-center justify-end pr-2 border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-600 font-mono select-none">
+                                    {row.po_qty || "—"}
+                                </div>
+                                {/* GR Qty - display only */}
+                                <div className="h-9 flex items-center justify-end pr-2 border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-600 font-mono select-none">
+                                    {row.gr_qty || "—"}
+                                </div>
+                                {/* Balance Qty - display only */}
+                                <div className="h-9 flex items-center justify-end pr-2 border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-600 font-mono select-none">
+                                    {row.balance_qty || "—"}
+                                </div>
+                                {/* UOM - display only */}
+                                <div className="h-9 flex items-center justify-center border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-600 select-none">
+                                    {row.uom || "—"}
+                                </div>
+                                {/* Nett Qty - editable */}
                                 <Input value={row.invoice_total_nett_qty}
                                     onChange={e => {
                                         const val = e.target.value;
@@ -981,12 +1053,7 @@ export default function GoodsReceiptHeaderPage() {
                                     }}
                                     placeholder="0.000" type="text" inputMode="decimal"
                                     className="h-9 text-xs border-slate-200 text-right" />
-                                <select name="uom" value={row.uom}
-                                    onChange={e => updateMaterialField(row.id, "uom", e.target.value)}
-                                    className="h-9 px-2 border border-slate-200 rounded-md bg-white text-xs focus:ring-1 focus:ring-blue-500 outline-none w-full">
-                                    <option value="">—</option>
-                                    {materials.map(u => <option key={u.uom} value={u.uom}>{u.uom}</option>)}
-                                </select>
+                                {/* Pockets - editable */}
                                 <Input value={row.total_pockets}
                                     onChange={e => {
                                         const val = e.target.value;
@@ -995,6 +1062,7 @@ export default function GoodsReceiptHeaderPage() {
                                     }}
                                     placeholder="0" type="text" inputMode="numeric"
                                     className="h-9 text-xs border-slate-200 text-center" />
+                                {/* Rolls - editable */}
                                 <Input value={row.total_rolls}
                                     onChange={e => {
                                         const val = e.target.value;
@@ -1003,9 +1071,11 @@ export default function GoodsReceiptHeaderPage() {
                                     }}
                                     placeholder="0" type="text" inputMode="numeric"
                                     className="h-9 text-xs border-slate-200 text-center" />
+                                {/* Exist Stock - display only */}
                                 <div className="h-9 flex items-center justify-center border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-400 select-none">
                                     {row.existing_stock_qty || "—"}
                                 </div>
+                                {/* Exist Rolls - display only */}
                                 <div className="h-9 flex items-center justify-center border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-400 select-none">
                                     {row.existing_total_rolls || "—"}
                                 </div>

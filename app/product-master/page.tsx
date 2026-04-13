@@ -299,8 +299,12 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
     // 1. Handle Checkboxes and exit early
     if (type === 'checkbox') {
         const checked = (e.target as HTMLInputElement).checked;
-        setFormData(prev => ({ ...prev, [name]: checked }));
-        return; 
+        if (name === 'qc_required' && !checked) {
+            setFormData(prev => ({ ...prev, [name]: checked, coa_checklist_id: "" }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: checked }));
+        }
+        return;
     }
 
     // 2. RUN VALIDATION (Does not block typing)
@@ -1825,6 +1829,7 @@ const confirmCancelItem = async () => {
         className={`w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none ${!formData.qc_required ? 'opacity-50 cursor-not-allowed' : ''}`}
         required={formData.qc_required}
     >
+        <option value="">Enter COA checklist ID</option>
         {checklists.filter((data) => data.active !== false).map(product => (
             <option key={product.checklist_id} value={product.checklist_id}>
                 {product.checklist_id} - {product.checklist_description}
