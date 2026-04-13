@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import GoodsReceiptDetail from '@/server/models/GoodsReceiptDetail';
+import { saveAudit } from '@/server/lib/AuditService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,9 @@ export async function PUT(
         await ensureConnection();
         const body = await request.json();
 
+        // Fetch existing for audit (has material_doc_no + material_id for PK values)
+        const existing = await GoodsReceiptDetail.findById(params.id).lean();
+
         // Strip PK fields — they must not change
         delete body.material_doc_no;
         delete body.material_id;
@@ -71,6 +75,28 @@ export async function PUT(
         if (!updated) {
             return NextResponse.json({ error: 'GR Detail not found.' }, { status: 404 });
         }
+
+        // ── Audit Trail ──────────────────────────────────────────────────────
+        try {
+            const docNo     = (existing as any)?.material_doc_no || '';
+            const materialId = (existing as any)?.material_id    || '';
+            await saveAudit({
+                menu_id:           'T12',
+                header_table_name: 'GoodsReceiptHeader',
+                documnet_no:       docNo,
+                change_user_id:    'ADMIN',
+                tables: [{
+                    table_name:      'GoodsReceiptDetail',
+                    pk_field_names:  'material_doc_no|material_id',
+                    pk_field_values: `${docNo}|${materialId}`,
+                    old_data:        existing as any || {},
+                    new_data:        updatePayload,
+                }],
+            });
+        } catch (auditErr) {
+            console.error('Audit save failed (non-blocking):', auditErr);
+        }
+
         return NextResponse.json(updated);
     } catch (error: any) {
         if (error.name === 'ValidationError') {

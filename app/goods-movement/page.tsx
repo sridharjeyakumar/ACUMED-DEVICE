@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, CheckCircle2, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -171,12 +171,6 @@ export default function GoodsMovementPage() {
     const [availableRolls,   setAvailableRolls]   = useState<GRUnitRow[]>([]);
     const [isRollPopupOpen,  setIsRollPopupOpen]  = useState(false);
     const [rollSearch,       setRollSearch]       = useState("");
-
-    // Approval modal
-    const [isApprovalModalOpen,  setIsApprovalModalOpen]  = useState(false);
-    const [approvalMovement,     setApprovalMovement]     = useState<GoodsMovement | null>(null);
-    const [approvalUnits,        setApprovalUnits]        = useState<any[]>([]);
-    const [approvalRemarks,      setApprovalRemarks]      = useState("");
 
     // Expandable rows
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -399,42 +393,6 @@ const getGMStatusDisplay = (statusId: string) => {
         setAvailableRolls(prev => [...prev, unit._originalRoll]);
         const newTotal = newGmUnits.reduce((sum, u) => sum + Math.abs(u.nett_qty), 0);
         setFormData(prev => ({ ...prev, total_nett_qty: newGmUnits.length ? String(parseFloat(newTotal.toFixed(3))) : "" }));
-    };
-
-    // ── Approval modal ───────────────────────────────────────────────────────────
-
-    const handleOpenApproval = async (m: GoodsMovement) => {
-        setApprovalMovement(m);
-        setApprovalRemarks("");
-        try {
-            const units = await goodsMovementUnitsAPI.getByGmNo(m.gm_no);
-            setApprovalUnits(units || []);
-        } catch {
-            setApprovalUnits([]);
-        }
-        setIsApprovalModalOpen(true);
-    };
-
-    const handleApprovalSubmit = async (action: 'A' | 'X') => {
-        if (!approvalMovement) return;
-        if (action === 'A' && !approvalRemarks.trim()) {
-            toast({ title: "Required", description: "Approval remarks are required", variant: "destructive" });
-            return;
-        }
-        try {
-            await goodsMovementAPI.update(approvalMovement.gm_no, {
-                status:               action,
-                approval_remarks:     approvalRemarks,
-                approved_by_user_id:  getSessionUser()?.user_id || "ADMIN",
-                approved_date_time:   new Date().toISOString(),
-            });
-            toast({ title: action === 'A' ? "Approved" : "Cancelled", description: `${approvalMovement.gm_no} ${action === 'A' ? 'approved' : 'cancelled'} successfully` });
-            setIsApprovalModalOpen(false);
-            setApprovalMovement(null);
-            loadMovements();
-        } catch (error: any) {
-            toast({ title: "Error", description: error.message || "Failed to update", variant: "destructive" });
-        }
     };
 
     // ── Input change ─────────────────────────────────────────────────────────────
@@ -890,35 +848,6 @@ const getGMStatusDisplay = (statusId: string) => {
                 </div>
             </div>
 
-            {/* Approval fields (edit only, when status allows) */}
-            {isEdit && (
-                <>
-                    <div className="col-span-2 mt-2">
-                        <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">Approval</h3>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-foreground mb-2">Status</label>
-                        <select
-                            name="status"
-                            value={formData.status}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                        >
-                            <option value="E">E - Entered</option>
-                            <option value="A">A - Approved</option>
-                            <option value="X">X - Cancelled</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-foreground mb-2">Approval Remarks</label>
-                        <Input name="approval_remarks" value={(formData as any).approval_remarks || ""} onChange={handleInputChange} maxLength={100} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-foreground mb-2">Approved By User ID</label>
-                        <Input name="approved_by_user_id" value={(formData as any).approved_by_user_id || ""} onChange={handleInputChange} maxLength={5} />
-                    </div>
-                </>
-            )}
         </div>
     );
 
@@ -1096,16 +1025,6 @@ const getGMStatusDisplay = (statusId: string) => {
                                                             </td>
                                                             <td className="px-4 py-3">
                                                                 <div className="flex items-center justify-center gap-2">
-                                                                    {m.status === 'E' && (
-                                                                        <Button
-                                                                            variant="ghost" size="sm"
-                                                                            onClick={e => { e.stopPropagation(); handleOpenApproval(m); }}
-                                                                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                                            title="Approve / Cancel"
-                                                                        >
-                                                                            <CheckCircle2 className="w-4 h-4" />
-                                                                        </Button>
-                                                                    )}
                                                                     {isSuperAdmin && (
                                                                         <Button variant="ghost" size="sm"
                                                                             onClick={e => { e.stopPropagation(); handleDelete(m); }}
@@ -1349,109 +1268,6 @@ const getGMStatusDisplay = (statusId: string) => {
                                             )}
                                         </tbody>
                                     </table>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-
-            {/* ── Approval Modal ─────────────────────────────────────────────────── */}
-            <AnimatePresence>
-                {isApprovalModalOpen && approvalMovement && (
-                    <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => setIsApprovalModalOpen(false)} />
-                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
-                                <div className="bg-green-700 text-white px-6 py-4 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Approve Goods Movement — {approvalMovement.gm_no}</h2>
-                                    <button onClick={() => setIsApprovalModalOpen(false)} className="text-white hover:bg-green-800 rounded-lg p-2 transition-colors"><X className="w-6 h-6" /></button>
-                                </div>
-                                <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)] space-y-6">
-                                    {/* Header info */}
-                                    <div>
-                                        <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3 border-b pb-2">Goods Movement Details</h3>
-                                        <div className="grid grid-cols-2 gap-4 text-sm">
-                                            {[
-                                                ["GM Date",          formatDate(approvalMovement.gm_date)],
-                                                ["Material Status",  approvalMovement.material_status_id],
-                                                ["Material Doc No.", approvalMovement.material_doc_no || "-"],
-                                                ["Material ID",      approvalMovement.material_id],
-                                                ["Total Nett Qty",   `${approvalMovement.total_nett_qty} ${approvalMovement.uom}`],
-                                                ["Remarks",          approvalMovement.remarks || "-"],
-                                                ["Entered By",       approvalMovement.entered_by_user_id],
-                                                ["Entered On",       formatDateTime(approvalMovement.entered_date_time)],
-                                            ].map(([label, value]) => (
-                                                <div key={label}>
-                                                    <span className="text-muted-foreground">{label}:</span>
-                                                    <span className="ml-2 font-semibold">{value}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Units */}
-                                    {approvalUnits.length > 0 && (
-                                        <div>
-                                            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3 border-b pb-2">Movement Units</h3>
-                                            <table className="w-full text-sm border rounded-lg overflow-hidden">
-                                                <thead>
-                                                    <tr className="bg-gray-100">
-                                                        <th className="px-3 py-2 text-left font-semibold">Roll No.</th>
-                                                        <th className="px-3 py-2 text-right font-semibold">Nett Qty</th>
-                                                        <th className="px-3 py-2 text-left font-semibold">UOM</th>
-                                                        <th className="px-3 py-2 text-center font-semibold">Status</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-border">
-                                                    {approvalUnits.map((u: any, idx: number) => (
-                                                        <tr key={idx} className="hover:bg-gray-50">
-                                                            <td className="px-3 py-2 font-mono">{u.roll_no}</td>
-                                                            <td className={`px-3 py-2 text-right font-semibold ${u.nett_qty < 0 ? 'text-red-600' : 'text-green-700'}`}>{u.nett_qty}</td>
-                                                            <td className="px-3 py-2">{u.uom}</td>
-                                                            <td className="px-3 py-2 text-center">
-                                                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-bold ${STATUS_LABELS[u.status]?.color || 'bg-gray-100 text-gray-600'}`}>
-                                                                    {STATUS_LABELS[u.status]?.label || u.status}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-
-                                    {/* Approval remarks */}
-                                    <div>
-                                        <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3 border-b pb-2">Approval</h3>
-                                        <label className="block text-sm font-semibold text-foreground mb-2">
-                                            Approval Remarks <span className="text-red-500">*</span>
-                                            <span className="text-muted-foreground font-normal ml-1">(required to approve)</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={approvalRemarks}
-                                            onChange={e => setApprovalRemarks(e.target.value)}
-                                            maxLength={100}
-                                            placeholder="Enter remarks..."
-                                            className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3 bg-gray-50">
-                                    <Button variant="outline" onClick={() => setIsApprovalModalOpen(false)}>Close</Button>
-                                    <Button
-                                        className="bg-red-600 hover:bg-red-700 text-white"
-                                        onClick={() => handleApprovalSubmit('X')}
-                                    >
-                                        Cancel Movement
-                                    </Button>
-                                    <Button
-                                        className="bg-green-600 hover:bg-green-700 text-white"
-                                        onClick={() => handleApprovalSubmit('A')}
-                                    >
-                                        Approve
-                                    </Button>
                                 </div>
                             </div>
                         </motion.div>

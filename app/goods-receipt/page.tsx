@@ -843,7 +843,7 @@ export default function GoodsReceiptHeaderPage() {
                                 <select name="po_no" value={formData.po_no} onChange={handleInputChange}
                                     className={`h-9 text-xs border border-slate-200 rounded-md w-full px-2 bg-background focus:ring-2 focus:ring-blue-500 outline-none ${fieldErrors.po_no ? "border-red-500 bg-red-50" : ""}`}>
                                     <option value="">Select PO No.</option>
-                                    {purchaseOrders.filter(po => po.status === 'E' || po.status === 'A').map(po => (
+                                    {purchaseOrders.filter(po =>po.status === 'A').map(po => (
                                         <option key={po.po_no} value={po.po_no}>{po.po_no}</option>
                                     ))}
                                 </select>

@@ -3,6 +3,7 @@ import { ensureConnection } from '@/server/db/connection';
 import GoodsReceiptHeader from '@/server/models/GoodsReceiptHeader';
 import GoodsReceiptDetail from '@/server/models/GoodsReceiptDetail';
 import GoodsReceiptUnits from '@/server/models/GoodsReceiptUnits';
+import { saveAudit } from '@/server/lib/AuditService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -90,6 +91,11 @@ export async function PUT(
             return NextResponse.json({ error: validationErrors.join(' | ') }, { status: 422 });
         }
 
+        // Fetch existing for audit before update
+        const existing = await GoodsReceiptHeader.findOne({
+            material_doc_no: params.id.toUpperCase(),
+        }).lean();
+
         // Prevent changing the primary key
         delete body.material_doc_no;
 
@@ -108,6 +114,25 @@ export async function PUT(
                 { error: `Goods Receipt Header '${params.id}' not found` },
                 { status: 404 }
             );
+        }
+
+        // ── Audit Trail ──────────────────────────────────────────────────────
+        try {
+            await saveAudit({
+                menu_id:           'T12',
+                header_table_name: 'GoodsReceiptHeader',
+                documnet_no:       params.id.toUpperCase(),
+                change_user_id:    (body.last_modified_user_id || 'ADMIN').slice(0, 5).toUpperCase(),
+                tables: [{
+                    table_name:      'GoodsReceiptHeader',
+                    pk_field_names:  'material_doc_no',
+                    pk_field_values: params.id.toUpperCase(),
+                    old_data:        existing as any || {},
+                    new_data:        body,
+                }],
+            });
+        } catch (auditErr) {
+            console.error('Audit save failed (non-blocking):', auditErr);
         }
 
         return NextResponse.json(updated, { status: 200 });
@@ -135,6 +160,11 @@ export async function PATCH(
     try {
         await ensureConnection();
         const body = await _request.json();
+
+        const existing = await GoodsReceiptHeader.findOne({
+            material_doc_no: params.id.toUpperCase(),
+        }).lean();
+
         const updated = await GoodsReceiptHeader.findOneAndUpdate(
             { material_doc_no: params.id.toUpperCase() },
             { ...body, last_modified_date_time: new Date() },
@@ -143,6 +173,26 @@ export async function PATCH(
         if (!updated) {
             return NextResponse.json({ error: `GR '${params.id}' not found` }, { status: 404 });
         }
+
+        // ── Audit Trail ──────────────────────────────────────────────────────
+        try {
+            await saveAudit({
+                menu_id:           'GRN',
+                header_table_name: 'GoodsReceiptHeader',
+                documnet_no:       params.id.toUpperCase(),
+                change_user_id:    (body.last_modified_user_id || 'ADMIN').slice(0, 5).toUpperCase(),
+                tables: [{
+                    table_name:      'GoodsReceiptHeader',
+                    pk_field_names:  'material_doc_no',
+                    pk_field_values: params.id.toUpperCase(),
+                    old_data:        existing as any || {},
+                    new_data:        body,
+                }],
+            });
+        } catch (auditErr) {
+            console.error('Audit save failed (non-blocking):', auditErr);
+        }
+
         return NextResponse.json(updated, { status: 200 });
     } catch (error: any) {
         return NextResponse.json({ error: error.message || 'Failed to update' }, { status: 500 });

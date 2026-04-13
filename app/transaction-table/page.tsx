@@ -11,10 +11,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { cartonCapacityAPI, packSizeAPI, productAPI, transactionAPI, productionPlanDetailAPI, productionRejectedAPI } from "@/services/api";
+import { cartonCapacityAPI, packSizeAPI, productAPI, transactionAPI, productionPlanDetailAPI, productionRejectedAPI, holidaysAPI, weeklyOffAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 interface Transaction {
+    planned_total_no_of_sachets: string;
+    planned_no_of_working_days: string;
     _id?: string;
     batch_no: string;
     product_id: string;
@@ -137,6 +139,46 @@ function formatMonthYear(monthYear: string): string {
     return `${monthNames[parseInt(month) - 1]} ${year}`;
 }
 
+// ── Working day calculation ────────────────────────────────────────────────────
+function calcWorkingDays(
+    start: string,
+    end: string,
+    holidays: { date: string | Date }[],
+    weeklyOffs: { day_of_week: number; week_of_month?: number }[]
+): number {
+    if (!start || !end) return 0;
+    const startDt = new Date(start);
+    const endDt = new Date(end);
+    if (isNaN(startDt.getTime()) || isNaN(endDt.getTime()) || startDt > endDt) return 0;
+
+    const holidaySet = new Set(
+        holidays.map(h => {
+            const d = new Date(h.date);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        })
+    );
+
+    // WeeklyOffMaster day_of_week: 1=Mon…6=Sat, 7=Sun → JS getDay(): 0=Sun…6=Sat
+    const toJsDay = (dow: number) => (dow === 7 ? 0 : dow);
+
+    let count = 0;
+    const cur = new Date(startDt);
+    while (cur <= endDt) {
+        const ds = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
+        if (!holidaySet.has(ds)) {
+            const dow = cur.getDay();
+            const weekOfMonth = Math.ceil(cur.getDate() / 7);
+            const isOff = weeklyOffs.some(wo => {
+                if (toJsDay(wo.day_of_week) !== dow) return false;
+                return wo.week_of_month == null || wo.week_of_month === weekOfMonth;
+            });
+            if (!isOff) count++;
+        }
+        cur.setDate(cur.getDate() + 1);
+    }
+    return count;
+}
+
 export default function TransactionTablePage() {
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
@@ -209,6 +251,10 @@ export default function TransactionTablePage() {
     const [completedRemarks, setCompletedRemarks] = useState('');
     const [plannedSachetsSum, setPlannedSachetsSum] = useState<number>(0);
 
+    // Holidays & weekly offs (for working day calculation)
+    const [holidays, setHolidays] = useState<{ date: string | Date }[]>([]);
+    const [weeklyOffs, setWeeklyOffs] = useState<{ day_of_week: number; week_of_month?: number }[]>([]);
+
     // Reset form data when Add modal opens
     useEffect(() => {
         if (isAddModalOpen) {
@@ -244,6 +290,11 @@ export default function TransactionTablePage() {
             setSelectedProduct(null);
         }
     }, [isAddModalOpen]);
+
+    useEffect(() => {
+        holidaysAPI.getAll().then(setHolidays).catch(console.error);
+        weeklyOffAPI.getAll().then(setWeeklyOffs).catch(console.error);
+    }, []);
 
     useEffect(() => {
         const loadProducts = async () => {
@@ -649,6 +700,10 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                 month_year: formData.month_year,
                 planned_start_date: formData.planned_start_date ? new Date(formData.planned_start_date) : undefined,
                 planned_end_date: formData.planned_end_date ? new Date(formData.planned_end_date) : undefined,
+                planned_no_of_working_days: (formData.planned_start_date && formData.planned_end_date)
+                    ? calcWorkingDays(formData.planned_start_date, formData.planned_end_date, holidays, weeklyOffs)
+                    : undefined,
+                planned_total_no_of_sachets: productDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) || undefined,
                 actual_start_date: formData.actual_start_date ? new Date(formData.actual_start_date) : undefined,
                 actual_end_date: formData.actual_end_date ? new Date(formData.actual_end_date) : undefined,
                 // Planned totals (from product details)
@@ -945,6 +1000,10 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                 month_year: formData.month_year,
                 planned_start_date: formData.planned_start_date ? new Date(formData.planned_start_date) : undefined,
                 planned_end_date: formData.planned_end_date ? new Date(formData.planned_end_date) : undefined,
+                planned_no_of_working_days: (formData.planned_start_date && formData.planned_end_date)
+                    ? calcWorkingDays(formData.planned_start_date, formData.planned_end_date, holidays, weeklyOffs)
+                    : undefined,
+                planned_total_no_of_sachets: [...editPacksizeDetails, ...editNewRows].reduce((s, d) => s + (d.no_of_sachets || 0), 0) || undefined,
                 actual_start_date: formData.actual_start_date ? new Date(formData.actual_start_date) : undefined,
                 actual_end_date: formData.actual_end_date ? new Date(formData.actual_end_date) : undefined,
                 total_sachets: formData.total_sachets ? parseInt(formData.total_sachets) : undefined,
@@ -1039,10 +1098,21 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
         isSubmittingRef.current = true;
         try {
             await saveEditNewRows();
+
+            // Sum net_weight_kgs from ProductionRejected for this batch + product
+            let totalRejectedKg = 0;
+            try {
+                const rejectedRecords = await productionRejectedAPI.getByBatchNo(selectedTransaction.batch_no);
+                totalRejectedKg = (rejectedRecords as any[])
+                    .filter((r: any) => r.product_id === selectedTransaction.product_id)
+                    .reduce((sum: number, r: any) => sum + (r.net_weight_kgs || 0), 0);
+            } catch { /* non-blocking — proceed with 0 if fetch fails */ }
+
             await transactionAPI.update(selectedTransaction.batch_no, {
                 current_batch_status_id: 'C',
                 completed_remarks: completedRemarks,
                 actual_end_date: new Date(),
+                total_rejected_qty_kg: totalRejectedKg,
                 last_modified_user_id: "ADMIN",
                 last_modified_date_time: new Date(),
             });
@@ -1251,6 +1321,12 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 Planned End Date
                                             </th>
+                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                Planned No of Working Days
+                                            </th>
+                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                Planned Total No of Sachets
+                                            </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 Actual Start Date
                                             </th>
@@ -1349,6 +1425,12 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                             </td>
                                                             <td className="px-6 py-4 align-middle text-xs">
                                                                 {formatDateTime(item.planned_end_date)}
+                                                            </td>
+                                                             <td className="px-6 py-4 align-middle text-xs">
+                                                                {item.planned_no_of_working_days || '-'}
+                                                            </td>
+                                                             <td className="px-6 py-4 align-middle text-xs">
+                                                               {item.planned_total_no_of_sachets || '-'}
                                                             </td>
                                                             <td className="px-6 py-4 align-middle text-xs">
                                                                 {formatDateTime(item.actual_start_date)}
@@ -1683,6 +1765,20 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                             min={getMinDateForEndDate(formData.planned_start_date)}
                                             className="w-full border border-slate-200 rounded-xl px-2 py-2 text-xs text-center outline-none focus:ring-2 focus:ring-blue-100"
                                         />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Planned Working Days</label>
+                                        <div className="bg-[#f1f5f9] border border-slate-200 rounded-xl px-2 py-2 text-xs text-center text-slate-600 font-mono">
+                                            {formData.planned_start_date && formData.planned_end_date
+                                                ? calcWorkingDays(formData.planned_start_date, formData.planned_end_date, holidays, weeklyOffs)
+                                                : '—'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Planned Total Sachets</label>
+                                        <div className="bg-[#f1f5f9] border border-slate-200 rounded-xl px-2 py-2 text-xs text-center text-slate-600 font-mono">
+                                            {productDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) || '—'}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3 mb-4 text-center">
@@ -2159,6 +2255,20 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                         disabled={selectedTransaction?.current_batch_status_id !== 'P'}
                                                         className={`w-full border border-slate-200 rounded-xl px-2 py-2 text-xs text-center outline-none focus:ring-2 focus:ring-blue-100 ${selectedTransaction?.current_batch_status_id !== 'P' ? 'bg-[#f1f5f9] text-slate-400 cursor-not-allowed' : ''}`}
                                                     />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Planned Working Days</label>
+                                                    <div className="bg-[#f1f5f9] border border-slate-200 rounded-xl px-2 py-2 text-xs text-center text-slate-600 font-mono">
+                                                        {formData.planned_start_date && formData.planned_end_date
+                                                            ? calcWorkingDays(formData.planned_start_date, formData.planned_end_date, holidays, weeklyOffs)
+                                                            : '—'}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Planned Total Sachets</label>
+                                                    <div className="bg-[#f1f5f9] border border-slate-200 rounded-xl px-2 py-2 text-xs text-center text-slate-600 font-mono">
+                                                        {[...editPacksizeDetails, ...editNewRows].reduce((s, d) => s + (d.no_of_sachets || 0), 0) || '—'}
+                                                    </div>
                                                 </div>
                                                 <div>
                                                     <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Actual Start</label>

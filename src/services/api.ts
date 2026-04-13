@@ -288,6 +288,7 @@ export const materialAPI = {
   create: (data: any) => fetchAPI('/materials', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: any) => fetchAPI(`/materials/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) => fetchAPI(`/materials/${id}`, { method: 'DELETE' }),
+  getActive: () => fetchAPI('/materials?active=true'),
 };
 
 // Vendor Master API
@@ -948,6 +949,7 @@ export const productStockAPI = {
     adjust: (batchNo: string, data: {
         pack_size_id: string; product_status_id: string;
         packs_delta: number; sachets_delta: number;
+        cartons_delta?: number;
         product_id?: string; carton_type_id?: string; total_no_of_cartons?: number;
     }) => fetchAPI(`/product-stock/${encodeURIComponent(batchNo)}`, { method: 'PATCH', body: JSON.stringify(data) }),
     getAll: (params?: { productId?: string; batchNo?: string }) => {
@@ -1071,6 +1073,16 @@ export const purchaseOrderAPI = {
     create: (data: any) => fetchAPI('/purchase-orders', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: any) => fetchAPI(`/purchase-orders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => fetchAPI(`/purchase-orders/${id}`, { method: 'DELETE' }),
+};
+
+
+
+export const purchaseOrderDetailAPI = {
+    getByPoNo: (poNo: string) => fetchAPI(`/purchase-order-details?po_no=${encodeURIComponent(poNo)}`),
+    create: (data: any) => fetchAPI('/purchase-order-details', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => fetchAPI(`/purchase-order-details/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchAPI(`/purchase-order-details/${id}`, { method: 'DELETE' }),
+    deleteByPoNo: (poNo: string) => fetchAPI(`/purchase-order-details?po_no=${encodeURIComponent(poNo)}`, { method: 'DELETE' }),
 };
 
 export const productMovementAPI = {

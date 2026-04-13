@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -36,7 +35,7 @@ export default function RootLayout({
             <div className="fixed bottom-0 left-0 z-50 p-3 pointer-events-none">
               <div className="bg-background/80 backdrop-blur-sm border border-border rounded-lg px-3 py-1.5 shadow-lg">
                 <span className="text-xs font-medium text-muted-foreground">
-                  App Version: <span className="font-semibold text-foreground">v.0.1.8</span>
+                  App Version: <span className="font-semibold text-foreground">v.0.1.9</span>
                 </span>
               </div>
             </div>
