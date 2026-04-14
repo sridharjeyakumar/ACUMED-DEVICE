@@ -111,9 +111,9 @@ const navSections: NavSection[] = [
       { icon: FileText, label: "Goods Movement Approval", href: "/goods-movement-approval" },
 
 
-      { icon: TableProperties, label: "Production Plan", href: "/transaction-table" },
+      { icon: TableProperties, label: "Production Plan", href: "/transaction-table" , subtitle: "Production"},
       { icon: Activity, label: "Machine Event", href: "/machine-event" },
-      { icon: Factory, label: "Production Entry", href: "/production", subtitle: "Production" },
+      { icon: Factory, label: "Production Entry", href: "/production",  },
       { icon: Activity, label: "Production Rejected Entry", href: "/production-rejected" },
       { icon: Factory, label: "Packing Entry", href: "/packing-entry"},
       { icon: Factory, label: "Packing Approval", href: "/packing-entry-approval" },
@@ -123,7 +123,7 @@ const navSections: NavSection[] = [
 
 
 
-      { icon: Factory, label: "COA Generation", href: "/coa-generation", subtitle: "Quality" },
+      { icon: Factory, label: "COA Generation & Print", href: "/coa-generation", subtitle: "Quality" },
     ],
   },
   {
@@ -133,6 +133,27 @@ const navSections: NavSection[] = [
     ],
   },
 ];
+
+// Group items within a section by their subtitle
+function groupItemsBySubtitle(items: NavItem[]) {
+  const groups: { subtitle?: string; items: NavItem[] }[] = [];
+  let currentGroup: { subtitle?: string; items: NavItem[] } = { items: [] };
+
+  for (const item of items) {
+    if (item.subtitle) {
+      if (currentGroup.items.length > 0 || currentGroup.subtitle !== undefined) {
+        groups.push(currentGroup);
+      }
+      currentGroup = { subtitle: item.subtitle, items: [item] };
+    } else {
+      currentGroup.items.push(item);
+    }
+  }
+  if (currentGroup.items.length > 0 || currentGroup.subtitle !== undefined) {
+    groups.push(currentGroup);
+  }
+  return groups;
+}
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -144,25 +165,32 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
   const navRef = useRef<HTMLElement>(null);
   const scrollPositionRef = useRef<number>(0);
   const activeItemRef = useRef<HTMLLIElement>(null);
-  
-  // Find which section contains the active item and ensure it's expanded
-  const getActiveSection = useCallback(() => {
+
+  // Find which section and subtitle group contains the active item
+  const getActiveInfo = useCallback(() => {
     const normalizedPath = pathname?.replace(/\/$/, '') || '/';
+    let activeSection: string | null = null;
+    let activeSubtitle: string | null = null;
+
     for (const section of navSections) {
-      const hasActiveItem = section.items.some(item => {
-        const normalizedHref = (item.href || '').replace(/\/$/, '');
-        return normalizedHref === normalizedPath || (item.href === '/' && normalizedPath === '/');
-      });
-      if (hasActiveItem && section.title) {
-        return section.title;
+      const groups = groupItemsBySubtitle(section.items);
+      for (const group of groups) {
+        const hasActiveItem = group.items.some(item => {
+          const normalizedHref = (item.href || '').replace(/\/$/, '');
+          return normalizedHref === normalizedPath || (item.href === '/' && normalizedPath === '/');
+        });
+        if (hasActiveItem) {
+          if (section.title) activeSection = section.title;
+          if (group.subtitle) activeSubtitle = `${section.title || 'root'}-${group.subtitle}`;
+        }
       }
     }
-    return null;
+    return { activeSection, activeSubtitle };
   }, [pathname]);
 
   // Initialize expanded sections with the active section included
   const [expandedSections, setExpandedSections] = useState<string[]>(() => {
-    const activeSection = getActiveSection();
+    const { activeSection } = getActiveInfo();
     const defaultSections = ["MASTER"];
     if (activeSection && !defaultSections.includes(activeSection)) {
       return [...defaultSections, activeSection];
@@ -170,13 +198,29 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
     return defaultSections;
   });
 
-  // Ensure active section is expanded when pathname changes
+  // Initialize expanded subtitles — all subtitle groups open by default
+  const [expandedSubtitles, setExpandedSubtitles] = useState<string[]>(() => {
+    const keys: string[] = [];
+    for (const section of navSections) {
+      for (const item of section.items) {
+        if (item.subtitle) {
+          keys.push(`${section.title || 'root'}-${item.subtitle}`);
+        }
+      }
+    }
+    return keys;
+  });
+
+  // Ensure active section and subtitle group are expanded when pathname changes
   useEffect(() => {
-    const activeSection = getActiveSection();
+    const { activeSection, activeSubtitle } = getActiveInfo();
     if (activeSection && !expandedSections.includes(activeSection)) {
       setExpandedSections(prev => [...prev, activeSection]);
     }
-  }, [pathname, getActiveSection]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (activeSubtitle && !expandedSubtitles.includes(activeSubtitle)) {
+      setExpandedSubtitles(prev => [...prev, activeSubtitle!]);
+    }
+  }, [pathname, getActiveInfo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to active item when it becomes visible
   useEffect(() => {
@@ -215,6 +259,12 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
   const toggleSection = useCallback((title: string) => {
     setExpandedSections((prev) =>
       prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
+    );
+  }, []);
+
+  const toggleSubtitle = useCallback((key: string) => {
+    setExpandedSubtitles((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   }, []);
 
@@ -275,41 +325,67 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
                 </button>
               )}
               {(!section.title || expandedSections.includes(section.title)) && (
-                <ul className="space-y-1 px-2">
-                  {section.items.map((item, itemIndex) => {
-                    const normalizedHref = (item.href || '').replace(/\/$/, '');
-                    const isActive = activePathname === normalizedHref || (item.href === "/" && activePathname === "/");
-                    const itemKey = `${section.title || 'root'}-${item.href || itemIndex}`;
+                <div className="space-y-1 px-2">
+                  {groupItemsBySubtitle(section.items).map((group, groupIndex) => {
+                    const subtitleKey = group.subtitle
+                      ? `${section.title || 'root'}-${group.subtitle}`
+                      : null;
+                    const isSubtitleExpanded = subtitleKey
+                      ? expandedSubtitles.includes(subtitleKey)
+                      : true;
+
                     return (
-                      <li
-                        key={itemKey}
-                        ref={isActive ? activeItemRef : null}
-                      >
-                        {item.subtitle && (
-                          <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">
-                            {item.subtitle}
-                          </p>
+                      <div key={groupIndex}>
+                        {group.subtitle && subtitleKey && (
+                          <button
+                            onClick={() => toggleSubtitle(subtitleKey)}
+                            className="w-full flex items-center justify-between px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted hover:text-foreground transition-colors"
+                          >
+                            {group.subtitle}
+                            <ChevronDown
+                              className={cn(
+                                "w-3 h-3 transition-transform duration-200",
+                                isSubtitleExpanded ? "rotate-0" : "-rotate-90"
+                              )}
+                            />
+                          </button>
                         )}
-                        <Link
-                          href={item.href || "#"}
-                          className={cn(
-                            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200",
-                            isActive
-                              ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                              : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
-                          )}
-                          prefetch={true}
-                        >
-                          <item.icon className={cn(
-                            "w-5 h-5 flex-shrink-0",
-                            isActive && "text-sidebar-accent-foreground"
-                          )} />
-                          <span className={isActive ? "font-semibold" : ""}>{item.label}</span>
-                        </Link>
-                      </li>
+                        {isSubtitleExpanded && (
+                          <ul className="space-y-1">
+                            {group.items.map((item, itemIndex) => {
+                              const normalizedHref = (item.href || '').replace(/\/$/, '');
+                              const isActive = activePathname === normalizedHref || (item.href === "/" && activePathname === "/");
+                              const itemKey = `${section.title || 'root'}-${item.href || itemIndex}`;
+                              return (
+                                <li
+                                  key={itemKey}
+                                  ref={isActive ? activeItemRef : null}
+                                >
+                                  <Link
+                                    href={item.href || "#"}
+                                    className={cn(
+                                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200",
+                                      isActive
+                                        ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                                        : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
+                                    )}
+                                    prefetch={true}
+                                  >
+                                    <item.icon className={cn(
+                                      "w-5 h-5 flex-shrink-0",
+                                      isActive && "text-sidebar-accent-foreground"
+                                    )} />
+                                    <span className={isActive ? "font-semibold" : ""}>{item.label}</span>
+                                  </Link>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </div>
                     );
                   })}
-                </ul>
+                </div>
               )}
             </div>
           ))}
