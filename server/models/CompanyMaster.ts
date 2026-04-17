@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { YAxis } from 'recharts';
 
 export interface ICompanyMaster extends Document {
   comp_id: string; // Char(4) - PK
@@ -22,6 +23,10 @@ export interface ICompanyMaster extends Document {
   last_modified_date_time?: Date; // Date
   factory_license_no?: string; // Char(20)
   active?: boolean; // For soft delete
+  billing_address?: string; // Char(1) 
+  shipping_address?: string; // Char(1)
+  po_terms_and_conditions?: string; // Char(500)
+  po_image?: string; // Image
 }
 
 const CompanyMasterSchema: Schema = new Schema({
@@ -146,6 +151,29 @@ const CompanyMasterSchema: Schema = new Schema({
     type: Boolean,
     default: true,
   },
+  billing_address: {
+    type: String,
+    required: false,
+    maxlength: 1,
+    trim: true,
+  },
+  shipping_address: {
+    type: String,
+    required: false,
+    maxlength: 1,
+    trim: true,
+  },
+  po_terms_and_conditions: {
+    type: String,
+    required: false,
+    maxlength: 500,
+    trim: true,
+  },
+  po_image: {
+    type: String,
+    required: false,
+  }
+
 }, {
   timestamps: true,
 });

@@ -24,6 +24,8 @@ export interface IMaterialMaster extends Document {
   last_modified_date_time?: Date; // Date
   vendor_id?: string;
   core_weight?: number; // N(6,3)
+  default_gst_percent?: number; // N(2,2) - Default GST percentage for the material
+  default_unit_price?: number; // N(7,2) - Default unit price for the material
 }
 
 const MaterialMasterSchema: Schema = new Schema({
@@ -157,6 +159,18 @@ const MaterialMasterSchema: Schema = new Schema({
   core_weight: {
     type: Number,
     required: false,
+  },
+  default_gst_percent: {
+    type: Number,
+    required: false,
+    min: 0,
+    max: 99.99,
+  },
+  default_unit_price: {
+    type: Number,
+    required: false,
+    min: 0,
+    max: 99999.99,
   },
 }, {
   timestamps: true,

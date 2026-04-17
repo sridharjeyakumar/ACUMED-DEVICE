@@ -89,6 +89,8 @@ export async function PUT(
     if (body.coa_checklist_id !== undefined) updateData.coa_checklist_id = body.coa_checklist_id === '' ? '' : cleanValue(body.coa_checklist_id);
     if (body.vendor_id !== undefined) updateData.vendor_id = cleanValue(body.vendor_id);
     if (body.core_weight !== undefined) updateData.core_weight = safeNumber(body.core_weight) || undefined;
+    if (body.default_gst_percent !== undefined) updateData.default_gst_percent = safeNumber(body.default_gst_percent) ?? undefined;
+    if (body.default_unit_price !== undefined) updateData.default_unit_price = safeNumber(body.default_unit_price) ?? undefined;
     if (body.material_image !== undefined) updateData.material_image = cleanValue(body.material_image);
     if (body.material_image_icon !== undefined) updateData.material_image_icon = cleanValue(body.material_image_icon);
     if (body.active !== undefined) updateData.active = body.active !== false;

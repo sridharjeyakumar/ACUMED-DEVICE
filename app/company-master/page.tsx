@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Upload, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -46,6 +47,10 @@ interface Company {
     last_modified_user_id?: string; // Char(5) - user ID
     last_modified_date_time?: Date; // Date
     active?: boolean;
+    billing_address?: string; // "Y" or "N"
+    shipping_address?: string; // "Y" or "N"
+    po_terms_and_conditions?: string; // Char(500)
+    po_image?: string; // image (base64)
 }
 
 export default function CompanyMasterPage() {
@@ -88,8 +93,13 @@ export default function CompanyMasterPage() {
         logo: "",
         factory_license_no: "",
         active: true,
+        billing_address: "",
+        shipping_address: "",
+        po_terms_and_conditions: "",
+        po_image: "",
     });
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const poImageInputRef = useRef<HTMLInputElement>(null);
     const isSubmittingRef = useRef(false);
 
 
@@ -121,6 +131,10 @@ export default function CompanyMasterPage() {
                 logo: "",
                 factory_license_no: "",
                 active: true,
+                billing_address: "",
+                shipping_address: "",
+                po_terms_and_conditions: "",
+                po_image: "",
             });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
@@ -145,6 +159,10 @@ export default function CompanyMasterPage() {
                 logo: "",
                 factory_license_no: "",
                 active: true,
+                billing_address: "",
+                shipping_address: "",
+                po_terms_and_conditions: "",
+                po_image: "",
             });
         }
         setIsCancelDialogOpen(false);
@@ -174,6 +192,10 @@ export default function CompanyMasterPage() {
                 logo: "",
                 factory_license_no: "",
                 active: true,
+                billing_address: "",
+                shipping_address: "",
+                po_terms_and_conditions: "",
+                po_image: "",
             });
         }
     }, [isAddModalOpen]);
@@ -241,6 +263,25 @@ export default function CompanyMasterPage() {
         }
     };
 
+    const handlePoImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                toast({
+                    title: "File too large",
+                    description: "Please upload an image smaller than 2MB",
+                    variant: "destructive",
+                });
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData(prev => ({ ...prev, po_image: reader.result as string }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -268,6 +309,10 @@ export default function CompanyMasterPage() {
                 last_modified_user_id: "ADMIN",
                 factory_license_no: formData.factory_license_no || undefined,
                 active: formData.active,
+                billing_address: formData.billing_address || undefined,
+                shipping_address: formData.shipping_address || undefined,
+                po_terms_and_conditions: formData.po_terms_and_conditions || undefined,
+                po_image: formData.po_image || undefined,
             });
             toast({
                 title: "Success",
@@ -294,6 +339,10 @@ export default function CompanyMasterPage() {
                 logo: "",
                 factory_license_no: "",
                 active: true,
+                billing_address: "",
+                shipping_address: "",
+                po_terms_and_conditions: "",
+                po_image: "",
             });
             loadCompanies();
         } catch (error: any) {
@@ -348,6 +397,10 @@ export default function CompanyMasterPage() {
             logo: company.logo || "",
             factory_license_no: company.factory_license_no || "",
             active: company.active !== false,
+            billing_address: company.billing_address || "",
+            shipping_address: company.shipping_address || "",
+            po_terms_and_conditions: company.po_terms_and_conditions || "",
+            po_image: company.po_image || "",
         });
         setIsEditModalOpen(true);
     };
@@ -380,6 +433,10 @@ export default function CompanyMasterPage() {
                 last_modified_user_id: "ADMIN",
                 factory_license_no: formData.factory_license_no || undefined,
                 active: formData.active,
+                billing_address: formData.billing_address || undefined,
+                shipping_address: formData.shipping_address || undefined,
+                po_terms_and_conditions: formData.po_terms_and_conditions || undefined,
+                po_image: formData.po_image || undefined,
             });
 
             toast({
@@ -408,6 +465,10 @@ export default function CompanyMasterPage() {
                 logo: "",
                 factory_license_no: "",
                 active: true,
+                billing_address: "",
+                shipping_address: "",
+                po_terms_and_conditions: "",
+                po_image: "",
             });
             loadCompanies();
         } catch (error: any) {
@@ -672,6 +733,25 @@ export default function CompanyMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Logo</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
+                                                    <span>Billing</span>
+                                                    <span>Address</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Shipping</span>
+                                                    <span>Address</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>PO Terms &</span>
+                                                    <span>Conditions</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">PO Image</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
                                                     <span>Last Modified</span>
                                                     <span>User Id</span>
                                                 </div>
@@ -689,13 +769,13 @@ export default function CompanyMasterPage() {
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={21} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={25} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading companies...
                                                 </td>
                                             </tr>
                                         ) : filteredCompanies.length === 0 ? (
                                             <tr>
-                                                <td colSpan={21} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={25} className="px-6 py-4 text-center text-muted-foreground">
                                                     No companies found
                                                 </td>
                                             </tr>
@@ -766,6 +846,29 @@ export default function CompanyMasterPage() {
                                                         {company.logo ? (
                                                             // eslint-disable-next-line @next/next/no-img-element
                                                             <img src={company.logo} alt="Logo" className="w-10 h-10 object-contain mx-auto" />
+                                                        ) : (
+                                                            <span className="text-xs text-muted-foreground">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">
+                                                            {company.billing_address === "Y" ? "Yes" : company.billing_address === "N" ? "No" : "-"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">
+                                                            {company.shipping_address === "Y" ? "Yes" : company.shipping_address === "N" ? "No" : "-"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground max-w-[200px] truncate block" title={company.po_terms_and_conditions}>
+                                                            {company.po_terms_and_conditions || "-"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        {company.po_image ? (
+                                                            // eslint-disable-next-line @next/next/no-img-element
+                                                            <img src={company.po_image} alt="PO Image" className="w-10 h-10 object-cover rounded-full mx-auto" />
                                                         ) : (
                                                             <span className="text-xs text-muted-foreground">-</span>
                                                         )}
@@ -1200,6 +1303,100 @@ export default function CompanyMasterPage() {
                                                 Active
                                             </label>
                                         </div>
+
+                                        {/* PO Details Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                PO Details
+                                            </h3>
+                                        </div>
+
+                                        {/* Billing Address */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Billing Address
+                                            </label>
+                                            <Select
+                                                value={formData.billing_address}
+                                                onValueChange={(value) => setFormData(prev => ({ ...prev, billing_address: value }))}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Y">Yes</SelectItem>
+                                                    <SelectItem value="N">No</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Shipping Address */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Shipping Address
+                                            </label>
+                                            <Select
+                                                value={formData.shipping_address}
+                                                onValueChange={(value) => setFormData(prev => ({ ...prev, shipping_address: value }))}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Y">Yes</SelectItem>
+                                                    <SelectItem value="N">No</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* PO Terms and Conditions */}
+                                        <div className="col-span-2">
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                PO Terms & Conditions
+                                            </label>
+                                            <textarea
+                                                name="po_terms_and_conditions"
+                                                value={formData.po_terms_and_conditions}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, po_terms_and_conditions: e.target.value }))}
+                                                placeholder="Enter PO terms and conditions"
+                                                maxLength={500}
+                                                rows={3}
+                                                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                            />
+                                        </div>
+
+                                        {/* PO Image */}
+                                        <div className="col-span-2">
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                PO Image
+                                            </label>
+                                            <div className="flex items-center gap-4">
+                                                {formData.po_image && (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img
+                                                        src={formData.po_image}
+                                                        alt="PO Image Preview"
+                                                        className="w-12 h-12 rounded object-cover border"
+                                                    />
+                                                )}
+                                                <input
+                                                    ref={poImageInputRef}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handlePoImageUpload}
+                                                    className="hidden"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() => poImageInputRef.current?.click()}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <Upload className="w-4 h-4" />
+                                                    Upload PO Image
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">
                                         <Button
@@ -1538,6 +1735,100 @@ export default function CompanyMasterPage() {
                                             <label htmlFor="edit-active" className="text-sm font-semibold text-foreground cursor-pointer">
                                                 Active
                                             </label>
+                                        </div>
+
+                                        {/* PO Details Section */}
+                                        <div className="col-span-2 mt-4">
+                                            <h3 className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-4 border-b pb-2">
+                                                PO Details
+                                            </h3>
+                                        </div>
+
+                                        {/* Billing Address */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Billing Address
+                                            </label>
+                                            <Select
+                                                value={formData.billing_address}
+                                                onValueChange={(value) => setFormData(prev => ({ ...prev, billing_address: value }))}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Y">Yes</SelectItem>
+                                                    <SelectItem value="N">No</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Shipping Address */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Shipping Address
+                                            </label>
+                                            <Select
+                                                value={formData.shipping_address}
+                                                onValueChange={(value) => setFormData(prev => ({ ...prev, shipping_address: value }))}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Y">Yes</SelectItem>
+                                                    <SelectItem value="N">No</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* PO Terms and Conditions */}
+                                        <div className="col-span-2">
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                PO Terms & Conditions
+                                            </label>
+                                            <textarea
+                                                name="po_terms_and_conditions"
+                                                value={formData.po_terms_and_conditions}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, po_terms_and_conditions: e.target.value }))}
+                                                placeholder="Enter PO terms and conditions"
+                                                maxLength={500}
+                                                rows={3}
+                                                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                            />
+                                        </div>
+
+                                        {/* PO Image */}
+                                        <div className="col-span-2">
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                PO Image
+                                            </label>
+                                            <div className="flex items-center gap-4">
+                                                {formData.po_image && (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img
+                                                        src={formData.po_image}
+                                                        alt="PO Image Preview"
+                                                        className="w-12 h-12 rounded object-cover border"
+                                                    />
+                                                )}
+                                                <input
+                                                    ref={poImageInputRef}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handlePoImageUpload}
+                                                    className="hidden"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() => poImageInputRef.current?.click()}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <Upload className="w-4 h-4" />
+                                                    Upload PO Image
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-border">

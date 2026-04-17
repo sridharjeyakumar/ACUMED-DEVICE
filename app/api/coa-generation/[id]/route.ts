@@ -42,6 +42,21 @@ export async function PUT(
     }
 
     if (mode === 'approval') {
+      if (!headerData.review_by_user_id) {
+        return NextResponse.json({ error: 'review_by_user_id is required' }, { status: 400 });
+      }
+      if (!headerData.review_date_time) {
+        return NextResponse.json({ error: 'review_date_time is required' }, { status: 400 });
+      }
+      const reviewDT = new Date(headerData.review_date_time);
+      const enteredDT = new Date(existing.entered_date_time);
+      const nowDT = new Date();
+      if (reviewDT < enteredDT) {
+        return NextResponse.json({ error: 'review_date_time must be >= entered_date_time' }, { status: 400 });
+      }
+      if (reviewDT > nowDT) {
+        return NextResponse.json({ error: 'review_date_time cannot be in the future' }, { status: 400 });
+      }
       await (COAHeader as any).updateOne(
         { coa_no: id },
         {
@@ -49,6 +64,8 @@ export async function PUT(
             approval_remarks: headerData.approval_remarks,
             approved_by_user_id: headerData.approved_by_user_id,
             approved_date_time: new Date(),
+            review_by_user_id: headerData.review_by_user_id,
+            review_date_time: reviewDT,
             status: headerData.status,
           },
         }

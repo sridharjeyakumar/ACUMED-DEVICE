@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, ChevronDown, ChevronUp, X, CheckCircle2, Printer } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { coaGenerationAPI } from "@/services/api";
+import { coaGenerationAPI, userAPI, companyAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -29,6 +29,8 @@ interface COAHeader {
   approval_remarks?: string;
   approved_by_user_id?: string;
   approved_date_time?: string;
+  review_by_user_id?: string;
+  review_date_time?: string;
   status: string;
 }
 
@@ -76,6 +78,13 @@ const RESULT_BADGE: Record<string, string> = {
   P: 'bg-green-50 text-green-700',
   F: 'bg-red-50 text-red-700',
 };
+
+function toDateTimeLocal(d: string | Date | undefined): string {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return '';
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}T${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+}
 
 /** Auto-compute actual_result from the expected_result type */
 function computeActualResult(row: DetailRow): string {
@@ -141,6 +150,7 @@ export default function COAGenerationPage() {
   const [printCOA,            setPrintCOA]            = useState<COAHeader | null>(null);
   const [printDetails,        setPrintDetails]        = useState<any[]>([]);
   const [printMetaMap,        setPrintMetaMap]        = useState<Record<number, any>>({});
+  const [printCompany,        setPrintCompany]        = useState<any>(null);
   const [selectedCOA,         setSelectedCOA]         = useState<COAHeader | null>(null);
 
   // Add / edit form state
@@ -159,8 +169,11 @@ export default function COAGenerationPage() {
   const [detailRows, setDetailRows] = useState<DetailRow[]>([]);
 
   // Approval form
-  const [approvalRemarks,  setApprovalRemarks]  = useState('');
-  const [approvalDetails,  setApprovalDetails]  = useState<DetailRow[]>([]);
+  const [approvalRemarks,    setApprovalRemarks]    = useState('');
+  const [approvalDetails,    setApprovalDetails]    = useState<DetailRow[]>([]);
+  const [reviewByUserId,     setReviewByUserId]     = useState('');
+  const [reviewDateTime,     setReviewDateTime]     = useState('');
+  const [usersList,          setUsersList]          = useState<{ user_id: string }[]>([]);
 
   // ── Load list ───────────────────────────────────────────────────────────────
 
@@ -371,11 +384,23 @@ export default function COAGenerationPage() {
     }
   };
 
+  // ── Load users when approval modal opens ────────────────────────────────────
+
+  useEffect(() => {
+    if (isApprovalModalOpen && usersList.length === 0) {
+      userAPI.getAll()
+        .then((data: any) => setUsersList(Array.isArray(data) ? data : []))
+        .catch(() => setUsersList([]));
+    }
+  }, [isApprovalModalOpen]);
+
   // ── Open Approval ───────────────────────────────────────────────────────────
 
   const handleOpenApproval = async (coa: COAHeader) => {
     setSelectedCOA(coa);
     setApprovalRemarks('');
+    setReviewByUserId('');
+    setReviewDateTime(toDateTimeLocal(new Date()));
     try {
       const [res, items] = await Promise.all([
         coaGenerationAPI.getById(coa.coa_no),
@@ -411,12 +436,33 @@ export default function COAGenerationPage() {
       toast({ title: 'Required', description: 'Approval remarks are required', variant: 'destructive' });
       return;
     }
+    if (!reviewByUserId) {
+      toast({ title: 'Required', description: 'Review By User ID is required', variant: 'destructive' });
+      return;
+    }
+    if (!reviewDateTime) {
+      toast({ title: 'Required', description: 'Review Date & Time is required', variant: 'destructive' });
+      return;
+    }
+    const reviewDT = new Date(reviewDateTime);
+    const enteredDT = new Date(selectedCOA.entered_date_time);
+    const nowDT = new Date();
+    if (reviewDT < enteredDT) {
+      toast({ title: 'Invalid Date', description: 'Review Date & Time must be on or after Entered Date & Time', variant: 'destructive' });
+      return;
+    }
+    if (reviewDT > nowDT) {
+      toast({ title: 'Invalid Date', description: 'Review Date & Time cannot be in the future', variant: 'destructive' });
+      return;
+    }
     try {
       await coaGenerationAPI.update(selectedCOA.coa_no, {
         mode: 'approval',
         status: action,
         approval_remarks: approvalRemarks,
         approved_by_user_id: userId,
+        review_by_user_id: reviewByUserId,
+        review_date_time: reviewDateTime,
       });
       toast({
         title: action === 'A' ? 'Approved' : 'Cancelled',
@@ -436,15 +482,19 @@ export default function COAGenerationPage() {
     setPrintCOA(coa);
     setPrintDetails([]);
     setPrintMetaMap({});
+    setPrintCompany(null);
     try {
-      const [res, items] = await Promise.all([
+      const [res, items, allCompanies] = await Promise.all([
         coaGenerationAPI.getById(coa.coa_no),
         coaGenerationAPI.getChecklistItems(coa.coa_checklist_id).catch(() => []),
+        companyAPI.getAll().catch(() => []),
       ]);
       const meta: Record<number, any> = {};
       (Array.isArray(items) ? items : []).forEach((item: any) => { meta[item.checklist_sno] = item; });
       setPrintMetaMap(meta);
       setPrintDetails(res.details || []);
+      const corp = (Array.isArray(allCompanies) ? allCompanies : []).find((c: any) => c.comp_id === 'CORP') || null;
+      setPrintCompany(corp);
     } catch {
       setPrintDetails([]);
     }
@@ -731,8 +781,20 @@ export default function COAGenerationPage() {
                       <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">COA Date</th>
                       <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Batch No.</th>
                       <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Product ID</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Manufacture Date</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Expiry Date</th>
+
+
                       <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Checklist ID</th>
                       <th className="px-4 py-3 text-sm font-semibold text-center whitespace-nowrap">Overall Result</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Remark</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Entered By UserID</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Entered By Date & Time</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Reviewed By UserID</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Reviewed Date & Time</th>
+
+
+
                       <th className="px-4 py-3 text-sm font-semibold text-center whitespace-nowrap">Status</th>
                       <th className="px-4 py-3 text-sm font-semibold text-center whitespace-nowrap">Actions</th>
                     </tr>
@@ -766,12 +828,19 @@ export default function COAGenerationPage() {
                             <span className="font-mono text-sm">{coa.batch_no}</span>
                           </td>
                           <td className="px-4 py-4 text-sm">{coa.product_id}</td>
+                          <td className="px-4 py-4 text-sm">{fmt(coa.manufactured_date)}</td> 
+                          <td className="px-4 py-4 text-sm">{fmt(coa.expiry_date)}</td>
                           <td className="px-4 py-4 text-sm font-mono">{coa.coa_checklist_id}</td>
                           <td className="px-4 py-4 text-center">
                             <span className={`px-2 py-0.5 rounded text-xs font-semibold ${RESULT_BADGE[coa.coa_overall_result] || ''}`}>
                               {coa.coa_overall_result === 'P' ? 'Pass' : 'Fail'}
                             </span>
                           </td>
+                          <td className="px-4 py-4 text-sm">{coa.remarks || '-'}</td>
+                          <td className="px-4 py-4 text-sm font-mono">{coa.entered_by_user_id}</td>
+                          <td className="px-4 py-4 text-sm">{fmtDT(coa.entered_date_time)}</td>
+                          <td className="px-4 py-4 text-sm font-mono">{coa.review_by_user_id || '-'}</td>
+                          <td className="px-4 py-4 text-sm">{coa.review_date_time ? fmtDT(coa.review_date_time) : '-'}</td>
                           <td className="px-4 py-4 text-center">
                             <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_BADGE[coa.status] || ''}`}>
                               {STATUS_LABEL[coa.status] || coa.status}
@@ -852,8 +921,10 @@ export default function COAGenerationPage() {
                                 {coa.status !== 'E' && coa.approval_remarks && (
                                   <div className="mt-3 p-3 bg-white rounded border border-border text-xs flex flex-wrap gap-4">
                                     <span><span className="font-semibold text-muted-foreground">Approval Remarks: </span>{coa.approval_remarks}</span>
-                                    {coa.approved_by_user_id && <span><span className="font-semibold text-muted-foreground">By: </span>{coa.approved_by_user_id}</span>}
+                                    {coa.approved_by_user_id && <span><span className="font-semibold text-muted-foreground">Approved By: </span>{coa.approved_by_user_id}</span>}
                                     {coa.approved_date_time && <span className="text-muted-foreground">{fmtDT(coa.approved_date_time)}</span>}
+                                    {coa.review_by_user_id && <span><span className="font-semibold text-muted-foreground">Reviewed By: </span>{coa.review_by_user_id}</span>}
+                                    {coa.review_date_time && <span className="text-muted-foreground">Review: {fmtDT(coa.review_date_time)}</span>}
                                   </div>
                                 )}
                               </td>
@@ -1014,6 +1085,39 @@ export default function COAGenerationPage() {
                       <label className="block text-xs font-semibold text-foreground mb-1">Approved Date/Time</label>
                       <Input value={fmtDT(new Date().toISOString())} disabled className="bg-gray-50 text-sm" />
                     </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-foreground mb-1">
+                        Review By User ID <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={reviewByUserId}
+                        onChange={e => setReviewByUserId(e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-amber-500 outline-none text-sm"
+                        required
+                      >
+                        <option value="">Select User</option>
+                        {usersList.map((u: any) => (
+                          <option key={u.user_id} value={u.user_id}>{u.user_id}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-foreground mb-1">
+                        Review Date & Time <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={reviewDateTime}
+                        onChange={e => setReviewDateTime(e.target.value)}
+                        min={toDateTimeLocal(selectedCOA?.entered_date_time)}
+                        max={toDateTimeLocal(new Date())}
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-amber-500 outline-none text-sm"
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Must be between Entered Date/Time and now
+                      </p>
+                    </div>
                   </div>
 
                   {/* Buttons */}
@@ -1047,16 +1151,22 @@ export default function COAGenerationPage() {
           <>
             {/* Print CSS */}
             <style>{`
+              @page {
+                margin: 0;
+                size: A4;
+              }
               @media print {
                 body * { visibility: hidden !important; }
                 #coa-print-content, #coa-print-content * { visibility: visible !important; }
                 #coa-print-content {
-                  position: fixed !important;
+                  position: absolute !important;
                   top: 0; left: 0;
-                  width: 100%; height: auto;
-                  padding: 28px 32px;
+                  width: 210mm;
+                  min-height: 297mm;
+                  padding: 12mm 14mm;
                   background: white;
                   font-family: Arial, sans-serif;
+                  box-sizing: border-box;
                 }
               }
             `}</style>
@@ -1080,65 +1190,62 @@ export default function COAGenerationPage() {
                   <div
                     id="coa-print-content"
                     className="bg-white mx-auto shadow-md"
-                    style={{ width: '100%', maxWidth: '720px', padding: '28px 32px', fontFamily: 'Arial, sans-serif', fontSize: '12px', color: '#000', lineHeight: '1.4' }}
+                    style={{ width: '100%', maxWidth: '760px', padding: '32px 40px', fontFamily: 'Arial, sans-serif', fontSize: '13px', color: '#000', lineHeight: '1.6' }}
                   >
                     {/* ── Company header ── */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
-                      <tbody>
-                        <tr>
-                          <td style={{ width: '28%', border: '1px solid #000', padding: '10px 12px', verticalAlign: 'middle', textAlign: 'center' }}>
-                            <div style={{ width: '90px', height: '56px', border: '1px solid #aaa', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', fontSize: '10px', color: '#777' }}>
-                              Company Logo
-                            </div>
-                          </td>
-                          <td style={{ border: '1px solid #000', padding: '10px 12px', textAlign: 'center', verticalAlign: 'middle' }}>
-                            <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>&lt; COMPANY NAME &gt;</div>
-                            <div style={{ fontSize: '11px', color: '#444' }}>&lt; Address line 1 &gt;</div>
-                            <div style={{ fontSize: '11px', color: '#444' }}>&lt; Address line 2 &gt;</div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    <div style={{ position: 'relative', textAlign: 'center', marginBottom: '14px', borderBottom: '2px solid #000', paddingBottom: '12px', minHeight: '64px' }}>
+                      <div style={{ position: 'absolute', left: 0, top: 0 }}>
+                        {printCompany?.logo
+                          ? <img src={printCompany.logo} style={{ height: '56px', maxWidth: '100px', objectFit: 'contain' }} alt="Logo" />
+                          : <div style={{ fontSize: '10px', color: '#555' }}>Company Logo</div>
+                        }
+                      </div>
+                      <div style={{ display: 'inline-block', textAlign: 'center' }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '4px' }}>{printCompany?.company_name || '< COMPANY NAME >'}</div>
+                        {printCompany?.address_1 && <div style={{ fontSize: '12px' }}>{printCompany.address_1}</div>}
+                        {printCompany?.address_2 && <div style={{ fontSize: '12px' }}>{printCompany.address_2}</div>}
+                      </div>
+                    </div>
 
                     {/* ── Title ── */}
-                    <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '15px', border: '1px solid #000', padding: '8px 12px', marginBottom: '12px', letterSpacing: '2px' }}>
+                    <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '16px', borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: '10px 12px', marginBottom: '16px', letterSpacing: '3px' }}>
                       CERTIFICATE OF ANALYSIS
                     </div>
 
                     {/* ── Header fields ── */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '12px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
                       <tbody>
                         {[
-                          { l1: 'COA No.', v1: printCOA.coa_no, l2: 'COA Date', v2: fmt(printCOA.coa_date) },
-                          { l1: 'Product', v1: printCOA.product_id, l2: 'Batch No.', v2: printCOA.batch_no },
-                          { l1: 'Checklist', v1: printCOA.coa_checklist_id, l2: 'Overall Result', v2: printCOA.coa_overall_result === 'P' ? 'Pass' : 'Fail', v2Bold: true, v2Color: printCOA.coa_overall_result === 'P' ? '#166534' : '#991b1b' },
-                          { l1: 'Manufactured Date', v1: fmt(printCOA.manufactured_date), l2: 'Expiry Date', v2: fmt(printCOA.expiry_date) },
+                          { l1: 'COA No.',        v1: printCOA.coa_no,                                      l2: 'COA Date',          v2: fmt(printCOA.coa_date) },
+                          { l1: 'Product',         v1: printCOA.product_id,                                  l2: 'Batch No.',         v2: printCOA.batch_no },
+                          { l1: 'Checklist',       v1: printCOA.coa_checklist_id,                            l2: 'Manufactured Date', v2: fmt(printCOA.manufactured_date) },
+                          { l1: 'Overall Result',  v1: printCOA.coa_overall_result === 'P' ? 'Pass' : 'Fail', v1Bold: true, l2: 'Expiry Date', v2: fmt(printCOA.expiry_date) },
                         ].map((row, i) => (
                           <tr key={i}>
-                            <td style={{ width: '20%', padding: '5px 8px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{row.l1}</td>
-                            <td style={{ width: '30%', border: '1px solid #000', padding: '5px 8px', background: '#fff9e6' }}>{row.v1}</td>
-                            <td style={{ width: '20%', padding: '5px 8px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{row.l2}</td>
-                            <td style={{ width: '30%', border: '1px solid #000', padding: '5px 8px', background: '#fff9e6', fontWeight: (row as any).v2Bold ? 'bold' : 'normal', color: (row as any).v2Color || '#000' }}>{row.v2}</td>
+                            <td style={{ width: '20%', padding: '7px 10px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{row.l1}</td>
+                            <td style={{ width: '30%', border: '1px solid #000', padding: '7px 10px', fontWeight: (row as any).v1Bold ? 'bold' : 'normal' }}>{row.v1}</td>
+                            <td style={{ width: '20%', padding: '7px 10px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{row.l2}</td>
+                            <td style={{ width: '30%', border: '1px solid #000', padding: '7px 10px' }}>{row.v2}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
 
                     {/* ── Detail table ── */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '12px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
                       <thead>
-                        <tr style={{ background: '#d1d5db' }}>
-                          <th style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center', width: '8%', fontWeight: 'bold' }}>Checklist Sno</th>
-                          <th style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center', width: '32%', fontWeight: 'bold' }}>Checklist Parameter</th>
-                          <th style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center', width: '22%', fontWeight: 'bold' }}>Expected Result</th>
-                          <th style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center', width: '22%', fontWeight: 'bold' }}>Actual Result</th>
-                          <th style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center', width: '16%', fontWeight: 'bold' }}>Status</th>
+                        <tr style={{ background: '#e5e5e5' }}>
+                          <th style={{ border: '1px solid #000', padding: '8px 10px', textAlign: 'center', width: '8%', fontWeight: 'bold' }}>S.No</th>
+                          <th style={{ border: '1px solid #000', padding: '8px 10px', textAlign: 'center', width: '32%', fontWeight: 'bold' }}>Test Parameter</th>
+                          <th style={{ border: '1px solid #000', padding: '8px 10px', textAlign: 'center', width: '22%', fontWeight: 'bold' }}>Expected Result</th>
+                          <th style={{ border: '1px solid #000', padding: '8px 10px', textAlign: 'center', width: '22%', fontWeight: 'bold' }}>Actual Result</th>
+                          <th style={{ border: '1px solid #000', padding: '8px 10px', textAlign: 'center', width: '16%', fontWeight: 'bold' }}>Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         {printDetails.length === 0 ? (
                           <tr>
-                            <td colSpan={5} style={{ border: '1px solid #000', padding: '12px', textAlign: 'center', color: '#777' }}>No detail records</td>
+                            <td colSpan={5} style={{ border: '1px solid #000', padding: '14px', textAlign: 'center' }}>No detail records</td>
                           </tr>
                         ) : printDetails.map((d: any) => {
                           const meta = printMetaMap[d.checklist_sno] || {};
@@ -1146,7 +1253,7 @@ export default function COAGenerationPage() {
 
                           let expectedDisplay = '';
                           if (er === 'P') expectedDisplay = 'Pass / Fail';
-                          else if (er === 'E') expectedDisplay = `= ${meta.expected_value_1 ?? ''}`;
+                          else if (er === 'E') expectedDisplay = `${meta.expected_value_1 ?? ''}`;
                           else if (er === 'R') expectedDisplay = `${meta.expected_value_1 ?? ''} to ${meta.expected_value_2 ?? ''}`;
                           else if (er === 'T') expectedDisplay = meta.expected_text || '';
                           else expectedDisplay = meta.expected_result || '';
@@ -1159,11 +1266,11 @@ export default function COAGenerationPage() {
                           const passed = d.actual_result === 'P';
                           return (
                             <tr key={d.checklist_sno}>
-                              <td style={{ border: '1px solid #000', padding: '5px 8px', textAlign: 'center' }}>{d.checklist_sno}</td>
-                              <td style={{ border: '1px solid #000', padding: '5px 8px' }}>{meta.checklist_parameter || '-'}</td>
-                              <td style={{ border: '1px solid #000', padding: '5px 8px', textAlign: 'center' }}>{expectedDisplay}</td>
-                              <td style={{ border: '1px solid #000', padding: '5px 8px', textAlign: 'center' }}>{actualDisplay}</td>
-                              <td style={{ border: '1px solid #000', padding: '5px 8px', textAlign: 'center', fontWeight: 'bold', color: passed ? '#166534' : '#991b1b' }}>
+                              <td style={{ border: '1px solid #000', padding: '7px 10px', textAlign: 'center' }}>{d.checklist_sno}</td>
+                              <td style={{ border: '1px solid #000', padding: '7px 10px' }}>{meta.checklist_parameter || '-'}</td>
+                              <td style={{ border: '1px solid #000', padding: '7px 10px', textAlign: 'center' }}>{expectedDisplay}</td>
+                              <td style={{ border: '1px solid #000', padding: '7px 10px', textAlign: 'center' }}>{actualDisplay}</td>
+                              <td style={{ border: '1px solid #000', padding: '7px 10px', textAlign: 'center', fontWeight: 'bold' }}>
                                 {passed ? 'Pass' : 'Fail'}
                               </td>
                             </tr>
@@ -1173,64 +1280,52 @@ export default function COAGenerationPage() {
                     </table>
 
                     {/* ── Remarks ── */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '4px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px' }}>
                       <tbody>
                         <tr>
-                          <td style={{ padding: '5px 8px', fontWeight: 'bold', width: '18%', whiteSpace: 'nowrap' }}>Remarks :</td>
-                          <td style={{ border: '1px solid #000', padding: '5px 8px', minHeight: '24px' }}>{printCOA.remarks || '\u00A0'}</td>
+                          <td style={{ padding: '7px 10px', fontWeight: 'bold', width: '18%', whiteSpace: 'nowrap' }}>Remarks :</td>
+                          <td style={{ border: '1px solid #000', padding: '7px 10px', minHeight: '32px' }}>{printCOA.remarks || '\u00A0'}</td>
                         </tr>
                       </tbody>
                     </table>
 
                     {/* ── Approval Remarks ── */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
                       <tbody>
                         <tr>
-                          <td colSpan={2} style={{ border: '1px solid #000', padding: '6px 8px', background: '#fde8c8', fontWeight: 'bold', fontSize: '12px' }}>
-                            Approval Remarks
-                          </td>
-                        </tr>
-                        <tr>
-                          <td colSpan={2} style={{ border: '1px solid #000', padding: '6px 8px', background: '#fef3e2', minHeight: '28px' }}>
-                            {printCOA.approval_remarks || '\u00A0'}
-                          </td>
+                          <td style={{ padding: '7px 10px', fontWeight: 'bold', width: '18%', whiteSpace: 'nowrap' }}>Approval Remarks :</td>
+                          <td style={{ border: '1px solid #000', padding: '7px 10px', minHeight: '32px' }}>{printCOA.approval_remarks || '\u00A0'}</td>
                         </tr>
                       </tbody>
                     </table>
 
                     {/* ── Signature section ── */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
                       <tbody>
                         <tr>
-                          <td style={{ width: '33.3%', border: '1px solid #000', padding: '5px 10px', textAlign: 'center', fontWeight: 'bold', background: '#f3f4f6' }}>Executed By :</td>
-                          <td style={{ width: '33.3%', border: '1px solid #000', padding: '5px 10px', textAlign: 'center', fontWeight: 'bold', background: '#f3f4f6' }}>Reviewed By :</td>
-                          <td style={{ width: '33.4%', border: '1px solid #000', padding: '5px 10px', textAlign: 'center', fontWeight: 'bold', background: '#f3f4f6' }}>Approved By :</td>
+                          <td style={{ width: '33.3%', border: '1px solid #000', padding: '8px 12px', textAlign: 'center', fontWeight: 'bold', background: '#e5e5e5' }}>Executed By :</td>
+                          <td style={{ width: '33.3%', border: '1px solid #000', padding: '8px 12px', textAlign: 'center', fontWeight: 'bold', background: '#e5e5e5' }}>Reviewed By :</td>
+                          <td style={{ width: '33.4%', border: '1px solid #000', padding: '8px 12px', textAlign: 'center', fontWeight: 'bold', background: '#e5e5e5' }}>Approved By :</td>
                         </tr>
                         <tr>
-                          <td style={{ border: '1px solid #000', padding: '10px 12px', verticalAlign: 'top' }}>
-                            <div style={{ marginBottom: '6px', fontSize: '11px' }}>Name :</div>
-                            <div style={{ border: '1px solid #aaa', padding: '4px 8px', background: '#fff9e6', marginBottom: '10px', minHeight: '22px' }}>{printCOA.entered_by_user_id}</div>
-                            <div style={{ marginBottom: '6px', fontSize: '11px' }}>Date :</div>
-                            <div style={{ border: '1px solid #aaa', padding: '4px 8px', background: '#fff9e6', minHeight: '22px' }}>{fmt(printCOA.entered_date_time)}</div>
+                          <td style={{ border: '1px solid #000', padding: '14px 16px', verticalAlign: 'top' }}>
+                            <div style={{ border: '1px solid #aaa', padding: '6px 10px', marginBottom: '16px', minHeight: '28px' }}>{printCOA.entered_by_user_id}</div>
+                            <div style={{ border: '1px solid #aaa', padding: '6px 10px', minHeight: '28px' }}>{fmt(printCOA.entered_date_time)}</div>
                           </td>
-                          <td style={{ border: '1px solid #000', padding: '10px 12px', verticalAlign: 'top' }}>
-                            <div style={{ marginBottom: '6px', fontSize: '11px' }}>Name :</div>
-                            <div style={{ border: '1px solid #aaa', padding: '4px 8px', marginBottom: '10px', minHeight: '22px' }}>&nbsp;</div>
-                            <div style={{ marginBottom: '6px', fontSize: '11px' }}>Date :</div>
-                            <div style={{ border: '1px solid #aaa', padding: '4px 8px', minHeight: '22px' }}>&nbsp;</div>
+                          <td style={{ border: '1px solid #000', padding: '14px 16px', verticalAlign: 'top' }}>
+                            <div style={{ border: '1px solid #aaa', padding: '6px 10px', marginBottom: '16px', minHeight: '28px' }}>{printCOA.review_by_user_id || '\u00A0'}</div>
+                            <div style={{ border: '1px solid #aaa', padding: '6px 10px', minHeight: '28px' }}>{printCOA.review_date_time ? fmt(printCOA.review_date_time) : '\u00A0'}</div>
                           </td>
-                          <td style={{ border: '1px solid #000', padding: '10px 12px', verticalAlign: 'top' }}>
-                            <div style={{ marginBottom: '6px', fontSize: '11px' }}>Name :</div>
-                            <div style={{ border: '1px solid #aaa', padding: '4px 8px', background: '#fff9e6', marginBottom: '10px', minHeight: '22px' }}>{printCOA.approved_by_user_id || '\u00A0'}</div>
-                            <div style={{ marginBottom: '6px', fontSize: '11px' }}>Date :</div>
-                            <div style={{ border: '1px solid #aaa', padding: '4px 8px', background: '#fff9e6', minHeight: '22px' }}>{printCOA.approved_date_time ? fmt(printCOA.approved_date_time) : '\u00A0'}</div>
+                          <td style={{ border: '1px solid #000', padding: '14px 16px', verticalAlign: 'top' }}>
+                            <div style={{ border: '1px solid #aaa', padding: '6px 10px', marginBottom: '16px', minHeight: '28px' }}>{printCOA.approved_by_user_id || '\u00A0'}</div>
+                            <div style={{ border: '1px solid #aaa', padding: '6px 10px', minHeight: '28px' }}>{printCOA.approved_date_time ? fmt(printCOA.approved_date_time) : '\u00A0'}</div>
                           </td>
                         </tr>
                       </tbody>
                     </table>
 
                     {/* ── Footer ── */}
-                    <div style={{ fontSize: '10px', fontStyle: 'italic', color: '#666', marginTop: '6px' }}>
+                    <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#000', marginTop: '10px' }}>
                       * This is a system generated COA
                     </div>
                   </div>

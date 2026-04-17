@@ -83,6 +83,8 @@ export async function PUT(
     if (body.contact_email_id !== undefined) updateData.contact_email_id = cleanValue(body.contact_email_id);
     if (body.website !== undefined) updateData.website = cleanValue(body.website);
     if (body.active !== undefined) updateData.active = body.active !== false;
+    if (body.default_shipping_instruction !== undefined) updateData.default_shipping_instruction = cleanValue(body.default_shipping_instruction);
+    if (body.default_terms_of_payment !== undefined) updateData.default_terms_of_payment = cleanValue(body.default_terms_of_payment);
 
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();

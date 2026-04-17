@@ -20,6 +20,10 @@ export interface IPurchaseOrder extends Document {
   approved_by_user_id?: string;     // Char(5)
   approved_date_time?: Date;        // Date & Time
   status: string;                   // Char(1) - E / A / X / C
+  po_basic_amount?: number;             // N(8,2) 
+  po_gst_amount?: number;               // N(8,2)
+  po_total_amount?: number;             // N(8,2)
+  mail_sent_status?: string;              // Char(1) 
 }
 
 const PurchaseOrderSchema: Schema = new Schema({
@@ -115,6 +119,28 @@ const PurchaseOrderSchema: Schema = new Schema({
     uppercase: true,
     enum: ['E', 'A', 'X', 'C'], // Entered / Active / Cancelled / Closed
     default: 'E',
+  },
+  po_basic_amount: {
+    type: Number,
+    required: false,
+    min: 0,
+  },
+  po_gst_amount: {
+    type: Number,
+    required: false,
+    min: 0,
+  },
+  po_total_amount: {
+    type: Number,
+    required: false,
+    min: 0,
+  },
+  mail_sent_status: {
+    type: String,
+    required: false,
+    maxlength: 1,
+    trim: true,
+    uppercase: true,
   },
 }, {
   timestamps: true,

@@ -48,13 +48,22 @@ export async function POST(request: NextRequest) {
         const errors: string[] = [];
         if (!body.material_doc_no?.trim()) errors.push('material_doc_no is required.');
         if (!body.material_id?.trim())     errors.push('material_id is required.');
-        if (body.invoice_total_nett_qty == null || isNaN(Number(body.invoice_total_nett_qty)))
-            errors.push('invoice_total_nett_qty is required and must be a number.');
-        if (!body.uom?.trim()) errors.push('uom is required.');
+        if (!body.uom?.trim())             errors.push('uom is required.');
+
+        const grossQty = Number(body.invoice_total_gross_qty);
+        const tareQty  = Number(body.invoice_total_tare_qty);
+        if (body.invoice_total_gross_qty == null || isNaN(grossQty) || grossQty <= 0)
+            errors.push('invoice_total_gross_qty is required and must be > 0.');
+        if (body.invoice_total_tare_qty == null || isNaN(tareQty) || tareQty <= 0)
+            errors.push('invoice_total_tare_qty is required and must be > 0.');
+        else if (!isNaN(grossQty) && tareQty >= grossQty)
+            errors.push('invoice_total_tare_qty must be less than invoice_total_gross_qty.');
 
         if (errors.length > 0) {
             return NextResponse.json({ error: errors.join(' | ') }, { status: 422 });
         }
+
+        const nettQty = grossQty - tareQty;
 
         // Verify parent header exists
         const header = await GoodsReceiptHeader.findOne({
@@ -82,7 +91,9 @@ export async function POST(request: NextRequest) {
         const detail = new GoodsReceiptDetail({
             material_doc_no:        body.material_doc_no.trim().toUpperCase(),
             material_id:            body.material_id.trim().toUpperCase(),
-            invoice_total_nett_qty: Number(body.invoice_total_nett_qty),
+            invoice_total_gross_qty: grossQty,
+            invoice_total_tare_qty:  tareQty,
+            invoice_total_nett_qty:  nettQty,
             uom:                    body.uom.trim().toUpperCase(),
             total_pockets:          body.total_pockets != null ? Number(body.total_pockets) : undefined,
             total_rolls:            body.total_rolls   != null ? Number(body.total_rolls)   : undefined,

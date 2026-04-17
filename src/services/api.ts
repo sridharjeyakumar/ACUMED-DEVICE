@@ -1083,6 +1083,11 @@ export const purchaseOrderDetailAPI = {
     update: (id: string, data: any) => fetchAPI(`/purchase-order-details/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => fetchAPI(`/purchase-order-details/${id}`, { method: 'DELETE' }),
     deleteByPoNo: (poNo: string) => fetchAPI(`/purchase-order-details?po_no=${encodeURIComponent(poNo)}`, { method: 'DELETE' }),
+    addGrQty: (poNo: string, materialId: string, addGrQty: number) =>
+        fetchAPI(`/purchase-order-details?po_no=${encodeURIComponent(poNo)}&material_id=${encodeURIComponent(materialId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ add_gr_qty: addGrQty }),
+        }),
 };
 
 export const productMovementAPI = {

@@ -48,8 +48,15 @@ export async function PUT(
 
         // Validate updatable numerics
         const errors: string[] = [];
-        if (body.invoice_total_nett_qty != null && isNaN(Number(body.invoice_total_nett_qty)))
-            errors.push('invoice_total_nett_qty must be a number.');
+        const grossQty = body.invoice_total_gross_qty != null ? Number(body.invoice_total_gross_qty) : null;
+        const tareQty  = body.invoice_total_tare_qty  != null ? Number(body.invoice_total_tare_qty)  : null;
+
+        if (grossQty !== null && (isNaN(grossQty) || grossQty <= 0))
+            errors.push('invoice_total_gross_qty must be > 0.');
+        if (tareQty !== null && (isNaN(tareQty) || tareQty <= 0))
+            errors.push('invoice_total_tare_qty must be > 0.');
+        if (grossQty !== null && tareQty !== null && tareQty >= grossQty)
+            errors.push('invoice_total_tare_qty must be less than invoice_total_gross_qty.');
         if (body.total_pockets != null && isNaN(Number(body.total_pockets)))
             errors.push('total_pockets must be a number.');
         if (body.total_rolls != null && isNaN(Number(body.total_rolls)))
@@ -59,12 +66,18 @@ export async function PUT(
         }
 
         const updatePayload: Record<string, any> = {};
-        if (body.invoice_total_nett_qty != null) updatePayload.invoice_total_nett_qty = Number(body.invoice_total_nett_qty);
-        if (body.uom)                           updatePayload.uom                     = body.uom.trim().toUpperCase();
-        if (body.total_pockets != null)         updatePayload.total_pockets           = Number(body.total_pockets);
-        if (body.total_rolls != null)           updatePayload.total_rolls             = Number(body.total_rolls);
-        if (body.existing_stock_qty != null)    updatePayload.existing_stock_qty      = Number(body.existing_stock_qty);
-        if (body.existing_total_rolls != null)  updatePayload.existing_total_rolls    = Number(body.existing_total_rolls);
+        if (grossQty !== null) {
+            updatePayload.invoice_total_gross_qty = grossQty;
+            if (tareQty !== null) {
+                updatePayload.invoice_total_tare_qty  = tareQty;
+                updatePayload.invoice_total_nett_qty  = grossQty - tareQty;
+            }
+        }
+        if (body.uom)                           updatePayload.uom                   = body.uom.trim().toUpperCase();
+        if (body.total_pockets != null)         updatePayload.total_pockets         = Number(body.total_pockets);
+        if (body.total_rolls != null)           updatePayload.total_rolls           = Number(body.total_rolls);
+        if (body.existing_stock_qty != null)    updatePayload.existing_stock_qty    = Number(body.existing_stock_qty);
+        if (body.existing_total_rolls != null)  updatePayload.existing_total_rolls  = Number(body.existing_total_rolls);
 
         const updated = await GoodsReceiptDetail.findByIdAndUpdate(
             params.id,

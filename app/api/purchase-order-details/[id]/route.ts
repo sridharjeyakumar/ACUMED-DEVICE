@@ -57,11 +57,17 @@ export async function PUT(
         }
 
         const updatePayload: Record<string, any> = {};
-        if (body.sno != null)           updatePayload.sno           = Number(body.sno);
-        if (body.po_qty != null)        updatePayload.po_qty        = Number(body.po_qty);
-        if (body.uom)                   updatePayload.uom           = body.uom.trim().toUpperCase();
-        if (body.material_spec != null) updatePayload.material_spec = body.material_spec?.trim() || undefined;
-        if (body.remarks != null)       updatePayload.remarks       = body.remarks?.trim() || undefined;
+        if (body.sno != null)                    updatePayload.sno                    = Number(body.sno);
+        if (body.po_qty != null)                 updatePayload.po_qty                 = Number(body.po_qty);
+        if (body.uom)                            updatePayload.uom                    = body.uom.trim().toUpperCase();
+        if (body.material_spec != null)          updatePayload.material_spec          = body.material_spec?.trim() || undefined;
+        if (body.remarks != null)                updatePayload.remarks                = body.remarks?.trim() || undefined;
+        if (body.unit_price != null)             updatePayload.unit_price             = Number(body.unit_price);
+        if (body.basic_amount != null)           updatePayload.basic_amount           = Number(body.basic_amount);
+        if (body.gst_percentage != null)         updatePayload.gst_percentage         = Number(body.gst_percentage);
+        if (body.gst_amount != null)             updatePayload.gst_amount             = Number(body.gst_amount);
+        if (body.total_amount != null)           updatePayload.total_amount           = Number(body.total_amount);
+        if (body.expected_delivery_date != null) updatePayload.expected_delivery_date = body.expected_delivery_date ? new Date(body.expected_delivery_date) : undefined;
 
         const updated = await PurchaseOrderDetail.findByIdAndUpdate(
             id,

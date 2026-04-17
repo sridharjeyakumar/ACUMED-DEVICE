@@ -12,10 +12,12 @@ export interface IGoodsReceiptHeader extends Document {
   received_by_emp_id: string;        // Char(5) - Foreign Key
   checked_by_emp_id: string;         // Char(5) - Foreign Key
   remarks?: string;                  // Char(100)
+  supplier_coa?: string;             // Attachment - Supplier COA (base64 or URL)
   last_modified_user_id: string;     // Char(5)
   last_modified_date_time: Date;     // Date
   status: string;                    // Char(1) (e.g., 'A' for Active, 'P' for Pending)
   active: boolean;                   // Virtual field to indicate if the record is active (status === 'A')
+  
 }
 
 const GoodsReceiptHeaderSchema: Schema = new Schema({
@@ -61,7 +63,8 @@ const GoodsReceiptHeaderSchema: Schema = new Schema({
     default: true,
   },
   
-  remarks: { type: String, maxlength: 100, trim: true },
+  remarks:      { type: String, maxlength: 100, trim: true },
+  supplier_coa: { type: String, required: false }, // Attachment - Supplier COA
   last_modified_user_id: { type: String, maxlength: 5 },
   last_modified_date_time: { type: Date, default: Date.now },
   status: { type: String, maxlength: 1, default: '1' }
