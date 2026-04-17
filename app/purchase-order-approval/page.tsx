@@ -325,10 +325,10 @@ export default function PurchaseOrderApprovalPage() {
                 </td>
                 <td style="text-align:center;">${d.po_qty != null ? Number(d.po_qty).toLocaleString('en-IN') : '-'}</td>
                 <td style="text-align:center;">${d.uom}</td>
-                <td style="text-align:center;">${inr(d.unit_price)}</td>
-                <td style="text-align:center;">${inr(d.basic_amount)}</td>
-                <td style="text-align:center;">${d.gst_percentage != null ? `@ ${d.gst_percentage} %` : '-'}</td>
-                <td style="text-align:center;">${inr(d.total_amount)}</td>
+                <td style="text-align:center;">${(d.unit_price)}</td>
+                <td style="text-align:center;">${(d.basic_amount)}</td>
+                <td style="text-align:center;">${d.gst_percentage}</td>
+                <td style="text-align:center;">${(d.total_amount)}</td>
               </tr>`).join('');
 
             const html = `<!DOCTYPE html>
@@ -486,10 +486,10 @@ export default function PurchaseOrderApprovalPage() {
     <thead>
       <tr>
         <th style="width:4%;">S.No</th>
-        <th style="width:30%;">Material</th>
-        <th style="width:7%;">PO Qty</th>
-        <th style="width:5%;">UoM</th>
-        <th style="width:13%;">unit Rate &#8377;</th>
+        <th style="width:27%;">Material</th>
+        <th style="width:10%;">PO Qty</th>
+        <th style="width:7%;">UoM</th>
+        <th style="width:11%;">unit Rate &#8377;</th>
         <th style="width:13%;">Amount &#8377;</th>
         <th style="width:8%;">GST</th>
         <th style="width:13%;">Total &#8377;</th>
@@ -499,9 +499,9 @@ export default function PurchaseOrderApprovalPage() {
       ${detailRowsHtml}
       <tr style="background:#f0f0f0;">
         <td colspan="5" style="text-align:right;font-weight:bold;border:1px solid #555;">TOTAL</td>
-        <td style="text-align:center;font-weight:bold;">&#8377; ${fmtNum(totalBasic)}</td>
-        <td style="text-align:center;font-weight:bold;">&#8377; ${fmtNum(totalGst)}</td>
-        <td style="text-align:center;font-weight:bold;">&#8377; ${fmtNum(totalAmt)}</td>
+        <td style="text-align:center;font-weight:bold;"> ${fmtNum(totalBasic)}</td>
+        <td style="text-align:center;font-weight:bold;"> ${fmtNum(totalGst)}</td>
+        <td style="text-align:center;font-weight:bold;"> ${fmtNum(totalAmt)}</td>
       </tr>
     </tbody>
   </table>
