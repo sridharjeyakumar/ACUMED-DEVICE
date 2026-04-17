@@ -1176,11 +1176,11 @@ export default function COAGenerationPage() {
               <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[94vh] flex flex-col overflow-hidden">
 
                 {/* Modal toolbar */}
-                <div className="bg-gray-800 text-white px-6 py-4 flex items-center justify-between flex-shrink-0 rounded-t-xl">
+                <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between flex-shrink-0 rounded-t-xl">
                   <h2 className="text-base font-bold flex items-center gap-2">
                     <Printer className="w-5 h-5" /> Print Preview — {printCOA.coa_no}
                   </h2>
-                  <button onClick={() => setIsPrintModalOpen(false)} className="text-white hover:bg-gray-700 rounded-lg p-1.5 transition-colors">
+                  <button onClick={() => setIsPrintModalOpen(false)} className="text-white hover:bg-blue-700 rounded-lg p-1.5 transition-colors">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -1193,22 +1193,35 @@ export default function COAGenerationPage() {
                     style={{ width: '100%', maxWidth: '760px', padding: '32px 40px', fontFamily: 'Arial, sans-serif', fontSize: '13px', color: '#000', lineHeight: '1.6' }}
                   >
                     {/* ── Company header ── */}
-                    <div style={{ position: 'relative', textAlign: 'center', marginBottom: '14px', borderBottom: '2px solid #000', paddingBottom: '12px', minHeight: '64px' }}>
+                    <div style={{ position: 'relative', textAlign: 'center', marginBottom: '14px', borderBottom: '2px solid #555', paddingBottom: '12px', minHeight: '54px' }}>
                       <div style={{ position: 'absolute', left: 0, top: 0 }}>
                         {printCompany?.logo
-                          ? <img src={printCompany.logo} style={{ height: '56px', maxWidth: '100px', objectFit: 'contain' }} alt="Logo" />
-                          : <div style={{ fontSize: '10px', color: '#555' }}>Company Logo</div>
+                          ? <img src={printCompany.logo} style={{ height: '44px', maxWidth: '80px', objectFit: 'contain' }} alt="Logo" />
+                          : <div style={{ width: '80px', height: '44px', border: '1px solid #aaa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#888', textAlign: 'center' }}>Company<br/>Logo</div>
                         }
                       </div>
                       <div style={{ display: 'inline-block', textAlign: 'center' }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '4px' }}>{printCompany?.company_name || '< COMPANY NAME >'}</div>
-                        {printCompany?.address_1 && <div style={{ fontSize: '12px' }}>{printCompany.address_1}</div>}
-                        {printCompany?.address_2 && <div style={{ fontSize: '12px' }}>{printCompany.address_2}</div>}
+                        <div style={{ fontWeight: 'bold', fontSize: '18px', color: '#1a4fa8' }}>{printCompany?.company_name || '< COMPANY NAME >'}</div>
+                        <div style={{ fontSize: '11px', color: '#333', lineHeight: '1.6', marginTop: '3px' }}>
+                          {(printCompany?.address_1 || printCompany?.address_2) && (
+                            <div>{[printCompany?.address_1, printCompany?.address_2].filter(Boolean).join(' ')}</div>
+                          )}
+                          {(printCompany?.city || printCompany?.pincode || printCompany?.state) && (
+                            <div>{[printCompany?.city, printCompany?.pincode ? `- ${printCompany.pincode}` : '', printCompany?.state ? `, ${printCompany.state}` : ''].filter(Boolean).join(' ')}</div>
+                          )}
+                          {(printCompany?.website || printCompany?.email_id) && (
+                            <div>
+                              {printCompany?.website && <span>website : {printCompany.website}</span>}
+                              {printCompany?.website && printCompany?.email_id && <span>&nbsp;&nbsp;&nbsp;</span>}
+                              {printCompany?.email_id && <span>email id : {printCompany.email_id}</span>}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
                     {/* ── Title ── */}
-                    <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '16px', borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: '10px 12px', marginBottom: '16px', letterSpacing: '3px' }}>
+                    <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '16px', borderTop: '1px solid #555', borderBottom: '1px solid #555', padding: '10px 12px', marginBottom: '16px', letterSpacing: '3px', color: '#1a4fa8', background: '#dce6f7' }}>
                       CERTIFICATE OF ANALYSIS
                     </div>
 
@@ -1222,10 +1235,10 @@ export default function COAGenerationPage() {
                           { l1: 'Overall Result',  v1: printCOA.coa_overall_result === 'P' ? 'Pass' : 'Fail', v1Bold: true, l2: 'Expiry Date', v2: fmt(printCOA.expiry_date) },
                         ].map((row, i) => (
                           <tr key={i}>
-                            <td style={{ width: '20%', padding: '7px 10px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{row.l1}</td>
-                            <td style={{ width: '30%', border: '1px solid #000', padding: '7px 10px', fontWeight: (row as any).v1Bold ? 'bold' : 'normal' }}>{row.v1}</td>
-                            <td style={{ width: '20%', padding: '7px 10px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{row.l2}</td>
-                            <td style={{ width: '30%', border: '1px solid #000', padding: '7px 10px' }}>{row.v2}</td>
+                            <td style={{ width: '20%', padding: '7px 10px', fontWeight: 'bold', whiteSpace: 'nowrap', color: '#1a4fa8' }}>{row.l1}</td>
+                            <td style={{ width: '30%', border: '1px solid #555', padding: '7px 10px', fontWeight: (row as any).v1Bold ? 'bold' : 'normal' }}>{row.v1}</td>
+                            <td style={{ width: '20%', padding: '7px 10px', fontWeight: 'bold', whiteSpace: 'nowrap', color: '#1a4fa8' }}>{row.l2}</td>
+                            <td style={{ width: '30%', border: '1px solid #555', padding: '7px 10px' }}>{row.v2}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1234,18 +1247,18 @@ export default function COAGenerationPage() {
                     {/* ── Detail table ── */}
                     <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
                       <thead>
-                        <tr style={{ background: '#e5e5e5' }}>
-                          <th style={{ border: '1px solid #000', padding: '8px 10px', textAlign: 'center', width: '8%', fontWeight: 'bold' }}>S.No</th>
-                          <th style={{ border: '1px solid #000', padding: '8px 10px', textAlign: 'center', width: '32%', fontWeight: 'bold' }}>Test Parameter</th>
-                          <th style={{ border: '1px solid #000', padding: '8px 10px', textAlign: 'center', width: '22%', fontWeight: 'bold' }}>Expected Result</th>
-                          <th style={{ border: '1px solid #000', padding: '8px 10px', textAlign: 'center', width: '22%', fontWeight: 'bold' }}>Actual Result</th>
-                          <th style={{ border: '1px solid #000', padding: '8px 10px', textAlign: 'center', width: '16%', fontWeight: 'bold' }}>Status</th>
+                        <tr style={{ background: '#dce6f7' }}>
+                          <th style={{ border: '1px solid #555', padding: '8px 10px', textAlign: 'center', width: '8%', fontWeight: 'bold' }}>S.No</th>
+                          <th style={{ border: '1px solid #555', padding: '8px 10px', textAlign: 'center', width: '32%', fontWeight: 'bold' }}>Test Parameter</th>
+                          <th style={{ border: '1px solid #555', padding: '8px 10px', textAlign: 'center', width: '22%', fontWeight: 'bold' }}>Expected Result</th>
+                          <th style={{ border: '1px solid #555', padding: '8px 10px', textAlign: 'center', width: '22%', fontWeight: 'bold' }}>Actual Result</th>
+                          <th style={{ border: '1px solid #555', padding: '8px 10px', textAlign: 'center', width: '16%', fontWeight: 'bold' }}>Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         {printDetails.length === 0 ? (
                           <tr>
-                            <td colSpan={5} style={{ border: '1px solid #000', padding: '14px', textAlign: 'center' }}>No detail records</td>
+                            <td colSpan={5} style={{ border: '1px solid #555', padding: '14px', textAlign: 'center' }}>No detail records</td>
                           </tr>
                         ) : printDetails.map((d: any) => {
                           const meta = printMetaMap[d.checklist_sno] || {};
@@ -1266,11 +1279,11 @@ export default function COAGenerationPage() {
                           const passed = d.actual_result === 'P';
                           return (
                             <tr key={d.checklist_sno}>
-                              <td style={{ border: '1px solid #000', padding: '7px 10px', textAlign: 'center' }}>{d.checklist_sno}</td>
-                              <td style={{ border: '1px solid #000', padding: '7px 10px' }}>{meta.checklist_parameter || '-'}</td>
-                              <td style={{ border: '1px solid #000', padding: '7px 10px', textAlign: 'center' }}>{expectedDisplay}</td>
-                              <td style={{ border: '1px solid #000', padding: '7px 10px', textAlign: 'center' }}>{actualDisplay}</td>
-                              <td style={{ border: '1px solid #000', padding: '7px 10px', textAlign: 'center', fontWeight: 'bold' }}>
+                              <td style={{ border: '1px solid #555', padding: '7px 10px', textAlign: 'center' }}>{d.checklist_sno}</td>
+                              <td style={{ border: '1px solid #555', padding: '7px 10px' }}>{meta.checklist_parameter || '-'}</td>
+                              <td style={{ border: '1px solid #555', padding: '7px 10px', textAlign: 'center' }}>{expectedDisplay}</td>
+                              <td style={{ border: '1px solid #555', padding: '7px 10px', textAlign: 'center' }}>{actualDisplay}</td>
+                              <td style={{ border: '1px solid #555', padding: '7px 10px', textAlign: 'center', fontWeight: 'bold' }}>
                                 {passed ? 'Pass' : 'Fail'}
                               </td>
                             </tr>
@@ -1283,8 +1296,8 @@ export default function COAGenerationPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px' }}>
                       <tbody>
                         <tr>
-                          <td style={{ padding: '7px 10px', fontWeight: 'bold', width: '18%', whiteSpace: 'nowrap' }}>Remarks :</td>
-                          <td style={{ border: '1px solid #000', padding: '7px 10px', minHeight: '32px' }}>{printCOA.remarks || '\u00A0'}</td>
+                          <td style={{ padding: '7px 10px', fontWeight: 'bold', width: '160px', whiteSpace: 'nowrap', color: '#1a4fa8' }}>Remarks :</td>
+                          <td style={{ border: '1px solid #555', padding: '7px 10px', minHeight: '32px' }}>{printCOA.remarks || '\u00A0'}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1293,8 +1306,8 @@ export default function COAGenerationPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
                       <tbody>
                         <tr>
-                          <td style={{ padding: '7px 10px', fontWeight: 'bold', width: '18%', whiteSpace: 'nowrap' }}>Approval Remarks :</td>
-                          <td style={{ border: '1px solid #000', padding: '7px 10px', minHeight: '32px' }}>{printCOA.approval_remarks || '\u00A0'}</td>
+                          <td style={{ padding: '7px 10px', fontWeight: 'bold', width: '160px', whiteSpace: 'nowrap', color: '#1a4fa8' }}>Approval Remarks :</td>
+                          <td style={{ border: '1px solid #555', padding: '7px 10px', minHeight: '32px' }}>{printCOA.approval_remarks || '\u00A0'}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1303,29 +1316,28 @@ export default function COAGenerationPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
                       <tbody>
                         <tr>
-                          <td style={{ width: '33.3%', border: '1px solid #000', padding: '8px 12px', textAlign: 'center', fontWeight: 'bold', background: '#e5e5e5' }}>Executed By :</td>
-                          <td style={{ width: '33.3%', border: '1px solid #000', padding: '8px 12px', textAlign: 'center', fontWeight: 'bold', background: '#e5e5e5' }}>Reviewed By :</td>
-                          <td style={{ width: '33.4%', border: '1px solid #000', padding: '8px 12px', textAlign: 'center', fontWeight: 'bold', background: '#e5e5e5' }}>Approved By :</td>
+                          <td style={{ width: '10%', border: '1px solid #555', padding: '8px 12px', background: '#dce6f7' }}></td>
+                          <td style={{ width: '30%', border: '1px solid #555', padding: '8px 12px', textAlign: 'center', fontWeight: 'bold', background: '#dce6f7', color: '#1a4fa8' }}>Executed By :</td>
+                          <td style={{ width: '30%', border: '1px solid #555', padding: '8px 12px', textAlign: 'center', fontWeight: 'bold', background: '#dce6f7', color: '#1a4fa8' }}>Reviewed By :</td>
+                          <td style={{ width: '30%', border: '1px solid #555', padding: '8px 12px', textAlign: 'center', fontWeight: 'bold', background: '#dce6f7', color: '#1a4fa8' }}>Approved By :</td>
                         </tr>
                         <tr>
-                          <td style={{ border: '1px solid #000', padding: '14px 16px', verticalAlign: 'top' }}>
-                            <div style={{ border: '1px solid #aaa', padding: '6px 10px', marginBottom: '16px', minHeight: '28px' }}>{printCOA.entered_by_user_id}</div>
-                            <div style={{ border: '1px solid #aaa', padding: '6px 10px', minHeight: '28px' }}>{fmt(printCOA.entered_date_time)}</div>
-                          </td>
-                          <td style={{ border: '1px solid #000', padding: '14px 16px', verticalAlign: 'top' }}>
-                            <div style={{ border: '1px solid #aaa', padding: '6px 10px', marginBottom: '16px', minHeight: '28px' }}>{printCOA.review_by_user_id || '\u00A0'}</div>
-                            <div style={{ border: '1px solid #aaa', padding: '6px 10px', minHeight: '28px' }}>{printCOA.review_date_time ? fmt(printCOA.review_date_time) : '\u00A0'}</div>
-                          </td>
-                          <td style={{ border: '1px solid #000', padding: '14px 16px', verticalAlign: 'top' }}>
-                            <div style={{ border: '1px solid #aaa', padding: '6px 10px', marginBottom: '16px', minHeight: '28px' }}>{printCOA.approved_by_user_id || '\u00A0'}</div>
-                            <div style={{ border: '1px solid #aaa', padding: '6px 10px', minHeight: '28px' }}>{printCOA.approved_date_time ? fmt(printCOA.approved_date_time) : '\u00A0'}</div>
-                          </td>
+                          <td style={{ border: '1px solid #555', padding: '8px 12px', fontWeight: 'bold', color: '#1a4fa8', whiteSpace: 'nowrap' }}>Name :</td>
+                          <td style={{ border: '1px solid #555', padding: '8px 12px' }}>{printCOA.entered_by_user_id || '\u00A0'}</td>
+                          <td style={{ border: '1px solid #555', padding: '8px 12px' }}>{printCOA.review_by_user_id || '\u00A0'}</td>
+                          <td style={{ border: '1px solid #555', padding: '8px 12px' }}>{printCOA.approved_by_user_id || '\u00A0'}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ border: '1px solid #555', padding: '8px 12px', fontWeight: 'bold', color: '#1a4fa8', whiteSpace: 'nowrap' }}>Date :</td>
+                          <td style={{ border: '1px solid #555', padding: '8px 12px' }}>{fmt(printCOA.entered_date_time)}</td>
+                          <td style={{ border: '1px solid #555', padding: '8px 12px' }}>{printCOA.review_date_time ? fmt(printCOA.review_date_time) : '\u00A0'}</td>
+                          <td style={{ border: '1px solid #555', padding: '8px 12px' }}>{printCOA.approved_date_time ? fmt(printCOA.approved_date_time) : '\u00A0'}</td>
                         </tr>
                       </tbody>
                     </table>
 
                     {/* ── Footer ── */}
-                    <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#000', marginTop: '10px' }}>
+                    <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#555', marginTop: '10px' }}>
                       * This is a system generated COA
                     </div>
                   </div>
@@ -1336,7 +1348,7 @@ export default function COAGenerationPage() {
                   <Button variant="outline" onClick={() => setIsPrintModalOpen(false)} className="px-5">
                     <X className="w-4 h-4 mr-2" /> Cancel
                   </Button>
-                  <Button onClick={handlePrint} className="bg-gray-800 hover:bg-gray-900 text-white px-6 flex items-center gap-2">
+                  <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-6 flex items-center gap-2">
                     <Printer className="w-4 h-4" /> Print / Save as PDF
                   </Button>
                 </div>
