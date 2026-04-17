@@ -5,12 +5,12 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, ChevronDown } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, ChevronDown, Printer } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { purchaseOrderAPI, vendorAPI, materialAPI, purchaseOrderDetailAPI } from "@/services/api";
+import { purchaseOrderAPI, vendorAPI, materialAPI, purchaseOrderDetailAPI, companyAPI, employeeAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 interface PurchaseOrder {
@@ -773,6 +773,239 @@ export default function PurchaseOrdersPage() {
     };
 
 
+    const handlePrint = async (order: PurchaseOrder) => {
+        try {
+            let details: PODetail[] = expandedDetails[order.po_no];
+            if (!details) {
+                details = await purchaseOrderDetailAPI.getByPoNo(order.po_no);
+            }
+
+            const [vendor, allCompanies] = await Promise.all([
+                vendorAPI.getById(order.vendor_id),
+                companyAPI.getAll().catch(() => []),
+            ]);
+
+            const c1 = allCompanies.find((c: any) => c.comp_id === 'CORP');
+            const c2 = allCompanies.find((c: any) => c.comp_id === 'FACT');
+
+            let authorisedName = '';
+            if (order.approved_by_user_id) {
+                try {
+                    const emp = await employeeAPI.getById(order.approved_by_user_id);
+                    authorisedName = emp?.emp_name || order.approved_by_user_id;
+                } catch {
+                    authorisedName = order.approved_by_user_id;
+                }
+            }
+
+            const fmt = (d?: string) => {
+                if (!d) return '-';
+                const dt = new Date(d);
+                if (isNaN(dt.getTime())) return '-';
+                return `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`;
+            };
+
+            const fmtNum = (n?: number) => {
+                if (n == null) return '-';
+                return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            };
+
+            const getMaterialName = (id: string) => {
+                const m = activeMaterials.find(m => m.material_id === id);
+                return m?.material_name || id;
+            };
+
+            const totalBasic = details.reduce((s, d) => s + (d.basic_amount || 0), 0);
+            const totalGst   = details.reduce((s, d) => s + (d.gst_amount || 0), 0);
+            const totalAmt   = details.reduce((s, d) => s + (d.total_amount || 0), 0);
+
+            const logoHtml = c1?.logo
+                ? `<img src="${c1.logo}" style="height:44px;max-width:80px;object-fit:contain;" alt="Logo"/>`
+                : `<div style="width:80px;height:44px;border:1px solid #aaa;display:flex;align-items:center;justify-content:center;font-size:9px;color:#888;">Company<br/>Logo</div>`;
+
+            const signImgHtml = c1?.po_image
+                ? `<img src="${c1.po_image}" style="height:56px;max-width:120px;object-fit:contain;display:block;margin:4px auto;" alt="Authorised Sign"/>`
+                : '';
+
+            const detailRowsHtml = details.map(d => `
+              <tr>
+                <td style="text-align:center;">${d.sno}</td>
+                <td>
+                  ${getMaterialName(d.material_id)}<br/>
+                  <span style="color:#444;">Spec : ${d.material_spec || '-'}</span><br/>
+                  <span style="color:#444;">Exp. Delivery Date : ${fmt(d.expected_delivery_date)}</span>
+                </td>
+                <td style="text-align:center;">${d.po_qty != null ? Number(d.po_qty).toLocaleString('en-IN') : '-'}</td>
+                <td style="text-align:center;">${d.uom}</td>
+                <td style="text-align:center;">${d.unit_price}</td>
+                <td style="text-align:center;">${d.basic_amount}</td>
+                <td style="text-align:center;">${d.gst_percentage}</td>
+                <td style="text-align:center;">${d.total_amount}</td>
+              </tr>`).join('');
+
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Purchase Order - ${order.po_no}</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 210mm; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; background: #fff;
+         padding: 12mm 10mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 100%; }
+  .hdr { position: relative; text-align: center; margin-bottom: 8px; min-height: 54px; }
+  .hdr-logo { position: absolute; left: 0; top: 0; }
+  .hdr-info { display: inline-block; text-align: center; }
+  .co-name { font-size: 18px; font-weight: bold; color: #1a4fa8; }
+  .co-addr { font-size: 11px; color: #333; line-height: 1.6; margin-top: 3px; }
+  .main-tbl { width: 100%; border-collapse: collapse; border: 1px solid #555; margin-bottom: 5px; table-layout: fixed; }
+  .main-tbl td, .main-tbl th { border: 1px solid #555; padding: 6px 8px; vertical-align: top; font-size: 12px; word-break: break-word; overflow-wrap: break-word; }
+  .po-heading { background: #dce6f7; color: #1a4fa8; text-align: center; font-size: 14px; font-weight: bold; padding: 7px; border: 1px solid #555; }
+  .lbl { font-weight: bold; }
+  .lbl-blue { font-weight: bold; color: #1a4fa8; }
+  .items-tbl { width: 100%; border-collapse: collapse; border: 1px solid #555; margin-bottom: 5px; table-layout: fixed; }
+  .items-tbl th { background: #dce6f7; color: #000; text-align: center; font-weight: bold; border: 1px solid #555; padding: 6px 4px; font-size: 12px; }
+  .items-tbl td { border: 1px solid #555; padding: 5px 6px; vertical-align: top; font-size: 12px; word-break: break-word; overflow-wrap: break-word; }
+  .bottom-tbl { width: 100%; border-collapse: collapse; border: 1px solid #555; table-layout: fixed; margin-top: 5px; }
+  .bottom-tbl td { border: 1px solid #555; padding: 20px 12px; vertical-align: top; font-size: 12px; word-break: break-word; overflow-wrap: break-word; min-height: 120px; }
+  .sys-footer { margin-top: 8px; font-size: 10px; color: #555; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <div class="hdr-logo">${logoHtml}</div>
+    <div class="hdr-info">
+      <div class="co-name">${c1?.company_name || ''}</div>
+      <div class="co-addr">
+        ${[c1?.address_1, c1?.address_2].filter(Boolean).join(' ')}${(c1?.address_1 || c1?.address_2) ? '<br/>' : ''}
+        ${[c1?.city, c1?.pincode ? `- ${c1.pincode}` : '', c1?.state ? `, ${c1.state}` : ''].filter(Boolean).join(' ')}
+        ${(c1?.website || c1?.email_id) ? '<br/>' : ''}
+        ${c1?.website ? `website : ${c1.website}` : ''}${c1?.website && c1?.email_id ? '&nbsp;&nbsp;&nbsp;' : ''}${c1?.email_id ? `email id : ${c1.email_id}` : ''}
+      </div>
+    </div>
+  </div>
+  <table class="main-tbl">
+    <tr><td colspan="2" class="po-heading">Purchase Order</td></tr>
+    <tr>
+      <td style="width:50%;">
+        <div class="lbl">Supplier Address :</div>
+        <div style="margin-top:3px;line-height:1.7;">
+          M/s. ${vendor?.vendor_name || ''}<br/>
+          ${vendor?.address1 || ''}${vendor?.address1 ? '<br/>' : ''}
+          ${vendor?.address2 ? vendor.address2 + '<br/>' : ''}
+          ${vendor?.city || ''}${vendor?.pincode ? ` - ${vendor.pincode}` : ''}${(vendor?.city || vendor?.pincode) ? '<br/>' : ''}
+          ${[vendor?.district, vendor?.state].filter(Boolean).join(', ')}
+        </div>
+      </td>
+      <td style="width:50%;">
+        <table style="width:100%;border:none;border-collapse:collapse;">
+          <tr><td style="border:none;padding:2px 4px;width:110px;">PO No.</td><td style="border:none;padding:2px 4px;"> : <span class="lbl-blue"><strong>${order.po_no}</strong></span></td></tr>
+          <tr><td style="border:none;padding:2px 4px;">PO Date</td><td style="border:none;padding:2px 4px;"> : <span class="lbl-blue"><strong>${fmt(order.po_date)}</strong></span></td></tr>
+          <tr><td style="border:none;padding:4px;" colspan="2"></td></tr>
+          <tr><td style="border:none;padding:2px 4px;">Ref. Doc No.</td><td style="border:none;padding:2px 4px;"> : ${order.vendor_ref_doc_no || '-'}</td></tr>
+          <tr><td style="border:none;padding:2px 4px;">Ref. Doc Date</td><td style="border:none;padding:2px 4px;"> : ${fmt(order.vendor_ref_doc_date)}</td></tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="width:50%;vertical-align:top;">
+        <div class="lbl">Delivery Address :</div>
+        <div style="margin-top:3px;line-height:1.7;">
+          M/s. ${c1?.company_name || ''}<br/>
+          ${c1?.address_1 || ''}${c1?.address_1 ? '<br/>' : ''}
+          ${c1?.address_2 ? c1.address_2 + '<br/>' : ''}
+          ${c1?.city || ''}${c1?.pincode ? ` - ${c1.pincode}` : ''}${(c1?.city || c1?.pincode) ? '<br/>' : ''}
+          ${c1?.state || ''}
+        </div>
+      </td>
+      <td style="width:50%;vertical-align:top;">
+        <div class="lbl">Billing Address :</div>
+        <div style="margin-top:3px;line-height:1.7;">
+          M/s. ${c2?.company_name || ''}<br/>
+          ${c2?.address_1 || ''}${c2?.address_1 ? '<br/>' : ''}
+          ${c2?.address_2 ? c2.address_2 + '<br/>' : ''}
+          ${c2?.city || ''}${c2?.pincode ? ` - ${c2.pincode}` : ''}${(c2?.city || c2?.pincode) ? '<br/>' : ''}
+          ${c2?.state || ''}
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="width:50%;vertical-align:top;">
+        <div class="lbl">Shipping Instruction :</div>
+        <div style="margin-top:2px;margin-bottom:8px;">${order.shipping_instruction || '-'}</div>
+        <div class="lbl">Payment Terms :</div>
+        <div style="margin-top:2px;">${order.terms_of_payment || '-'}</div>
+      </td>
+      <td style="width:50%;vertical-align:top;">
+        <div><span class="lbl">GST No.</span> ${c1?.gst_no || '-'}</div>
+        <div style="margin-top:10px;">Contact Person &nbsp;: ${c1?.contact_person || '-'}</div>
+        <div style="margin-top:2px;">Contact No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${c1?.contact_no || '-'}</div>
+      </td>
+    </tr>
+  </table>
+  <table class="items-tbl">
+    <thead>
+      <tr>
+        <th style="width:4%;">S.No</th>
+        <th style="width:27%;">Material</th>
+        <th style="width:10%;">PO Qty</th>
+        <th style="width:7%;">UoM</th>
+        <th style="width:11%;">unit Rate &#8377;</th>
+        <th style="width:13%;">Amount &#8377;</th>
+        <th style="width:8%;">GST</th>
+        <th style="width:13%;">Total &#8377;</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${detailRowsHtml}
+      <tr style="background:#f0f0f0;">
+        <td colspan="5" style="text-align:right;font-weight:bold;border:1px solid #555;">TOTAL</td>
+        <td style="text-align:center;font-weight:bold;"> ${fmtNum(totalBasic)}</td>
+        <td style="text-align:center;font-weight:bold;"> ${fmtNum(totalGst)}</td>
+        <td style="text-align:center;font-weight:bold;"> ${fmtNum(totalAmt)}</td>
+      </tr>
+    </tbody>
+  </table>
+  <table class="bottom-tbl">
+    <tr>
+      <td style="width:55%;">
+        <div class="lbl">Terms and Conditions :</div>
+        <div style="margin-top:8px;line-height:1.8;white-space:pre-wrap;">${c1?.po_terms_and_conditions || ''}</div>
+      </td>
+      <td style="width:45%;text-align:center;">
+        ${order.status === 'A' ? `
+        <div style="margin-bottom:16px;">for ${c1?.company_short_name || c1?.company_name || ''}</div>
+        ${signImgHtml}
+        <div style="margin-top:16px;">${authorisedName}</div>
+        <div style="margin-top:4px;">( Authorised Signatory )</div>
+        ` : `
+        <div style="font-weight:bold;font-size:14px;color:#cc0000;">PURCHASE ORDER NOT YET APPROVED</div>
+        `}
+      </td>
+    </tr>
+  </table>
+  <div class="sys-footer">
+    * This is a system-generated Purchase Order and does not require a physical signature.
+    ${c1?.email_id ? `For any queries, contact ${c1.email_id}` : ''}
+  </div>
+</div>
+<script>window.onload = () => { window.print(); }</script>
+</body>
+</html>`;
+
+            const printWindow = window.open('', '_blank', 'width=900,height=750');
+            if (printWindow) {
+                printWindow.document.write(html);
+                printWindow.document.close();
+            }
+        } catch (err: any) {
+            toast({ title: "Print Error", description: err.message || "Failed to generate print", variant: "destructive" });
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex min-h-screen bg-background">
@@ -1004,6 +1237,15 @@ export default function PurchaseOrdersPage() {
                                                         </td>
                                                         <td className="px-4 py-3">
                                                             <div className="flex items-center justify-center gap-2">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={(e) => { e.stopPropagation(); handlePrint(order); }}
+                                                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                                    title="Print PO"
+                                                                >
+                                                                    <Printer className="w-4 h-4" />
+                                                                </Button>
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
