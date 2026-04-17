@@ -514,10 +514,14 @@ export default function PurchaseOrderApprovalPage() {
         <div style="margin-top:8px;line-height:1.8;white-space:pre-wrap;">${c1?.po_terms_and_conditions || ''}</div>
       </td>
       <td style="width:45%;text-align:center;">
+        ${order.status === 'A' ? `
         <div style="margin-bottom:16px;">for ${c1?.company_short_name || c1?.company_name || ''}</div>
         ${signImgHtml}
         <div style="margin-top:16px;">${authorisedName}</div>
         <div style="margin-top:4px;">( Authorised Signatory )</div>
+        ` : `
+        <div style="font-weight:bold;font-size:14px;color:#cc0000;">PURCHASE ORDER NOT YET APPROVED</div>
+        `}
       </td>
     </tr>
   </table>
