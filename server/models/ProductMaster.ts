@@ -45,7 +45,7 @@ const ProductMasterSchema: Schema = new Schema({
   product_shortname: {
     type: String,
     required: true,
-    maxlength: 100,
+    maxlength: 50,
     trim: true,
   },
   uom: {

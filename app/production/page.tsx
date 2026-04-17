@@ -524,7 +524,7 @@ export default function ProductionPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Tare Wt (kg)</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Gross Wt (kg)</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Net Wt (kg)</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Calc Qty</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Calc Total Qty</th>
                                             {/* <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Machine Qty</th> */}
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>

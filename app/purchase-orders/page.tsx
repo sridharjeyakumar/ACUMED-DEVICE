@@ -31,12 +31,18 @@ interface PurchaseOrder {
     approved_by_user_id?: string;
     approved_date_time?: string;
     status: string;
+    po_basic_amount?: number;
+    po_gst_amount?: number;
+    po_total_amount?: number;
+    mail_sent_status?: string;
 }
 
 interface Vendor {
     vendor_id: string;
     vendor_name: string;
     active?: boolean;
+    default_shipping_instruction?: string;
+    default_terms_of_payment?: string;
 }
 
 interface ActiveMaterial {
@@ -45,6 +51,9 @@ interface ActiveMaterial {
     uom: string;
     material_spec?: string;
     min_order_qty?: number;
+    default_unit_price?: number;
+    default_gst_percent?: number;
+    lead_time_days_min?: number;
 }
 
 interface PODetail {
@@ -58,6 +67,12 @@ interface PODetail {
     remarks?: string;
     gr_qty: number;
     balance_qty: number;
+    unit_price?: number;
+    basic_amount?: number;
+    gst_percentage?: number;
+    gst_amount?: number;
+    total_amount?: number;
+    expected_delivery_date?: string;
 }
 
 interface DetailRow {
@@ -72,6 +87,35 @@ interface DetailRow {
     balance_qty: number;
     min_order_qty: number;
     _deleted?: boolean;
+    unit_price: number | string;
+    basic_amount: number;
+    gst_percentage: number;
+    gst_amount: number;
+    total_amount: number;
+    expected_delivery_date: string;
+}
+
+function computeAmounts(po_qty: number | string, unit_price: number | string, gst_percentage: number | string) {
+    const qty = parseFloat(String(po_qty)) || 0;
+    const price = parseFloat(String(unit_price)) || 0;
+    const gst = parseFloat(String(gst_percentage)) || 0;
+    const basic_amount = parseFloat((qty * price).toFixed(2));
+    const gst_amount = Math.round(basic_amount * gst / 100);
+    const total_amount = parseFloat((basic_amount + gst_amount).toFixed(2));
+    return { basic_amount, gst_amount, total_amount };
+}
+
+function computeExpectedDeliveryDate(po_date: string, lead_time_days_min?: number): string {
+    const base = po_date ? new Date(po_date) : new Date();
+    if (lead_time_days_min != null && lead_time_days_min > 0) {
+        base.setDate(base.getDate() + lead_time_days_min);
+    }
+    // Clamp to today if result is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    base.setHours(0, 0, 0, 0);
+    const result = base < today ? today : base;
+    return result.toISOString().split('T')[0];
 }
 
 function formatDate(dateStr: string | undefined): string {
@@ -124,7 +168,7 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                 <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider">PO Details</h3>
                 <Button type="button" size="sm" onClick={onAddRow}
                     className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 h-7">
-                    + Add RowPO Details
+                    + Add Row
                 </Button>
             </div>
             <div className="overflow-x-auto border rounded-lg">
@@ -135,6 +179,12 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                             <th className="px-3 py-2 text-left whitespace-nowrap">Material ID <span className="text-red-500">*</span></th>
                             <th className="px-3 py-2 text-left whitespace-nowrap">PO Qty <span className="text-red-500">*</span></th>
                             <th className="px-3 py-2 text-left whitespace-nowrap">UOM</th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap">Unit Price</th>
+                            <th className="px-3 py-2 text-right whitespace-nowrap">Basic Amt</th>
+                            <th className="px-3 py-2 text-right whitespace-nowrap">GST %</th>
+                            <th className="px-3 py-2 text-right whitespace-nowrap">GST Amt</th>
+                            <th className="px-3 py-2 text-right whitespace-nowrap">Total Amt</th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap">Exp. Delivery</th>
                             <th className="px-3 py-2 text-left whitespace-nowrap">Material Spec</th>
                             <th className="px-3 py-2 text-left whitespace-nowrap">Remarks</th>
                             <th className="px-3 py-2 text-left whitespace-nowrap">GR Qty</th>
@@ -145,7 +195,7 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                     <tbody className="divide-y divide-border">
                         {visibleRows.length === 0 ? (
                             <tr>
-                                <td colSpan={9} className="px-4 py-6 text-center text-muted-foreground">
+                                <td colSpan={15} className="px-4 py-6 text-center text-muted-foreground">
                                     No items added. Click &quot;+ Add Row&quot; to add materials.
                                 </td>
                             </tr>
@@ -187,6 +237,29 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                                             />
                                         </td>
                                         <td className="px-3 py-2 font-mono text-gray-600 whitespace-nowrap">{row.uom || '-'}</td>
+                                        <td className="px-3 py-2">
+                                            <Input
+                                                type="number"
+                                                value={row.unit_price}
+                                                min={0}
+                                                step="0.01"
+                                                onChange={e => onChange(idx, 'unit_price', e.target.value)}
+                                                className="w-24 text-xs h-7 px-2"
+                                            />
+                                        </td>
+                                        <td className="px-3 py-2 text-right text-gray-700 whitespace-nowrap">{row.basic_amount.toFixed(2)}</td>
+                                        <td className="px-3 py-2 text-right text-gray-500 whitespace-nowrap">{row.gst_percentage}%</td>
+                                        <td className="px-3 py-2 text-right text-gray-700 whitespace-nowrap">{row.gst_amount.toFixed(2)}</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-blue-700 whitespace-nowrap">{row.total_amount.toFixed(2)}</td>
+                                        <td className="px-3 py-2">
+                                            <Input
+                                                type="date"
+                                                value={row.expected_delivery_date}
+                                                min={new Date().toISOString().split('T')[0]}
+                                                onChange={e => onChange(idx, 'expected_delivery_date', e.target.value)}
+                                                className="w-36 text-xs h-7 px-2"
+                                            />
+                                        </td>
                                         <td className="px-3 py-2 text-gray-500 max-w-[180px] truncate" title={row.material_spec}>{row.material_spec || '-'}</td>
                                         <td className="px-3 py-2">
                                             <Input
@@ -355,16 +428,38 @@ export default function PurchaseOrdersPage() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleVendorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const vendorId = e.target.value;
+        const vendor = vendors.find(v => v.vendor_id === vendorId);
+        setFormData(prev => ({
+            ...prev,
+            vendor_id: vendorId,
+            shipping_instruction: vendor?.default_shipping_instruction || prev.shipping_instruction,
+            terms_of_payment: vendor?.default_terms_of_payment || prev.terms_of_payment,
+        }));
+    };
+
+    const poBasicAmount = detailRows.filter(r => !r._deleted).reduce((s, r) => s + (r.basic_amount || 0), 0);
+    const poGstAmount = detailRows.filter(r => !r._deleted).reduce((s, r) => s + (r.gst_amount || 0), 0);
+    const poTotalAmount = detailRows.filter(r => !r._deleted).reduce((s, r) => s + (r.total_amount || 0), 0);
+
     // ── Detail row helpers ────────────────────────────────────────────────────
     const handleAddDetailRow = () => {
         setDetailRows(prev => [...prev, {
             material_id: '', po_qty: '', uom: '', material_spec: '',
             remarks: '', gr_qty: 0, balance_qty: 0, min_order_qty: 0,
+            unit_price: '', basic_amount: 0, gst_percentage: 0,
+            gst_amount: 0, total_amount: 0, expected_delivery_date: '',
         }]);
     };
 
     const handleDetailMaterialChange = (idx: number, materialId: string) => {
         const mat = activeMaterials.find(m => m.material_id === materialId);
+        const po_qty = mat?.min_order_qty ?? 0;
+        const unit_price = mat?.default_unit_price ?? 0;
+        const gst_percentage = mat?.default_gst_percent ?? 0;
+        const { basic_amount, gst_amount, total_amount } = computeAmounts(po_qty, unit_price, gst_percentage);
+        const expected_delivery_date = computeExpectedDeliveryDate(formData.po_date, mat?.lead_time_days_min);
         setDetailRows(prev => prev.map((row, i) => i !== idx ? row : {
             ...row,
             material_id: materialId,
@@ -372,11 +467,27 @@ export default function PurchaseOrdersPage() {
             material_spec: mat?.material_spec || '',
             po_qty: mat?.min_order_qty ?? '',
             min_order_qty: mat?.min_order_qty ?? 0,
+            unit_price,
+            gst_percentage,
+            basic_amount,
+            gst_amount,
+            total_amount,
+            expected_delivery_date,
         }));
     };
 
     const handleDetailChange = (idx: number, field: keyof DetailRow, value: any) => {
-        setDetailRows(prev => prev.map((row, i) => i !== idx ? row : { ...row, [field]: value }));
+        setDetailRows(prev => prev.map((row, i) => {
+            if (i !== idx) return row;
+            const updated = { ...row, [field]: value };
+            if (field === 'po_qty' || field === 'unit_price') {
+                const { basic_amount, gst_amount, total_amount } = computeAmounts(
+                    updated.po_qty, updated.unit_price, updated.gst_percentage
+                );
+                return { ...updated, basic_amount, gst_amount, total_amount };
+            }
+            return updated;
+        }));
     };
 
     const handleRemoveDetailRow = (idx: number) => {
@@ -389,6 +500,8 @@ export default function PurchaseOrdersPage() {
     };
 
     const validateDetailRows = (): boolean => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         const active = detailRows.filter(r => !r._deleted);
         for (const row of active) {
             if (!row.material_id) {
@@ -403,6 +516,14 @@ export default function PurchaseOrdersPage() {
             if (qty < row.min_order_qty) {
                 toast({ title: "Validation Error", description: `PO Qty for ${row.material_id} must be ≥ ${row.min_order_qty} (min order qty).`, variant: "destructive" });
                 return false;
+            }
+            if (row.expected_delivery_date) {
+                const deliveryDate = new Date(row.expected_delivery_date);
+                deliveryDate.setHours(0, 0, 0, 0);
+                if (deliveryDate < today) {
+                    toast({ title: "Validation Error", description: `Expected Delivery Date for ${row.material_id} must be today or a future date.`, variant: "destructive" });
+                    return false;
+                }
             }
         }
         return true;
@@ -423,6 +544,9 @@ export default function PurchaseOrdersPage() {
                 shipping_instruction: formData.shipping_instruction || undefined,
                 approved_date_time: formData.approved_date_time || undefined,
                 entered_date_time: new Date(),
+                po_basic_amount: poBasicAmount || undefined,
+                po_gst_amount: poGstAmount || undefined,
+                po_total_amount: poTotalAmount || undefined,
             });
 
             const poNo = order.po_no || formData.po_no;
@@ -439,6 +563,12 @@ export default function PurchaseOrdersPage() {
                     remarks: row.remarks || undefined,
                     gr_qty: 0,
                     balance_qty: 0,
+                    unit_price: Number(row.unit_price) || undefined,
+                    basic_amount: row.basic_amount || undefined,
+                    gst_percentage: row.gst_percentage || undefined,
+                    gst_amount: row.gst_amount || undefined,
+                    total_amount: row.total_amount || undefined,
+                    expected_delivery_date: row.expected_delivery_date || undefined,
                 });
             }
 
@@ -464,7 +594,7 @@ export default function PurchaseOrdersPage() {
             vendor_ref_doc_no: order.vendor_ref_doc_no || "",
             vendor_ref_doc_date: toDateInput(order.vendor_ref_doc_date),
             delivery_text: order.delivery_text || "",
-            shipping_instruction: toDateInput(order.shipping_instruction),
+            shipping_instruction: order.shipping_instruction || "",
             terms_of_payment: order.terms_of_payment || "",
             remarks: order.remarks || "",
             entered_by_user_id: order.entered_by_user_id,
@@ -479,6 +609,9 @@ export default function PurchaseOrdersPage() {
             const details: PODetail[] = await purchaseOrderDetailAPI.getByPoNo(order.po_no);
             setDetailRows(details.map(d => {
                 const mat = activeMaterials.find(m => m.material_id === d.material_id);
+                const unit_price = d.unit_price ?? mat?.default_unit_price ?? 0;
+                const gst_percentage = d.gst_percentage ?? mat?.default_gst_percent ?? 0;
+                const { basic_amount, gst_amount, total_amount } = computeAmounts(d.po_qty, unit_price, gst_percentage);
                 return {
                     _id: d._id,
                     material_id: d.material_id,
@@ -490,6 +623,17 @@ export default function PurchaseOrdersPage() {
                     gr_qty: d.gr_qty,
                     balance_qty: d.balance_qty,
                     min_order_qty: mat?.min_order_qty ?? 0,
+                    unit_price,
+                    gst_percentage,
+                    basic_amount: d.basic_amount ?? basic_amount,
+                    gst_amount: d.gst_amount ?? gst_amount,
+                    total_amount: d.total_amount ?? total_amount,
+                    expected_delivery_date: computeExpectedDeliveryDate(
+                        d.expected_delivery_date
+                            ? new Date(d.expected_delivery_date).toISOString().split('T')[0]
+                            : order.po_date,
+                        d.expected_delivery_date ? 0 : mat?.lead_time_days_min
+                    ),
                 };
             }));
         } catch {
@@ -516,6 +660,9 @@ export default function PurchaseOrdersPage() {
                 terms_of_payment: formData.terms_of_payment || undefined,
                 remarks: formData.remarks || undefined,
                 approval_remarks: formData.approval_remarks || undefined,
+                po_basic_amount: poBasicAmount || undefined,
+                po_gst_amount: poGstAmount || undefined,
+                po_total_amount: poTotalAmount || undefined,
                 approved_by_user_id: formData.approved_by_user_id || undefined,
                 approved_date_time: formData.approved_date_time || undefined,
                 status: formData.status,
@@ -540,6 +687,12 @@ export default function PurchaseOrdersPage() {
                             remarks: row.remarks || undefined,
                             gr_qty: row.gr_qty,
                             balance_qty: row.balance_qty,
+                            unit_price: Number(row.unit_price) || undefined,
+                            basic_amount: row.basic_amount || undefined,
+                            gst_percentage: row.gst_percentage || undefined,
+                            gst_amount: row.gst_amount || undefined,
+                            total_amount: row.total_amount || undefined,
+                            expected_delivery_date: row.expected_delivery_date || undefined,
                         });
                     } else {
                         await purchaseOrderDetailAPI.update(row._id, {
@@ -548,6 +701,12 @@ export default function PurchaseOrdersPage() {
                             uom: row.uom,
                             material_spec: row.material_spec || undefined,
                             remarks: row.remarks || undefined,
+                            unit_price: Number(row.unit_price) || undefined,
+                            basic_amount: row.basic_amount || undefined,
+                            gst_percentage: row.gst_percentage || undefined,
+                            gst_amount: row.gst_amount || undefined,
+                            total_amount: row.total_amount || undefined,
+                            expected_delivery_date: row.expected_delivery_date || undefined,
                         });
                     }
                     sno++;
@@ -562,6 +721,12 @@ export default function PurchaseOrdersPage() {
                         remarks: row.remarks || undefined,
                         gr_qty: 0,
                         balance_qty: 0,
+                        unit_price: Number(row.unit_price) || undefined,
+                        basic_amount: row.basic_amount || undefined,
+                        gst_percentage: row.gst_percentage || undefined,
+                        gst_amount: row.gst_amount || undefined,
+                        total_amount: row.total_amount || undefined,
+                        expected_delivery_date: row.expected_delivery_date || undefined,
                     });
                     sno++;
                 }
@@ -571,7 +736,8 @@ export default function PurchaseOrdersPage() {
             setIsEditModalOpen(false);
             setSelectedOrder(null);
             setDetailRows([]);
-            // Invalidate cached expand details for this PO
+            // Collapse the row and clear cached details so it re-fetches on next expand
+            setExpandedRows(prev => { const s = new Set(prev); s.delete(selectedOrder.po_no); return s; });
             setExpandedDetails(prev => { const n = { ...prev }; delete n[selectedOrder.po_no]; return n; });
             loadOrders();
         } catch (error: any) {
@@ -758,6 +924,10 @@ export default function PurchaseOrdersPage() {
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Approval Remarks</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Approved By</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Approved Date & Time</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-right whitespace-nowrap">Basic Amt</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-right whitespace-nowrap">GST Amt</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-right whitespace-nowrap">Total Amt</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Mail Status</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Status</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-center whitespace-nowrap">Actions</th>
                                         </tr>
@@ -823,6 +993,10 @@ export default function PurchaseOrdersPage() {
                                                             ) : "-"}
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">{formatDateTime(order.approved_date_time)}</td>
+                                                        <td className="px-4 py-3 text-sm text-right">{order.po_basic_amount != null ? `₹ ${Number(order.po_basic_amount).toFixed(2)}` : '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-right">{order.po_gst_amount != null ? `₹ ${Number(order.po_gst_amount).toFixed(2)}` : '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-right font-semibold text-blue-700">{order.po_total_amount != null ? `₹ ${Number(order.po_total_amount).toFixed(2)}` : '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-400">{order.mail_sent_status || '—'}</td>
                                                         <td className="px-4 py-3">
                                                             <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${STATUS_LABELS[order.status]?.color || 'bg-gray-100 text-gray-600'}`}>
                                                                 {STATUS_LABELS[order.status]?.label || order.status}
@@ -881,6 +1055,12 @@ export default function PurchaseOrdersPage() {
                                                                                     <th className="px-3 py-2 text-left font-semibold">Material ID</th>
                                                                                     <th className="px-3 py-2 text-left font-semibold">PO Qty</th>
                                                                                     <th className="px-3 py-2 text-left font-semibold">UOM</th>
+                                                                                    <th className="px-3 py-2 text-right font-semibold">Unit Price</th>
+                                                                                    <th className="px-3 py-2 text-right font-semibold">Basic Amt</th>
+                                                                                    <th className="px-3 py-2 text-right font-semibold">GST %</th>
+                                                                                    <th className="px-3 py-2 text-right font-semibold">GST Amt</th>
+                                                                                    <th className="px-3 py-2 text-right font-semibold">Total Amt</th>
+                                                                                    <th className="px-3 py-2 text-left font-semibold">Exp. Delivery</th>
                                                                                     <th className="px-3 py-2 text-left font-semibold">Material Spec</th>
                                                                                     <th className="px-3 py-2 text-left font-semibold">Remarks</th>
                                                                                     <th className="px-3 py-2 text-left font-semibold">GR Qty</th>
@@ -891,10 +1071,19 @@ export default function PurchaseOrdersPage() {
                                                                                 {(expandedDetails[order.po_no] || []).map(detail => (
                                                                                     <tr key={detail._id} className="bg-white hover:bg-blue-50/50">
                                                                                         <td className="px-3 py-2">{detail.sno}</td>
-                                                                                        <td className="px-3 py-2 font-mono font-semibold text-blue-700">{detail.material_id}</td>
+                                                                                        <td className="px-3 py-2 font-mono font-semibold text-blue-700">
+                                                                                            {detail.material_id}
+                                                                                            {(() => { const m = activeMaterials.find(m => m.material_id === detail.material_id); return m ? <span className="block text-xs font-normal font-sans text-gray-500">{m.material_name}</span> : null; })()}
+                                                                                        </td>
                                                                                         <td className="px-3 py-2">{detail.po_qty}</td>
                                                                                         <td className="px-3 py-2">{detail.uom}</td>
-                                                                                        <td className="px-3 py-2 max-w-[220px] truncate text-gray-500" title={detail.material_spec}>{detail.material_spec || '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right">{detail.unit_price != null ? Number(detail.unit_price).toFixed(2) : '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right">{detail.basic_amount != null ? Number(detail.basic_amount).toFixed(2) : '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right text-gray-500">{detail.gst_percentage != null ? `${detail.gst_percentage}%` : '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right">{detail.gst_amount != null ? Number(detail.gst_amount).toFixed(2) : '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right font-semibold text-blue-700">{detail.total_amount != null ? Number(detail.total_amount).toFixed(2) : '-'}</td>
+                                                                                        <td className="px-3 py-2 whitespace-nowrap">{detail.expected_delivery_date ? new Date(detail.expected_delivery_date).toLocaleDateString('en-GB') : '-'}</td>
+                                                                                        <td className="px-3 py-2 max-w-[180px] truncate text-gray-500" title={detail.material_spec}>{detail.material_spec || '-'}</td>
                                                                                         <td className="px-3 py-2">{detail.remarks || '-'}</td>
                                                                                         <td className="px-3 py-2">{detail.gr_qty}</td>
                                                                                         <td className="px-3 py-2">{detail.balance_qty}</td>
@@ -983,7 +1172,7 @@ export default function PurchaseOrdersPage() {
                                         </div>
                                         <div className="col-span-2">
                                             <label className="block text-sm font-semibold text-foreground mb-2">Vendor ID <span className="text-red-500">*</span></label>
-                                            <select name="vendor_id" value={formData.vendor_id} onChange={handleInputChange}
+                                            <select name="vendor_id" value={formData.vendor_id} onChange={handleVendorChange}
                                                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none" required>
                                                 <option value="">Select a vendor</option>
                                                 {vendors.filter(v => v.active !== false).map(v => (
@@ -1024,6 +1213,26 @@ export default function PurchaseOrdersPage() {
                                         <div className="col-span-2">
                                             <label className="block text-sm font-semibold text-foreground mb-2">Entered By User ID <span className="text-red-500">*</span></label>
                                             <Input name="entered_by_user_id" value={formData.entered_by_user_id} onChange={handleInputChange} maxLength={5} required />
+                                        </div>
+
+                                        {/* PO Totals (display only) */}
+                                        <div className="col-span-2 grid grid-cols-4 gap-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                                            <div>
+                                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Basic Amount</p>
+                                                <p className="text-sm font-semibold text-gray-800">₹ {poBasicAmount.toFixed(2)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">GST Amount</p>
+                                                <p className="text-sm font-semibold text-gray-800">₹ {poGstAmount.toFixed(2)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Total Amount</p>
+                                                <p className="text-base font-bold text-blue-700">₹ {poTotalAmount.toFixed(2)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Mail Sent Status</p>
+                                                <p className="text-sm text-gray-400">—</p>
+                                            </div>
                                         </div>
 
                                         {/* PO Details table */}
@@ -1099,7 +1308,7 @@ export default function PurchaseOrdersPage() {
                                         </div>
                                         <div className="col-span-2">
                                             <label className="block text-sm font-semibold text-foreground mb-2">Vendor ID <span className="text-red-500">*</span></label>
-                                            <select name="vendor_id" value={formData.vendor_id} onChange={handleInputChange}
+                                            <select name="vendor_id" value={formData.vendor_id} onChange={handleVendorChange}
                                                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none" required>
                                                 <option value="">Select a vendor</option>
                                                 {vendors.filter(v => v.active !== false).map(v => (
@@ -1137,6 +1346,26 @@ export default function PurchaseOrdersPage() {
                                             <label className="block text-sm font-semibold text-foreground mb-2">Remarks</label>
                                             <Input name="remarks" value={formData.remarks} onChange={handleInputChange} maxLength={100} />
                                         </div>
+                                        {/* PO Totals (display only) */}
+                                        <div className="col-span-2 grid grid-cols-4 gap-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                                            <div>
+                                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Basic Amount</p>
+                                                <p className="text-sm font-semibold text-gray-800">₹ {poBasicAmount.toFixed(2)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">GST Amount</p>
+                                                <p className="text-sm font-semibold text-gray-800">₹ {poGstAmount.toFixed(2)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Total Amount</p>
+                                                <p className="text-base font-bold text-blue-700">₹ {poTotalAmount.toFixed(2)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Mail Sent Status</p>
+                                                <p className="text-sm text-gray-400">—</p>
+                                            </div>
+                                        </div>
+
                                         {/* PO Details table */}
                                         <PODetailTable
                                             detailRows={detailRows}

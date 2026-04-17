@@ -1143,7 +1143,7 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange}
                                                 placeholder="Enter shortname"
                                                 required
-                                                maxLength={3}
+                                                maxLength={50}
                                             />
                                         </div>
 
@@ -1583,7 +1583,7 @@ const confirmCancelItem = async () => {
                                                 onChange={handleInputChange}
                                                 placeholder="Enter shortname"
                                                 required
-                                                maxLength={3}
+                                                maxLength={50}
                                             />
                                         </div>
 

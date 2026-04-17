@@ -4,15 +4,14 @@ export interface IGoodsReceiptUnits extends Document {
   material_doc_no: string;    // PK Part 1
   material_id: string;        // PK Part 2
   sno: number;                // PK Part 3
-  packet_no: string;          // Char (10)
-  roll_no: string;            // Char (10)
-  nett_qty: number;           // N (6,3)
-  uom: string;                // Char (3)
-  actual_qty: number;         // N (6,3)
-  consumed_qty: number;       // N (6,3)
-  rejected_qty: number;       // N (6,3)
-  balance_qty: number;        // N (6,3)
-  status: string;             // Char (1)
+  packet_no: string;          // Char (10) - Not Null
+  roll_no: string;            // Char (10) - Not Null, unique per doc+material
+  gross_qty: number;          // N (6,3) - Entry > 0
+  tare_qty: number;           // N (6,3) - From MaterialMaster.core_weight
+  nett_qty: number;           // N (6,3) - gross - tare
+  uom: string;                // Char (3) - From GoodsReceiptDetail.uom
+  status: string;             // Char (1) - From GoodsReceiptHeader.status
+  balance_qty?: number;       // N (6,3) - Computed: nett_qty - issued_qty
 }
 
 const GoodsReceiptUnitsSchema: Schema = new Schema({
@@ -35,24 +34,22 @@ const GoodsReceiptUnitsSchema: Schema = new Schema({
   },
 
   // --- Transactional Fields ---
-  packet_no: { type: String, maxlength: 10, trim: true },
-  roll_no: { type: String, maxlength: 10, trim: true },
-  nett_qty: { type: Number, required: true },
-  uom: { type: String, maxlength: 3, uppercase: true },
-  actual_qty: { type: Number, required: true },
-  consumed_qty: { type: Number, default: 0 },
-  rejected_qty: { type: Number, default: 0 },
-  balance_qty: { type: Number, required: true }, // Logic handled in UI
-  status: { type: String, maxlength: 1, } // Logic handled in UI
+  packet_no:  { type: String, required: true,  maxlength: 10, trim: true },
+  roll_no:    { type: String, required: true,  maxlength: 10, trim: true },
+  gross_qty:  { type: Number, required: true,  min: 0, max: 999999.999 }, // N(6,3)
+  tare_qty:   { type: Number, required: true,  min: 0, max: 999999.999 }, // N(6,3) - core_weight
+  nett_qty:   { type: Number, required: true,  min: 0, max: 999999.999 }, // N(6,3) - gross - tare
+  uom:        { type: String, required: true,  maxlength: 3, uppercase: true },
+  status:     { type: String, required: true,  maxlength: 1 }   ,
+  balance_qty: { type: Number, min: 0, max: 999999.999 }    // from GR Header status
 }, {
   timestamps: true,
 });
 
-// Enforcing the Primary Key constraint across the first three fields
-GoodsReceiptUnitsSchema.index(
-  { material_doc_no: 1, material_id: 1, sno: 1 }, 
-  { unique: true }
-);
+// Composite PK
+GoodsReceiptUnitsSchema.index({ material_doc_no: 1, material_id: 1, sno: 1 }, { unique: true });
+// roll_no must be unique per doc+material
+GoodsReceiptUnitsSchema.index({ material_doc_no: 1, material_id: 1, roll_no: 1 }, { unique: true });
 
 const GoodsReceiptUnits = (mongoose.models.GoodsReceiptUnits as mongoose.Model<IGoodsReceiptUnits>) || 
   mongoose.model<IGoodsReceiptUnits>('GoodsReceiptUnits', GoodsReceiptUnitsSchema);

@@ -36,6 +36,8 @@ interface Material {
     material_image_icon?: string;
     vendor_id?: string;
     core_weight?: number;
+    default_gst_percent?: number;
+    default_unit_price?: number;
     last_modified_user_id?: string;
     last_modified_date_time?: Date;
     active?: boolean;
@@ -128,6 +130,8 @@ export default function MaterialMasterPage() {
         active: true,
         vendor_id: "",
         core_weight: "",
+        default_gst_percent: "",
+        default_unit_price: "",
     });
     const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -238,7 +242,8 @@ useEffect(() => {
                 active: true,
                 vendor_id: "",
                 core_weight: "",
-
+                default_gst_percent: "",
+                default_unit_price: "",
             });
         }
     }, [isAddModalOpen]);
@@ -364,6 +369,8 @@ const getChecklistDisplay = (checklistId: string) => {
                 last_modified_user_id: "ADMIN",
                 vendor_id: formData.vendor_id || undefined,
                 core_weight: formData.core_weight ? Number(formData.core_weight) : undefined,
+                default_gst_percent: formData.default_gst_percent ? Number(formData.default_gst_percent) : undefined,
+                default_unit_price: formData.default_unit_price ? Number(formData.default_unit_price) : undefined,
             };
 
             await materialAPI.create(formattedData);
@@ -394,7 +401,8 @@ const getChecklistDisplay = (checklistId: string) => {
                 active: true,
                 vendor_id: "",
                 core_weight: "",
-
+                default_gst_percent: "",
+                default_unit_price: "",
             });
             loadMaterials();
         } catch (error: any) {
@@ -432,6 +440,8 @@ const getChecklistDisplay = (checklistId: string) => {
             active: material.active !== undefined ? material.active : true,
             vendor_id: material.vendor_id || "",
             core_weight: material.core_weight?.toString() || "",
+            default_gst_percent: material.default_gst_percent?.toString() || "",
+            default_unit_price: material.default_unit_price?.toString() || "",
         });
         setIsEditModalOpen(true);
     };
@@ -465,6 +475,8 @@ const getChecklistDisplay = (checklistId: string) => {
                 last_modified_user_id: "ADMIN",
                 vendor_id: formData.vendor_id || undefined,
                 core_weight: formData.core_weight ? Number(formData.core_weight) : undefined,
+                default_gst_percent: formData.default_gst_percent ? Number(formData.default_gst_percent) : undefined,
+                default_unit_price: formData.default_unit_price ? Number(formData.default_unit_price) : undefined,
             };
 
             await materialAPI.update(selectedMaterial!.material_id, formattedData);
@@ -826,6 +838,8 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Image Icon</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Vendor ID</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Core Weight</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Default GST %</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Default Unit Price</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Last Modified User ID</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Last Modified Date & Time</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Active</th>
@@ -945,6 +959,14 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
 
         <td className="px-4 py-3 text-sm">
           {material.core_weight ?? "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.default_gst_percent != null ? `${material.default_gst_percent}%` : "-"}
+        </td>
+
+        <td className="px-4 py-3 text-sm">
+          {material.default_unit_price != null ? material.default_unit_price : "-"}
         </td>
 
         {/* LAST MODIFIED USER */}
@@ -1246,6 +1268,40 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                                 onChange={handleInputChange}
                                                 placeholder="0.000"
                                                 step="0.001"
+                                            />
+                                        </div>
+
+                                        {/* Default GST % */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Default GST %
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="default_gst_percent"
+                                                value={formData.default_gst_percent}
+                                                onChange={handleInputChange}
+                                                placeholder="0.00"
+                                                step="0.01"
+                                                min="0"
+                                                max="99.99"
+                                            />
+                                        </div>
+
+                                        {/* Default Unit Price */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Default Unit Price
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="default_unit_price"
+                                                value={formData.default_unit_price}
+                                                onChange={handleInputChange}
+                                                placeholder="0.00"
+                                                step="0.01"
+                                                min="0"
+                                                max="99999.99"
                                             />
                                         </div>
 
@@ -1704,6 +1760,40 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                                 onChange={handleInputChange}
                                                 placeholder="0.000"
                                                 step="0.001"
+                                            />
+                                        </div>
+
+                                        {/* Default GST % */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Default GST %
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="default_gst_percent"
+                                                value={formData.default_gst_percent}
+                                                onChange={handleInputChange}
+                                                placeholder="0.00"
+                                                step="0.01"
+                                                min="0"
+                                                max="99.99"
+                                            />
+                                        </div>
+
+                                        {/* Default Unit Price */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Default Unit Price
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                name="default_unit_price"
+                                                value={formData.default_unit_price}
+                                                onChange={handleInputChange}
+                                                placeholder="0.00"
+                                                step="0.01"
+                                                min="0"
+                                                max="99999.99"
                                             />
                                         </div>
 

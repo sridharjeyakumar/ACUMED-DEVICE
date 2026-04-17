@@ -22,6 +22,8 @@ export interface IVendorMaster extends Document {
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
   active: boolean; // Boolean
+  default_shipping_instruction?: string; // Char(500)
+  default_terms_of_payment?: string; // Char(500)
 }
 
 const VendorMasterSchema: Schema = new Schema({
@@ -152,6 +154,18 @@ const VendorMasterSchema: Schema = new Schema({
     required: true,
     default: true,
     index: true,
+  },
+  default_shipping_instruction: {
+    type: String,
+    required: false,
+    maxlength: 500,
+    trim: true,
+  },
+  default_terms_of_payment: {
+    type: String,
+    required: false,
+    maxlength: 500,
+    trim: true,
   },
 }, {
   timestamps: true,

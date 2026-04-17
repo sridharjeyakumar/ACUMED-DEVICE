@@ -15,6 +15,8 @@ export interface ICOAHeader extends Document {
     approval_remarks: string;
     approved_by_user_id: string;
     approved_date_time: Date;
+    review_by_user_id: string;
+    review_date_time: Date;
     status: string;
 }
 const COAHeaderSchema: Schema = new Schema({
@@ -79,6 +81,13 @@ const COAHeaderSchema: Schema = new Schema({
         maxlength: 5 // Char (5)
     },
     approved_date_time: { 
+        type: Date 
+    },
+    review_by_user_id: { 
+        type: String,
+        maxlength: 5 // Char (5)
+    },
+    review_date_time: { 
         type: Date 
     },
     status: { 
