@@ -166,7 +166,7 @@ const CompanyMasterSchema: Schema = new Schema({
   po_terms_and_conditions: {
     type: String,
     required: false,
-    maxlength: 500,
+    maxlength: 1000,
     trim: true,
   },
   po_image: {

@@ -55,7 +55,7 @@ const navSections: NavSection[] = [
   {
     title: "MASTER",
     items: [
-      { icon: Package, label: "Product Master", href: "/product-master" ,subtitle: "Master"},
+      { icon: Package, label: "Product Master", href: "/product-master"},
       { icon: Layers, label: "Material Master", href: "/material-master" },
       { icon: Truck, label: "Vendor Master", href: "/vendor-master" },
       { icon: Box, label: "Pack Size Master", href: "/pack-size-master" },
@@ -66,7 +66,6 @@ const navSections: NavSection[] = [
       { icon: Layers, label: "Material Category Master", href: "/material-category-master" },
       { icon: MapPin, label: "Location Master", href: "/location-master" },
       { icon: Trash2, label: "Collection Bin Master", href: "/collection-bin-master" },
-      { icon: ClipboardList, label: "Machine Stop Reason Master", href: "/machine-stop-reason-master" },
       { icon: Factory, label: "Machine Master", href: "/production-capacity" },
       { icon: Factory, label: "Department Master", href: "/department-master" },
       { icon: Award, label: "Employee Grade Master", href: "/employee-grade-master" },
@@ -76,13 +75,14 @@ const navSections: NavSection[] = [
   {
     title: "CONFIGURATION",
     items: [
-      { icon: Building2, label: "Company Master", href: "/company-master" ,subtitle: "Configuration"},
+      { icon: Building2, label: "Company Master", href: "/company-master" },
       { icon: CheckCircle2, label: "Product Status Master", href: "/product-status-master" },
       { icon: CheckCircle2, label: "Product Status Transition Master", href: "/product-status-transition-master" },
       { icon: Package, label: "Material Status Master", href: "/material-status-master" },
       { icon: Archive, label: "Carton Capacity Master", href: "/carton-capacity-master" },
       { icon: CheckCircle2, label: "Batch Status Master", href: "/batch-status-master" },
       { icon: ClipboardList, label: "Machine Event Type Master", href: "/machine-event-type-master" },
+      { icon: ClipboardList, label: "Machine Stop Reason Master", href: "/machine-stop-reason-master" },
       { icon: Ruler, label: "UOM Master", href: "/uom-master" },
       { icon: CalendarDays, label: "Holidays Master", href: "/holidays-master" },
       { icon: CalendarOff, label: "Weekly Off Master", href: "/weekly-off-master" },
@@ -93,7 +93,7 @@ const navSections: NavSection[] = [
   {
     title: "SYSTEM",
     items: [
-      { icon: MenuIcon, label: "Menu Master", href: "/menu-master",subtitle: "System" },
+      { icon: MenuIcon, label: "Menu Master", href: "/menu-master" },
       { icon: Users, label: "Role Master", href: "/role-master" },
       { icon: Key, label: "Menu Access Master", href: "/menu-access-master" },
       { icon: UserCircle, label: "User Master", href: "/user-master" },

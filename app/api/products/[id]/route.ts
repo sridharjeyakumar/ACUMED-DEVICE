@@ -84,9 +84,10 @@ export async function PUT(
     if (body.batch_no_pattern !== undefined) updateData.batch_no_pattern = cleanValue(body.batch_no_pattern);
     if (body.product_image !== undefined) updateData.product_image = cleanValue(body.product_image);
     if (body.product_image_icon !== undefined) updateData.product_image_icon = cleanValue(body.product_image_icon);
-    if (body.qc_required !== undefined) updateData.qc_required = body.qc_required === true || body.qc_required === "true";
+    if (body.product_type !== undefined) updateData.product_type = cleanValue(body.product_type);
+    if (body.qc_required !== undefined) updateData.qc_required = body.qc_required === true || body.qc_required === "true" ? 'Y' : (body.qc_required === 'Y' || body.qc_required === 'N' ? body.qc_required : 'N');
     if (body.coa_checklist_id !== undefined) updateData.coa_checklist_id = cleanValue(body.coa_checklist_id);
-    if (body.sterilization_required !== undefined) updateData.sterilization_required = body.sterilization_required === true || body.sterilization_required === "true";
+    if (body.sterilization_required !== undefined) updateData.sterilization_required = body.sterilization_required === true || body.sterilization_required === "true" ? 'Y' : (body.sterilization_required === 'Y' || body.sterilization_required === 'N' ? body.sterilization_required : 'N');
     if (body.active !== undefined) updateData.active = body.active !== false;
         if (body.batch_prefix !== undefined) updateData.batch_prefix = cleanValue(body.batch_prefix);
     if (body.running_batch_sno !== undefined) {

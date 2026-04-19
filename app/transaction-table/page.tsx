@@ -5,13 +5,13 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, X, Play, Pause, CheckCircle, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Plus, Filter, Pencil, ChevronLeft, ChevronRight, Play, Pause, CheckCircle, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { cartonCapacityAPI, packSizeAPI, productAPI, transactionAPI, productionPlanDetailAPI, productionRejectedAPI, holidaysAPI, weeklyOffAPI } from "@/services/api";
+import { cartonCapacityAPI, packSizeAPI, productAPI, transactionAPI, productionPlanDetailAPI, productionRejectedAPI, holidaysAPI, weeklyOffAPI, productBomAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 interface Transaction {
@@ -36,7 +36,7 @@ interface Transaction {
     last_modified_user_id?: string;
     last_modified_date_time?: Date;
     current_batch_event_type_id?: string;
-    current_batch_status_id: 'P' | 'I' | 'W' | 'C';
+    current_batch_status_id: 'P' | 'R' | 'W' | 'S' | 'C';
     createdAt?: string;
     updatedAt?: string;
 }
@@ -112,10 +112,11 @@ interface ProductDetail {
     batch_no?: string;
 }
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
     'P': { label: 'Planned', color: 'bg-blue-50 text-blue-600', icon: Play },
-    'I': { label: 'In Progress', color: 'bg-green-50 text-green-600', icon: Play },
-    'W': { label: 'Waiting', color: 'bg-yellow-50 text-yellow-600', icon: Pause },
+    'R': { label: 'Released', color: 'bg-green-50 text-green-600', icon: Play },
+    'W': { label: 'Work-In-Progress', color: 'bg-yellow-50 text-yellow-600', icon: Pause },
+    'S': { label: 'Stop', color: 'bg-orange-50 text-orange-600', icon: Pause },
     'C': { label: 'Completed', color: 'bg-gray-50 text-gray-600', icon: CheckCircle },
 };
 
@@ -179,6 +180,60 @@ function calcWorkingDays(
     return count;
 }
 
+function BatchStatusStepper({
+    currentValue,
+    existingStatus,
+    onChange,
+}: {
+    currentValue: string;
+    existingStatus?: string | null;
+    onChange?: (id: string) => void;
+}) {
+    const steps = [
+        { id: 'P', label: 'Planned',   pastCls: 'bg-blue-500 text-white',   currCls: 'bg-blue-600 text-white ring-4 ring-blue-200',   nextCls: 'bg-white border-2 border-blue-400 text-blue-600 hover:bg-blue-50',   lineCls: 'bg-blue-400',   labelCls: 'text-blue-700'   },
+        { id: 'R', label: 'Released',  pastCls: 'bg-green-500 text-white',  currCls: 'bg-green-600 text-white ring-4 ring-green-200',  nextCls: 'bg-white border-2 border-green-400 text-green-600 hover:bg-green-50',  lineCls: 'bg-green-400',  labelCls: 'text-green-700'  },
+        { id: 'W', label: 'WIP',       pastCls: 'bg-yellow-500 text-white', currCls: 'bg-yellow-500 text-white ring-4 ring-yellow-200', nextCls: 'bg-white border-2 border-yellow-400 text-yellow-600 hover:bg-yellow-50', lineCls: 'bg-yellow-400', labelCls: 'text-yellow-700' },
+        { id: 'S', label: 'Stop',      pastCls: 'bg-orange-500 text-white', currCls: 'bg-orange-600 text-white ring-4 ring-orange-200', nextCls: 'bg-white border-2 border-orange-400 text-orange-600 hover:bg-orange-50', lineCls: 'bg-orange-400', labelCls: 'text-orange-700' },
+        { id: 'C', label: 'Completed', pastCls: 'bg-slate-500 text-white',  currCls: 'bg-slate-600 text-white ring-4 ring-slate-200',  nextCls: 'bg-white border-2 border-slate-400 text-slate-600 hover:bg-slate-50',  lineCls: 'bg-slate-400',  labelCls: 'text-slate-700'  },
+    ];
+    const currentIdx = steps.findIndex(s => s.id === currentValue);
+    const nextAllowedMap: Record<string, string> = { P: 'R', W: 'S', S: 'C' };
+    const clickableId = existingStatus ? (nextAllowedMap[existingStatus] ?? null) : null;
+
+    return (
+        <div className="flex items-start w-full">
+            {steps.map((step, idx) => {
+                const isPast = idx < currentIdx;
+                const isCurrent = step.id === currentValue;
+                const isClickable = clickableId === step.id && !!onChange;
+                const circleCls = isCurrent ? step.currCls : isPast ? step.pastCls : isClickable ? step.nextCls : 'bg-white border-2 border-slate-200 text-slate-300';
+                const lbCls = isCurrent || isPast || isClickable ? step.labelCls : 'text-slate-300';
+                return (
+                    <div key={step.id} className="flex items-center flex-1">
+                        <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                            <button
+                                type="button"
+                                disabled={!isClickable}
+                                onClick={() => isClickable && onChange?.(step.id)}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black transition-all ${circleCls} ${isClickable ? 'cursor-pointer' : 'cursor-default'} ${isCurrent ? 'scale-110' : ''}`}
+                                title={step.label}
+                            >
+                                {isPast ? '✓' : step.id}
+                            </button>
+                            <span className={`text-[9px] font-bold uppercase text-center leading-tight w-12 ${lbCls} ${isCurrent ? 'font-black' : ''}`}>
+                                {step.label}
+                            </span>
+                        </div>
+                        {idx < steps.length - 1 && (
+                            <div className={`h-0.5 flex-1 mx-1 mt-[-14px] ${idx < currentIdx ? step.lineCls : 'bg-slate-200'}`} />
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 export default function TransactionTablePage() {
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
@@ -221,7 +276,7 @@ export default function TransactionTablePage() {
         remarks: "",
         completed_remarks: "",
         current_batch_event_type_id: "NB",
-        current_batch_status_id: "P" as 'P' | 'I' | 'W' | 'C',
+        current_batch_status_id: "P" as 'P' | 'R' | 'W' | 'S' | 'C',
     });
     
     const isSubmittingRef = useRef(false);
@@ -232,7 +287,6 @@ export default function TransactionTablePage() {
     const [packSizes, setPackSizes] = useState<PackSize[]>([]);
     
     // Product Detail States - Now inline
-    const [showProductDetails, setShowProductDetails] = useState(false);
     const [productDetails, setProductDetails] = useState<ProductDetail[]>([]);
     const [currentProductDetail, setCurrentProductDetail] = useState({
         packsize_id: '',
@@ -244,11 +298,12 @@ export default function TransactionTablePage() {
     const [initialTotalSachets, setInitialTotalSachets] = useState<number>(0);
     const [editPacksizeDetails, setEditPacksizeDetails] = useState<ProductDetail[]>([]);
     const [editNewRows, setEditNewRows] = useState<ProductDetail[]>([]);
-    const [editNewRow, setEditNewRow] = useState({ packsize_id: '', no_of_packs: '' });
+
+    // BOM products (products that use the batch's product_id as a raw material)
+    const [bomProducts, setBomProducts] = useState<Product[]>([]);
 
     // Close (status='C') confirmation
     const [showCloseConfirmDialog, setShowCloseConfirmDialog] = useState(false);
-    const [completedRemarks, setCompletedRemarks] = useState('');
     const [plannedSachetsSum, setPlannedSachetsSum] = useState<number>(0);
 
     // Holidays & weekly offs (for working day calculation)
@@ -276,7 +331,7 @@ export default function TransactionTablePage() {
                 remarks: "",
                 completed_remarks: "",
                 current_batch_event_type_id: "NB",
-                current_batch_status_id: "P",
+                current_batch_status_id: "P" as 'P' | 'R' | 'W' | 'S' | 'C',
             });
             setProductDetails([]);
             setCurrentProductDetail({
@@ -284,7 +339,7 @@ export default function TransactionTablePage() {
                 no_of_packs: '',
                 remarks: ''
             });
-            setShowProductDetails(false);
+
             setIsDuplicateBatch(false);
             setDuplicateMessage("");
             setSelectedProduct(null);
@@ -331,6 +386,16 @@ export default function TransactionTablePage() {
         };
         loadPackSizes();
     }, []);
+
+    // Load BOM products whenever the batch's product_id changes
+    useEffect(() => {
+        const batchProductId = formData.product_id || selectedTransaction?.product_id;
+        if (!batchProductId) { setBomProducts([]); return; }
+        productBomAPI.getByProductId(batchProductId).then((boms: { product_id: string }[]) => {
+            const bomProductIds = new Set(boms.map((b: { product_id: string }) => b.product_id));
+            setBomProducts(products.filter(p => bomProductIds.has(p.product_id)));
+        }).catch(console.error);
+    }, [formData.product_id, selectedTransaction?.product_id, products]);
 
     const loadTransactions = useCallback(async () => {
         try {
@@ -453,9 +518,6 @@ useEffect(() => {
         }
     };
 
-    const handleBatchNoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        return;
-    };
 
     const getTodayDateString = () => {
         const today = new Date();
@@ -470,99 +532,6 @@ useEffect(() => {
     const getMinDateForEndDate = (startDate: string) => {
         if (!startDate) return todayDate;
         return startDate > todayDate ? startDate : todayDate;
-    };
-
-    // Product Detail Functions
-    const calculateSachets = (detail: typeof currentProductDetail) => {
-        if (!detail.packsize_id || !detail.no_of_packs) return 0;
-        const packSize = packSizes.find(ps => ps.pack_size_id === detail.packsize_id);
-        return packSize ? parseInt(detail.no_of_packs) * packSize.qty_per_carton : 0;
-    };
-
-    const getPacksPerCartonByType = (cartonType: string) => {
-        if (!selectedProduct || !currentProductDetail.packsize_id) return 0;
-        
-        const capacityRecord = records.find(r => 
-            r.product_id === selectedProduct.product_id && 
-            r.pack_size_id === currentProductDetail.packsize_id && 
-            r.carton_type_id === cartonType &&
-            r.active === true
-        );
-        
-        return capacityRecord ? capacityRecord.packs_per_carton : 0;
-    };
-
-    const calculateCartons = (cartonType: string) => {
-        if (!currentProductDetail.no_of_packs || !currentProductDetail.packsize_id) return 0;
-        
-        const packsPerCarton = getPacksPerCartonByType(cartonType);
-        if (packsPerCarton === 0) return 0;
-        
-        return Math.ceil(parseInt(currentProductDetail.no_of_packs) / packsPerCarton);
-    };
-
-    const getPackSizeName = (packsize_id: string) => {
-        const packSize = packSizes.find(ps => ps.pack_size_id === packsize_id);
-        return packSize ? `${packSize.pack_size_name} (${packSize.qty_per_carton} ${packSize.uom})` : '';
-    };
-
-    const handleProductDetailChange = (field: string, value: string) => {
-        setCurrentProductDetail(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    };
-
-    const handleAddProductDetail = () => {
-        if (!currentProductDetail.packsize_id || !currentProductDetail.no_of_packs) {
-            toast({
-                title: "Validation Error",
-                description: "Please select pack size and enter number of packs",
-                variant: "destructive",
-            });
-            return;
-        }
-
-        const newDetail: ProductDetail = {
-            packsize_id: currentProductDetail.packsize_id,
-            no_of_packs: parseInt(currentProductDetail.no_of_packs),
-            remarks: currentProductDetail.remarks,
-            no_of_sachets: calculateSachets(currentProductDetail),
-            packs_per_steri_carton: getPacksPerCartonByType('ST'),
-            sterilization_cartons: calculateCartons('ST'),
-            packs_per_shipper_carton: getPacksPerCartonByType('SH'),
-            shipper_cartons: calculateCartons('SH'),
-            no_of_shipper_cartons: 0,
-            no_of_sterilization_cartons: 0,
-            last_modified_user_id: "",
-            last_modified_date_time: undefined
-        };
-
-        setProductDetails([...productDetails, newDetail]);
-        setCurrentProductDetail({
-            packsize_id: '',
-            no_of_packs: '',
-            remarks: ''
-        });
-        
-        // Update only the planned totals in the main form
-        updatePlannedTotals([...productDetails, newDetail]);
-        
-        toast({
-            title: "Success",
-            description: "Product detail added successfully",
-        });
-    };
-
-    const removeProductDetail = (index: number) => {
-        const updatedDetails = productDetails.filter((_, i) => i !== index);
-        setProductDetails(updatedDetails);
-        updatePlannedTotals(updatedDetails);
-        
-        toast({
-            title: "Removed",
-            description: "Product detail removed",
-        });
     };
 
     const updatePlannedTotals = (details: ProductDetail[]) => {
@@ -620,19 +589,6 @@ useEffect(() => {
             }
         }
     };
-// Helper function to get packs per carton for a specific product and pack size
-const getPacksPerCartonByTypeForProduct = (packsize_id: string, cartonType: string) => {
-    if (!selectedProduct || !packsize_id) return 0;
-    
-    const capacityRecord = records.find(r => 
-        r.product_id === selectedProduct.product_id && 
-        r.pack_size_id === packsize_id && 
-        r.carton_type_id === cartonType &&
-        r.active === true
-    );
-    
-    return capacityRecord ? capacityRecord.packs_per_carton : 0;
-};
 
 // Helper: carton capacity lookup by product_id (used in Edit modal pack size editing)
 const getPacksPerCartonForProduct = (product_id: string, packsize_id: string, cartonType: string) => {
@@ -729,7 +685,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                 const productionPlanDetails = productDetails.map((detail, index) => ({
                     batch_no: formData.batch_no.toUpperCase(),
                     sno: index + 1,
-                    product_id: formData.product_id.toUpperCase(),
+                    product_id: (detail.product_id || formData.product_id).toUpperCase(),
                     packsize_id: detail.packsize_id,
                     no_of_packs: detail.no_of_packs,
                     no_of_sachets: detail.no_of_sachets,
@@ -840,11 +796,9 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
             current_batch_status_id: transaction.current_batch_status_id,
         });
 
-        // Capture original total sachets for validation in 'I' and 'W' modes
+        // Capture original total sachets for validation in 'R', 'W', and 'S' modes
         setInitialTotalSachets(transaction.total_sachets || 0);
         setEditNewRows([]);
-        setEditNewRow({ packsize_id: '', no_of_packs: '' });
-        setCompletedRemarks('');
 
         const product = products.find(p => p.product_id === transaction.product_id);
         setSelectedProduct(product || null);
@@ -861,61 +815,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
     };
 
     // Calculate sachets for a given packsize_id + no_of_packs (used in edit new rows)
-    const calcEditRowSachets = (packsize_id: string, no_of_packs: string) => {
-        if (!packsize_id || !no_of_packs) return 0;
-        const ps = packSizes.find(p => p.pack_size_id === packsize_id);
-        return ps ? parseInt(no_of_packs) * ps.qty_per_carton : 0;
-    };
 
-    const getEditRowCartons = (packsize_id: string, no_of_packs: string, cartonType: string) => {
-        if (!packsize_id || !no_of_packs || !selectedProduct) return 0;
-        const cap = records.find(r =>
-            r.product_id === selectedProduct.product_id &&
-            r.pack_size_id === packsize_id &&
-            r.carton_type_id === cartonType &&
-            r.active === true
-        );
-        if (!cap || cap.packs_per_carton === 0) return 0;
-        return Math.ceil(parseInt(no_of_packs) / cap.packs_per_carton);
-    };
-
-    const handleAddEditRow = () => {
-        if (!editNewRow.packsize_id || !editNewRow.no_of_packs) {
-            toast({ title: "Validation Error", description: "Select pack size and enter number of packs", variant: "destructive" });
-            return;
-        }
-        const newSachets = calcEditRowSachets(editNewRow.packsize_id, editNewRow.no_of_packs);
-        const existingSachetsSum = editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
-        const newRowsSachetsSum = editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
-        if (existingSachetsSum + newRowsSachetsSum + newSachets > initialTotalSachets) {
-            toast({
-                title: "Sachets Limit Exceeded",
-                description: `Adding this row would make total sachets (${existingSachetsSum + newRowsSachetsSum + newSachets}) exceed the planned total (${initialTotalSachets}).`,
-                variant: "destructive",
-            });
-            return;
-        }
-        const steriPerPack = getEditRowCartons(editNewRow.packsize_id, editNewRow.no_of_packs, 'ST');
-        const shipperPerPack = getEditRowCartons(editNewRow.packsize_id, editNewRow.no_of_packs, 'SH');
-        const ps = packSizes.find(p => p.pack_size_id === editNewRow.packsize_id);
-        const steriCartons = ps && steriPerPack > 0 ? Math.ceil(parseInt(editNewRow.no_of_packs) / steriPerPack) : 0;
-        const shipperCartons = ps && shipperPerPack > 0 ? Math.ceil(parseInt(editNewRow.no_of_packs) / shipperPerPack) : 0;
-        setEditNewRows(prev => [...prev, {
-            packsize_id: editNewRow.packsize_id,
-            no_of_packs: parseInt(editNewRow.no_of_packs),
-            remarks: '',
-            no_of_sachets: newSachets,
-            packs_per_steri_carton: steriPerPack,
-            sterilization_cartons: steriCartons,
-            packs_per_shipper_carton: shipperPerPack,
-            shipper_cartons: shipperCartons,
-            no_of_shipper_cartons: shipperCartons,
-            no_of_sterilization_cartons: steriCartons,
-            last_modified_user_id: "",
-            last_modified_date_time: undefined,
-        }]);
-        setEditNewRow({ packsize_id: '', no_of_packs: '' });
-    };
 
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -925,8 +825,8 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
 
         const currentStatus = selectedTransaction.current_batch_status_id;
 
-        // Status 'I': only save new packsize rows, no TransactionTable changes
-        if (currentStatus === 'I') {
+        // Status 'R' (Released): only save new packsize rows, no data or status changes
+        if (currentStatus === 'R') {
             isSubmittingRef.current = true;
             try {
                 await saveEditNewRows();
@@ -942,9 +842,39 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
             return;
         }
 
-        // Status 'W': only status change to 'C' is allowed, plus new packsize rows
+        // Status 'W' (Work-In-Progress): save new rows + optionally change status to 'S'
         if (currentStatus === 'W') {
+            isSubmittingRef.current = true;
+            try {
+                await saveEditNewRows();
+                if (formData.current_batch_status_id === 'S') {
+                    await transactionAPI.update(selectedTransaction.batch_no, {
+                        current_batch_status_id: 'S',
+                        last_modified_user_id: "ADMIN",
+                        last_modified_date_time: new Date(),
+                    });
+                    toast({ title: "Success", description: "Status updated to Stop." });
+                } else {
+                    toast({ title: "Success", description: "New pack size rows saved." });
+                }
+                setIsEditModalOpen(false);
+                setSelectedTransaction(null);
+                loadTransactions();
+            } catch (error: any) {
+                toast({ title: "Error", description: error.message || "Failed to save", variant: "destructive" });
+            } finally {
+                isSubmittingRef.current = false;
+            }
+            return;
+        }
+
+        // Status 'S' (Stop): save new rows + optionally trigger close dialog (status 'C')
+        if (currentStatus === 'S') {
             if (formData.current_batch_status_id === 'C') {
+                if (!formData.completed_remarks?.trim()) {
+                    toast({ title: "Validation", description: "Completed Remarks are required before closing the batch.", variant: "destructive" });
+                    return;
+                }
                 isSubmittingRef.current = true;
                 try {
                     const details = await productionPlanDetailAPI.getByBatchNo(selectedTransaction.batch_no);
@@ -973,9 +903,9 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
             return;
         }
 
-        // Status 'P': full edit — validate status transition (only P→P or P→I)
-        if (!['P', 'I'].includes(formData.current_batch_status_id)) {
-            toast({ title: "Invalid Status", description: "From Planned, status can only move to In Progress or stay Planned.", variant: "destructive" });
+        // Status 'P' (Planned): full edit — validate status transition (only P→P or P→R)
+        if (!['P', 'R'].includes(formData.current_batch_status_id)) {
+            toast({ title: "Invalid Status", description: "From Planned, status can only move to Released or stay Planned.", variant: "destructive" });
             return;
         }
 
@@ -1037,7 +967,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                 const toCreate = newDetailRows.map((row, idx) => ({
                     batch_no: selectedTransaction.batch_no,
                     sno: maxSno + idx + 1,
-                    product_id: selectedTransaction.product_id,
+                    product_id: (row.product_id || selectedTransaction.product_id).toUpperCase(),
                     packsize_id: row.packsize_id,
                     no_of_packs: row.no_of_packs,
                     no_of_sachets: row.no_of_sachets,
@@ -1068,7 +998,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
         }
     };
 
-    // Save new packsize rows added during 'I' or 'W' edit
+    // Save new packsize rows added during 'R', 'W', or 'S' edit
     const saveEditNewRows = async () => {
         if (!selectedTransaction || editNewRows.length === 0) return;
         const existingDetails = await productionPlanDetailAPI.getByBatchNo(selectedTransaction.batch_no);
@@ -1076,7 +1006,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
         const toCreate = editNewRows.map((row, idx) => ({
             batch_no: selectedTransaction.batch_no,
             sno: nextSno + idx,
-            product_id: selectedTransaction.product_id,
+            product_id: (row.product_id || selectedTransaction.product_id).toUpperCase(),
             packsize_id: row.packsize_id,
             no_of_packs: row.no_of_packs,
             no_of_sachets: row.no_of_sachets,
@@ -1110,7 +1040,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
 
             await transactionAPI.update(selectedTransaction.batch_no, {
                 current_batch_status_id: 'C',
-                completed_remarks: completedRemarks,
+                completed_remarks: formData.completed_remarks,
                 actual_end_date: new Date(),
                 total_rejected_qty_kg: totalRejectedKg,
                 last_modified_user_id: "ADMIN",
@@ -1121,8 +1051,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
             setShowCloseConfirmDialog(false);
             setIsEditModalOpen(false);
             setSelectedTransaction(null);
-            setCompletedRemarks('');
-            loadTransactions();
+                loadTransactions();
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "Failed to close batch", variant: "destructive" });
         } finally {
@@ -1852,7 +1781,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-3">
                                     <div>
                                         <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block">Current Event Type ID</label>
                                         <div className="bg-[#f8fafc] border border-slate-200 rounded-xl px-4 py-2 text-sm font-medium text-slate-500">
@@ -1860,10 +1789,9 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block">Batch Status ID</label>
-                                        <div className="bg-[#f8fafc] border border-slate-200 rounded-xl px-4 py-2 text-sm font-medium flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                            <span className="text-slate-500 uppercase">P - PLANNED</span>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Batch Status</label>
+                                        <div className="bg-[#f8fafc] border border-slate-200 rounded-xl px-4 py-4">
+                                            <BatchStatusStepper currentValue="P" existingStatus={null} />
                                         </div>
                                     </div>
                                 </div>
@@ -1881,6 +1809,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                     type="button"
                                     onClick={() => {
                                         const newDetail: ProductDetail = {
+                                            product_id: '',
                                             packsize_id: '',
                                             no_of_packs: 0,
                                             remarks: '',
@@ -1910,7 +1839,8 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                         <thead className="bg-slate-50">
                                             <tr>
                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sno</th>
-                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Pack Size *</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Product *</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Pack Size</th>
                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Packs *</th>
                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sachets</th>
                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Steri/Pack</th>
@@ -1924,79 +1854,53 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                         <tbody className="bg-white divide-y divide-slate-200">
                                             {productDetails.map((detail, index) => {
                                                 const selectedPackSize = packSizes.find(ps => ps.pack_size_id === detail.packsize_id);
-                                                
+                                                const selectedBomProduct = bomProducts.find(p => p.product_id === detail.product_id);
+
                                                 return (
                                                     <tr key={index} className="hover:bg-slate-50">
                                                         <td className="px-4 py-3 text-sm font-mono">{index + 1}</td>
                                                         
-                                                        {/* Pack Size */}
+                                                        {/* Product */}
                                                         <td className="px-4 py-3">
-                                                            {detail.packsize_id ? (
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-sm font-medium text-slate-700">
-                                                                        {selectedPackSize?.pack_size_name || detail.packsize_id}
-                                                                    </span>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            const newDetails = [...productDetails];
-                                                                            newDetails[index] = {
-                                                                                ...detail,
-                                                                                packsize_id: '',
-                                                                                packs_per_steri_carton: 0,
-                                                                                packs_per_shipper_carton: 0,
-                                                                                no_of_sachets: 0,
-                                                                                sterilization_cartons: 0,
-                                                                                shipper_cartons: 0
-                                                                            };
-                                                                            setProductDetails(newDetails);
-                                                                            updatePlannedTotals(newDetails);
-                                                                        }}
-                                                                        className="ml-2 text-blue-600 hover:text-blue-800"
-                                                                        title="Change pack size"
-                                                                    >
-                                                                        <Pencil className="w-3 h-3" />
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <select
-                                                                    value={detail.packsize_id || ''}
-                                                                    onChange={(e) => {
-                                                                        const newDetails = [...productDetails];
-                                                                        const newPackSizeId = e.target.value;
-                                                                        const newSelectedPackSize = packSizes.find(ps => ps.pack_size_id === newPackSizeId);
-                                                                        
-                                                                        const steriPerPack = getPacksPerCartonByTypeForProduct(newPackSizeId, 'ST');
-                                                                        const shipperPerPack = getPacksPerCartonByTypeForProduct(newPackSizeId, 'SH');
-                                                                        
-                                                                        const packs = detail.no_of_packs || 0;
-                                                                        const sachets = newSelectedPackSize ? packs * newSelectedPackSize.qty_per_carton : 0;
-                                                                        const steriCartons = steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0;
-                                                                        const shipperCartons = shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0;
-                                                                        
-                                                                        newDetails[index] = {
-                                                                            ...detail,
-                                                                            packsize_id: newPackSizeId,
-                                                                            packs_per_steri_carton: steriPerPack,
-                                                                            packs_per_shipper_carton: shipperPerPack,
-                                                                            no_of_sachets: sachets,
-                                                                            sterilization_cartons: steriCartons,
-                                                                            shipper_cartons: shipperCartons
-                                                                        };
-                                                                        
-                                                                        setProductDetails(newDetails);
-                                                                        updatePlannedTotals(newDetails);
-                                                                    }}
-                                                                    className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
-                                                                >
-                                                                    <option value="">Select Pack Size</option>
-                                                                    {packSizes.filter((p)=>p.active).map((size) => (
-                                                                        <option key={size.pack_size_id} value={size.pack_size_id}>
-                                                                            {size.pack_size_name} ({size.qty_per_carton} {size.uom})
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                            )}
+                                                            <select
+                                                                value={detail.product_id || ''}
+                                                                onChange={(e) => {
+                                                                    const newDetails = [...productDetails];
+                                                                    const selProd = bomProducts.find(p => p.product_id === e.target.value);
+                                                                    const newPackSizeId = selProd?.default_pack_size_id || '';
+                                                                    const ps = packSizes.find(p => p.pack_size_id === newPackSizeId);
+                                                                    const steriPerPack = getPacksPerCartonForProduct(e.target.value, newPackSizeId, 'ST');
+                                                                    const shipperPerPack = getPacksPerCartonForProduct(e.target.value, newPackSizeId, 'SH');
+                                                                    const packs = detail.no_of_packs || 0;
+                                                                    newDetails[index] = {
+                                                                        ...detail,
+                                                                        product_id: e.target.value,
+                                                                        packsize_id: newPackSizeId,
+                                                                        packs_per_steri_carton: steriPerPack,
+                                                                        packs_per_shipper_carton: shipperPerPack,
+                                                                        no_of_sachets: ps ? packs * ps.qty_per_carton : 0,
+                                                                        sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
+                                                                        shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
+                                                                    };
+                                                                    setProductDetails(newDetails);
+                                                                    updatePlannedTotals(newDetails);
+                                                                }}
+                                                                className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
+                                                            >
+                                                                <option value="">Select Product</option>
+                                                                {bomProducts.map(p => (
+                                                                    <option key={p.product_id} value={p.product_id}>
+                                                                        {p.product_id} - {p.product_name}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </td>
+
+                                                        {/* Pack Size — display only, auto-filled */}
+                                                        <td className="px-4 py-3 text-sm text-slate-600 bg-slate-50">
+                                                            {selectedBomProduct
+                                                                ? (selectedPackSize?.pack_size_name || detail.packsize_id || '—')
+                                                                : '—'}
                                                         </td>
                                                         
                                                         {/* No. of Packs */}
@@ -2140,24 +2044,15 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                                             </svg>
                                             {isSubmittingRef.current ? 'Saving...' :
-                                             selectedTransaction?.current_batch_status_id === 'I' ? 'Save New Rows' :
-                                             selectedTransaction?.current_batch_status_id === 'W' ? 'Save / Close Batch' :
+                                             selectedTransaction?.current_batch_status_id === 'R' ? 'Save New Rows' :
+                                             selectedTransaction?.current_batch_status_id === 'W' ? 'Save / Update Status' :
+                                             selectedTransaction?.current_batch_status_id === 'S' ? 'Save / Close Batch' :
                                              'Update Plan'}
                                         </button>
                                     </div>
                                 </div>
 
                                 <form onSubmit={handleEditSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                                    {/* Status banner */}
-                                    {selectedTransaction && selectedTransaction.current_batch_status_id !== 'P' && (
-                                        <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-medium border ${
-                                            selectedTransaction.current_batch_status_id === 'I' ? 'bg-green-50 text-green-700 border-green-200' :
-                                            selectedTransaction.current_batch_status_id === 'W' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : ''
-                                        }`}>
-                                            {selectedTransaction.current_batch_status_id === 'I' && 'Batch is In Progress — transaction fields are locked. You may add new pack size rows only (total sachets must remain unchanged).'}
-                                            {selectedTransaction.current_batch_status_id === 'W' && 'Batch is Waiting — transaction fields are locked. You may add new pack size rows or change status to Completed.'}
-                                        </div>
-                                    )}
 
                                     {/* MAIN CARDS GRID */}
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -2380,7 +2275,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                 </div>
                                             </div>
                                             {/* Event Type & Status */}
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-4">
                                                 <div>
                                                     <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block">Event Type ID</label>
                                                     {selectedTransaction?.current_batch_status_id === 'P' ? (
@@ -2395,27 +2290,31 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block">Status <span className="text-red-500">*</span></label>
-                                                    {selectedTransaction?.current_batch_status_id === 'P' && (
-                                                        <select name="current_batch_status_id" value={formData.current_batch_status_id} onChange={handleInputChange}
-                                                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-100" required>
-                                                            <option value="P">P — Planned</option>
-                                                            <option value="I">I — In Progress</option>
-                                                        </select>
-                                                    )}
-                                                    {selectedTransaction?.current_batch_status_id === 'I' && (
-                                                        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-2 text-sm font-medium text-green-700">
-                                                            I — In Progress
-                                                        </div>
-                                                    )}
-                                                    {selectedTransaction?.current_batch_status_id === 'W' && (
-                                                        <select name="current_batch_status_id" value={formData.current_batch_status_id} onChange={handleInputChange}
-                                                            className="w-full bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-yellow-200" required>
-                                                            <option value="W">W — Waiting</option>
-                                                            <option value="C">C — Completed</option>
-                                                        </select>
-                                                    )}
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Batch Status <span className="text-red-500">*</span></label>
+                                                    <div className="bg-[#f8fafc] border border-slate-200 rounded-xl px-4 py-4">
+                                                        <BatchStatusStepper
+                                                            currentValue={formData.current_batch_status_id}
+                                                            existingStatus={selectedTransaction?.current_batch_status_id}
+                                                            onChange={(id) => setFormData(prev => ({ ...prev, current_batch_status_id: id as any }))}
+                                                        />
+                                                    </div>
                                                 </div>
+                                                {formData.current_batch_status_id === 'C' && (
+                                                    <div>
+                                                        <label className="text-[10px] font-bold text-red-500 uppercase mb-1.5 block">
+                                                            Completed Remarks <span className="text-red-500">*</span>
+                                                        </label>
+                                                        <textarea
+                                                            name="completed_remarks"
+                                                            value={formData.completed_remarks}
+                                                            onChange={handleInputChange}
+                                                            placeholder="Enter completion remarks..."
+                                                            maxLength={100}
+                                                            rows={3}
+                                                            className="w-full border border-red-200 rounded-xl px-4 py-2 text-sm resize-none outline-none focus:ring-2 focus:ring-red-100"
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -2431,6 +2330,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                 <button
                                                     type="button"
                                                     onClick={() => setEditPacksizeDetails(prev => [...prev, {
+                                                        product_id: '',
                                                         packsize_id: '',
                                                         no_of_packs: 0,
                                                         remarks: '',
@@ -2456,7 +2356,8 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                         <thead className="bg-slate-50">
                                                             <tr>
                                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sno</th>
-                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Pack Size *</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Product *</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Pack Size</th>
                                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Packs *</th>
                                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sachets</th>
                                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Steri/Pack</th>
@@ -2464,49 +2365,57 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Shipper/Pack</th>
                                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Shipper Cartons</th>
                                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Remarks</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Action</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="bg-white divide-y divide-slate-200">
                                                             {editPacksizeDetails.map((detail, index) => {
-                                                                const displaySno = detail.sno ?? `New`;
                                                                 const selectedPackSize = packSizes.find(ps => ps.pack_size_id === detail.packsize_id);
-                                                                const isNew = !detail.sno;
+                                                                const selectedBomProductEdit = bomProducts.find(p => p.product_id === detail.product_id);
                                                                 return (
-                                                                    <tr key={index} className={`hover:bg-slate-50 ${isNew ? 'bg-blue-50' : ''}`}>
-                                                                        <td className="px-4 py-3 text-sm font-mono">
-                                                                            {isNew ? <span className="text-blue-500 italic text-xs">New</span> : displaySno}
+                                                                    <tr key={index} className="hover:bg-slate-50">
+                                                                        <td className="px-4 py-3 text-sm font-mono">{index + 1}</td>
+
+                                                                        {/* Product */}
+                                                                        <td className="px-4 py-3">
+                                                                            <select
+                                                                                value={detail.product_id || ''}
+                                                                                onChange={(e) => {
+                                                                                    const selProd = bomProducts.find(p => p.product_id === e.target.value);
+                                                                                    const newPackSizeId = selProd?.default_pack_size_id || '';
+                                                                                    const updatedDetails = [...editPacksizeDetails];
+                                                                                    const ps = packSizes.find(p => p.pack_size_id === newPackSizeId);
+                                                                                    const steriPerPack = getPacksPerCartonForProduct(e.target.value, newPackSizeId, 'ST');
+                                                                                    const shipperPerPack = getPacksPerCartonForProduct(e.target.value, newPackSizeId, 'SH');
+                                                                                    const packs = detail.no_of_packs || 0;
+                                                                                    updatedDetails[index] = {
+                                                                                        ...detail,
+                                                                                        product_id: e.target.value,
+                                                                                        packsize_id: newPackSizeId,
+                                                                                        packs_per_steri_carton: steriPerPack,
+                                                                                        packs_per_shipper_carton: shipperPerPack,
+                                                                                        no_of_sachets: ps ? packs * ps.qty_per_carton : 0,
+                                                                                        sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
+                                                                                        shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
+                                                                                    };
+                                                                                    setEditPacksizeDetails(updatedDetails);
+                                                                                }}
+                                                                                className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
+                                                                            >
+                                                                                <option value="">Select Product</option>
+                                                                                {bomProducts.map(p => (
+                                                                                    <option key={p.product_id} value={p.product_id}>
+                                                                                        {p.product_id} - {p.product_name}
+                                                                                    </option>
+                                                                                ))}
+                                                                            </select>
                                                                         </td>
 
-                                                                        {/* Pack Size */}
-                                                                        <td className="px-4 py-3">
-                                                                            {detail.packsize_id ? (
-                                                                                <div className="flex items-center justify-between gap-2">
-                                                                                    <span className="text-sm font-medium text-slate-700">
-                                                                                        {selectedPackSize?.pack_size_name || detail.packsize_id}
-                                                                                    </span>
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() => handleEditPacksizeChange(index, 'packsize_id', '')}
-                                                                                        className="text-blue-500 hover:text-blue-700"
-                                                                                        title="Change pack size"
-                                                                                    >
-                                                                                        <Pencil className="w-3 h-3" />
-                                                                                    </button>
-                                                                                </div>
-                                                                            ) : (
-                                                                                <select
-                                                                                    value=""
-                                                                                    onChange={(e) => handleEditPacksizeChange(index, 'packsize_id', e.target.value)}
-                                                                                    className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
-                                                                                >
-                                                                                    <option value="">Select Pack Size</option>
-                                                                                    {packSizes.filter(p => p.active).map(size => (
-                                                                                        <option key={size.pack_size_id} value={size.pack_size_id}>
-                                                                                            {size.pack_size_name} ({size.qty_per_carton} {size.uom})
-                                                                                        </option>
-                                                                                    ))}
-                                                                                </select>
-                                                                            )}
+                                                                        {/* Pack Size — display only, auto-filled */}
+                                                                        <td className="px-4 py-3 text-sm text-slate-600 bg-slate-50">
+                                                                            {selectedBomProductEdit
+                                                                                ? (selectedPackSize?.pack_size_name || detail.packsize_id || '—')
+                                                                                : '—'}
                                                                         </td>
 
                                                                         {/* No. of Packs */}
@@ -2516,16 +2425,17 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                                                 min="0"
                                                                                 value={detail.no_of_packs || ''}
                                                                                 onChange={(e) => handleEditPacksizeChange(index, 'no_of_packs', e.target.value)}
-                                                                                className="w-20 px-2 py-1 border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                                                className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                                                placeholder="0"
                                                                             />
                                                                         </td>
 
-                                                                        {/* Auto-calculated */}
-                                                                        <td className="px-4 py-3 text-sm font-mono text-slate-600">{detail.no_of_sachets}</td>
-                                                                        <td className="px-4 py-3 text-sm text-slate-600">{detail.packs_per_steri_carton}</td>
-                                                                        <td className="px-4 py-3 text-sm font-mono text-slate-600">{detail.no_of_sterilization_cartons}</td>
-                                                                        <td className="px-4 py-3 text-sm text-slate-600">{detail.packs_per_shipper_carton}</td>
-                                                                        <td className="px-4 py-3 text-sm font-mono text-slate-600">{detail.no_of_shipper_cartons}</td>
+                                                                        {/* Calculated fields */}
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_sachets || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{detail.packs_per_steri_carton || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_sterilization_cartons || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{detail.packs_per_shipper_carton || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_shipper_cartons || 0}</td>
 
                                                                         {/* Remarks */}
                                                                         <td className="px-4 py-3">
@@ -2538,6 +2448,18 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                                                 className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
                                                                             />
                                                                         </td>
+
+                                                                        {/* Delete Action */}
+                                                                        <td className="px-4 py-3 text-center">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setEditPacksizeDetails(prev => prev.filter((_, i) => i !== index))}
+                                                                                className="text-red-600 hover:text-red-800 transition-colors"
+                                                                                title="Delete row"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </button>
+                                                                        </td>
                                                                     </tr>
                                                                 );
                                                             })}
@@ -2545,103 +2467,224 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                     </table>
                                                 </div>
                                             ) : (
-                                                <div className="text-center py-8 text-slate-400 text-sm">No product plan details yet. Click Add New Row to add one.</div>
+                                                <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                                                    <p className="text-slate-500 mb-3">No product details added yet</p>
+                                                </div>
                                             )}
                                         </div>
                                     )}
 
-                                    {/* Pack Size Details for 'I' and 'W' */}
-                                    {(selectedTransaction?.current_batch_status_id === 'I' || selectedTransaction?.current_batch_status_id === 'W') && (
+                                    {/* Product Plan Details for 'R', 'W', and 'S' */}
+                                    {(selectedTransaction?.current_batch_status_id === 'R' || selectedTransaction?.current_batch_status_id === 'W' || selectedTransaction?.current_batch_status_id === 'S') && (
                                         <div className="mt-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                                            <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center justify-between mb-6">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-blue-500">📋</span>
-                                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Pack Size Details</h2>
+                                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Product Plan Details</h2>
                                                 </div>
-                                                <p className="text-xs text-slate-500">
-                                                    Planned: <span className="font-mono font-bold text-slate-700">{initialTotalSachets}</span>
-                                                    {' · '}Used: <span className="font-mono font-bold text-slate-700">
-                                                        {editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) + editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0)}
-                                                    </span>
-                                                    {' · '}Remaining: <span className={`font-mono font-bold ${
-                                                        initialTotalSachets - editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) - editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0) < 0 ? 'text-red-600' : 'text-green-600'
-                                                    }`}>
-                                                        {initialTotalSachets - editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) - editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0)}
-                                                    </span>
-                                                </p>
+                                                <div className="flex items-center gap-4">
+                                                    <p className="text-xs text-slate-500">
+                                                        Planned: <span className="font-mono font-bold text-slate-700">{initialTotalSachets}</span>
+                                                        {' · '}Used: <span className="font-mono font-bold text-slate-700">
+                                                            {editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) + editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0)}
+                                                        </span>
+                                                        {' · '}Remaining: <span className={`font-mono font-bold ${
+                                                            initialTotalSachets - editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) - editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0) < 0 ? 'text-red-600' : 'text-green-600'
+                                                        }`}>
+                                                            {initialTotalSachets - editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) - editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0)}
+                                                        </span>
+                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setEditNewRows(prev => [...prev, {
+                                                            product_id: '',
+                                                            packsize_id: '',
+                                                            no_of_packs: 0,
+                                                            remarks: '',
+                                                            no_of_sachets: 0,
+                                                            packs_per_steri_carton: 0,
+                                                            sterilization_cartons: 0,
+                                                            packs_per_shipper_carton: 0,
+                                                            shipper_cartons: 0,
+                                                            no_of_shipper_cartons: 0,
+                                                            no_of_sterilization_cartons: 0,
+                                                            last_modified_user_id: 'ADMIN',
+                                                            last_modified_date_time: new Date(),
+                                                        }])}
+                                                        className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                        Add New Row
+                                                    </button>
+                                                </div>
                                             </div>
 
-                                            {/* Existing + new rows table */}
-                                            {(editPacksizeDetails.length > 0 || editNewRows.length > 0) && (
-                                                <div className="overflow-x-auto rounded-xl border border-slate-200 mb-4">
-                                                    <table className="min-w-full divide-y divide-slate-200 text-xs">
+                                            {(editPacksizeDetails.length > 0 || editNewRows.length > 0) ? (
+                                                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                                    <table className="min-w-full divide-y divide-slate-200">
                                                         <thead className="bg-slate-50">
                                                             <tr>
-                                                                <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-wider">S.No</th>
-                                                                <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-wider">Pack Size</th>
-                                                                <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-wider">Packs</th>
-                                                                <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-wider">Sachets</th>
-                                                                <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-wider">Steri Cartons</th>
-                                                                <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-wider">Shipper Cartons</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sno</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Product *</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Pack Size</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Packs *</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sachets</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Steri/Pack</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Steri Cartons</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Shipper/Pack</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Shipper Cartons</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Remarks</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Action</th>
                                                             </tr>
                                                         </thead>
-                                                        <tbody className="bg-white divide-y divide-slate-100">
-                                                            {editPacksizeDetails.map((d, i) => (
-                                                                <tr key={i} className="text-slate-600 hover:bg-slate-50">
-                                                                    <td className="px-4 py-3 font-mono">{d.sno || i + 1}</td>
-                                                                    <td className="px-4 py-3">{packSizes.find(ps => ps.pack_size_id === d.packsize_id)?.pack_size_name || d.packsize_id}</td>
-                                                                    <td className="px-4 py-3 font-mono">{d.no_of_packs}</td>
-                                                                    <td className="px-4 py-3 font-mono">{d.no_of_sachets}</td>
-                                                                    <td className="px-4 py-3 font-mono">{d.no_of_sterilization_cartons}</td>
-                                                                    <td className="px-4 py-3 font-mono">{d.no_of_shipper_cartons}</td>
-                                                                </tr>
-                                                            ))}
-                                                            {editNewRows.map((d, i) => (
-                                                                <tr key={`new-${i}`} className="bg-blue-50 text-blue-700">
-                                                                    <td className="px-4 py-3 italic font-mono">New</td>
-                                                                    <td className="px-4 py-3">{packSizes.find(ps => ps.pack_size_id === d.packsize_id)?.pack_size_name || d.packsize_id}</td>
-                                                                    <td className="px-4 py-3 font-mono">{d.no_of_packs}</td>
-                                                                    <td className="px-4 py-3 font-mono">{d.no_of_sachets}</td>
-                                                                    <td className="px-4 py-3 font-mono">{d.no_of_sterilization_cartons}</td>
-                                                                    <td className="px-4 py-3 font-mono">{d.no_of_shipper_cartons}</td>
-                                                                </tr>
-                                                            ))}
+                                                        <tbody className="bg-white divide-y divide-slate-200">
+                                                            {/* Existing rows — read-only */}
+                                                            {editPacksizeDetails.map((d, i) => {
+                                                                const ps = packSizes.find(p => p.pack_size_id === d.packsize_id);
+                                                                const prod = products.find(p => p.product_id === d.product_id);
+                                                                return (
+                                                                    <tr key={i} className="hover:bg-slate-50">
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{d.sno || i + 1}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50 text-slate-600">{prod?.product_name || d.product_id || '—'}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50 text-slate-600">{ps?.pack_size_name || d.packsize_id || '—'}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{d.no_of_packs}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{d.no_of_sachets || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{d.packs_per_steri_carton || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{d.no_of_sterilization_cartons || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{d.packs_per_shipper_carton || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{d.no_of_shipper_cartons || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50 text-slate-500">{d.remarks || '—'}</td>
+                                                                        <td className="px-4 py-3 bg-slate-50"></td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                            {/* New rows — inline editable */}
+                                                            {editNewRows.map((row, i) => {
+                                                                const selectedPs = packSizes.find(p => p.pack_size_id === row.packsize_id);
+                                                                const selectedBomProd = bomProducts.find(p => p.product_id === row.product_id);
+                                                                return (
+                                                                    <tr key={`new-${i}`} className="hover:bg-slate-50">
+                                                                        <td className="px-4 py-3 text-sm font-mono">{editPacksizeDetails.length + i + 1}</td>
+
+                                                                        {/* Product select */}
+                                                                        <td className="px-4 py-3">
+                                                                            <select
+                                                                                value={row.product_id || ''}
+                                                                                onChange={(e) => {
+                                                                                    const selProd = bomProducts.find(p => p.product_id === e.target.value);
+                                                                                    const newPackSizeId = selProd?.default_pack_size_id || '';
+                                                                                    const ps = packSizes.find(p => p.pack_size_id === newPackSizeId);
+                                                                                    const steriPerPack = getPacksPerCartonForProduct(e.target.value, newPackSizeId, 'ST');
+                                                                                    const shipperPerPack = getPacksPerCartonForProduct(e.target.value, newPackSizeId, 'SH');
+                                                                                    const packs = row.no_of_packs || 0;
+                                                                                    const newSachets = ps ? packs * ps.qty_per_carton : 0;
+                                                                                    const existingSum = editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
+                                                                                    const newRowsSum = editNewRows.reduce((s, d, idx) => idx === i ? s : s + (d.no_of_sachets || 0), 0);
+                                                                                    if (existingSum + newRowsSum + newSachets > initialTotalSachets) {
+                                                                                        toast({ title: "Sachets Limit Exceeded", description: `Total would exceed planned (${initialTotalSachets})`, variant: "destructive" });
+                                                                                        return;
+                                                                                    }
+                                                                                    setEditNewRows(prev => prev.map((r, idx) => idx !== i ? r : {
+                                                                                        ...r,
+                                                                                        product_id: e.target.value,
+                                                                                        packsize_id: newPackSizeId,
+                                                                                        packs_per_steri_carton: steriPerPack,
+                                                                                        packs_per_shipper_carton: shipperPerPack,
+                                                                                        no_of_sachets: newSachets,
+                                                                                        no_of_sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
+                                                                                        no_of_shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
+                                                                                        sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
+                                                                                        shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
+                                                                                    }));
+                                                                                }}
+                                                                                className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
+                                                                            >
+                                                                                <option value="">Select Product</option>
+                                                                                {bomProducts.map(p => (
+                                                                                    <option key={p.product_id} value={p.product_id}>{p.product_id} - {p.product_name}</option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </td>
+
+                                                                        {/* Pack Size — display only */}
+                                                                        <td className="px-4 py-3 text-sm text-slate-600 bg-slate-50">
+                                                                            {selectedBomProd ? (selectedPs?.pack_size_name || row.packsize_id || '—') : '—'}
+                                                                        </td>
+
+                                                                        {/* No. of Packs */}
+                                                                        <td className="px-4 py-3">
+                                                                            <input
+                                                                                type="number"
+                                                                                min="0"
+                                                                                value={row.no_of_packs || ''}
+                                                                                onChange={(e) => {
+                                                                                    const packs = parseInt(e.target.value) || 0;
+                                                                                    const ps = packSizes.find(p => p.pack_size_id === row.packsize_id);
+                                                                                    const newSachets = ps ? packs * ps.qty_per_carton : 0;
+                                                                                    const existingSum = editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
+                                                                                    const newRowsSum = editNewRows.reduce((s, d, idx) => idx === i ? s : s + (d.no_of_sachets || 0), 0);
+                                                                                    if (existingSum + newRowsSum + newSachets > initialTotalSachets) {
+                                                                                        toast({ title: "Sachets Limit Exceeded", description: `Total would exceed planned (${initialTotalSachets})`, variant: "destructive" });
+                                                                                        return;
+                                                                                    }
+                                                                                    const steriPerPack = row.packs_per_steri_carton || 0;
+                                                                                    const shipperPerPack = row.packs_per_shipper_carton || 0;
+                                                                                    setEditNewRows(prev => prev.map((r, idx) => idx !== i ? r : {
+                                                                                        ...r,
+                                                                                        no_of_packs: packs,
+                                                                                        no_of_sachets: newSachets,
+                                                                                        no_of_sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
+                                                                                        no_of_shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
+                                                                                        sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
+                                                                                        shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
+                                                                                    }));
+                                                                                }}
+                                                                                placeholder="0"
+                                                                                className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                                            />
+                                                                        </td>
+
+                                                                        {/* Calculated */}
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{row.no_of_sachets || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{row.packs_per_steri_carton || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{row.no_of_sterilization_cartons || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{row.packs_per_shipper_carton || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{row.no_of_shipper_cartons || 0}</td>
+
+                                                                        {/* Remarks */}
+                                                                        <td className="px-4 py-3">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={row.remarks || ''}
+                                                                                onChange={(e) => setEditNewRows(prev => prev.map((r, idx) => idx !== i ? r : { ...r, remarks: e.target.value }))}
+                                                                                placeholder="Remarks"
+                                                                                maxLength={100}
+                                                                                className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                                            />
+                                                                        </td>
+
+                                                                        {/* Delete */}
+                                                                        <td className="px-4 py-3 text-center">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setEditNewRows(prev => prev.filter((_, idx) => idx !== i))}
+                                                                                className="text-red-600 hover:text-red-800 transition-colors"
+                                                                                title="Delete row"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </button>
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
                                                         </tbody>
                                                     </table>
                                                 </div>
+                                            ) : (
+                                                <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                                                    <p className="text-slate-500 mb-3">No product details added yet</p>
+                                                </div>
                                             )}
-
-                                            {/* Add new row input */}
-                                            <div className="flex items-end gap-3 bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                                <div className="flex-1">
-                                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Pack Size</label>
-                                                    <select value={editNewRow.packsize_id}
-                                                        onChange={(e) => setEditNewRow(prev => ({ ...prev, packsize_id: e.target.value }))}
-                                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white">
-                                                        <option value="">Select Pack Size</option>
-                                                        {packSizes.filter(p => p.active).map(ps => (
-                                                            <option key={ps.pack_size_id} value={ps.pack_size_id}>{ps.pack_size_name} ({ps.qty_per_carton} {ps.uom})</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div className="w-32">
-                                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">No. of Packs</label>
-                                                    <input type="number" min="1" value={editNewRow.no_of_packs}
-                                                        onChange={(e) => setEditNewRow(prev => ({ ...prev, no_of_packs: e.target.value }))}
-                                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                                        placeholder="0" />
-                                                </div>
-                                                <div className="w-28 text-center">
-                                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Sachets</label>
-                                                    <div className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-mono text-slate-600">
-                                                        {calcEditRowSachets(editNewRow.packsize_id, editNewRow.no_of_packs)}
-                                                    </div>
-                                                </div>
-                                                <button type="button" onClick={handleAddEditRow}
-                                                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all">
-                                                    <Plus className="w-4 h-4" /> Add Row
-                                                </button>
-                                            </div>
                                         </div>
                                     )}
                                 </form>
@@ -2669,26 +2712,18 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                     </div>
                                 )}
 
-                                <div className="mb-4">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                        Completed Remarks <span className="text-red-500">*</span>
-                                    </label>
-                                    <textarea
-                                        value={completedRemarks}
-                                        onChange={(e) => setCompletedRemarks(e.target.value)}
-                                        placeholder="Enter completion remarks..."
-                                        maxLength={100}
-                                        rows={3}
-                                        className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                                    />
-                                </div>
+                                {formData.completed_remarks && (
+                                    <div className="mb-4 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-700">
+                                        <span className="font-semibold">Remarks:</span> {formData.completed_remarks}
+                                    </div>
+                                )}
 
                                 <div className="flex justify-end gap-3">
                                     <button onClick={() => setShowCloseConfirmDialog(false)}
                                         className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
                                         Cancel
                                     </button>
-                                    <button onClick={handleConfirmClose} disabled={!completedRemarks.trim() || isSubmittingRef.current}
+                                    <button onClick={handleConfirmClose} disabled={isSubmittingRef.current}
                                         className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
                                         {isSubmittingRef.current ? 'Closing...' : 'Confirm Close'}
                                     </button>

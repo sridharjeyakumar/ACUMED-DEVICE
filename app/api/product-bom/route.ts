@@ -12,8 +12,10 @@ export async function GET(request: NextRequest) {
     await ensureConnection();
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('product_id');
+    const materialId = searchParams.get('material_id');
     const filter: Record<string, any> = {};
     if (productId) filter.product_id = productId.toUpperCase();
+    if (materialId) filter.material_id = materialId.toUpperCase();
     const productBOMs = await ProductBOMMaster.find(filter).lean().sort({ bom_id: 1, material_id: 1 });
     return NextResponse.json(productBOMs, {
       headers: {

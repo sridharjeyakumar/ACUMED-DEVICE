@@ -32,9 +32,10 @@ interface Product {
     running_batch_sno?:number;
     product_image?: string;
     product_image_icon?: string;
-    qc_required?: boolean;
+    qc_required?: 'Y' | 'N';
     coa_checklist_id?: string;
-    sterilization_required?: boolean;
+    sterilization_required?: 'Y' | 'N';
+    product_type?: string;
     last_modified_user_id?: string;
     last_modified_date_time?: Date;
     active?: boolean;
@@ -125,9 +126,10 @@ export default function ProductMasterPage() {
         running_batch_sno:"",
         product_image: "",
         product_image_icon: "",
-        qc_required: false,
+        qc_required: 'N' as 'Y' | 'N',
         coa_checklist_id: "",
-        sterilization_required: false,
+        sterilization_required: 'N' as 'Y' | 'N',
+        product_type: "",
         active: true,
     });
 
@@ -230,9 +232,10 @@ useEffect(() => {
                 running_batch_sno:"",
                 product_image: "",
                 product_image_icon: "",
-                qc_required: false,
+                qc_required: 'N' as 'Y' | 'N',
                 coa_checklist_id: "",
-                sterilization_required: false,
+                sterilization_required: 'N' as 'Y' | 'N',
+                product_type: "",
                 active: true,
             });
         }
@@ -299,10 +302,8 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
     // 1. Handle Checkboxes and exit early
     if (type === 'checkbox') {
         const checked = (e.target as HTMLInputElement).checked;
-        if (name === 'qc_required' && !checked) {
-            setFormData(prev => ({ ...prev, [name]: checked, coa_checklist_id: "" }));
-        } else {
-            setFormData(prev => ({ ...prev, [name]: checked }));
+        if (name === 'active') {
+            setFormData(prev => ({ ...prev, active: checked }));
         }
         return;
     }
@@ -317,9 +318,13 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
     }
 
     // 3. UPDATE STATE (This makes typing work!)
+    if (name === 'qc_required' && value === 'N') {
+        setFormData(prev => ({ ...prev, qc_required: 'N', coa_checklist_id: "" }));
+        return;
+    }
     setFormData(prev => ({
         ...prev,
-        [name]: value 
+        [name]: value
     }));
 };
     const handleSubmit = async (e: React.FormEvent) => {
@@ -358,6 +363,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                 qc_required: formData.qc_required,
                 coa_checklist_id: formData.coa_checklist_id || undefined,
                 sterilization_required: formData.sterilization_required,
+                product_type: formData.product_type || undefined,
                 active: formData.active,
                 last_modified_user_id: "ADMIN",
             };
@@ -386,9 +392,10 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                 running_batch_sno:"",
                 product_image: "",
                 product_image_icon: "",
-                qc_required: false,
+                qc_required: 'N' as 'Y' | 'N',
                 coa_checklist_id: "",
-                sterilization_required: false,
+                sterilization_required: 'N' as 'Y' | 'N',
+                product_type: "",
                 active: true,
             });
             loadProducts();
@@ -423,9 +430,10 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
             running_batch_sno: product.running_batch_sno?.toString() || "",
             product_image: product.product_image || "",
             product_image_icon: product.product_image_icon || "",
-            qc_required: product.qc_required || false,
+            qc_required: (product.qc_required === 'Y' || (product.qc_required as any) === true ? 'Y' : 'N') as 'Y' | 'N',
             coa_checklist_id: product.coa_checklist_id || "",
-            sterilization_required: product.sterilization_required || false,
+            sterilization_required: (product.sterilization_required === 'Y' || (product.sterilization_required as any) === true ? 'Y' : 'N') as 'Y' | 'N',
+            product_type: product.product_type || "",
             active: product.active !== undefined ? product.active : true,
         });
         setIsEditModalOpen(true);
@@ -458,8 +466,9 @@ const handleEditSubmit = async (e: React.FormEvent) => {
             product_image: formData.product_image || undefined,
             product_image_icon: formData.product_image_icon || undefined,
             qc_required: formData.qc_required,
-            coa_checklist_id: formData.qc_required ? (formData.coa_checklist_id || undefined) : "",
+            coa_checklist_id: formData.qc_required === 'Y' ? (formData.coa_checklist_id || undefined) : "",
             sterilization_required: formData.sterilization_required,
+            product_type: formData.product_type || undefined,
             active: formData.active,
             last_modified_user_id: "ADMIN",
         };
@@ -492,7 +501,7 @@ const handleEditSubmit = async (e: React.FormEvent) => {
         : selectedProduct!.running_batch_sno,
             product_image: formattedData.product_image || selectedProduct!.product_image,
             product_image_icon: formattedData.product_image_icon || selectedProduct!.product_image_icon,
-            coa_checklist_id: formattedData.qc_required ? (formattedData.coa_checklist_id || selectedProduct!.coa_checklist_id) : "",
+            coa_checklist_id: formattedData.qc_required === 'Y' ? (formattedData.coa_checklist_id || selectedProduct!.coa_checklist_id) : "",
         };
 
         // Update the products state
@@ -836,6 +845,7 @@ const confirmCancelItem = async () => {
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Product Short Name</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">UOM</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Product Category ID</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Product Type</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Product Specification</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Weight per Piece</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Weight UOM</th>
@@ -887,6 +897,15 @@ const confirmCancelItem = async () => {
               </span>
         </td>
 
+        {/* PRODUCT TYPE */}
+        <td className="px-4 py-3 text-sm">
+          {product.product_type ? (
+            <span className="inline-flex px-2 py-1 rounded-md bg-indigo-50 text-indigo-600 font-mono text-xs">
+              {product.product_type === 'SFG' ? 'SFG - Semi Finished Goods' : product.product_type === 'FG' ? 'FG - Finished Goods' : product.product_type}
+            </span>
+          ) : "-"}
+        </td>
+
         <td className="px-4 py-3 text-sm">{product.product_spec || "-"}</td>
         <td className="px-4 py-3 text-sm">{product.weight_per_piece ?? "-"}</td>
         <td className="px-4 py-3 text-sm">{product.weight_uom || "-"}</td>
@@ -911,29 +930,29 @@ const confirmCancelItem = async () => {
         {/* QC REQUIRED BADGE */}
         <td className="px-4 py-3">
           <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-            product.qc_required
+            product.qc_required === 'Y'
               ? "bg-green-50 text-green-600"
               : "bg-gray-100 text-gray-500"
           }`}>
-            {product.qc_required ? "YES" : "NO"}
+            {product.qc_required === 'Y' ? "YES" : "NO"}
           </span>
         </td>
 
         {/* COA CHECKLIST ID */}
         <td className="px-4 py-3 text-sm">
               <span className="inline-flex px-2 py-1 rounded-md bg-yellow-50 text-yellow-600 font-mono text-xs w-fit">
-                {product.qc_required ? getChecklistDisplay(product.coa_checklist_id) : '—'}
+                {product.qc_required === 'Y' ? getChecklistDisplay(product.coa_checklist_id) : '—'}
               </span>
         </td>
 
         {/* STERILIZATION BADGE */}
         <td className="px-4 py-3">
           <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-            product.sterilization_required
+            product.sterilization_required === 'Y'
               ? "bg-green-50 text-green-600"
               : "bg-gray-100 text-gray-500"
           }`}>
-            {product.sterilization_required ? "YES" : "NO"}
+            {product.sterilization_required === 'Y' ? "YES" : "NO"}
           </span>
         </td>
 
@@ -1128,6 +1147,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.product_name}
                                                 onChange={handleInputChange}
                                                 placeholder="Enter product name"
+                                                maxLength={50}
                                                 required
                                             />
                                         </div>
@@ -1191,6 +1211,23 @@ const confirmCancelItem = async () => {
     </select>
                                         </div>
 
+                                        {/* Product Type */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Type
+                                            </label>
+                                            <select
+                                                name="product_type"
+                                                value={formData.product_type}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="">Select Product Type</option>
+                                                <option value="SFG">SFG - Semi Finished Goods</option>
+                                                <option value="FG">FG - Finished Goods</option>
+                                            </select>
+                                        </div>
+
                                         {/* Specifications Section */}
                                         <div className="col-span-2 mt-4">
                                             <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-4 border-b pb-2">
@@ -1208,6 +1245,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.product_spec}
                                                 onChange={handleInputChange}
                                                 placeholder="Enter product specification"
+                                                maxLength={500}
                                             />
                                         </div>
 
@@ -1290,6 +1328,7 @@ const confirmCancelItem = async () => {
                                                 name="storage_condition"
                                                 value={formData.storage_condition}
                                                 onChange={handleInputChange}
+                                                maxLength={50}
                                                 placeholder="Enter storage condition"
                                             />
                                         </div>
@@ -1363,18 +1402,19 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* QC Required */}
-                                        <div className="flex items-center space-x-2 pt-6">
-                                            <input
-                                                type="checkbox"
-                                                id="qc_required_add"
-                                                name="qc_required"
-                                                checked={formData.qc_required}
-                                                onChange={handleInputChange}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="qc_required_add" className="text-sm font-semibold text-foreground">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
                                                 QC Required
                                             </label>
+                                            <select
+                                                name="qc_required"
+                                                value={formData.qc_required}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="N">No</option>
+                                                <option value="Y">Yes</option>
+                                            </select>
                                         </div>
 
                                         {/* COA Checklist ID */}
@@ -1382,36 +1422,37 @@ const confirmCancelItem = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 COA Checklist ID
                                             </label>
-                                                                                                                                                                                                                                                                     <select
-        name="coa_checklist_id"
-        value={formData.coa_checklist_id}
-        onChange={handleInputChange}
-        disabled={!formData.qc_required}
-        className={`w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none ${!formData.qc_required ? 'opacity-50 cursor-not-allowed' : ''}`}
-        required={formData.qc_required}
-    >
-        <option value="">Enter COA checklist ID</option>
-        {checklists.filter((data) => data.active !== false).map(product => (
-            <option key={product.checklist_id} value={product.checklist_id}>
-                {product.checklist_id} - {product.checklist_description}
-            </option>
-        ))}
-    </select>
+                                            <select
+                                                name="coa_checklist_id"
+                                                value={formData.coa_checklist_id}
+                                                onChange={handleInputChange}
+                                                disabled={formData.qc_required !== 'Y'}
+                                                className={`w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none ${formData.qc_required !== 'Y' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                required={formData.qc_required === 'Y'}
+                                            >
+                                                <option value="">Enter COA checklist ID</option>
+                                                {checklists.filter((data) => data.active !== false).map(product => (
+                                                    <option key={product.checklist_id} value={product.checklist_id}>
+                                                        {product.checklist_id} - {product.checklist_description}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         {/* Sterilization Required */}
-                                        <div className="flex items-center space-x-2 pt-6">
-                                            <input
-                                                type="checkbox"
-                                                id="sterilization_required_add"
-                                                name="sterilization_required"
-                                                checked={formData.sterilization_required}
-                                                onChange={handleInputChange}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="sterilization_required_add" className="text-sm font-semibold text-foreground">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Sterilization Required
                                             </label>
+                                            <select
+                                                name="sterilization_required"
+                                                value={formData.sterilization_required}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="N">No</option>
+                                                <option value="Y">Yes</option>
+                                            </select>
                                         </div>
 
                                         {/* Images Section */}
@@ -1568,6 +1609,7 @@ const confirmCancelItem = async () => {
                                                 value={formData.product_name}
                                                 onChange={handleInputChange}
                                                 placeholder="Enter product name"
+                                                maxLength={50}
                                                 required
                                             />
                                         </div>
@@ -1631,6 +1673,23 @@ const confirmCancelItem = async () => {
     </select>
                                         </div>
 
+                                        {/* Product Type */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Product Type
+                                            </label>
+                                            <select
+                                                name="product_type"
+                                                value={formData.product_type}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="">Select Product Type</option>
+                                                <option value="SFG">SFG - Semi Finished Goods</option>
+                                                <option value="FG">FG - Finished Goods</option>
+                                            </select>
+                                        </div>
+
                                         {/* Specifications Section */}
                                         <div className="col-span-2 mt-4">
                                             <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-4 border-b pb-2">
@@ -1647,6 +1706,7 @@ const confirmCancelItem = async () => {
                                                 name="product_spec"
                                                 value={formData.product_spec}
                                                 onChange={handleInputChange}
+                                                maxLength={500}
                                                 placeholder="Enter product specification"
                                             />
                                         </div>
@@ -1730,6 +1790,7 @@ const confirmCancelItem = async () => {
                                                 name="storage_condition"
                                                 value={formData.storage_condition}
                                                 onChange={handleInputChange}
+                                                maxLength={50}
                                                 placeholder="Enter storage condition"
                                             />
                                         </div>
@@ -1802,55 +1863,57 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* QC Required */}
-                                        <div className="flex items-center space-x-2 pt-6">
-                                            <input
-                                                type="checkbox"
-                                                id="qc_required_edit"
-                                                name="qc_required"
-                                                checked={formData.qc_required}
-                                                onChange={handleInputChange}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="qc_required_edit" className="text-sm font-semibold text-foreground">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
                                                 QC Required
                                             </label>
+                                            <select
+                                                name="qc_required"
+                                                value={formData.qc_required}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="N">No</option>
+                                                <option value="Y">Yes</option>
+                                            </select>
                                         </div>
 
                                         {/* COA Checklist ID */}
-                                                                         <div>
+                                        <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 COA Checklist ID
                                             </label>
-                                                                                                                                                                                                                                                                     <select
-        name="coa_checklist_id"
-        value={formData.coa_checklist_id}
-        onChange={handleInputChange}
-        disabled={!formData.qc_required}
-        className={`w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none ${!formData.qc_required ? 'opacity-50 cursor-not-allowed' : ''}`}
-        required={formData.qc_required}
-    >
-        <option value="">Enter COA checklist ID</option>
-        {checklists.filter((data) => data.active !== false).map(product => (
-            <option key={product.checklist_id} value={product.checklist_id}>
-                {product.checklist_id} - {product.checklist_description}
-            </option>
-        ))}
-    </select>
+                                            <select
+                                                name="coa_checklist_id"
+                                                value={formData.coa_checklist_id}
+                                                onChange={handleInputChange}
+                                                disabled={formData.qc_required !== 'Y'}
+                                                className={`w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none ${formData.qc_required !== 'Y' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                required={formData.qc_required === 'Y'}
+                                            >
+                                                <option value="">Enter COA checklist ID</option>
+                                                {checklists.filter((data) => data.active !== false).map(product => (
+                                                    <option key={product.checklist_id} value={product.checklist_id}>
+                                                        {product.checklist_id} - {product.checklist_description}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         {/* Sterilization Required */}
-                                        <div className="flex items-center space-x-2 pt-6">
-                                            <input
-                                                type="checkbox"
-                                                id="sterilization_required_edit"
-                                                name="sterilization_required"
-                                                checked={formData.sterilization_required}
-                                                onChange={handleInputChange}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="sterilization_required_edit" className="text-sm font-semibold text-foreground">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Sterilization Required
                                             </label>
+                                            <select
+                                                name="sterilization_required"
+                                                value={formData.sterilization_required}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="N">No</option>
+                                                <option value="Y">Yes</option>
+                                            </select>
                                         </div>
 
                                         {/* Images Section */}

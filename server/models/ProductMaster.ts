@@ -19,12 +19,13 @@ export interface IProductMaster extends Document {
   running_batch_sno?:number; //N(3)
   product_image?: string; // Image URL or base64
   product_image_icon?: string; // Image URL or base64
-  qc_required?: boolean; // Boolean
+  qc_required?: 'Y' | 'N';
   coa_checklist_id?: string; // Char(10)
-  sterilization_required?: boolean; // Boolean
+  sterilization_required?: 'Y' | 'N';
   active: boolean; // Boolean
   last_modified_user_id?: string; // Char(5)
   last_modified_date_time?: Date; // Date
+  product_type?: string; // Char(3) 
 }
 
 const ProductMasterSchema: Schema = new Schema({
@@ -32,14 +33,14 @@ const ProductMasterSchema: Schema = new Schema({
     type: String,
     required: true,
     unique: true,
-    maxlength: 10,
+    maxlength: 5,
     trim: true,
     index: true,
   },
   product_name: {
     type: String,
     required: true,
-    maxlength: 200,
+    maxlength: 50,
     trim: true,
   },
   product_shortname: {
@@ -51,7 +52,7 @@ const ProductMasterSchema: Schema = new Schema({
   uom: {
     type: String,
     required: true,
-    maxlength: 10,
+    maxlength: 3,
     trim: true,
   },
   product_category_id: {
@@ -71,11 +72,12 @@ const ProductMasterSchema: Schema = new Schema({
     type: Number,
     required: false,
     min: 0,
+    max: 999.99,
   },
   weight_uom: {
     type: String,
     required: false,
-    maxlength: 10,
+    maxlength: 3,
     trim: true,
     enum: ['GMS', 'KGS', 'MG', ''],
   },
@@ -88,7 +90,7 @@ const ProductMasterSchema: Schema = new Schema({
     type: Number,
     required: false,
     min: 0,
-    max: 999,
+    max: 99,
   },
   storage_condition: {
     type: String,
@@ -100,11 +102,12 @@ const ProductMasterSchema: Schema = new Schema({
     type: Number,
     required: false,
     min: 0,
+    max: 9999999,
   },
   default_pack_size_id: {
     type: String,
     required: false,
-    maxlength: 10,
+    maxlength: 4,
     trim: true,
   },
   batch_no_pattern: {
@@ -133,22 +136,26 @@ const ProductMasterSchema: Schema = new Schema({
     type: String,
     required: false,
   },
-  qc_required: {
-    type: Boolean,
-    required: false,
-    default: false,
-  },
+qc_required: {
+  type: String,
+  required: false,
+  maxlength: 1,
+  enum: ['Y', 'N'],
+  default: 'N',
+},
   coa_checklist_id: {
     type: String,
     required: false,
-    maxlength: 10,
+    maxlength: 4,
     trim: true,
   },
   sterilization_required: {
-    type: Boolean,
-    required: false,
-    default: false,
-  },
+  type: String,
+  required: false,
+  maxlength: 1,
+  enum: ['Y', 'N'],
+  default: 'N',
+},
   active: {
     type: Boolean,
     required: true,
@@ -164,6 +171,12 @@ const ProductMasterSchema: Schema = new Schema({
   last_modified_date_time: {
     type: Date,
     required: false,
+  },
+  product_type: {
+    type: String,
+    required: false,
+    maxlength: 3,
+    trim: true,
   },
 }, {
   timestamps: true,

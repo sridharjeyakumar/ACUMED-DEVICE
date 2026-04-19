@@ -4,6 +4,7 @@ export interface IMachineStatus extends Document {
   machine_id: string;                      // Char(2) - PK
   batch_no: string;                        // Char(6)
   product_id: string;                      // Char(5)
+  last_machine_event_id?: number;           // N(7) - FK → MachineEvent
   last_machine_event_type_id: string;      // Char(2) - FK → MachineEventTypeMaster
   material_id?: string;                    // Char(5)
   last_event_date: Date;
@@ -35,6 +36,11 @@ const MachineStatusSchema: Schema = new Schema({
     trim: true,
     uppercase: true,
     ref: 'ProductMaster'
+  },
+  last_machine_event_id: {
+    type: Number,
+    max: 9999999,                           // N(7)
+    ref: 'MachineEvent'                     // FK
   },
   last_machine_event_type_id: {
     type: String,
