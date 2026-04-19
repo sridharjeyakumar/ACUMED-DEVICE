@@ -5,12 +5,12 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, ChevronDown, Printer } from "lucide-react";
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Pencil, Trash2, ChevronDown, Printer, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { purchaseOrderAPI, vendorAPI, materialAPI, purchaseOrderDetailAPI, companyAPI, employeeAPI } from "@/services/api";
+import { purchaseOrderAPI, vendorAPI, materialAPI, purchaseOrderDetailAPI, companyAPI, employeeAPI, sendMailAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 interface PurchaseOrder {
@@ -43,6 +43,8 @@ interface Vendor {
     active?: boolean;
     default_shipping_instruction?: string;
     default_terms_of_payment?: string;
+    contact_person?: string;
+    contact_email_id?: string;
 }
 
 interface ActiveMaterial {
@@ -333,6 +335,10 @@ export default function PurchaseOrdersPage() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [orderToDelete, setOrderToDelete] = useState<PurchaseOrder | null>(null);
     const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
+
+    const [isMailModalOpen, setIsMailModalOpen] = useState(false);
+    const [mailData, setMailData] = useState({ to: '', cc: '', subject: '', body: '' });
+    const [mailSending, setMailSending] = useState(false);
 
     const [formData, setFormData] = useState({ ...emptyForm });
     const [detailRows, setDetailRows] = useState<DetailRow[]>([]);
@@ -1004,6 +1010,77 @@ export default function PurchaseOrdersPage() {
         }
     };
 
+    const handleOpenMailModal = async (order: PurchaseOrder) => {
+        try {
+            const vendor = vendors.find(v => v.vendor_id === order.vendor_id);
+            const allCompanies = await companyAPI.getAll().catch(() => []);
+            const c1 = allCompanies.find((c: any) => c.comp_id === 'CORP');
+            let details: PODetail[] = expandedDetails[order.po_no];
+            if (!details) {
+                details = await purchaseOrderDetailAPI.getByPoNo(order.po_no);
+            }
+            const detailTableRows = details.map((d, i) => {
+                const mat = activeMaterials.find(m => m.material_id === d.material_id);
+                return `<tr>
+                    <td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">${i + 1}</td>
+                    <td style="border:1px solid #ccc;padding:6px 10px;">${mat?.material_name || d.material_id}</td>
+                    <td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">${d.po_qty != null ? Number(d.po_qty).toLocaleString('en-IN') : '-'}</td>
+                    <td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">${d.uom || '-'}</td>
+                </tr>`;
+            }).join('');
+
+            const bodyHtml = `
+<p>Dear ${vendor?.contact_person || 'Sir/Madam'},</p>
+<p>We are pleased to place the Order for the below material.</p>
+<table style="border-collapse:collapse;width:100%;margin:12px 0;">
+  <thead>
+    <tr style="background:#f0f4ff;">
+      <th style="border:1px solid #ccc;padding:6px 10px;">S.No</th>
+      <th style="border:1px solid #ccc;padding:6px 10px;">Material Name</th>
+      <th style="border:1px solid #ccc;padding:6px 10px;">PO Qty</th>
+      <th style="border:1px solid #ccc;padding:6px 10px;">UoM</th>
+    </tr>
+  </thead>
+  <tbody>${detailTableRows}</tbody>
+</table>
+<p>Refer the PO document attached.</p>
+<br/>
+<p>Thanks and Regards,<br/>${c1?.company_name || 'ACUMED DEVICES'}</p>`;
+
+            setMailData({
+                to: vendor?.contact_email_id || '',
+                cc: 'acumed.devices@gmail.com',
+                subject: `Purchase Order ${order.po_no} from ${c1?.company_short_name || c1?.company_name || ''}`,
+                body: bodyHtml,
+            });
+            setSelectedOrder(order);
+            setIsMailModalOpen(true);
+        } catch (err: any) {
+            toast({ title: "Error", description: err.message || "Failed to prepare mail", variant: "destructive" });
+        }
+    };
+
+    const handleSendMail = async () => {
+        if (!mailData.to) {
+            toast({ title: "No recipient", description: "Vendor has no email address on record.", variant: "destructive" });
+            return;
+        }
+        setMailSending(true);
+        try {
+            await sendMailAPI.send({ to: mailData.to, cc: mailData.cc, subject: mailData.subject, html: mailData.body });
+            if (selectedOrder) {
+                await purchaseOrderAPI.update(selectedOrder.po_no, { mail_sent_status: 'Y' });
+                setOrders(prev => prev.map(o => o.po_no === selectedOrder.po_no ? { ...o, mail_sent_status: 'Y' } : o));
+            }
+            toast({ title: "Mail Sent", description: `Mail sent to ${mailData.to}` });
+            setIsMailModalOpen(false);
+        } catch (err: any) {
+            toast({ title: "Mail Error", description: err.message || "Failed to send mail", variant: "destructive" });
+        } finally {
+            setMailSending(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex min-h-screen bg-background">
@@ -1158,6 +1235,7 @@ export default function PurchaseOrdersPage() {
                                             <th className="px-4 py-3 text-sm font-semibold text-right whitespace-nowrap">Basic Amt</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-right whitespace-nowrap">GST Amt</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-right whitespace-nowrap">Total Amt</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Vendor Email</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Mail Status</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Status</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-center whitespace-nowrap">Actions</th>
@@ -1227,6 +1305,7 @@ export default function PurchaseOrdersPage() {
                                                         <td className="px-4 py-3 text-sm text-right">{order.po_basic_amount != null ? `₹ ${Number(order.po_basic_amount).toFixed(2)}` : '-'}</td>
                                                         <td className="px-4 py-3 text-sm text-right">{order.po_gst_amount != null ? `₹ ${Number(order.po_gst_amount).toFixed(2)}` : '-'}</td>
                                                         <td className="px-4 py-3 text-sm text-right font-semibold text-blue-700">{order.po_total_amount != null ? `₹ ${Number(order.po_total_amount).toFixed(2)}` : '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-500">{vendors.find(v => v.vendor_id === order.vendor_id)?.contact_email_id || '—'}</td>
                                                         <td className="px-4 py-3 text-sm text-gray-400">{order.mail_sent_status || '—'}</td>
                                                         <td className="px-4 py-3">
                                                             <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${STATUS_LABELS[order.status]?.color || 'bg-gray-100 text-gray-600'}`}>
@@ -1244,6 +1323,16 @@ export default function PurchaseOrdersPage() {
                                                                     title={order.status === 'X' ? "Cannot print a cancelled PO" : "Print PO"}
                                                                 >
                                                                     <Printer className="w-4 h-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    disabled={order.status === 'X' || !vendors.find(v => v.vendor_id === order.vendor_id)?.contact_email_id}
+                                                                    onClick={(e) => { e.stopPropagation(); handleOpenMailModal(order); }}
+                                                                    className={order.status === 'X' || !vendors.find(v => v.vendor_id === order.vendor_id)?.contact_email_id ? "text-gray-400 cursor-not-allowed" : "text-green-600 hover:text-green-700 hover:bg-green-50"}
+                                                                    title={order.status === 'X' ? "Cannot mail a cancelled PO" : !vendors.find(v => v.vendor_id === order.vendor_id)?.contact_email_id ? "Vendor has no email" : "Send Mail"}
+                                                                >
+                                                                    <Mail className="w-4 h-4" />
                                                                 </Button>
                                                                 <Button
                                                                     variant="ghost"
@@ -1649,6 +1738,53 @@ export default function PurchaseOrdersPage() {
                                 <div className="flex justify-end gap-3">
                                     <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
                                     <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={confirmDelete}>Delete</Button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* ── Send Mail Modal ── */}
+            <AnimatePresence>
+                {isMailModalOpen && (
+                    <>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50" onClick={() => setIsMailModalOpen(false)} />
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                                <div className="flex items-center justify-between px-6 py-4 border-b">
+                                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Mail className="w-5 h-5 text-green-600" /> Send Purchase Order Mail</h2>
+                                    <button onClick={() => setIsMailModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                                </div>
+                                <div className="px-6 py-4 space-y-4">
+                                    <div>
+                                        <Label className="text-xs font-semibold text-gray-600 uppercase">To</Label>
+                                        <Input value={mailData.to} onChange={e => setMailData(p => ({ ...p, to: e.target.value }))}
+                                            className="mt-1 text-sm" placeholder="Recipient email" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-semibold text-gray-600 uppercase">CC</Label>
+                                        <Input value={mailData.cc} onChange={e => setMailData(p => ({ ...p, cc: e.target.value }))}
+                                            className="mt-1 text-sm" placeholder="CC email" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-semibold text-gray-600 uppercase">Subject</Label>
+                                        <Input value={mailData.subject} onChange={e => setMailData(p => ({ ...p, subject: e.target.value }))}
+                                            className="mt-1 text-sm" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-semibold text-gray-600 uppercase">Body Preview</Label>
+                                        <div className="mt-1 border rounded-lg p-4 text-sm bg-gray-50 max-h-60 overflow-y-auto"
+                                            dangerouslySetInnerHTML={{ __html: mailData.body }} />
+                                    </div>
+                                </div>
+                                <div className="flex justify-end gap-3 px-6 py-4 border-t">
+                                    <Button variant="outline" onClick={() => setIsMailModalOpen(false)}>Cancel</Button>
+                                    <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleSendMail} disabled={mailSending}>
+                                        {mailSending ? 'Sending...' : 'Send Mail'}
+                                    </Button>
                                 </div>
                             </div>
                         </motion.div>

@@ -1077,6 +1077,11 @@ export const purchaseOrderAPI = {
     delete: (id: string) => fetchAPI(`/purchase-orders/${id}`, { method: 'DELETE' }),
 };
 
+export const sendMailAPI = {
+    send: (data: { to: string; cc?: string; subject: string; html: string }) =>
+        fetchAPI('/send-mail', { method: 'POST', body: JSON.stringify(data) }),
+};
+
 
 
 export const purchaseOrderDetailAPI = {
