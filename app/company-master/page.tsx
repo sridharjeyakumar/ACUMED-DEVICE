@@ -749,7 +749,7 @@ export default function CompanyMasterPage() {
                                                     <span>Conditions</span>
                                                 </div>
                                             </th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">PO Image</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">PO Signatory Image</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
                                                     <span>Last Modified</span>
@@ -1312,41 +1312,31 @@ export default function CompanyMasterPage() {
                                         </div>
 
                                         {/* Billing Address */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                        <div className="flex items-center gap-3 mt-2">
+                                            <input
+                                                type="checkbox"
+                                                id="add-billing-address"
+                                                checked={formData.billing_address === "Y"}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, billing_address: e.target.checked ? "Y" : "N" }))}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="add-billing-address" className="text-sm font-semibold text-foreground cursor-pointer">
                                                 Billing Address
                                             </label>
-                                            <Select
-                                                value={formData.billing_address}
-                                                onValueChange={(value) => setFormData(prev => ({ ...prev, billing_address: value }))}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Y">Yes</SelectItem>
-                                                    <SelectItem value="N">No</SelectItem>
-                                                </SelectContent>
-                                            </Select>
                                         </div>
 
                                         {/* Shipping Address */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                        <div className="flex items-center gap-3 mt-2">
+                                            <input
+                                                type="checkbox"
+                                                id="add-shipping-address"
+                                                checked={formData.shipping_address === "Y"}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, shipping_address: e.target.checked ? "Y" : "N" }))}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="add-shipping-address" className="text-sm font-semibold text-foreground cursor-pointer">
                                                 Shipping Address
                                             </label>
-                                            <Select
-                                                value={formData.shipping_address}
-                                                onValueChange={(value) => setFormData(prev => ({ ...prev, shipping_address: value }))}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Y">Yes</SelectItem>
-                                                    <SelectItem value="N">No</SelectItem>
-                                                </SelectContent>
-                                            </Select>
                                         </div>
 
                                         {/* PO Terms and Conditions */}
@@ -1359,7 +1349,7 @@ export default function CompanyMasterPage() {
                                                 value={formData.po_terms_and_conditions}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, po_terms_and_conditions: e.target.value }))}
                                                 placeholder="Enter PO terms and conditions"
-                                                maxLength={500}
+                                                maxLength={1000}
                                                 rows={3}
                                                 className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                                             />
@@ -1368,7 +1358,7 @@ export default function CompanyMasterPage() {
                                         {/* PO Image */}
                                         <div className="col-span-2">
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                PO Image
+                                                PO Signatory Image
                                             </label>
                                             <div className="flex items-center gap-4">
                                                 {formData.po_image && (
@@ -1393,7 +1383,7 @@ export default function CompanyMasterPage() {
                                                     className="flex items-center gap-2"
                                                 >
                                                     <Upload className="w-4 h-4" />
-                                                    Upload PO Image
+                                                    Upload PO Signatory Image
                                                 </Button>
                                             </div>
                                         </div>
@@ -1745,41 +1735,31 @@ export default function CompanyMasterPage() {
                                         </div>
 
                                         {/* Billing Address */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                        <div className="flex items-center gap-3 mt-2">
+                                            <input
+                                                type="checkbox"
+                                                id="edit-billing-address"
+                                                checked={formData.billing_address === "Y"}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, billing_address: e.target.checked ? "Y" : "N" }))}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="edit-billing-address" className="text-sm font-semibold text-foreground cursor-pointer">
                                                 Billing Address
                                             </label>
-                                            <Select
-                                                value={formData.billing_address}
-                                                onValueChange={(value) => setFormData(prev => ({ ...prev, billing_address: value }))}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Y">Yes</SelectItem>
-                                                    <SelectItem value="N">No</SelectItem>
-                                                </SelectContent>
-                                            </Select>
                                         </div>
 
                                         {/* Shipping Address */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                        <div className="flex items-center gap-3 mt-2">
+                                            <input
+                                                type="checkbox"
+                                                id="edit-shipping-address"
+                                                checked={formData.shipping_address === "Y"}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, shipping_address: e.target.checked ? "Y" : "N" }))}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="edit-shipping-address" className="text-sm font-semibold text-foreground cursor-pointer">
                                                 Shipping Address
                                             </label>
-                                            <Select
-                                                value={formData.shipping_address}
-                                                onValueChange={(value) => setFormData(prev => ({ ...prev, shipping_address: value }))}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Y">Yes</SelectItem>
-                                                    <SelectItem value="N">No</SelectItem>
-                                                </SelectContent>
-                                            </Select>
                                         </div>
 
                                         {/* PO Terms and Conditions */}
@@ -1792,7 +1772,7 @@ export default function CompanyMasterPage() {
                                                 value={formData.po_terms_and_conditions}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, po_terms_and_conditions: e.target.value }))}
                                                 placeholder="Enter PO terms and conditions"
-                                                maxLength={500}
+                                                maxLength={1000}
                                                 rows={3}
                                                 className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                                             />
@@ -1801,7 +1781,7 @@ export default function CompanyMasterPage() {
                                         {/* PO Image */}
                                         <div className="col-span-2">
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                PO Image
+                                                PO Signatory Image
                                             </label>
                                             <div className="flex items-center gap-4">
                                                 {formData.po_image && (
@@ -1826,7 +1806,7 @@ export default function CompanyMasterPage() {
                                                     className="flex items-center gap-2"
                                                 >
                                                     <Upload className="w-4 h-4" />
-                                                    Upload PO Image
+                                                    Upload PO Signatory Image
                                                 </Button>
                                             </div>
                                         </div>

@@ -25,10 +25,13 @@ export async function GET(request: NextRequest) {
         const filter: Record<string, any> = {};
         if (docNo)      filter.material_doc_no = docNo.toUpperCase();
         if (materialId) filter.material_id     = materialId.toUpperCase();
-        if (available === 'true') filter.status = 'A';
+        if (available === 'true') {
+            filter.status = { $in: ['A', 'I'] };
+            filter.balance_qty = { $gt: 0 };
+        }
 
         const sortOrder = available === 'true'
-            ? { roll_no: -1 }
+            ? { roll_no: 1 }
             : { material_doc_no: 1, material_id: 1, sno: 1 };
 
         const units = await GoodsReceiptUnits.find(filter).lean().sort(sortOrder as any);

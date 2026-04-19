@@ -837,10 +837,10 @@ export default function PurchaseOrdersPage() {
                 </td>
                 <td style="text-align:center;">${d.po_qty != null ? Number(d.po_qty).toLocaleString('en-IN') : '-'}</td>
                 <td style="text-align:center;">${d.uom}</td>
-                <td style="text-align:center;">${d.unit_price}</td>
-                <td style="text-align:center;">${d.basic_amount}</td>
-                <td style="text-align:center;">${d.gst_percentage}</td>
-                <td style="text-align:center;">${d.total_amount}</td>
+                <td style="text-align:center;">${fmtNum(d.unit_price)}</td>
+                <td style="text-align:center;">${fmtNum(d.basic_amount)}</td>
+                <td style="text-align:center;">${d.gst_percentage != null ? `@ ${d.gst_percentage}%` : '-'}<br/><span style="font-size:11px;">${fmtNum(d.gst_amount)}</span></td>
+                <td style="text-align:center;">${fmtNum(d.total_amount)}</td>
               </tr>`).join('');
 
             const html = `<!DOCTYPE html>
@@ -921,7 +921,7 @@ export default function PurchaseOrdersPage() {
           ${c1?.state || ''}
         </div>
       </td>
-      <td style="width:50%;vertical-align:top;">
+      <td style="width:50%;vertical-align:top;" rowspan="2">
         <div class="lbl">Billing Address :</div>
         <div style="margin-top:3px;line-height:1.7;">
           M/s. ${c2?.company_name || ''}<br/>
@@ -930,6 +930,9 @@ export default function PurchaseOrdersPage() {
           ${c2?.city || ''}${c2?.pincode ? ` - ${c2.pincode}` : ''}${(c2?.city || c2?.pincode) ? '<br/>' : ''}
           ${c2?.state || ''}
         </div>
+        <div style="margin-top:10px;"><span class="lbl">GST No.</span> ${c1?.gst_no || '-'}</div>
+        <div style="margin-top:10px;">Contact Person &nbsp;: ${c1?.contact_person || '-'}</div>
+        <div style="margin-top:2px;">Contact No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${c1?.contact_no || '-'}</div>
       </td>
     </tr>
     <tr>
@@ -939,23 +942,18 @@ export default function PurchaseOrdersPage() {
         <div class="lbl">Payment Terms :</div>
         <div style="margin-top:2px;">${order.terms_of_payment || '-'}</div>
       </td>
-      <td style="width:50%;vertical-align:top;">
-        <div><span class="lbl">GST No.</span> ${c1?.gst_no || '-'}</div>
-        <div style="margin-top:10px;">Contact Person &nbsp;: ${c1?.contact_person || '-'}</div>
-        <div style="margin-top:2px;">Contact No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${c1?.contact_no || '-'}</div>
-      </td>
     </tr>
   </table>
   <table class="items-tbl">
     <thead>
       <tr>
         <th style="width:4%;">S.No</th>
-        <th style="width:27%;">Material</th>
+        <th style="width:23%;">Material</th>
         <th style="width:10%;">PO Qty</th>
         <th style="width:7%;">UoM</th>
         <th style="width:11%;">unit Rate &#8377;</th>
-        <th style="width:13%;">Amount &#8377;</th>
-        <th style="width:8%;">GST</th>
+        <th style="width:12%;">Amount &#8377;</th>
+        <th style="width:13%;">GST</th>
         <th style="width:13%;">Total &#8377;</th>
       </tr>
     </thead>
@@ -1240,9 +1238,10 @@ export default function PurchaseOrdersPage() {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
+                                                                    disabled={order.status === 'X'}
                                                                     onClick={(e) => { e.stopPropagation(); handlePrint(order); }}
-                                                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                                    title="Print PO"
+                                                                    className={order.status === 'X' ? "text-gray-400 cursor-not-allowed" : "text-blue-600 hover:text-blue-700 hover:bg-blue-50"}
+                                                                    title={order.status === 'X' ? "Cannot print a cancelled PO" : "Print PO"}
                                                                 >
                                                                     <Printer className="w-4 h-4" />
                                                                 </Button>

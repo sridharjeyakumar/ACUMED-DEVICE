@@ -8,6 +8,8 @@ export interface IMachineEventMaterial extends Document {
   actual_open_qty?: number;       // N(6,3)
   actual_close_qty?: number;      // N(6,3)
   actual_consumed_qty?: number;   // N(6,3)
+  actual_gross_qty?: number;      // N(6,3)
+  actual_tare_qty?: number;       // N(6,3)
   uom?: string;                   // Char(3)
 }
 
@@ -50,6 +52,16 @@ const MachineEventMaterialSchema: Schema = new Schema({
     max: 999999.999                // N(6,3)
   },
   actual_consumed_qty: {
+    type: Number,
+    min: 0,
+    max: 999999.999                // N(6,3)
+  },
+  actual_gross_qty: {
+    type: Number,
+    min: 0,
+    max: 999999.999                // N(6,3)
+  },
+  actual_tare_qty: {
     type: Number,
     min: 0,
     max: 999999.999                // N(6,3)

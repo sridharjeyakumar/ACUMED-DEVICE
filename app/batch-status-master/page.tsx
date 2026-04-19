@@ -30,7 +30,9 @@ interface BatchStatus {
     remarks?: string;               // Char(100)
     seq_no: number;                 // N(2)
     status_seq_no?: number;            // N(2)
-    machine_event_allowed:string;      // Char(1) - 'Y' or 'N'
+    machine_event_allowed: string;      // Char(1) - 'Y' or 'N'
+    production_entry_allowed?: string;  // Char(1) - 'Y' or 'N'
+    packing_entry_allowed?: string;     // Char(1) - 'Y' or 'N'
     active: boolean;
     last_modified_user_id?: string; // Char(5)
     last_modified_date_time?: Date;
@@ -75,6 +77,8 @@ export default function BatchStatusMasterPage() {
         seq_no: "",
         status_seq_no: "",
         machine_event_allowed: "N",
+        production_entry_allowed: "N",
+        packing_entry_allowed: "N",
         active: true,
     });
 
@@ -87,6 +91,8 @@ export default function BatchStatusMasterPage() {
                 seq_no: "",
                 status_seq_no: "",
                 machine_event_allowed: "N",
+                production_entry_allowed: "N",
+                packing_entry_allowed: "N",
                 active: true,
             });
         }
@@ -160,6 +166,8 @@ export default function BatchStatusMasterPage() {
                 seq_no: parseInt(formData.seq_no) || 0,
                 status_seq_no: parseInt(formData.status_seq_no) || 0,
                 machine_event_allowed: formData.machine_event_allowed,
+                production_entry_allowed: formData.production_entry_allowed,
+                packing_entry_allowed: formData.packing_entry_allowed,
                 active: true,
                 last_modified_user_id: "ADMIN",
             });
@@ -168,7 +176,7 @@ export default function BatchStatusMasterPage() {
                 description: "Batch status created successfully",
             });
             setIsAddModalOpen(false);
-            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", status_seq_no: "", machine_event_allowed: "N", active: true });
+            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", status_seq_no: "", machine_event_allowed: "N", production_entry_allowed: "N", packing_entry_allowed: "N", active: true });
             loadStatuses();
         } catch (error: any) {
             toast({
@@ -217,6 +225,8 @@ export default function BatchStatusMasterPage() {
             active: status.active,
             status_seq_no: status.status_seq_no ? status.status_seq_no.toString() : "",
             machine_event_allowed: status.machine_event_allowed || "N",
+            production_entry_allowed: status.production_entry_allowed || "N",
+            packing_entry_allowed: status.packing_entry_allowed || "N",
         });
         setIsEditModalOpen(true);
     };
@@ -247,6 +257,8 @@ export default function BatchStatusMasterPage() {
                 seq_no: parseInt(formData.seq_no) || 0,
                 status_seq_no: parseInt(formData.status_seq_no) || 0,
                 machine_event_allowed: formData.machine_event_allowed,
+                production_entry_allowed: formData.production_entry_allowed,
+                packing_entry_allowed: formData.packing_entry_allowed,
                 active: formData.active,
                 last_modified_user_id: "ADMIN",
             });
@@ -264,7 +276,7 @@ export default function BatchStatusMasterPage() {
             });
             setIsEditModalOpen(false);
             setSelectedStatus(null);
-            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", status_seq_no: "", machine_event_allowed: "N", active: true });
+            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", status_seq_no: "", machine_event_allowed: "N", production_entry_allowed: "N", packing_entry_allowed: "N", active: true });
             loadStatuses();
         } catch (error: any) {
             toast({
@@ -352,11 +364,11 @@ export default function BatchStatusMasterPage() {
     const confirmCancel = () => {
         if (cancelModalType === 'add') {
             setIsAddModalOpen(false);
-            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", status_seq_no: "", machine_event_allowed: "N", active: true });
+            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", status_seq_no: "", machine_event_allowed: "N", production_entry_allowed: "N", packing_entry_allowed: "N", active: true });
         } else if (cancelModalType === 'edit') {
             setIsEditModalOpen(false);
             setSelectedStatus(null);
-            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", status_seq_no: "", machine_event_allowed: "N", active: true });
+            setFormData({ batch_status_id: "", batch_status_name: "", remarks: "", seq_no: "", status_seq_no: "", machine_event_allowed: "N", production_entry_allowed: "N", packing_entry_allowed: "N", active: true });
         }
         setIsCancelDialogOpen(false);
         setCancelModalType(null);
@@ -490,7 +502,24 @@ export default function BatchStatusMasterPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Remarks</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Seq No.</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status Seq No.</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Machine Event Allowed</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Machine Event</span>
+                                                    <span>Allowed</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Production Entry</span>
+                                                    <span>Allowed</span>
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span>Packing Entry</span>
+                                                    <span>Allowed</span>
+                                                </div>
+                                            </th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
@@ -545,7 +574,13 @@ export default function BatchStatusMasterPage() {
                                                         <span className="text-sm text-foreground">{status.status_seq_no}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-foreground">{status.machine_event_allowed}</span>
+                                                        <span className="text-sm text-foreground">{status.machine_event_allowed === "Y" ? "Yes" : "No"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.production_entry_allowed === "Y" ? "Yes" : status.production_entry_allowed === "N" ? "No" : "-"}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-foreground">{status.packing_entry_allowed === "Y" ? "Yes" : status.packing_entry_allowed === "N" ? "No" : "-"}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
@@ -720,32 +755,43 @@ export default function BatchStatusMasterPage() {
                                                 placeholder="e.g. 1"
                                             />
                                         </div>
-<div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Machine Event Allowed <span className="text-red-500">*</span>
+                                        <div className="flex items-center gap-3 pt-2">
+                                            <input
+                                                type="checkbox"
+                                                id="add-machine-event"
+                                                checked={formData.machine_event_allowed === "Y"}
+                                                onChange={(e) => setFormData({ ...formData, machine_event_allowed: e.target.checked ? "Y" : "N" })}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="add-machine-event" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                Machine Event Allowed
                                             </label>
-                                            <div className="flex items-center gap-4 pt-2">
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input
-                                                        type="radio"
-                                                        name="machine_event_allowed"
-                                                        checked={formData.machine_event_allowed === "Y"}
-                                                        onChange={() => setFormData({ ...formData, machine_event_allowed: "Y" })}
-                                                        className="text-blue-600"
-                                                    />
-                                                    <span className="text-sm">Yes</span>
-                                                </label>
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input
-                                                        type="radio"
-                                                        name="machine_event_allowed"
-                                                        checked={formData.machine_event_allowed === "N"}
-                                                        onChange={() => setFormData({ ...formData, machine_event_allowed: "N" })}
-                                                        className="text-blue-600"
-                                                    />
-                                                    <span className="text-sm">No</span>
-                                                </label>
-                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 pt-2">
+                                            <input
+                                                type="checkbox"
+                                                id="add-production-entry"
+                                                checked={formData.production_entry_allowed === "Y"}
+                                                onChange={(e) => setFormData({ ...formData, production_entry_allowed: e.target.checked ? "Y" : "N" })}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="add-production-entry" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                Production Entry Allowed
+                                            </label>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 pt-2">
+                                            <input
+                                                type="checkbox"
+                                                id="add-packing-entry"
+                                                checked={formData.packing_entry_allowed === "Y"}
+                                                onChange={(e) => setFormData({ ...formData, packing_entry_allowed: e.target.checked ? "Y" : "N" })}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="add-packing-entry" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                Packing Entry Allowed
+                                            </label>
                                         </div>
 
                                         <div>
@@ -867,33 +913,45 @@ export default function BatchStatusMasterPage() {
                                                 placeholder="e.g. 1"
                                             />
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Machine Event Allowed <span className="text-red-500">*</span>
+                                        <div className="flex items-center gap-3 pt-2">
+                                            <input
+                                                type="checkbox"
+                                                id="edit-machine-event"
+                                                checked={formData.machine_event_allowed === "Y"}
+                                                onChange={(e) => setFormData({ ...formData, machine_event_allowed: e.target.checked ? "Y" : "N" })}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="edit-machine-event" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                Machine Event Allowed
                                             </label>
-                                            <div className="flex items-center gap-4 pt-2">
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input
-                                                        type="radio"
-                                                        name="machine_event_allowed"
-                                                        checked={formData.machine_event_allowed === "Y"}
-                                                        onChange={() => setFormData({ ...formData, machine_event_allowed: "Y" })}
-                                                        className="text-blue-600"
-                                                    />
-                                                    <span className="text-sm">Yes</span>
-                                                </label>
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input
-                                                        type="radio"
-                                                        name="machine_event_allowed"
-                                                        checked={formData.machine_event_allowed === "N"}
-                                                        onChange={() => setFormData({ ...formData, machine_event_allowed: "N" })}
-                                                        className="text-blue-600"
-                                                    />
-                                                    <span className="text-sm">No</span>
-                                                </label>
-                                            </div>
                                         </div>
+
+                                        <div className="flex items-center gap-3 pt-2">
+                                            <input
+                                                type="checkbox"
+                                                id="edit-production-entry"
+                                                checked={formData.production_entry_allowed === "Y"}
+                                                onChange={(e) => setFormData({ ...formData, production_entry_allowed: e.target.checked ? "Y" : "N" })}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="edit-production-entry" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                Production Entry Allowed
+                                            </label>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 pt-2">
+                                            <input
+                                                type="checkbox"
+                                                id="edit-packing-entry"
+                                                checked={formData.packing_entry_allowed === "Y"}
+                                                onChange={(e) => setFormData({ ...formData, packing_entry_allowed: e.target.checked ? "Y" : "N" })}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="edit-packing-entry" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                Packing Entry Allowed
+                                            </label>
+                                        </div>
+
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">Active Status</label>
                                             <div className="flex items-center gap-4 pt-2">

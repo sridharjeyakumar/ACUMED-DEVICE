@@ -6,6 +6,8 @@ import MachineStatus from '@/server/models/MachineStatus';
 import BatchMaterialSummary from '@/server/models/BatchMaterialSummary';
 import MachineEventTypeMaster from '@/server/models/MachineEventTypeMaster';
 import GoodsReceiptUnits from '@/server/models/GoodsReceiptUnits';
+import GoodsReceiptHeader from '@/server/models/GoodsReceiptHeader';
+import TransactionTable from '@/server/models/TransactionTable';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -64,6 +66,14 @@ export async function POST(request: NextRequest) {
 
     await event.save();
 
+    // Step 1: Update TransactionTable.current_batch_event_type_id for this batch
+    if (body.batch_no && body.machine_event_type_id) {
+      await TransactionTable.findOneAndUpdate(
+        { batch_no: body.batch_no.toUpperCase() },
+        { $set: { current_batch_event_type_id: body.machine_event_type_id.toUpperCase() } }
+      );
+    }
+
     // Save material record if material data is present
     if (body.material_id && body.roll_no) {
       const material = new MachineEventMaterial({
@@ -103,7 +113,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Update GoodsReceiptUnits if event type accepts close qty
+      // Step 2 & 3: Update GoodsReceiptUnits if event type accepts close qty
       if (
         eventTypeMaster &&
         (eventTypeMaster as any).accept_close_qty === 'Y'
@@ -113,15 +123,32 @@ export async function POST(request: NextRequest) {
           $inc: { consumed_qty: Number(body.actual_consumed_qty) },
         };
         if (closeQty === 0) {
+          // Step 2: actual_close_qty = 0 → zero out balance and close this roll
           updateOp.$set = { balance_qty: 0, status: 'C' };
         }
-        await GoodsReceiptUnits.findOneAndUpdate(
+        const updatedGRU = await GoodsReceiptUnits.findOneAndUpdate(
           {
             material_id: body.material_id.toUpperCase(),
             roll_no: body.roll_no,
           },
-          updateOp
-        );
+          updateOp,
+          { new: true }
+        ).lean();
+
+        // Step 3: If this roll is now closed, check if all rolls on the same material doc are closed
+        if (closeQty === 0 && updatedGRU && (updatedGRU as any).material_doc_no) {
+          const materialDocNo = (updatedGRU as any).material_doc_no;
+          const openCount = await GoodsReceiptUnits.countDocuments({
+            material_doc_no: materialDocNo,
+            status: { $ne: 'C' },
+          });
+          if (openCount === 0) {
+            await GoodsReceiptHeader.findOneAndUpdate(
+              { material_doc_no: materialDocNo },
+              { $set: { status: 'C' } }
+            );
+          }
+        }
       }
     }
 
@@ -161,6 +188,7 @@ export async function POST(request: NextRequest) {
         $set: {
           batch_no: body.batch_no?.toUpperCase(),
           product_id: body.product_id?.toUpperCase(),
+          last_machine_event_id: event.machine_event_id,
           last_machine_event_type_id: body.machine_event_type_id?.toUpperCase(),
           material_id: body.material_id ? body.material_id.toUpperCase() : null,
           last_event_date: body.event_date || new Date(),

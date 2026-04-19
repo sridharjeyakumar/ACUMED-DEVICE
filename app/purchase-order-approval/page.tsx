@@ -285,11 +285,6 @@ export default function PurchaseOrderApprovalPage() {
                 return `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`;
             };
 
-            // Format number with commas + ₹ prefix (en-IN: 1,00,000)
-            const inr = (n?: number) => {
-                if (n == null) return '-';
-                return '&#8377; ' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            };
             // Format number with commas only (no symbol)
             const fmtNum = (n?: number) => {
                 if (n == null) return '-';
@@ -325,10 +320,10 @@ export default function PurchaseOrderApprovalPage() {
                 </td>
                 <td style="text-align:center;">${d.po_qty != null ? Number(d.po_qty).toLocaleString('en-IN') : '-'}</td>
                 <td style="text-align:center;">${d.uom}</td>
-                <td style="text-align:center;">${(d.unit_price)}</td>
-                <td style="text-align:center;">${(d.basic_amount)}</td>
-                <td style="text-align:center;">${d.gst_percentage}</td>
-                <td style="text-align:center;">${(d.total_amount)}</td>
+                <td style="text-align:center;">${fmtNum(d.unit_price)}</td>
+                <td style="text-align:center;">${fmtNum(d.basic_amount)}</td>
+                <td style="text-align:center;">${d.gst_percentage != null ? `@ ${d.gst_percentage}%` : '-'}<br/><span style="font-size:11px;">${fmtNum(d.gst_amount)}</span></td>
+                <td style="text-align:center;">${fmtNum(d.total_amount)}</td>
               </tr>`).join('');
 
             const html = `<!DOCTYPE html>
@@ -440,7 +435,7 @@ export default function PurchaseOrderApprovalPage() {
       </td>
     </tr>
 
-    <!-- Row 2: Delivery Address | Billing Address -->
+    <!-- Row 2: Delivery Address | Billing Address (rowspan=2, no dividing line) -->
     <tr>
       <td style="width:50%;vertical-align:top;">
         <div class="lbl">Delivery Address :</div>
@@ -452,7 +447,7 @@ export default function PurchaseOrderApprovalPage() {
           ${c1?.state || ''}
         </div>
       </td>
-      <td style="width:50%;vertical-align:top;">
+      <td style="width:50%;vertical-align:top;" rowspan="2">
         <div class="lbl">Billing Address :</div>
         <div style="margin-top:3px;line-height:1.7;">
           M/s. ${c2?.company_name || ''}<br/>
@@ -461,21 +456,19 @@ export default function PurchaseOrderApprovalPage() {
           ${c2?.city || ''}${c2?.pincode ? ` - ${c2.pincode}` : ''}${(c2?.city || c2?.pincode) ? '<br/>' : ''}
           ${c2?.state || ''}
         </div>
+        <div style="margin-top:10px;"><span class="lbl">GST No.</span> ${c1?.gst_no || '-'}</div>
+        <div style="margin-top:10px;">Contact Person &nbsp;: ${c1?.contact_person || '-'}</div>
+        <div style="margin-top:2px;">Contact No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${c1?.contact_no || '-'}</div>
       </td>
     </tr>
 
-    <!-- Row 3: Shipping Instruction + Payment Terms | GST + Contact -->
+    <!-- Row 3: Shipping Instruction + Payment Terms (right cell merged above) -->
     <tr>
       <td style="width:50%;vertical-align:top;">
         <div class="lbl">Shipping Instruction :</div>
         <div style="margin-top:2px;margin-bottom:8px;">${order.shipping_instruction || '-'}</div>
         <div class="lbl">Payment Terms :</div>
         <div style="margin-top:2px;">${order.terms_of_payment || '-'}</div>
-      </td>
-      <td style="width:50%;vertical-align:top;">
-        <div><span class="lbl">GST No.</span> ${c1?.gst_no || '-'}</div>
-        <div style="margin-top:10px;">Contact Person &nbsp;: ${c1?.contact_person || '-'}</div>
-        <div style="margin-top:2px;">Contact No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${c1?.contact_no || '-'}</div>
       </td>
     </tr>
 
@@ -486,12 +479,12 @@ export default function PurchaseOrderApprovalPage() {
     <thead>
       <tr>
         <th style="width:4%;">S.No</th>
-        <th style="width:27%;">Material</th>
+        <th style="width:23%;">Material</th>
         <th style="width:10%;">PO Qty</th>
         <th style="width:7%;">UoM</th>
         <th style="width:11%;">unit Rate &#8377;</th>
-        <th style="width:13%;">Amount &#8377;</th>
-        <th style="width:8%;">GST</th>
+        <th style="width:12%;">Amount &#8377;</th>
+        <th style="width:13%;">GST</th>
         <th style="width:13%;">Total &#8377;</th>
       </tr>
     </thead>

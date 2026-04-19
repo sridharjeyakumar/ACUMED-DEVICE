@@ -51,10 +51,10 @@ export async function PUT(
 
     // Validate status if provided
     if (body.current_batch_status_id) {
-      const validStatuses = ['P', 'I', 'W', 'C'];
+      const validStatuses = ['P', 'R', 'W', 'S', 'C'];
       if (!validStatuses.includes(body.current_batch_status_id)) {
         return NextResponse.json(
-          { error: 'Invalid status. Must be P, I, W, or C' },
+          { error: 'Invalid status. Must be P, R, W, S, or C' },
           { status: 400 }
         );
       }
@@ -174,10 +174,10 @@ export async function PATCH(
     
     // Validate status if provided
     if (body.current_batch_status_id) {
-      const validStatuses = ['P', 'I', 'W', 'C'];
+      const validStatuses = ['P', 'R', 'W', 'S', 'C'];
       if (!validStatuses.includes(body.current_batch_status_id)) {
         return NextResponse.json(
-          { error: 'Invalid status. Must be P, I, W, or C' },
+          { error: 'Invalid status. Must be P, R, W, S, or C' },
           { status: 400 }
         );
       }

@@ -10,6 +10,8 @@ export interface IBatchStatusMaster extends Document {
   last_modified_user_id?: string;     // Char(5)
   last_modified_date_time?: Date;
   active: boolean;
+  production_entry_allowed?: string;          // Char(1) - 'Y' or 'N'
+  packing_entry_allowed?: string;             // Char(1) - 'Y' or 'N'
 }
 
 const BatchStatusMasterSchema: Schema = new Schema({
@@ -61,6 +63,18 @@ const BatchStatusMasterSchema: Schema = new Schema({
     type: Boolean,
     required: true,
     default: true
+  },
+  production_entry_allowed: {
+    type: String,
+    enum: ['Y', 'N'],   // Char(1) - 'Y' or 'N'
+    uppercase: true,
+    default: 'N'
+  },
+  packing_entry_allowed: {
+    type: String,
+    enum: ['Y', 'N'],   // Char(1) - 'Y' or 'N'
+    uppercase: true,
+    default: 'N'
   }
 }, {
   timestamps: true

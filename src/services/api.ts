@@ -156,9 +156,11 @@ export const machineEventAPI = {
 export const productBomAPI = {
   getByProductId: (productId: string) =>
     fetchAPI(`/product-bom?product_id=${encodeURIComponent(productId)}`),
+  getByMaterialId: (materialId: string) =>
+    fetchAPI(`/product-bom?material_id=${encodeURIComponent(materialId)}`),
 };
 
-// Available rolls from GoodsReceiptUnits (status=A, balance_qty>0, sorted roll_no DESC)
+// Available rolls from GoodsReceiptUnits (status IN A/I, balance_qty>0, sorted roll_no ASC)
 export const availableRollsAPI = {
   getByMaterialId: (materialId: string) =>
     fetchAPI(`/goods-receipt-units?material_id=${encodeURIComponent(materialId)}&available=true`),

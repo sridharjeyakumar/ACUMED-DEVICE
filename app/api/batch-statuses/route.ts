@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
       seq_no: body.seq_no,
       status_seq_no: body.status_seq_no,
       machine_event_allowed: body.machine_event_allowed || 'N',
+      production_entry_allowed: body.production_entry_allowed || 'N',
+      packing_entry_allowed: body.packing_entry_allowed || 'N',
       active: body.active !== false,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),

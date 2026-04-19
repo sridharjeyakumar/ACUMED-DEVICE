@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { machineEventAPI, machineEventTypeAPI, machineStopReasonAPI, employeeAPI, materialStockAPI, productBomAPI, availableRollsAPI, machineEventMaterialAPI, batchMaterialSummaryAPI } from "@/services/api";
+import { machineEventAPI, machineEventTypeAPI, machineStopReasonAPI, employeeAPI, materialStockAPI, productBomAPI, availableRollsAPI, machineEventMaterialAPI, batchMaterialSummaryAPI, materialAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
@@ -87,7 +87,7 @@ function getCurrentDate(): string {
 const emptyAddForm = {
     machine_id: "", machine_event_type_id: "", batch_no: "", product_id: "",
     batch_status_id: "", event_time: "", stop_reason_id: "", done_by_emp_id: "", remarks: "",
-    material_search: "", selected_material_id: "", mat_uom: "", actual_open_qty: "", qty_open: "", qty_close: "", roll_number: "",
+    material_search: "", selected_material_id: "", mat_uom: "", actual_open_qty: "", actual_gross_qty: "", qty_open: "", qty_close: "", roll_number: "",
 };
 
 const emptyEditForm = {
@@ -131,10 +131,12 @@ export default function MachineEventPage() {
     const [prevEventInfo, setPrevEventInfo] = useState<{ type_id: string; date: string; time: string } | null>(null);
     const [stockData, setStockData] = useState<MaterialStock | null>(null);
     const [bomMaterials, setBomMaterials] = useState<{ material_id: string; input_uom: string }[]>([]);
-    const [availableRolls, setAvailableRolls] = useState<{ roll_no: string; balance_qty: number }[]>([]);
+    const [availableRolls, setAvailableRolls] = useState<{ roll_no: string; balance_qty: number; uom: string; status: string }[]>([]);
+    const [actualTareQty, setActualTareQty] = useState<number>(0);
     // Close-qty mode: pre-loaded open record from MachineEventMaterial (T303 check)
     const [closeQtyRecord, setCloseQtyRecord] = useState<{
         material_id: string; roll_no: string; actual_open_qty: number; uom?: string;
+        actual_gross_qty?: number; actual_tare_qty?: number;
     } | null>(null);
     const [closeQtyError, setCloseQtyError] = useState<string>("");
 
@@ -221,7 +223,7 @@ export default function MachineEventPage() {
 
     useEffect(() => {
         if (isAddModalOpen) {
-            setAddForm({ ...emptyAddForm, event_time: getCurrentTime() });
+            setAddForm({ ...emptyAddForm, event_time: getCurrentTime(), done_by_emp_id: getSessionUser()?.employee_id || "" });
             setPrevEventTypeId("");
             setPrevEventInfo(null);
             setStockData(null);
@@ -229,6 +231,7 @@ export default function MachineEventPage() {
             setCloseQtyError("");
             setAvailableRolls([]);
             setBomMaterials([]);
+            setActualTareQty(0);
         }
     }, [isAddModalOpen]);
 
@@ -277,8 +280,8 @@ export default function MachineEventPage() {
                 }
             }
         }
-        // NB → look for batch with status 'R' (Ready for Production)
-        // all other event types → look for batch with status 'W' (Work in Progress)
+        // NB → look for batch with status 'R' (Released)
+        // all other event types → look for batch with status 'W' (Work-In-Progress)
         const lookupStatus = typeId === "NB" ? "R" : "W";
         try {
             const res = await fetch(`/api/transactions?current_batch_status_id=${lookupStatus}`);
@@ -326,6 +329,14 @@ export default function MachineEventPage() {
         if (!metm?.prerequisite_machine_event_type_id) return true;
         return prevEventTypeId === metm.prerequisite_machine_event_type_id;
     }
+
+    // ── Enabled event types: those whose prerequisite matches latest event ────
+
+    const enabledEventTypeIds = new Set(
+        addForm.machine_id
+            ? eventTypes.filter(t => t.prerequisite_machine_event_type_id === prevEventTypeId).map(t => t.machine_event_type_id)
+            : []
+    );
 
     // ── Selected METM for derived flags ──────────────────────────────────────
 
@@ -379,7 +390,9 @@ export default function MachineEventPage() {
                     // Open qty mode
                     material_id: addForm.selected_material_id,
                     roll_no: addForm.roll_number,
-                    actual_open_qty: addForm.actual_open_qty !== "" ? Number(addForm.actual_open_qty) : undefined,
+                    actual_gross_qty: addForm.actual_gross_qty !== "" ? Number(addForm.actual_gross_qty) : undefined,
+                    actual_tare_qty: actualTareQty,
+                    actual_open_qty: addForm.actual_gross_qty !== "" ? Math.max(0, Number(addForm.actual_gross_qty) - actualTareQty) : undefined,
                     actual_close_qty: 0,
                     actual_consumed_qty: 0,
                     uom: addForm.mat_uom || undefined,
@@ -387,11 +400,17 @@ export default function MachineEventPage() {
                     // Close qty mode — use pre-loaded open record data
                     material_id: closeQtyRecord.material_id,
                     roll_no: closeQtyRecord.roll_no,
+                    actual_gross_qty: closeQtyRecord.actual_gross_qty,
+                    actual_tare_qty: closeQtyRecord.actual_tare_qty,
                     actual_open_qty: closeQtyRecord.actual_open_qty,
                     actual_close_qty: addForm.qty_close !== "" ? Number(addForm.qty_close) : 0,
-                    actual_consumed_qty: addForm.qty_close !== ""
-                        ? Math.max(0, closeQtyRecord.actual_open_qty - Number(addForm.qty_close))
-                        : closeQtyRecord.actual_open_qty,
+                    actual_consumed_qty: (() => {
+                        const closeQty = addForm.qty_close !== "" ? Number(addForm.qty_close) : 0;
+                        const tare = closeQtyRecord.actual_tare_qty ?? 0;
+                        return Math.max(0, closeQty === 0
+                            ? closeQtyRecord.actual_open_qty - closeQty
+                            : closeQtyRecord.actual_open_qty - closeQty + tare);
+                    })(),
                     uom: closeQtyRecord.uom || addForm.mat_uom || undefined,
                 } : {}),
             });
@@ -921,6 +940,24 @@ export default function MachineEventPage() {
                                                         </select>
                                                     </div>
 
+                                                    {/* Latest Machine Event Type ID */}
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Latest Event Type ID</label>
+                                                        <Input value={prevEventTypeId || "—"} disabled className="bg-muted/40 text-muted-foreground text-sm font-mono" />
+                                                    </div>
+
+                                                    {/* Latest Event Date & Time */}
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Latest Event Date &amp; Time</label>
+                                                        <Input
+                                                            value={prevEventInfo ? (() => {
+                                                                const d = new Date(prevEventInfo.date);
+                                                                const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+                                                                return dateStr === getCurrentDate() ? prevEventInfo.time : `${d.toLocaleDateString()} ${prevEventInfo.time}`;
+                                                            })() : "—"}
+                                                            disabled className="bg-muted/40 text-muted-foreground text-sm font-mono" />
+                                                    </div>
+
                                                     {/* Event Type buttons */}
                                                     <div className="col-span-2">
                                                         <label className="block text-sm font-medium text-foreground mb-2">
@@ -928,13 +965,13 @@ export default function MachineEventPage() {
                                                         </label>
                                                         <div className="flex flex-wrap gap-2">
                                                             {eventTypes.map(et => {
-                                                                const isDisabled = et.machine_event_type_id === prevEventTypeId;
+                                                                const isDisabled = !enabledEventTypeIds.has(et.machine_event_type_id);
                                                                 const isSelected = addForm.machine_event_type_id === et.machine_event_type_id;
                                                                 return (
                                                                     <button key={et.machine_event_type_id} type="button"
                                                                         onClick={() => !isDisabled && handleEventTypeSelect(et.machine_event_type_id, addForm.machine_id)}
                                                                         disabled={isDisabled}
-                                                                        title={isDisabled ? "Latest event — disabled" : et.machine_event_type_name}
+                                                                        title={isDisabled ? "Not available for current machine state" : et.machine_event_type_name}
                                                                         className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border transition-all
                                                                             ${isSelected ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                                                                                 : isDisabled ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
@@ -945,11 +982,6 @@ export default function MachineEventPage() {
                                                                 );
                                                             })}
                                                         </div>
-                                                        {prevEventInfo && (
-                                                            <p className="text-xs text-amber-600 mt-2">
-                                                                Previous: <strong>{prevEventInfo.type_id}</strong> on {prevEventInfo.date ? new Date(prevEventInfo.date).toLocaleDateString() : "-"} at {prevEventInfo.time}
-                                                            </p>
-                                                        )}
                                                     </div>
 
                                                     {/* Batch Number */}
@@ -994,16 +1026,11 @@ export default function MachineEventPage() {
 
                                                     {/* Done By */}
                                                     <div>
-                                                        <label className="block text-sm font-medium text-foreground mb-1.5">
+                                                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                                                             <User className="w-3.5 h-3.5 inline mr-1 text-muted-foreground" />
-                                                            Done By <span className="text-red-500">*</span>
+                                                            Done By
                                                         </label>
-                                                        <select value={addForm.done_by_emp_id}
-                                                            onChange={e => setAddForm(prev => ({ ...prev, done_by_emp_id: e.target.value }))}
-                                                            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                            <option value="">-- Select Employee --</option>
-                                                            {employees.map(emp => <option key={emp.emp_id} value={emp.emp_id}>{emp.emp_id} - {emp.emp_name}</option>)}
-                                                        </select>
+                                                        <Input value={addForm.done_by_emp_id || "—"} disabled className="bg-muted/40 text-muted-foreground text-sm" />
                                                     </div>
 
                                                     {/* Stop Reason (conditional) */}
@@ -1051,18 +1078,25 @@ export default function MachineEventPage() {
                                                             </label>
                                                             <select value={addForm.selected_material_id}
                                                                 onChange={e => {
-                                                                    const bom = bomMaterials.find(b => b.material_id === e.target.value);
-                                                                    setAddForm(prev => ({ ...prev, selected_material_id: e.target.value, material_search: e.target.value, mat_uom: bom?.input_uom || "", actual_open_qty: "" }));
+                                                                    const matId = e.target.value;
+                                                                    const bom = bomMaterials.find(b => b.material_id === matId);
+                                                                    setAddForm(prev => ({ ...prev, selected_material_id: matId, material_search: matId, mat_uom: bom?.input_uom || "", actual_gross_qty: "", roll_number: "" }));
                                                                     setAvailableRolls([]);
-                                                                    if (e.target.value) {
-                                                                        availableRollsAPI.getByMaterialId(e.target.value)
-                                                                            .then((rolls: any[]) => {
-                                                                                setAvailableRolls(rolls || []);
-                                                                                if (rolls && rolls.length > 0) {
-                                                                                    setAddForm(prev => ({ ...prev, actual_open_qty: String(rolls[0].balance_qty) }));
-                                                                                }
-                                                                            })
-                                                                            .catch(() => setAvailableRolls([]));
+                                                                    setActualTareQty(0);
+                                                                    if (matId) {
+                                                                        Promise.all([
+                                                                            availableRollsAPI.getByMaterialId(matId),
+                                                                            materialAPI.getById(matId),
+                                                                        ]).then(([rolls, mat]) => {
+                                                                            const rollList = rolls || [];
+                                                                            setAvailableRolls(rollList);
+                                                                            const tare = mat?.core_weight ?? 0;
+                                                                            setActualTareQty(tare);
+                                                                            if (rollList.length > 0) {
+                                                                                const firstRoll = rollList[0];
+                                                                                setAddForm(prev => ({ ...prev, roll_number: firstRoll.roll_no, actual_gross_qty: String(firstRoll.balance_qty) }));
+                                                                            }
+                                                                        }).catch(() => { setAvailableRolls([]); setActualTareQty(0); });
                                                                     }
                                                                 }}
                                                                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -1082,35 +1116,51 @@ export default function MachineEventPage() {
                                                             <Input value={addForm.mat_uom} disabled className="bg-muted/40 text-muted-foreground text-sm" placeholder="Auto filled" />
                                                         </div>
 
-                                                        {/* Roll No — selection from GRU */}
-                                                        <div>
+                                                        {/* Roll No — selection from GRU (status IN A/I, balance>0, ASC) */}
+                                                        <div className="col-span-2">
                                                             <label className="block text-sm font-medium text-foreground mb-1.5">
                                                                 Roll No <span className="text-red-500">*</span>
                                                             </label>
                                                             <select value={addForm.roll_number}
                                                                 onChange={e => {
                                                                     const roll = availableRolls.find(r => r.roll_no === e.target.value);
-                                                                    setAddForm(prev => ({ ...prev, roll_number: e.target.value, actual_open_qty: roll ? String(roll.balance_qty) : prev.actual_open_qty }));
+                                                                    setAddForm(prev => ({ ...prev, roll_number: e.target.value, actual_gross_qty: roll ? String(roll.balance_qty) : "" }));
                                                                 }}
                                                                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                                                 <option value="">-- Select Roll --</option>
                                                                 {availableRolls.map(r => (
-                                                                    <option key={r.roll_no} value={r.roll_no}>{r.roll_no} (Bal: {r.balance_qty})</option>
+                                                                    <option key={r.roll_no} value={r.roll_no}>
+                                                                        {r.roll_no} | Bal: {r.balance_qty} | {r.uom} | Status: {r.status}
+                                                                    </option>
                                                                 ))}
                                                             </select>
                                                             {availableRolls.length === 0 && addForm.selected_material_id && (
-                                                                <p className="text-xs text-amber-500 mt-1">No available stock (status=A, balance&gt;0)</p>
+                                                                <p className="text-xs text-amber-500 mt-1">No stock found (status A/I, balance &gt; 0)</p>
                                                             )}
                                                         </div>
 
-                                                        {/* Actual Open Qty — editable, auto-filled from GRU */}
+                                                        {/* Actual Gross Qty — entry, default = balance_qty */}
                                                         <div>
                                                             <label className="block text-sm font-medium text-foreground mb-1.5">
-                                                                Actual Open Qty <span className="text-red-500">*</span>
+                                                                Actual Gross Qty <span className="text-red-500">*</span>
                                                             </label>
-                                                            <Input type="number" value={addForm.actual_open_qty}
-                                                                onChange={e => setAddForm(prev => ({ ...prev, actual_open_qty: e.target.value }))}
-                                                                placeholder="Auto filled from GR Units" min={0} step="0.001" />
+                                                            <Input type="number" value={addForm.actual_gross_qty}
+                                                                onChange={e => setAddForm(prev => ({ ...prev, actual_gross_qty: e.target.value }))}
+                                                                placeholder="Default from balance qty" min={0} step="0.001" />
+                                                        </div>
+
+                                                        {/* Actual Tare Qty — display only, from MaterialMaster.core_weight */}
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-muted-foreground mb-1.5">Actual Tare Qty</label>
+                                                            <Input value={actualTareQty} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                                                        </div>
+
+                                                        {/* Actual Open Qty — display only, auto-calc = gross - tare */}
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-muted-foreground mb-1.5">Actual Open Qty</label>
+                                                            <Input
+                                                                value={addForm.actual_gross_qty !== "" ? String(Math.max(0, Number(addForm.actual_gross_qty) - actualTareQty)) : ""}
+                                                                disabled className="bg-muted/40 text-muted-foreground text-sm font-semibold" />
                                                         </div>
 
                                                         {/* Actual Close Qty — display only, default 0 */}
@@ -1163,6 +1213,18 @@ export default function MachineEventPage() {
                                                                 <Input value={closeQtyRecord.roll_no} disabled className="bg-muted/40 text-muted-foreground text-sm" />
                                                             </div>
 
+                                                            {/* Actual Gross Qty — display only, from record X */}
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-muted-foreground mb-1.5">Actual Gross Qty</label>
+                                                                <Input value={closeQtyRecord.actual_gross_qty ?? "—"} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                                                            </div>
+
+                                                            {/* Actual Tare Qty — display only, from record X */}
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-muted-foreground mb-1.5">Actual Tare Qty</label>
+                                                                <Input value={closeQtyRecord.actual_tare_qty ?? "—"} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                                                            </div>
+
                                                             {/* Actual Open Qty — display only */}
                                                             <div>
                                                                 <label className="block text-sm font-medium text-muted-foreground mb-1.5">Actual Open Qty</label>
@@ -1180,13 +1242,18 @@ export default function MachineEventPage() {
                                                                 <p className="text-xs text-muted-foreground mt-1">0 ≤ close qty ≤ {closeQtyRecord.actual_open_qty}</p>
                                                             </div>
 
-                                                            {/* Actual Consumed Qty — display only = open - close */}
+                                                            {/* Actual Consumed Qty — display only */}
                                                             <div>
                                                                 <label className="block text-sm font-medium text-muted-foreground mb-1.5">Actual Consumed Qty</label>
                                                                 <Input
-                                                                    value={addForm.qty_close !== ""
-                                                                        ? String(Math.max(0, closeQtyRecord.actual_open_qty - Number(addForm.qty_close)))
-                                                                        : String(closeQtyRecord.actual_open_qty)}
+                                                                    value={(() => {
+                                                                        const closeQty = addForm.qty_close !== "" ? Number(addForm.qty_close) : 0;
+                                                                        const tare = closeQtyRecord.actual_tare_qty ?? 0;
+                                                                        const consumed = closeQty === 0
+                                                                            ? closeQtyRecord.actual_open_qty - closeQty
+                                                                            : closeQtyRecord.actual_open_qty - closeQty + tare;
+                                                                        return String(Math.max(0, consumed));
+                                                                    })()}
                                                                     disabled className="bg-muted/40 text-muted-foreground text-sm font-semibold" />
                                                             </div>
                                                         </div>
