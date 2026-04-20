@@ -1677,7 +1677,7 @@ export default function PurchaseOrdersPage() {
                                             <Input name="remarks" value={formData.remarks} onChange={handleInputChange} maxLength={100} />
                                         </div>
                                         {/* PO Totals (display only) */}
-                                        <div className="col-span-2 grid grid-cols-4 gap-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                                        <div className="col-span-2 grid grid-cols-5 gap-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
                                             <div>
                                                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Basic Amount</p>
                                                 <p className="text-sm font-semibold text-gray-800">₹ {poBasicAmount.toFixed(2)}</p>
@@ -1689,6 +1689,12 @@ export default function PurchaseOrdersPage() {
                                             <div>
                                                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Total Amount</p>
                                                 <p className="text-base font-bold text-blue-700">₹ {poTotalAmount.toFixed(2)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Vendor Email</p>
+                                                <p className="text-sm text-foreground">
+                                                    {vendors.find(v => v.vendor_id === formData.vendor_id)?.contact_email_id || '—'}
+                                                </p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Mail Sent Status</p>

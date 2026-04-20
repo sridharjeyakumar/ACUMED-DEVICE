@@ -327,6 +327,16 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
         [name]: value
     }));
 };
+
+const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    const value = checked ? 'Y' : 'N';
+    if (name === 'qc_required' && !checked) {
+        setFormData(prev => ({ ...prev, qc_required: 'N', coa_checklist_id: "" }));
+        return;
+    }
+    setFormData(prev => ({ ...prev, [name]: value }));
+};
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (isDuplicateId) {
@@ -451,7 +461,7 @@ const handleEditSubmit = async (e: React.FormEvent) => {
             product_shortname: formData.product_shortname,
             uom: formData.uom,
             product_category_id: formData.product_category_id || undefined,
-            product_spec: formData.product_spec || undefined,
+            product_spec: formData.product_spec,
             weight_per_piece: formData.weight_per_piece ? Number(formData.weight_per_piece) : undefined,
             weight_uom: formData.weight_uom || undefined,
             wipes_per_kg: formData.wipes_per_kg ? Number(formData.wipes_per_kg) : undefined,
@@ -487,7 +497,7 @@ const handleEditSubmit = async (e: React.FormEvent) => {
             product_id: selectedProduct!.product_id,
             // Preserve any fields that might be undefined in formattedData
             product_category_id: formattedData.product_category_id || selectedProduct!.product_category_id,
-            product_spec: formattedData.product_spec || selectedProduct!.product_spec,
+            product_spec: formattedData.product_spec,
             weight_per_piece: formattedData.weight_per_piece !== undefined ? formattedData.weight_per_piece : selectedProduct!.weight_per_piece,
             weight_uom: formattedData.weight_uom || selectedProduct!.weight_uom,
             wipes_per_kg: formattedData.wipes_per_kg !== undefined ? formattedData.wipes_per_kg : selectedProduct!.wipes_per_kg,
@@ -1402,19 +1412,18 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* QC Required */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                        <div className="flex items-center gap-3 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="qc_required"
+                                                name="qc_required"
+                                                checked={formData.qc_required === 'Y'}
+                                                onChange={handleCheckboxChange}
+                                                className="w-4 h-4 accent-primary cursor-pointer"
+                                            />
+                                            <label htmlFor="qc_required" className="text-sm font-semibold text-foreground cursor-pointer">
                                                 QC Required
                                             </label>
-                                            <select
-                                                name="qc_required"
-                                                value={formData.qc_required}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                            >
-                                                <option value="N">No</option>
-                                                <option value="Y">Yes</option>
-                                            </select>
                                         </div>
 
                                         {/* COA Checklist ID */}
@@ -1440,19 +1449,18 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Sterilization Required */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                        <div className="flex items-center gap-3 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="sterilization_required"
+                                                name="sterilization_required"
+                                                checked={formData.sterilization_required === 'Y'}
+                                                onChange={handleCheckboxChange}
+                                                className="w-4 h-4 accent-primary cursor-pointer"
+                                            />
+                                            <label htmlFor="sterilization_required" className="text-sm font-semibold text-foreground cursor-pointer">
                                                 Sterilization Required
                                             </label>
-                                            <select
-                                                name="sterilization_required"
-                                                value={formData.sterilization_required}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                            >
-                                                <option value="N">No</option>
-                                                <option value="Y">Yes</option>
-                                            </select>
                                         </div>
 
                                         {/* Images Section */}
@@ -1863,19 +1871,18 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* QC Required */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                        <div className="flex items-center gap-3 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="qc_required"
+                                                name="qc_required"
+                                                checked={formData.qc_required === 'Y'}
+                                                onChange={handleCheckboxChange}
+                                                className="w-4 h-4 accent-primary cursor-pointer"
+                                            />
+                                            <label htmlFor="qc_required" className="text-sm font-semibold text-foreground cursor-pointer">
                                                 QC Required
                                             </label>
-                                            <select
-                                                name="qc_required"
-                                                value={formData.qc_required}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                            >
-                                                <option value="N">No</option>
-                                                <option value="Y">Yes</option>
-                                            </select>
                                         </div>
 
                                         {/* COA Checklist ID */}
@@ -1901,19 +1908,18 @@ const confirmCancelItem = async () => {
                                         </div>
 
                                         {/* Sterilization Required */}
-                                        <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                        <div className="flex items-center gap-3 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="sterilization_required"
+                                                name="sterilization_required"
+                                                checked={formData.sterilization_required === 'Y'}
+                                                onChange={handleCheckboxChange}
+                                                className="w-4 h-4 accent-primary cursor-pointer"
+                                            />
+                                            <label htmlFor="sterilization_required" className="text-sm font-semibold text-foreground cursor-pointer">
                                                 Sterilization Required
                                             </label>
-                                            <select
-                                                name="sterilization_required"
-                                                value={formData.sterilization_required}
-                                                onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-                                            >
-                                                <option value="N">No</option>
-                                                <option value="Y">Yes</option>
-                                            </select>
                                         </div>
 
                                         {/* Images Section */}
