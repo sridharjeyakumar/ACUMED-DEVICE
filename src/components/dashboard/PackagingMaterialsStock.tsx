@@ -16,21 +16,19 @@ interface MaterialRow {
   stock_status: "CRITICAL" | "LOW" | null;
 }
 
-export function RawMaterialsStock({ delay = 0 }: { delay?: number }) {
-  const [materials, setMaterials]         = useState<MaterialRow[]>([]);
+export function PackagingMaterialsStock({ delay = 0 }: { delay?: number }) {
+  const [materials, setMaterials]           = useState<MaterialRow[]>([]);
   const [progressWidths, setProgressWidths] = useState<number[]>([]);
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState<string | null>(null);
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/dashboard/raw-materials-stock")
+    fetch("/api/dashboard/packaging-materials-stock")
       .then(r => r.json())
       .then((data: MaterialRow[] | { error: string }) => {
         if (Array.isArray(data)) {
           setMaterials(data);
-          // Init widths at 0 for animation
           setProgressWidths(data.map(() => 0));
-          // Animate after mount
           setTimeout(() => {
             setProgressWidths(
               data.map(m => {
@@ -43,7 +41,7 @@ export function RawMaterialsStock({ delay = 0 }: { delay?: number }) {
           setError((data as { error: string }).error ?? "Failed to load");
         }
       })
-      .catch(() => setError("Failed to load raw materials stock"))
+      .catch(() => setError("Failed to load packaging materials stock"))
       .finally(() => setLoading(false));
   }, [delay]);
 
@@ -64,7 +62,7 @@ export function RawMaterialsStock({ delay = 0 }: { delay?: number }) {
   if (materials.length === 0) {
     return (
       <div className="bg-card rounded-xl p-6 shadow-sm border border-border text-sm text-muted-foreground">
-        No raw material stock found.
+        No packaging material stock found.
       </div>
     );
   }
@@ -75,9 +73,9 @@ export function RawMaterialsStock({ delay = 0 }: { delay?: number }) {
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center gap-2 mb-6 shrink-0">
-        <Layers className="w-5 h-8 text-primary" />
+        <Layers className="w-5 h-5 text-primary" />
         <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">
-          Raw Materials Stock
+          Packaging Materials Stock
         </h3>
       </div>
 
