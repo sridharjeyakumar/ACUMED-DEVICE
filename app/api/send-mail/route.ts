@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer';
 
 export async function POST(req: NextRequest) {
     try {
-        const { to, cc, subject, html } = await req.json();
+        const { to, cc, subject, html, attachments } = await req.json();
 
         if (!to) return NextResponse.json({ error: 'Recipient email is required' }, { status: 400 });
 
@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
             cc: cc || undefined,
             subject,
             html,
+            attachments: attachments || [],
         });
 
         return NextResponse.json({ success: true });

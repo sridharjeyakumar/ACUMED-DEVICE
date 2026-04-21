@@ -7,6 +7,7 @@ export interface IProductBOMMaster extends Document {
   output_qty: number | null; // N(10) - can be null (e.g., 3000, 1200, null)
   output_uom: string; // Char(10) (e.g., "NOS")
   material_id: string; // Char(10) - FK to MaterialMaster (e.g., "RM001")
+  input_type: string; // Char(1)
   input_qty: number; // N(10) (e.g., 1)
   input_uom: string; // Char(10) (e.g., "KGS")
   last_modified_user_id?: string; // Char(5)
@@ -55,6 +56,13 @@ const ProductBOMMasterSchema: Schema = new Schema({
     maxlength: 10,
     trim: true,
     index: true,
+  },
+  input_type: {
+    type: String,
+    required: true,
+    maxlength: 1,
+    trim: true,
+    uppercase: true,
   },
   input_qty: {
     type: Number,

@@ -1151,6 +1151,34 @@ export default function CompanyMasterPage() {
                                             />
                                         </div>
 
+                                        {/* Billing & Shipping Address */}
+                                        <div className="col-span-2 flex items-center gap-6 mt-2">
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    id="add-billing-address"
+                                                    checked={formData.billing_address === "Y"}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, billing_address: e.target.checked ? "Y" : "N" }))}
+                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                />
+                                                <label htmlFor="add-billing-address" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                    Billing Address
+                                                </label>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    id="add-shipping-address"
+                                                    checked={formData.shipping_address === "Y"}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, shipping_address: e.target.checked ? "Y" : "N" }))}
+                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                />
+                                                <label htmlFor="add-shipping-address" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                    Shipping Address
+                                                </label>
+                                            </div>
+                                        </div>
+
                                         {/* Tax & Registration Details Section */}
                                         <div className="col-span-2 mt-4">
                                             <h3 className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-4 border-b pb-2">
@@ -1309,34 +1337,6 @@ export default function CompanyMasterPage() {
                                             <h3 className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-4 border-b pb-2">
                                                 PO Details
                                             </h3>
-                                        </div>
-
-                                        {/* Billing Address */}
-                                        <div className="flex items-center gap-3 mt-2">
-                                            <input
-                                                type="checkbox"
-                                                id="add-billing-address"
-                                                checked={formData.billing_address === "Y"}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, billing_address: e.target.checked ? "Y" : "N" }))}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="add-billing-address" className="text-sm font-semibold text-foreground cursor-pointer">
-                                                Billing Address
-                                            </label>
-                                        </div>
-
-                                        {/* Shipping Address */}
-                                        <div className="flex items-center gap-3 mt-2">
-                                            <input
-                                                type="checkbox"
-                                                id="add-shipping-address"
-                                                checked={formData.shipping_address === "Y"}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, shipping_address: e.target.checked ? "Y" : "N" }))}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="add-shipping-address" className="text-sm font-semibold text-foreground cursor-pointer">
-                                                Shipping Address
-                                            </label>
                                         </div>
 
                                         {/* PO Terms and Conditions */}
@@ -1582,6 +1582,34 @@ export default function CompanyMasterPage() {
                                             />
                                         </div>
 
+                                        {/* Billing & Shipping Address */}
+                                        <div className="col-span-2 flex items-center gap-6 mt-2">
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    id="edit-billing-address"
+                                                    checked={formData.billing_address === "Y"}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, billing_address: e.target.checked ? "Y" : "N" }))}
+                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                />
+                                                <label htmlFor="edit-billing-address" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                    Billing Address
+                                                </label>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    id="edit-shipping-address"
+                                                    checked={formData.shipping_address === "Y"}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, shipping_address: e.target.checked ? "Y" : "N" }))}
+                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                />
+                                                <label htmlFor="edit-shipping-address" className="text-sm font-semibold text-foreground cursor-pointer">
+                                                    Shipping Address
+                                                </label>
+                                            </div>
+                                        </div>
+
                                         {/* Tax & Registration Details Section */}
                                         <div className="col-span-2 mt-4">
                                             <h3 className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-4 border-b pb-2">
@@ -1732,34 +1760,6 @@ export default function CompanyMasterPage() {
                                             <h3 className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-4 border-b pb-2">
                                                 PO Details
                                             </h3>
-                                        </div>
-
-                                        {/* Billing Address */}
-                                        <div className="flex items-center gap-3 mt-2">
-                                            <input
-                                                type="checkbox"
-                                                id="edit-billing-address"
-                                                checked={formData.billing_address === "Y"}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, billing_address: e.target.checked ? "Y" : "N" }))}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="edit-billing-address" className="text-sm font-semibold text-foreground cursor-pointer">
-                                                Billing Address
-                                            </label>
-                                        </div>
-
-                                        {/* Shipping Address */}
-                                        <div className="flex items-center gap-3 mt-2">
-                                            <input
-                                                type="checkbox"
-                                                id="edit-shipping-address"
-                                                checked={formData.shipping_address === "Y"}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, shipping_address: e.target.checked ? "Y" : "N" }))}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="edit-shipping-address" className="text-sm font-semibold text-foreground cursor-pointer">
-                                                Shipping Address
-                                            </label>
                                         </div>
 
                                         {/* PO Terms and Conditions */}

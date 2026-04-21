@@ -22,6 +22,7 @@ interface BOMRecord {
     productId: string;
     outputQty: number | null;
     outputUom: string;
+    inputType: string;
     materialId: string;
     inputQty: number;
     inputUom: string;
@@ -116,6 +117,7 @@ export default function ProductBOMPage() {
         productId: "",
         outputQty: "",
         outputUom: "",
+        inputType: "",
         materialId: "",
         inputQty: "",
         inputUom: "",
@@ -132,6 +134,7 @@ export default function ProductBOMPage() {
             productId: data.product_id,
             outputQty: data.output_qty !== null && data.output_qty !== undefined ? data.output_qty : null,
             outputUom: data.output_uom,
+            inputType: data.input_type || "",
             materialId: data.material_id,
             inputQty: data.input_qty,
             inputUom: data.input_uom,
@@ -149,6 +152,7 @@ export default function ProductBOMPage() {
             product_id: data.productId,
             output_qty: safeNumber(data.outputQty),
             output_uom: data.outputUom,
+            input_type: data.inputType,
             material_id: data.materialId,
             input_qty: safeNumber(data.inputQty) || undefined,
             input_uom: data.inputUom,
@@ -220,6 +224,7 @@ useEffect(() => {
                 productId: "",
                 outputQty: "",
                 outputUom: "",
+                inputType: "",
                 materialId: "",
                 inputQty: "",
                 inputUom: "",
@@ -238,6 +243,23 @@ const getMaterialDisplay = (materialId: string) => {
     if (!materialId) return "-";
     const material = materials.find(m => m.material_id === materialId);
     return material ? `${material.material_id} - ${material.material_name}` : materialId;
+};
+const getInputIdDisplay = (inputType: string, id: string) => {
+    if (!id) return "-";
+    if (inputType === "M") {
+        const material = materials.find(m => m.material_id === id);
+        return material ? `${material.material_id} - ${material.material_name}` : id;
+    }
+    if (inputType === "P") {
+        const product = products.find(p => p.product_id === id);
+        return product ? `${product.product_id} - ${product.product_name}` : id;
+    }
+    // Fallback for records without input_type: check both lists
+    const material = materials.find(m => m.material_id === id);
+    if (material) return `${material.material_id} - ${material.material_name}`;
+    const product = products.find(p => p.product_id === id);
+    if (product) return `${product.product_id} - ${product.product_name}`;
+    return id;
 };
     const filteredRecords = records.filter((item) => {
         const matchesSearch = item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -275,10 +297,16 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
         setIsDuplicateId(exists);
     }
 
-    // 3. UPDATE STATE (This makes typing work!)
+    // 3. When inputType changes, reset materialId since the list changes
+    if (name === "inputType") {
+        setFormData(prev => ({ ...prev, inputType: value, materialId: "" }));
+        return;
+    }
+
+    // 4. UPDATE STATE (This makes typing work!)
     setFormData(prev => ({
         ...prev,
-        [name]: value 
+        [name]: value
     }));
 };
 
@@ -307,6 +335,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                 productId: "",
                 outputQty: "",
                 outputUom: "",
+                inputType: "",
                 materialId: "",
                 inputQty: "",
                 inputUom: "",
@@ -331,6 +360,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
             productId: bom.productId,
             outputQty: bom.outputQty?.toString() || "",
             outputUom: bom.outputUom,
+            inputType: bom.inputType || "",
             materialId: bom.materialId,
             inputQty: bom.inputQty.toString(),
             inputUom: bom.inputUom,
@@ -358,6 +388,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                 productId: "",
                 outputQty: "",
                 outputUom: "",
+                inputType: "",
                 materialId: "",
                 inputQty: "",
                 inputUom: "",
@@ -627,6 +658,7 @@ const confirmCancelItem = async () => {
     <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Product Id</th>
     <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Output Qty</th>
     <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Output UOM</th>
+    <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Input Type</th>
     <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Material Id</th>
     <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Input Qty</th>
     <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Input UOM</th>
@@ -649,7 +681,7 @@ const confirmCancelItem = async () => {
                                     <tbody className="divide-y divide-border">
   {filteredRecords.length === 0 ? (
     <tr>
-      <td colSpan={12} className="px-6 py-12 text-center text-muted-foreground">
+      <td colSpan={13} className="px-6 py-12 text-center text-muted-foreground">
         No product BOMs found
       </td>
     </tr>
@@ -691,10 +723,17 @@ const confirmCancelItem = async () => {
           <span className="text-sm font-semibold text-foreground">{item.outputUom}</span>
         </td>
 
-        {/* Material Id with pill style */}
+        {/* Input Type */}
+        <td className="px-6 py-6 text-center align-middle">
+          <span className="inline-flex px-2 py-1 rounded-md bg-blue-50 text-blue-700 font-mono text-xs font-bold">
+            {item.inputType || "-"}
+          </span>
+        </td>
+
+        {/* Material / Product Id with pill style */}
         <td className="px-6 py-6 text-center align-middle">
           <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-            {getMaterialDisplay(item.materialId)}
+            {getInputIdDisplay(item.inputType, item.materialId)}
           </span>
         </td>
 
@@ -975,75 +1014,83 @@ const confirmCancelItem = async () => {
     </select>
                                         </div>
 
-                                        {/* Material ID */}
+                                        {/* Input Type */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Input Type <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="inputType"
+                                                value={formData.inputType}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                required
+                                            >
+                                                <option value="">Select type</option>
+                                                <option value="M">M - Material</option>
+                                                <option value="P">P - Product</option>
+                                            </select>
+                                        </div>
 
-                                                                                                                  <div>
-    <label className="block text-sm font-semibold text-foreground mb-2">
-        Material ID <span className="text-red-500">*</span>
-    </label>
-    <select
-        name="materialId"
-        value={formData.materialId}
-        onChange={handleInputChange}
-        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-        required
-    >
-        <option value="">Select a material</option>
-        {materials.filter(material => material.active && material.material_type === "RM").map(material => (
-            <option key={material.material_id} value={material.material_id}>
-                {material.material_id} - {material.material_name}
-            </option>
-        ))}
-    </select>
-</div>
+                                        {/* Material / Product ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                {formData.inputType === "P" ? "Product ID" : "Material ID"} <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="materialId"
+                                                value={formData.materialId}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                required
+                                                disabled={!formData.inputType}
+                                            >
+                                                <option value="">Select {formData.inputType === "P" ? "a product" : "a material"}</option>
+                                                {formData.inputType === "M" && materials.filter(m => m.active).map(m => (
+                                                    <option key={m.material_id} value={m.material_id}>
+                                                        {m.material_id} - {m.material_name}
+                                                    </option>
+                                                ))}
+                                                {formData.inputType === "P" && products.filter(p => p.active).map(p => (
+                                                    <option key={p.product_id} value={p.product_id}>
+                                                        {p.product_id} - {p.product_name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
 
                                         {/* Input Qty */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Input Qty <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                type="number" 
-                                                name="inputQty" 
-                                                value={formData.inputQty} 
-                                                onChange={handleInputChange} 
+                                            <Input
+                                                type="number"
+                                                name="inputQty"
+                                                value={formData.inputQty}
+                                                onChange={handleInputChange}
                                                 required
                                             />
                                         </div>
 
-                                        {/* Input UOM */}
-                                        {/* <div>
+                                        <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Input UOM <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="inputUom" 
-                                                value={formData.inputUom} 
-                                                onChange={handleInputChange} 
-                                                placeholder="KGS"
+                                            <select
+                                                name="inputUom"
+                                                value={formData.inputUom}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                                 required
-                                                maxLength={3}
-                                            />
-                                        </div> */}
-                                                                                                                  <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Input UOM <span className="text-red-500">*</span>
-                                            </label>
-                                      
-                                                <select
-        name="inputUom"
-        value={formData.inputUom}
-        onChange={handleInputChange}
-        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-        required
-    >
-        <option value="">Select a uom</option>
-        {uoms.filter((uom) => uom.active !== false||uom.uom_id===formData.inputUom).map(product => (
-            <option key={product.uom_id} value={product.uom_id}>
-                {product.uom_id}
-            </option>
-        ))}
-    </select>
+                                            >
+                                                <option value="">Select a uom</option>
+                                                {uoms.filter((uom) => uom.active !== false || uom.uom_id === formData.inputUom).map(product => (
+                                                    <option key={product.uom_id} value={product.uom_id}>
+                                                        {product.uom_id}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         {/* Active */}
@@ -1197,37 +1244,61 @@ const confirmCancelItem = async () => {
                                             />
                                         </div>
 
-                                        {/* Material ID */}
-                                                                                                                                                       <div>
-    <label className="block text-sm font-semibold text-foreground mb-2">
-        Material ID <span className="text-red-500">*</span>
-    </label>
-    <select
-        name="materialId"
-        value={formData.materialId}
-        onChange={handleInputChange}
-        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
-        required
-    >
-        <option value="">Select a material</option>
-        {materials.filter(material => material.active && material.material_type === "RM").map(material => (
-            <option key={material.material_id} value={material.material_id}>
-                {material.material_id} - {material.material_name}
-            </option>
-        ))}
-    </select>
-</div>
+                                        {/* Input Type */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Input Type <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="inputType"
+                                                value={formData.inputType}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                required
+                                            >
+                                                <option value="">Select type</option>
+                                                <option value="M">M - Material</option>
+                                                <option value="P">P - Product</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Material / Product ID */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                {formData.inputType === "P" ? "Product ID" : "Material ID"} <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="materialId"
+                                                value={formData.materialId}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                                                required
+                                                disabled={!formData.inputType}
+                                            >
+                                                <option value="">Select {formData.inputType === "P" ? "a product" : "a material"}</option>
+                                                {formData.inputType === "M" && materials.filter(m => m.active).map(m => (
+                                                    <option key={m.material_id} value={m.material_id}>
+                                                        {m.material_id} - {m.material_name}
+                                                    </option>
+                                                ))}
+                                                {formData.inputType === "P" && products.filter(p => p.active).map(p => (
+                                                    <option key={p.product_id} value={p.product_id}>
+                                                        {p.product_id} - {p.product_name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
 
                                         {/* Input Qty */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Input Qty <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                type="number" 
-                                                name="inputQty" 
-                                                value={formData.inputQty} 
-                                                onChange={handleInputChange} 
+                                            <Input
+                                                type="number"
+                                                name="inputQty"
+                                                value={formData.inputQty}
+                                                onChange={handleInputChange}
                                                 required
                                             />
                                         </div>
@@ -1237,14 +1308,20 @@ const confirmCancelItem = async () => {
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Input UOM <span className="text-red-500">*</span>
                                             </label>
-                                            <Input 
-                                                name="inputUom" 
-                                                value={formData.inputUom} 
-                                                onChange={handleInputChange} 
-                                                placeholder="KGS"
+                                            <select
+                                                name="inputUom"
+                                                value={formData.inputUom}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
                                                 required
-                                                maxLength={3}
-                                            />
+                                            >
+                                                <option value="">Select a uom</option>
+                                                {uoms.filter((uom) => uom.active !== false || uom.uom_id === formData.inputUom).map(product => (
+                                                    <option key={product.uom_id} value={product.uom_id}>
+                                                        {product.uom_id}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         {/* Active */}
