@@ -40,6 +40,7 @@ export async function PATCH(
     if (body.active !== undefined) updateData.active = body.active;
     if (body.machineName !== undefined) updateData.machine_name = body.machineName;
     if (body.shortName !== undefined) updateData.machine_short_name = body.shortName;
+    if (body.section !== undefined) updateData.section = body.section;
     if (body.qtyPerMin !== undefined) updateData.prod_qty_per_minute = Number(body.qtyPerMin);
     if (body.uom !== undefined) updateData.uom = body.uom;
     if (body.avgHrsPerDay !== undefined) updateData.avg_prod_hrs_per_day = Number(body.avgHrsPerDay);
