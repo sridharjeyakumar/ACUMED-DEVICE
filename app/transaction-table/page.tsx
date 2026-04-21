@@ -1115,7 +1115,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <h1 className="text-3xl font-bold text-foreground mb-2">Batch Transaction Table</h1>
+                                <h1 className="text-3xl font-bold text-foreground mb-2">Production Plan</h1>
                                 <p className="text-muted-foreground">Monitor and manage manufacturing batches</p>
                             </div>
                             <Button
