@@ -92,6 +92,7 @@ export default function ProductMasterPage() {
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [filterActive, setFilterActive] = useState<string>("true");
     const [filterCategory, setFilterCategory] = useState<string>("all");
+    const [filterProductType, setFilterProductType] = useState<string>("all");
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -270,8 +271,10 @@ const getChecklistDisplay = (checklistId: string) => {
             (filterActive === "false" && product.active === false);
         
         const matchesCategory = filterCategory === "all" || product.product_category_id === filterCategory;
-        
-        return matchesSearch && matchesActive && matchesCategory;
+
+        const matchesProductType = filterProductType === "all" || product.product_type === filterProductType;
+
+        return matchesSearch && matchesActive && matchesCategory && matchesProductType;
     });
 
     // Pagination logic
@@ -283,9 +286,10 @@ const getChecklistDisplay = (checklistId: string) => {
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, filterActive, filterCategory, rowsPerPage]);
+    }, [searchQuery, filterActive, filterCategory, filterProductType, rowsPerPage]);
 
     const uniqueCategories = Array.from(new Set(products.map(p => p.product_category_id).filter(c => c)));
+    const uniqueProductTypes = Array.from(new Set(products.map(p => p.product_type).filter(t => t))) as string[];
 
     // const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     //     const { name, value, type } = e.target;
@@ -806,6 +810,37 @@ const confirmCancelItem = async () => {
                                                     </div>
                                                 </div>
                                             )}
+                                            {uniqueProductTypes.length > 0 && (
+                                                <div className="space-y-3 pt-3 border-t border-border">
+                                                    <Label className="text-sm font-semibold text-foreground">Product Type</Label>
+                                                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                                                        <div className="flex items-center space-x-2">
+                                                            <input
+                                                                type="radio"
+                                                                id="prod-type-all"
+                                                                name="prodTypeFilter"
+                                                                checked={filterProductType === "all"}
+                                                                onChange={() => setFilterProductType("all")}
+                                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <Label htmlFor="prod-type-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
+                                                        </div>
+                                                        {uniqueProductTypes.map((type) => (
+                                                            <div key={type} className="flex items-center space-x-2">
+                                                                <input
+                                                                    type="radio"
+                                                                    id={`prod-type-${type}`}
+                                                                    name="prodTypeFilter"
+                                                                    checked={filterProductType === type}
+                                                                    onChange={() => setFilterProductType(type)}
+                                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                                />
+                                                                <Label htmlFor={`prod-type-${type}`} className="text-sm font-normal cursor-pointer text-foreground">{type}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                             <div className="space-y-3 pt-3 border-t border-border">
                                                 <Label className="text-sm font-semibold text-foreground">No. of rows per screen</Label>
                                                 <select
@@ -829,6 +864,7 @@ const confirmCancelItem = async () => {
                                                 onClick={() => {
                                                     setFilterActive("all");
                                                     setFilterCategory("all");
+                                                    setFilterProductType("all");
                                                 }}
                                             >
                                                 Clear Filters

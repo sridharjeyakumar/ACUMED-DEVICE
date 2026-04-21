@@ -5,10 +5,11 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, ChevronDown, ChevronLeft, ChevronRight, Printer } from "lucide-react";
-import { motion } from "framer-motion";
+import { Search, ChevronDown, ChevronLeft, ChevronRight, Printer, Mail, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { purchaseOrderAPI, purchaseOrderDetailAPI, vendorAPI, materialAPI, companyAPI, employeeAPI } from "@/services/api";
+import { Label } from "@/components/ui/label";
+import { purchaseOrderAPI, purchaseOrderDetailAPI, vendorAPI, materialAPI, companyAPI, employeeAPI, sendMailAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 interface PurchaseOrder {
@@ -29,6 +30,7 @@ interface PurchaseOrder {
     approved_by_user_id?: string;
     approved_date_time?: string;
     status: string;
+    mail_sent_status?: string;
 }
 
 interface PODetail {
@@ -131,17 +133,32 @@ export default function PurchaseOrderApprovalPage() {
     // Per-row editable approval_remarks
     const [approvalRemarks, setApprovalRemarks] = useState<Record<string, string>>({});
 
+    // User id → name map
+    const [userMap, setUserMap] = useState<Record<string, string>>({});
+
+    // Mail modal
+    const [isMailModalOpen, setIsMailModalOpen] = useState(false);
+    const [mailData, setMailData] = useState({ to: '', cc: '', subject: '', body: '' });
+    const [mailSending, setMailSending] = useState(false);
+    const [selectedMailOrder, setSelectedMailOrder] = useState<PurchaseOrder | null>(null);
+    const [pdfAttachment, setPdfAttachment] = useState<{ base64: string; blobUrl: string; filename: string } | null>(null);
+    const [pdfGenerating, setPdfGenerating] = useState(false);
+
     // Rows being submitted
     const [submitting, setSubmitting] = useState<Set<string>>(new Set());
 
     const loadOrders = useCallback(async () => {
         try {
             setLoading(true);
-            const [allOrders, vendorData, materialData] = await Promise.all([
+            const [allOrders, vendorData, materialData, employeeData] = await Promise.all([
                 purchaseOrderAPI.getAll(),
                 vendorAPI.getAll(),
                 materialAPI.getAll(),
+                employeeAPI.getAll(),
             ]);
+            const map: Record<string, string> = {};
+            employeeData.forEach((e: any) => { if (e.emp_id) map[e.emp_id] = e.emp_name || e.emp_id; });
+            setUserMap(map);
 
             const relevant: PurchaseOrder[] = allOrders.filter(
                 (o: PurchaseOrder) => o.status === 'E' || o.status === 'A'
@@ -159,8 +176,8 @@ export default function PurchaseOrderApprovalPage() {
                 return next;
             });
 
-            // Eagerly load GR totals for all 'A' status POs (needed for button logic)
-            const activePOs = relevant.filter((o: PurchaseOrder) => o.status === 'A');
+            // Eagerly load GR totals for all POs (needed for Cancel button logic)
+            const activePOs = relevant.filter((o: PurchaseOrder) => o.status === 'A' || o.status === 'E');
             if (activePOs.length > 0) {
                 const totals: Record<string, number> = {};
                 const detailsCache: Record<string, PODetail[]> = {};
@@ -250,83 +267,50 @@ export default function PurchaseOrderApprovalPage() {
         }
     };
 
-    const handlePrint = async (order: PurchaseOrder) => {
-        try {
-            // Fetch PO details (use cache if available)
-            let details: PODetail[] = expandedDetails[order.po_no];
-            if (!details) {
-                details = await purchaseOrderDetailAPI.getByPoNo(order.po_no);
-            }
+    const buildPOHtml = (
+        order: PurchaseOrder,
+        details: PODetail[],
+        vendor: any,
+        c1: Company | undefined,
+        c2: Company | undefined,
+        authorisedName: string,
+    ): string => {
+        const fmt = (d?: string) => {
+            if (!d) return '-';
+            const dt = new Date(d);
+            if (isNaN(dt.getTime())) return '-';
+            return `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`;
+        };
+        const fmtNum = (n?: number) => n == null ? '-' : Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const getMaterialName = (id: string) => materials.find(m => m.material_id === id)?.material_name || '';
 
-            // Fetch vendor, companies, employee in parallel
-            const [vendor, allCompanies] = await Promise.all([
-                vendorAPI.getById(order.vendor_id),
-                companyAPI.getAll().catch(() => []),
-            ]);
+        const totalBasic = details.reduce((s, d) => s + (d.basic_amount || 0), 0);
+        const totalGst   = details.reduce((s, d) => s + (d.gst_amount || 0), 0);
+        const totalAmt   = details.reduce((s, d) => s + (d.total_amount || 0), 0);
 
-            const c1: Company | undefined = allCompanies.find((c: Company) => c.comp_id === 'CORP');
-            const c2: Company | undefined = allCompanies.find((c: Company) => c.comp_id === 'FACT');
+        const logoHtml = c1?.logo
+            ? `<img src="${c1.logo}" style="height:44px;max-width:80px;object-fit:contain;" alt="Logo"/>`
+            : `<div style="width:80px;height:44px;border:1px solid #aaa;display:flex;align-items:center;justify-content:center;font-size:9px;color:#888;">Company<br/>Logo</div>`;
+        const signImgHtml = c1?.po_image
+            ? `<img src="${c1.po_image}" style="height:56px;max-width:120px;object-fit:contain;display:block;margin:4px auto;" alt="Authorised Sign"/>`
+            : '';
+        const detailRowsHtml = details.map(d => `
+          <tr>
+            <td style="text-align:center;">${d.sno}</td>
+            <td>
+              ${getMaterialName(d.material_id)}<br/>
+              <span style="color:#444;">Spec : ${d.material_spec || '-'}</span><br/>
+              <span style="color:#444;">Exp. Delivery Date : ${fmt(d.expected_delivery_date)}</span>
+            </td>
+            <td style="text-align:center;">${d.po_qty != null ? Number(d.po_qty).toLocaleString('en-IN') : '-'}</td>
+            <td style="text-align:center;">${d.uom}</td>
+            <td style="text-align:center;">${fmtNum(d.unit_price)}</td>
+            <td style="text-align:center;">${fmtNum(d.basic_amount)}</td>
+            <td style="text-align:center;">${d.gst_percentage != null ? `@ ${d.gst_percentage}%` : '-'}<br/><span style="font-size:11px;">${fmtNum(d.gst_amount)}</span></td>
+            <td style="text-align:center;">${fmtNum(d.total_amount)}</td>
+          </tr>`).join('');
 
-            // Fetch authorised name from EmployeeMaster
-            let authorisedName = '';
-            if (order.approved_by_user_id) {
-                try {
-                    const emp = await employeeAPI.getById(order.approved_by_user_id);
-                    authorisedName = emp?.emp_name || order.approved_by_user_id;
-                } catch {
-                    authorisedName = order.approved_by_user_id;
-                }
-            }
-
-            const fmt = (d?: string) => {
-                if (!d) return '-';
-                const dt = new Date(d);
-                if (isNaN(dt.getTime())) return '-';
-                return `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`;
-            };
-
-            // Format number with commas only (no symbol)
-            const fmtNum = (n?: number) => {
-                if (n == null) return '-';
-                return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            };
-
-            const getMaterialName = (id: string) => {
-                const m = materials.find(m => m.material_id === id);
-                return m?.material_name || '';
-            };
-
-            const totalBasic = details.reduce((s, d) => s + (d.basic_amount || 0), 0);
-            const totalGst   = details.reduce((s, d) => s + (d.gst_amount || 0), 0);
-            const totalAmt   = details.reduce((s, d) => s + (d.total_amount || 0), 0);
-
-            // Small logo on left; company name fully centred across page
-            const logoHtml = c1?.logo
-                ? `<img src="${c1.logo}" style="height:44px;max-width:80px;object-fit:contain;" alt="Logo"/>`
-                : `<div style="width:80px;height:44px;border:1px solid #aaa;display:flex;align-items:center;justify-content:center;font-size:9px;color:#888;">Company<br/>Logo</div>`;
-
-            const signImgHtml = c1?.po_image
-                ? `<img src="${c1.po_image}" style="height:56px;max-width:120px;object-fit:contain;display:block;margin:4px auto;" alt="Authorised Sign"/>`
-                : '';
-
-            // Material column: name only (no ID), spec, exp delivery date
-            const detailRowsHtml = details.map(d => `
-              <tr>
-                <td style="text-align:center;">${d.sno}</td>
-                <td>
-                  ${getMaterialName(d.material_id)}<br/>
-                  <span style="color:#444;">Spec : ${d.material_spec || '-'}</span><br/>
-                  <span style="color:#444;">Exp. Delivery Date : ${fmt(d.expected_delivery_date)}</span>
-                </td>
-                <td style="text-align:center;">${d.po_qty != null ? Number(d.po_qty).toLocaleString('en-IN') : '-'}</td>
-                <td style="text-align:center;">${d.uom}</td>
-                <td style="text-align:center;">${fmtNum(d.unit_price)}</td>
-                <td style="text-align:center;">${fmtNum(d.basic_amount)}</td>
-                <td style="text-align:center;">${d.gst_percentage != null ? `@ ${d.gst_percentage}%` : '-'}<br/><span style="font-size:11px;">${fmtNum(d.gst_amount)}</span></td>
-                <td style="text-align:center;">${fmtNum(d.total_amount)}</td>
-              </tr>`).join('');
-
-            const html = `<!DOCTYPE html>
+        return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8"/>
@@ -338,47 +322,31 @@ export default function PurchaseOrderApprovalPage() {
   body { font-family: Arial, sans-serif; font-size: 12px; color: #000; background: #fff;
          padding: 12mm 10mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .page { width: 100%; }
-
-  /* Header: logo absolute-left so company name stays centred on full width */
   .hdr { position: relative; text-align: center; margin-bottom: 8px; min-height: 54px; }
   .hdr-logo { position: absolute; left: 0; top: 0; }
   .hdr-info { display: inline-block; text-align: center; }
   .co-name { font-size: 18px; font-weight: bold; color: #1a4fa8; }
   .co-addr { font-size: 11px; color: #333; line-height: 1.6; margin-top: 3px; }
-
-  /* Main bordered table */
   .main-tbl { width: 100%; border-collapse: collapse; border: 1px solid #555; margin-bottom: 5px; table-layout: fixed; }
   .main-tbl td, .main-tbl th { border: 1px solid #555; padding: 6px 8px; vertical-align: top;
                                 font-size: 12px; word-break: break-word; overflow-wrap: break-word; }
-
-  /* "Purchase Order" heading row */
   .po-heading { background: #dce6f7; color: #1a4fa8; text-align: center; font-size: 14px;
                 font-weight: bold; padding: 7px; border: 1px solid #555; }
-
   .lbl { font-weight: bold; }
   .lbl-blue { font-weight: bold; color: #1a4fa8; }
-
-  /* Items table */
-  .items-tbl { width: 100%; border-collapse: collapse; border: 1px solid #555; margin-bottom: 5px;
-               table-layout: fixed; }
+  .items-tbl { width: 100%; border-collapse: collapse; border: 1px solid #555; margin-bottom: 5px; table-layout: fixed; }
   .items-tbl th { background: #dce6f7; color: #000; text-align: center; font-weight: bold;
                   border: 1px solid #555; padding: 6px 4px; font-size: 12px; }
   .items-tbl td { border: 1px solid #555; padding: 5px 6px; vertical-align: top; font-size: 12px;
                   word-break: break-word; overflow-wrap: break-word; }
-
-  /* Bottom section */
   .bottom-tbl { width: 100%; border-collapse: collapse; border: 1px solid #555; table-layout: fixed; margin-top: 5px; }
   .bottom-tbl td { border: 1px solid #555; padding: 20px 12px; vertical-align: top; font-size: 12px;
                    word-break: break-word; overflow-wrap: break-word; min-height: 120px; }
-
-  /* System generated footer */
   .sys-footer { margin-top: 8px; font-size: 10px; color: #555; font-style: italic; }
 </style>
 </head>
 <body>
 <div class="page">
-
-  <!-- ── TOP HEADER ── -->
   <div class="hdr">
     <div class="hdr-logo">${logoHtml}</div>
     <div class="hdr-info">
@@ -391,16 +359,8 @@ export default function PurchaseOrderApprovalPage() {
       </div>
     </div>
   </div>
-
-  <!-- ── MAIN TABLE ── -->
   <table class="main-tbl">
-
-    <!-- Purchase Order heading -->
-    <tr>
-      <td colspan="2" class="po-heading">Purchase Order</td>
-    </tr>
-
-    <!-- Row 1: Supplier Address | PO Info -->
+    <tr><td colspan="2" class="po-heading">Purchase Order</td></tr>
     <tr>
       <td style="width:50%;">
         <div class="lbl">Supplier Address :</div>
@@ -414,28 +374,14 @@ export default function PurchaseOrderApprovalPage() {
       </td>
       <td style="width:50%;">
         <table style="width:100%;border:none;border-collapse:collapse;">
-          <tr>
-            <td style="border:none;padding:2px 4px;width:110px;">PO No.</td>
-            <td style="border:none;padding:2px 4px;"> : <span class="lbl-blue"><strong>${order.po_no}</strong></span></td>
-          </tr>
-          <tr>
-            <td style="border:none;padding:2px 4px;">PO Date</td>
-            <td style="border:none;padding:2px 4px;"> : <span class="lbl-blue"><strong>${fmt(order.po_date)}</strong></span></td>
-          </tr>
+          <tr><td style="border:none;padding:2px 4px;width:110px;">PO No.</td><td style="border:none;padding:2px 4px;"> : <span class="lbl-blue"><strong>${order.po_no}</strong></span></td></tr>
+          <tr><td style="border:none;padding:2px 4px;">PO Date</td><td style="border:none;padding:2px 4px;"> : <span class="lbl-blue"><strong>${fmt(order.po_date)}</strong></span></td></tr>
           <tr><td style="border:none;padding:4px;" colspan="2"></td></tr>
-          <tr>
-            <td style="border:none;padding:2px 4px;">Ref. Doc No.</td>
-            <td style="border:none;padding:2px 4px;"> : ${order.vendor_ref_doc_no || '-'}</td>
-          </tr>
-          <tr>
-            <td style="border:none;padding:2px 4px;">Ref. Doc Date</td>
-            <td style="border:none;padding:2px 4px;"> : ${fmt(order.vendor_ref_doc_date)}</td>
-          </tr>
+          <tr><td style="border:none;padding:2px 4px;">Ref. Doc No.</td><td style="border:none;padding:2px 4px;"> : ${order.vendor_ref_doc_no || '-'}</td></tr>
+          <tr><td style="border:none;padding:2px 4px;">Ref. Doc Date</td><td style="border:none;padding:2px 4px;"> : ${fmt(order.vendor_ref_doc_date)}</td></tr>
         </table>
       </td>
     </tr>
-
-    <!-- Row 2: Delivery Address | Billing Address (rowspan=2, no dividing line) -->
     <tr>
       <td style="width:50%;vertical-align:top;">
         <div class="lbl">Delivery Address :</div>
@@ -461,8 +407,6 @@ export default function PurchaseOrderApprovalPage() {
         <div style="margin-top:2px;">Contact No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${c1?.contact_no || '-'}</div>
       </td>
     </tr>
-
-    <!-- Row 3: Shipping Instruction + Payment Terms (right cell merged above) -->
     <tr>
       <td style="width:50%;vertical-align:top;">
         <div class="lbl">Shipping Instruction :</div>
@@ -471,10 +415,7 @@ export default function PurchaseOrderApprovalPage() {
         <div style="margin-top:2px;">${order.terms_of_payment || '-'}</div>
       </td>
     </tr>
-
   </table>
-
-  <!-- ── ITEMS TABLE ── -->
   <table class="items-tbl">
     <thead>
       <tr>
@@ -498,8 +439,6 @@ export default function PurchaseOrderApprovalPage() {
       </tr>
     </tbody>
   </table>
-
-  <!-- ── BOTTOM: Terms & Conditions + Signature ── -->
   <table class="bottom-tbl">
     <tr>
       <td style="width:55%;">
@@ -518,18 +457,37 @@ export default function PurchaseOrderApprovalPage() {
       </td>
     </tr>
   </table>
-
-  <!-- ── SYSTEM GENERATED FOOTER ── -->
   <div class="sys-footer">
     * This is a system-generated Purchase Order and does not require a physical signature.
     ${c1?.email_id ? `For any queries, contact ${c1.email_id}` : ''}
   </div>
+</div>`;
+    };
 
-</div>
-<script>window.onload = () => { window.print(); }</script>
-</body>
-</html>`;
+    const fetchPOData = async (order: PurchaseOrder) => {
+        let details: PODetail[] = expandedDetails[order.po_no];
+        if (!details) details = await purchaseOrderDetailAPI.getByPoNo(order.po_no);
+        const [vendor, allCompanies] = await Promise.all([
+            vendorAPI.getById(order.vendor_id),
+            companyAPI.getAll().catch(() => []),
+        ]);
+        const c1: Company | undefined = allCompanies.find((c: Company) => c.comp_id === 'CORP');
+        const c2: Company | undefined = allCompanies.find((c: Company) => c.comp_id === 'FACT');
+        let authorisedName = '';
+        if (order.approved_by_user_id) {
+            try {
+                const emp = await employeeAPI.getById(order.approved_by_user_id);
+                authorisedName = emp?.emp_name || order.approved_by_user_id;
+            } catch { authorisedName = order.approved_by_user_id; }
+        }
+        return { details, vendor, c1, c2, authorisedName };
+    };
 
+    const handlePrint = async (order: PurchaseOrder) => {
+        try {
+            const { details, vendor, c1, c2, authorisedName } = await fetchPOData(order);
+            const body = buildPOHtml(order, details, vendor, c1, c2, authorisedName);
+            const html = body + `\n<script>window.onload = () => { window.print(); }<\/script>\n</body>\n</html>`;
             const printWindow = window.open('', '_blank', 'width=900,height=750');
             if (printWindow) {
                 printWindow.document.write(html);
@@ -545,27 +503,179 @@ export default function PurchaseOrderApprovalPage() {
         return v ? `${id} - ${v.vendor_name}` : id;
     };
 
+    const handleOpenMailModal = async (order: PurchaseOrder) => {
+        try {
+            const vendor = vendors.find(v => v.vendor_id === order.vendor_id);
+            const allCompanies = await companyAPI.getAll().catch(() => []);
+            const c1 = allCompanies.find((c: any) => c.comp_id === 'CORP');
+            let details: PODetail[] = expandedDetails[order.po_no];
+            if (!details) {
+                details = await purchaseOrderDetailAPI.getByPoNo(order.po_no);
+            }
+            const detailTableRows = details.map((d, i) => {
+                const mat = materials.find(m => m.material_id === d.material_id);
+                return `<tr>
+                    <td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">${i + 1}</td>
+                    <td style="border:1px solid #ccc;padding:6px 10px;">${mat?.material_name || d.material_id}</td>
+                    <td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">${d.po_qty != null ? Number(d.po_qty).toLocaleString('en-IN') : '-'}</td>
+                    <td style="border:1px solid #ccc;padding:6px 10px;text-align:center;">${d.uom || '-'}</td>
+                </tr>`;
+            }).join('');
+            const bodyHtml = `
+<p>Dear ${vendor?.contact_person || 'Sir/Madam'},</p>
+<p>We are pleased to place the Order for the below material.</p>
+<table style="border-collapse:collapse;width:100%;margin:12px 0;">
+  <thead>
+    <tr style="background:#f0f4ff;">
+      <th style="border:1px solid #ccc;padding:6px 10px;">S.No</th>
+      <th style="border:1px solid #ccc;padding:6px 10px;">Material Name</th>
+      <th style="border:1px solid #ccc;padding:6px 10px;">PO Qty</th>
+      <th style="border:1px solid #ccc;padding:6px 10px;">UoM</th>
+    </tr>
+  </thead>
+  <tbody>${detailTableRows}</tbody>
+</table>
+<p>Refer the PO document attached.</p>
+<br/>
+<p>Thanks and Regards,<br/>${c1?.company_name || 'ACUMED DEVICES'}</p>`;
+            setMailData({
+                to: vendor?.contact_email_id || '',
+                cc: 'acumed.devices@gmail.com',
+                subject: `Purchase Order ${order.po_no} from ${c1?.company_short_name || c1?.company_name || ''}`,
+                body: bodyHtml,
+            });
+            setSelectedMailOrder(order);
+            setPdfAttachment(null);
+            setIsMailModalOpen(true);
+
+            // Generate PDF in background after modal opens
+            setPdfGenerating(true);
+            try {
+                const { base64, blobUrl } = await generatePOPdf(order);
+                setPdfAttachment({ base64, blobUrl, filename: `PO-${order.po_no}.pdf` });
+            } catch {
+                // modal still usable, attachment just won't be present
+            } finally {
+                setPdfGenerating(false);
+            }
+        } catch (err: any) {
+            toast({ title: "Error", description: err.message || "Failed to prepare mail", variant: "destructive" });
+        }
+    };
+
+    const handleCloseMailModal = () => {
+        if (pdfAttachment?.blobUrl) URL.revokeObjectURL(pdfAttachment.blobUrl);
+        setPdfAttachment(null);
+        setIsMailModalOpen(false);
+    };
+
+    const generatePOPdf = async (order: PurchaseOrder): Promise<{ base64: string; blobUrl: string }> => {
+        const { default: jsPDF } = await import('jspdf');
+        const { default: html2canvas } = await import('html2canvas');
+
+        const { details, vendor, c1, c2, authorisedName } = await fetchPOData(order);
+        const html = buildPOHtml(order, details, vendor, c1, c2, authorisedName) + '\n</body>\n</html>';
+
+        // Use an iframe so the full HTML document (CSS, body padding) renders correctly
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:1px;border:none;';
+        document.body.appendChild(iframe);
+
+        try {
+            const iframeDoc = iframe.contentDocument!;
+            iframeDoc.open();
+            iframeDoc.write(html);
+            iframeDoc.close();
+
+            // Let layout settle and images start loading
+            await new Promise(resolve => setTimeout(resolve, 400));
+
+            const canvas = await html2canvas(iframeDoc.body, {
+                scale: 1.5,
+                useCORS: true,
+                allowTaint: true,
+                logging: false,
+                imageTimeout: 0,
+                backgroundColor: '#ffffff',
+                windowWidth: 794,
+            });
+            const imgData = canvas.toDataURL('image/jpeg', 0.92);
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pageW = pdf.internal.pageSize.getWidth();
+            const pageH = pdf.internal.pageSize.getHeight();
+            const imgH = (canvas.height * pageW) / canvas.width;
+            let y = 0;
+            let remaining = imgH;
+            while (remaining > 0) {
+                pdf.addImage(imgData, 'JPEG', 0, -y, pageW, imgH);
+                remaining -= pageH;
+                if (remaining > 0) { pdf.addPage(); y += pageH; }
+            }
+            const base64 = pdf.output('datauristring').split(',')[1];
+            const blob = pdf.output('blob') as unknown as Blob;
+            const blobUrl = URL.createObjectURL(blob);
+            return { base64, blobUrl };
+        } finally {
+            document.body.removeChild(iframe);
+        }
+    };
+
+    const handleSendMail = async () => {
+        if (!mailData.to) {
+            toast({ title: "No recipient", description: "Vendor has no email address on record.", variant: "destructive" });
+            return;
+        }
+        setMailSending(true);
+        try {
+            const attachments: { filename: string; content: string; encoding: string; contentType: string }[] = [];
+            if (pdfAttachment) {
+                attachments.push({ filename: pdfAttachment.filename, content: pdfAttachment.base64, encoding: 'base64', contentType: 'application/pdf' });
+            }
+            await sendMailAPI.send({ to: mailData.to, cc: mailData.cc, subject: mailData.subject, html: mailData.body, attachments });
+            if (selectedMailOrder) {
+                await purchaseOrderAPI.update(selectedMailOrder.po_no, { mail_sent_status: 'Y' });
+                setOrders(prev => prev.map(o => o.po_no === selectedMailOrder.po_no ? { ...o, mail_sent_status: 'Y' } : o));
+            }
+            toast({ title: "Mail Sent", description: `Mail sent to ${mailData.to}` });
+            setIsMailModalOpen(false);
+        } catch (err: any) {
+            toast({ title: "Mail Error", description: err.message || "Failed to send mail", variant: "destructive" });
+        } finally {
+            setMailSending(false);
+        }
+    };
+
     // Action buttons per row
     const renderActions = (order: PurchaseOrder) => {
         const busy = submitting.has(order.po_no);
         if (order.status === 'E') {
+            const grTotal = grQtyTotals[order.po_no];
             return (
                 <div className="flex flex-col gap-1 min-w-[80px]">
+                    <Button size="sm" variant="outline"
+                        onClick={() => handlePrint(order)}
+                        className="border-blue-300 text-blue-600 hover:bg-blue-50 text-xs h-7 px-2"
+                        title="Print PO">
+                        <Printer className="w-3.5 h-3.5" />
+                    </Button>
                     <Button size="sm" disabled={busy}
                         onClick={() => handleAction(order.po_no, 'A')}
                         className="bg-green-600 hover:bg-green-700 text-white text-xs h-7 px-3 w-full">
                         Approve
                     </Button>
-                    <Button size="sm" disabled={busy}
-                        onClick={() => handleAction(order.po_no, 'X')}
-                        className="bg-red-600 hover:bg-red-700 text-white text-xs h-7 px-3 w-full">
-                        Cancel
-                    </Button>
+                    {grTotal === 0 && (
+                        <Button size="sm" disabled={busy}
+                            onClick={() => handleAction(order.po_no, 'X')}
+                            className="bg-red-600 hover:bg-red-700 text-white text-xs h-7 px-3 w-full">
+                            Cancel
+                        </Button>
+                    )}
                 </div>
             );
         }
         if (order.status === 'A') {
             const grTotal = grQtyTotals[order.po_no];
+            const vendor = vendors.find(v => v.vendor_id === order.vendor_id);
             const printBtn = (
                 <Button size="sm" variant="outline"
                     onClick={() => handlePrint(order)}
@@ -574,10 +684,20 @@ export default function PurchaseOrderApprovalPage() {
                     <Printer className="w-3.5 h-3.5" />
                 </Button>
             );
+            const mailBtn = order.mail_sent_status !== 'Y' ? (
+                <Button size="sm" variant="outline"
+                    onClick={() => handleOpenMailModal(order)}
+                    disabled={!vendor?.contact_email_id}
+                    className={vendor?.contact_email_id ? "border-green-300 text-green-600 hover:bg-green-50 text-xs h-7 px-2" : "text-gray-400 cursor-not-allowed text-xs h-7 px-2"}
+                    title={vendor?.contact_email_id ? "Send Mail" : "Vendor has no email"}>
+                    <Mail className="w-3.5 h-3.5" />
+                </Button>
+            ) : null;
             if (grTotal === undefined) {
                 return (
                     <div className="flex flex-col gap-1 min-w-[80px]">
                         {printBtn}
+                        {mailBtn}
                         <span className="text-xs text-gray-400 whitespace-nowrap">Loading...</span>
                     </div>
                 );
@@ -586,6 +706,7 @@ export default function PurchaseOrderApprovalPage() {
                 return (
                     <div className="flex flex-col gap-1 min-w-[80px]">
                         {printBtn}
+                        {mailBtn}
                         <Button size="sm" disabled={busy}
                             onClick={() => handleAction(order.po_no, 'X')}
                             className="bg-red-600 hover:bg-red-700 text-white text-xs h-7 px-3 w-full">
@@ -597,6 +718,7 @@ export default function PurchaseOrderApprovalPage() {
             return (
                 <div className="flex flex-col gap-1 min-w-[80px]">
                     {printBtn}
+                    {mailBtn}
                     <Button size="sm" disabled={busy}
                         onClick={() => handleAction(order.po_no, 'C')}
                         className="bg-gray-700 hover:bg-gray-800 text-white text-xs h-7 px-3 w-full">
@@ -764,19 +886,28 @@ export default function PurchaseOrderApprovalPage() {
                                                             <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
                                                                 {order.entered_by_user_id}
                                                             </span>
+                                                            {userMap[order.entered_by_user_id] && (
+                                                                <span className="block text-xs text-gray-500 mt-0.5">{userMap[order.entered_by_user_id]}</span>
+                                                            )}
                                                         </td>
                                                         <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDateTime(order.entered_date_time)}</td>
 
-                                                        {/* Approval Remarks — editable */}
+                                                        {/* Approval Remarks */}
                                                         <td className="px-4 py-3">
-                                                            <Input
-                                                                type="text"
-                                                                value={approvalRemarks[order.po_no] ?? ''}
-                                                                onChange={e => setApprovalRemarks(prev => ({ ...prev, [order.po_no]: e.target.value }))}
-                                                                maxLength={100}
-                                                                placeholder="Enter remarks..."
-                                                                className="w-36 text-xs h-7 px-2"
-                                                            />
+                                                            {order.status === "A" ? (
+                                                                <span className="text-xs text-gray-700">
+                                                                    {approvalRemarks[order.po_no] || '-'}
+                                                                </span>
+                                                            ) : (
+                                                                <Input
+                                                                    type="text"
+                                                                    value={approvalRemarks[order.po_no] ?? ''}
+                                                                    onChange={e => setApprovalRemarks(prev => ({ ...prev, [order.po_no]: e.target.value }))}
+                                                                    maxLength={100}
+                                                                    placeholder="Enter remarks..."
+                                                                    className="w-36 text-xs h-7 px-2"
+                                                                />
+                                                            )}
                                                         </td>
 
                                                         {/* Approved By — display only, default current user */}
@@ -784,6 +915,12 @@ export default function PurchaseOrderApprovalPage() {
                                                             <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs whitespace-nowrap">
                                                                 {order.approved_by_user_id || currentUser}
                                                             </span>
+                                                            {(() => {
+                                                                const id = order.approved_by_user_id || currentUser;
+                                                                return userMap[id] ? (
+                                                                    <span className="block text-xs text-gray-500 mt-0.5">{userMap[id]}</span>
+                                                                ) : null;
+                                                            })()}
                                                         </td>
 
                                                         {/* Approved Date & Time — display only, current time */}
@@ -878,6 +1015,85 @@ export default function PurchaseOrderApprovalPage() {
                     </motion.div>
                 </div>
             </main>
+
+            {/* ── Send Mail Modal ── */}
+            <AnimatePresence>
+                {isMailModalOpen && (
+                    <>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50" onClick={handleCloseMailModal} />
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                                <div className="flex items-center justify-between px-6 py-4 border-b">
+                                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                        <Mail className="w-5 h-5 text-green-600" /> Send Purchase Order Mail
+                                    </h2>
+                                    <button onClick={handleCloseMailModal} className="text-gray-400 hover:text-gray-600">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="px-6 py-4 space-y-4">
+                                    <div>
+                                        <Label className="text-xs font-semibold text-gray-600 uppercase">To</Label>
+                                        <Input value={mailData.to} onChange={e => setMailData(p => ({ ...p, to: e.target.value }))}
+                                            className="mt-1 text-sm" placeholder="Recipient email" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-semibold text-gray-600 uppercase">CC</Label>
+                                        <Input value={mailData.cc} onChange={e => setMailData(p => ({ ...p, cc: e.target.value }))}
+                                            className="mt-1 text-sm" placeholder="CC email" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-semibold text-gray-600 uppercase">Subject</Label>
+                                        <Input value={mailData.subject} onChange={e => setMailData(p => ({ ...p, subject: e.target.value }))}
+                                            className="mt-1 text-sm" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-semibold text-gray-600 uppercase">Attachment</Label>
+                                        <div className="mt-1">
+                                            {pdfGenerating ? (
+                                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                    <svg className="animate-spin w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                                    </svg>
+                                                    Generating PDF...
+                                                </div>
+                                            ) : pdfAttachment ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => window.open(pdfAttachment.blobUrl, '_blank')}
+                                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm hover:bg-red-100 transition-colors"
+                                                >
+                                                    <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd"/>
+                                                    </svg>
+                                                    {pdfAttachment.filename}
+                                                    <span className="text-xs text-red-400 ml-1">(click to preview)</span>
+                                                </button>
+                                            ) : (
+                                                <span className="text-sm text-gray-400">No attachment</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-semibold text-gray-600 uppercase">Body Preview</Label>
+                                        <div className="mt-1 border rounded-lg p-4 text-sm bg-gray-50 max-h-60 overflow-y-auto"
+                                            dangerouslySetInnerHTML={{ __html: mailData.body }} />
+                                    </div>
+                                </div>
+                                <div className="flex justify-end gap-3 px-6 py-4 border-t">
+                                    <Button variant="outline" onClick={handleCloseMailModal}>Close</Button>
+                                    <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleSendMail} disabled={mailSending || pdfGenerating}>
+                                        {mailSending ? 'Sending...' : 'Send Mail'}
+                                    </Button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

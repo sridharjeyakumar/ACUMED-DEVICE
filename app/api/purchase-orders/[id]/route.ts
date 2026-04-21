@@ -85,6 +85,7 @@ export async function PUT(
     if (body.approved_by_user_id !== undefined) updateData.approved_by_user_id = cleanValue(body.approved_by_user_id);
     if (body.approved_date_time !== undefined) updateData.approved_date_time = body.approved_date_time ? new Date(body.approved_date_time) : undefined;
     if (body.status !== undefined) updateData.status = body.status;
+    if (body.mail_sent_status !== undefined) updateData.mail_sent_status = body.mail_sent_status;
 
     const order = await PurchaseOrder.findOneAndUpdate(
       { po_no: id },

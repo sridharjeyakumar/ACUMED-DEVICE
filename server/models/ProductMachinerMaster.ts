@@ -4,6 +4,7 @@ export interface IProductMachinerMaster extends Document {
   machine_id: string;                  // Char(2) - PK
   machine_name: string;                // Char(25)
   machine_short_name: string;          // Char(25)
+  section?: string;                    // Char(50)
   prod_qty_per_minute: number;         // N(3)
   uom: string;                         // Char(3)
   avg_prod_hrs_per_day: number;        // N(2)
@@ -30,6 +31,11 @@ const ProductMachinerMasterSchema: Schema<IProductMachinerMaster> =
         maxlength: 25,
       },
       machine_short_name: {
+        type: String,
+        trim: true,
+        maxlength: 25,
+      },
+      section: {
         type: String,
         trim: true,
         maxlength: 25,

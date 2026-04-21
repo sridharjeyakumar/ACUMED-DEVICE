@@ -108,7 +108,7 @@ const fetchMachines = async () => {
             id: m._id,
             machineId: m.machine_id,
             machineName: m.machine_name,
-            section: "",
+            section: m.section ?? "",
             shortName: m.machine_short_name,
             qtyPerMin: m.prod_qty_per_minute,
             uom: m.uom,
@@ -504,6 +504,9 @@ const handleSubmit = async (e: React.FormEvent) => {
       Average Production Hours per Day
     </th>
      <th className="px-6 py-3 text-sm font-semibold text-center whitespace-nowrap">
+      Section Area
+    </th>
+     <th className="px-6 py-3 text-sm font-semibold text-center whitespace-nowrap">
       Remarks
     </th>
     <th className="px-6 py-3 text-sm font-semibold text-left whitespace-nowrap">
@@ -562,6 +565,9 @@ const handleSubmit = async (e: React.FormEvent) => {
         {/* AVG HOURS PER DAY */}
         <td className="px-6 py-4 text-sm text-center font-semibold">
           {machine.avgHrsPerDay ?? "-"}
+        </td>
+          <td className="px-6 py-4 text-sm text-center font-semibold">
+          {machine.section ?? "-"}
         </td>
  <td className="px-6 py-4 text-sm text-center font-semibold">
           {machine.remarks ?? "-"}
@@ -764,6 +770,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                                                 value={formData.section} 
                                                 onChange={handleInputChange} 
                                                 placeholder="e.g. SECTION A - PLASTIC COMPONENT" 
+                                                maxLength={25}
                                             />
                                         </div>
                                            <div>
@@ -958,7 +965,8 @@ const handleSubmit = async (e: React.FormEvent) => {
                                                 name="section" 
                                                 value={formData.section} 
                                                 onChange={handleInputChange} 
-                                                placeholder="e.g. SECTION A - PLASTIC COMPONENT" 
+                                                placeholder="e.g. SECTION A - PLASTIC COMPONENT"
+                                                maxLength={25} 
                                             />
                                         </div>
                                          <div>

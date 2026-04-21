@@ -62,15 +62,15 @@ export async function PUT(
     await ensureDbConnection();
     const body = await request.json();
     
-    // Helper function to convert empty strings to undefined
-    const cleanValue = (value: any) => (value === '' || value === null) ? undefined : value;
-    
-    // Handle "??" values for lead time - convert to null/undefined
+    // Helper function to convert empty strings to null (so MongoDB clears the field)
+    const cleanValue = (value: any) => (value === '' || value === null) ? null : value;
+
+    // Handle "??" values for lead time - convert to null
     const leadTimeMin = body.lead_time_days_min === "??" || body.lead_time_days_min === "" ? null : body.lead_time_days_min;
     const leadTimeMax = body.lead_time_days_max === "??" || body.lead_time_days_max === "" ? null : body.lead_time_days_max;
-    
+
     const updateData: any = {};
-    
+
     // Only include fields that are provided (not undefined)
     if (body.material_name !== undefined) updateData.material_name = body.material_name;
     if (body.material_short_name !== undefined) updateData.material_short_name = body.material_short_name;
@@ -78,19 +78,19 @@ export async function PUT(
     if (body.material_category_id !== undefined) updateData.material_category_id = cleanValue(body.material_category_id);
     if (body.material_type !== undefined) updateData.material_type = body.material_type;
     if (body.material_spec !== undefined) updateData.material_spec = cleanValue(body.material_spec);
-    if (body.safety_stock_qty !== undefined) updateData.safety_stock_qty = safeNumber(body.safety_stock_qty) || undefined;
-    if (body.re_order_qty !== undefined) updateData.re_order_qty = safeNumber(body.re_order_qty) || undefined;
-    if (body.min_order_qty !== undefined) updateData.min_order_qty = safeNumber(body.min_order_qty) || undefined;
+    if (body.safety_stock_qty !== undefined) updateData.safety_stock_qty = body.safety_stock_qty !== null ? safeNumber(body.safety_stock_qty) : null;
+    if (body.re_order_qty !== undefined) updateData.re_order_qty = body.re_order_qty !== null ? safeNumber(body.re_order_qty) : null;
+    if (body.min_order_qty !== undefined) updateData.min_order_qty = body.min_order_qty !== null ? safeNumber(body.min_order_qty) : null;
     if (body.lead_time_days_min !== undefined) updateData.lead_time_days_min = safeNumber(leadTimeMin);
     if (body.lead_time_days_max !== undefined) updateData.lead_time_days_max = safeNumber(leadTimeMax);
-    if (body.shelf_life_in_months !== undefined) updateData.shelf_life_in_months = safeNumber(body.shelf_life_in_months) || undefined;
-    if (body.gr_tolerance_percent !== undefined) updateData.gr_tolerance_percent = safeNumber(body.gr_tolerance_percent) || undefined;
+    if (body.shelf_life_in_months !== undefined) updateData.shelf_life_in_months = body.shelf_life_in_months !== null ? safeNumber(body.shelf_life_in_months) : null;
+    if (body.gr_tolerance_percent !== undefined) updateData.gr_tolerance_percent = body.gr_tolerance_percent !== null ? safeNumber(body.gr_tolerance_percent) : null;
     if (body.qc_required !== undefined) updateData.qc_required = body.qc_required === true || body.qc_required === "true";
-    if (body.coa_checklist_id !== undefined) updateData.coa_checklist_id = body.coa_checklist_id === '' ? '' : cleanValue(body.coa_checklist_id);
+    if (body.coa_checklist_id !== undefined) updateData.coa_checklist_id = cleanValue(body.coa_checklist_id);
     if (body.vendor_id !== undefined) updateData.vendor_id = cleanValue(body.vendor_id);
-    if (body.core_weight !== undefined) updateData.core_weight = safeNumber(body.core_weight) || undefined;
-    if (body.default_gst_percent !== undefined) updateData.default_gst_percent = safeNumber(body.default_gst_percent) ?? undefined;
-    if (body.default_unit_price !== undefined) updateData.default_unit_price = safeNumber(body.default_unit_price) ?? undefined;
+    if (body.core_weight !== undefined) updateData.core_weight = body.core_weight !== null ? safeNumber(body.core_weight) : null;
+    if (body.default_gst_percent !== undefined) updateData.default_gst_percent = body.default_gst_percent !== null ? safeNumber(body.default_gst_percent) : null;
+    if (body.default_unit_price !== undefined) updateData.default_unit_price = body.default_unit_price !== null ? safeNumber(body.default_unit_price) : null;
     if (body.material_image !== undefined) updateData.material_image = cleanValue(body.material_image);
     if (body.material_image_icon !== undefined) updateData.material_image_icon = cleanValue(body.material_image_icon);
     if (body.active !== undefined) updateData.active = body.active !== false;

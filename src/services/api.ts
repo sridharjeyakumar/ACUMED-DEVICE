@@ -1078,7 +1078,7 @@ export const purchaseOrderAPI = {
 };
 
 export const sendMailAPI = {
-    send: (data: { to: string; cc?: string; subject: string; html: string }) =>
+    send: (data: { to: string; cc?: string; subject: string; html: string; attachments?: { filename: string; content: string; encoding: string; contentType: string }[] }) =>
         fetchAPI('/send-mail', { method: 'POST', body: JSON.stringify(data) }),
 };
 

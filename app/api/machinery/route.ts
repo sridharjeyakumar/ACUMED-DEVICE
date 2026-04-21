@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       machine_id: body.machineId,
       machine_name: body.machineName,
       machine_short_name: body.shortName,
+      section: body.section ?? "",
       prod_qty_per_minute: Number(body.qtyPerMin),
       uom: body.uom,
       avg_prod_hrs_per_day: Number(body.avgHrsPerDay),

@@ -143,7 +143,7 @@ function toDateInput(dateStr: string | undefined): string {
 
 function generatePoNo(existing: PurchaseOrder[]): string {
     const yy = new Date().getFullYear().toString().slice(-2);
-    const prefix = `M${yy}`;
+    const prefix = `P${yy}`;
     const thisYear = existing.filter(o => o.po_no.startsWith(prefix));
     const maxSerial = thisYear.reduce((max, o) => {
         const serial = parseInt(o.po_no.slice(3)) || 0;
@@ -189,8 +189,6 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                             <th className="px-3 py-2 text-left whitespace-nowrap">Exp. Delivery</th>
                             <th className="px-3 py-2 text-left whitespace-nowrap">Material Spec</th>
                             <th className="px-3 py-2 text-left whitespace-nowrap">Remarks</th>
-                            <th className="px-3 py-2 text-left whitespace-nowrap">GR Qty</th>
-                            <th className="px-3 py-2 text-left whitespace-nowrap">Balance Qty</th>
                             <th className="px-3 py-2 w-8"></th>
                         </tr>
                     </thead>
@@ -272,8 +270,6 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                                                 className="w-28 text-xs h-7 px-2"
                                             />
                                         </td>
-                                        <td className="px-3 py-2 text-center text-gray-400">{row.gr_qty}</td>
-                                        <td className="px-3 py-2 text-center text-gray-400">{row.balance_qty}</td>
                                         <td className="px-3 py-2">
                                             <button type="button" onClick={() => onRemoveRow(idx)}
                                                 className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50">
@@ -472,6 +468,7 @@ export default function PurchaseOrdersPage() {
             uom: mat?.uom || '',
             material_spec: mat?.material_spec || '',
             po_qty: mat?.min_order_qty ?? '',
+            balance_qty: mat?.min_order_qty ?? 0,
             min_order_qty: mat?.min_order_qty ?? 0,
             unit_price,
             gst_percentage,
@@ -490,6 +487,9 @@ export default function PurchaseOrdersPage() {
                 const { basic_amount, gst_amount, total_amount } = computeAmounts(
                     updated.po_qty, updated.unit_price, updated.gst_percentage
                 );
+                if (field === 'po_qty') {
+                    updated.balance_qty = parseFloat(String(value)) || 0;
+                }
                 return { ...updated, basic_amount, gst_amount, total_amount };
             }
             return updated;
@@ -568,7 +568,7 @@ export default function PurchaseOrdersPage() {
                     material_spec: row.material_spec || undefined,
                     remarks: row.remarks || undefined,
                     gr_qty: 0,
-                    balance_qty: 0,
+                    balance_qty: Number(row.po_qty),
                     unit_price: Number(row.unit_price) || undefined,
                     basic_amount: row.basic_amount || undefined,
                     gst_percentage: row.gst_percentage || undefined,
@@ -726,7 +726,7 @@ export default function PurchaseOrdersPage() {
                         material_spec: row.material_spec || undefined,
                         remarks: row.remarks || undefined,
                         gr_qty: 0,
-                        balance_qty: 0,
+                        balance_qty: Number(row.po_qty),
                         unit_price: Number(row.unit_price) || undefined,
                         basic_amount: row.basic_amount || undefined,
                         gst_percentage: row.gst_percentage || undefined,
@@ -1327,16 +1327,6 @@ export default function PurchaseOrdersPage() {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
-                                                                    disabled={order.status === 'X' || !vendors.find(v => v.vendor_id === order.vendor_id)?.contact_email_id}
-                                                                    onClick={(e) => { e.stopPropagation(); handleOpenMailModal(order); }}
-                                                                    className={order.status === 'X' || !vendors.find(v => v.vendor_id === order.vendor_id)?.contact_email_id ? "text-gray-400 cursor-not-allowed" : "text-green-600 hover:text-green-700 hover:bg-green-50"}
-                                                                    title={order.status === 'X' ? "Cannot mail a cancelled PO" : !vendors.find(v => v.vendor_id === order.vendor_id)?.contact_email_id ? "Vendor has no email" : "Send Mail"}
-                                                                >
-                                                                    <Mail className="w-4 h-4" />
-                                                                </Button>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
                                                                     disabled={order.status !== 'E'}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
@@ -1393,8 +1383,6 @@ export default function PurchaseOrdersPage() {
                                                                                     <th className="px-3 py-2 text-left font-semibold">Exp. Delivery</th>
                                                                                     <th className="px-3 py-2 text-left font-semibold">Material Spec</th>
                                                                                     <th className="px-3 py-2 text-left font-semibold">Remarks</th>
-                                                                                    <th className="px-3 py-2 text-left font-semibold">GR Qty</th>
-                                                                                    <th className="px-3 py-2 text-left font-semibold">Balance Qty</th>
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody className="divide-y divide-blue-100">
@@ -1415,8 +1403,6 @@ export default function PurchaseOrdersPage() {
                                                                                         <td className="px-3 py-2 whitespace-nowrap">{detail.expected_delivery_date ? new Date(detail.expected_delivery_date).toLocaleDateString('en-GB') : '-'}</td>
                                                                                         <td className="px-3 py-2 max-w-[180px] truncate text-gray-500" title={detail.material_spec}>{detail.material_spec || '-'}</td>
                                                                                         <td className="px-3 py-2">{detail.remarks || '-'}</td>
-                                                                                        <td className="px-3 py-2">{detail.gr_qty}</td>
-                                                                                        <td className="px-3 py-2">{detail.balance_qty}</td>
                                                                                     </tr>
                                                                                 ))}
                                                                             </tbody>
