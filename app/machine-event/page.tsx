@@ -1065,7 +1065,7 @@ export default function MachineEventPage() {
                                             </div>
 
                                             {/* Material Selection — OPEN QTY mode (accept_open_qty = Y) */}
-                                            {acceptOpenQty && (
+                                            {acceptMaterial && (
                                                 <div className="bg-white rounded-lg border border-border p-5">
                                                     <div className="flex items-center gap-2 mb-4">
                                                         <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
