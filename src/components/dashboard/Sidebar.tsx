@@ -123,7 +123,9 @@ const navSections: NavSection[] = [
 
 
 
-      { icon: Factory, label: "COA Generation & Print", href: "/coa-generation", subtitle: "Quality" },
+      { icon: Factory, label: "COA Generation", href: "/coa-generation", subtitle: "Quality" },
+      { icon: Factory, label: "COA Approval & Print", href: "/coa-approval" },
+
     ],
   },
   {
