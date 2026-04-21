@@ -16,7 +16,7 @@ export async function GET(
     const { checklist_id } = await params;
     await ensureConnection();
     const items = await COAChecklistDetailMaster
-      .find({ checklist_id, active: true })
+      .find({ checklist_id })
       .lean()
       .sort({ checklist_sno: 1 });
     return NextResponse.json(items);
