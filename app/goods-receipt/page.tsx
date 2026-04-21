@@ -237,6 +237,8 @@ export default function GoodsReceiptHeaderPage() {
     const [purchaseOrders, setPurchaseOrders] = useState<{ po_no: string; vendor_id: string; po_date: string; status: string }[]>([]);
 
     // ── Material grid state ──────────────────────────────────────────────────
+    const [pendingFocusKey, setPendingFocusKey] = useState<string | null>(null);
+
     const makeUnit = (sno: number, defaults?: Partial<UnitRow>): UnitRow => ({
         sno, packet_no: "", roll_no: "", gross_qty: "",
         tare_qty: "0", nett_qty: "", uom: "", status: "D", balance_qty: "",
@@ -1102,7 +1104,7 @@ export default function GoodsReceiptHeaderPage() {
 
                     {/* Material column headers */}
                     <div className="grid items-center px-4 py-2 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider"
-                        style={{ gridTemplateColumns: "28px 32px 2fr 0.7fr 0.7fr 0.7fr 0.6fr 0.8fr 0.8fr 0.8fr 0.6fr 0.6fr 0.6fr 0.8fr 0.8fr 36px" }}>
+                        style={{ gridTemplateColumns: "28px 32px 2fr 0.7fr 0.7fr 0.7fr 0.6fr 1.1fr 0.8fr 1.1fr 0.6fr 0.6fr 0.6fr 0.8fr 0.8fr 36px" }}>
                         <div />
                         <div className="text-center">S.No</div>
                         <div>Material ID / Description</div>
@@ -1140,7 +1142,7 @@ export default function GoodsReceiptHeaderPage() {
                         return (
                         <div key={row.id} className="border-b border-slate-100 last:border-0">
                             <div className="grid items-center px-4 py-2.5 gap-x-2 hover:bg-slate-50/60 transition-colors"
-                                style={{ gridTemplateColumns: "28px 32px 2fr 0.7fr 0.7fr 0.7fr 0.6fr 0.8fr 0.8fr 0.8fr 0.6fr 0.6fr 0.6fr 0.8fr 0.8fr 36px" }}>
+                                style={{ gridTemplateColumns: "28px 32px 2fr 0.7fr 0.7fr 0.7fr 0.6fr 1.1fr 0.8fr 1.1fr 0.6fr 0.6fr 0.6fr 0.8fr 0.8fr 36px" }}>
                                 <button type="button" onClick={() => toggleExpand(row.id)}
                                     className="text-blue-500 hover:text-blue-700 flex items-center justify-center">
                                     {row.expanded ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
@@ -1248,7 +1250,9 @@ export default function GoodsReceiptHeaderPage() {
                                         </div>
                                         <button type="button" onClick={() => {
                                             const prev = row.units[row.units.length - 1];
-                                            const prevRollStem = prev?.roll_no ? prev.roll_no.replace(/\d+$/, "") : "";
+                                            const prevRollStem = prev?.roll_no ? prev.roll_no.slice(0, -1) : "";
+                                            const newSno = row.units.length + 1;
+                                            setPendingFocusKey(`${row.id}_${newSno}`);
                                             addUnit(row.id, {
                                                 packet_no: prev?.packet_no || "",
                                                 roll_no:   prevRollStem,
@@ -1288,7 +1292,13 @@ export default function GoodsReceiptHeaderPage() {
                                             <Input value={unit.packet_no}
                                                 onChange={e => updateUnit(row.id, unit.sno, "packet_no", e.target.value)}
                                                 placeholder="PKT-001" maxLength={10}
-                                                className={`h-8 text-xs px-2 ${!unit.packet_no ? "border-slate-200" : "border-slate-200"}`} />
+                                                className={`h-8 text-xs px-2 ${!unit.packet_no ? "border-slate-200" : "border-slate-200"}`}
+                                                ref={el => {
+                                                    if (el && pendingFocusKey === `${row.id}_${unit.sno}`) {
+                                                        el.focus();
+                                                        setPendingFocusKey(null);
+                                                    }
+                                                }} />
                                             {/* Roll No */}
                                             <Input value={unit.roll_no}
                                                 onChange={e => updateUnit(row.id, unit.sno, "roll_no", e.target.value)}
@@ -1305,7 +1315,7 @@ export default function GoodsReceiptHeaderPage() {
                                                     if (e.key === "Enter" && unit.packet_no && unit.roll_no && parseFloat(unit.gross_qty) > 0) {
                                                         e.preventDefault();
                                                         const prev = unit;
-                                                        const rollStem = prev.roll_no.replace(/\d+$/, "");
+                                                        const rollStem = prev.roll_no.slice(0, -1);
                                                         addUnit(row.id, { packet_no: prev.packet_no, roll_no: rollStem });
                                                     }
                                                 }}
@@ -1647,7 +1657,14 @@ export default function GoodsReceiptHeaderPage() {
                                                                                                         </button>
                                                                                                     </td>
                                                                                                     <td className="px-4 py-3 text-xs font-mono text-slate-500">{docNo}</td>
-                                                                                                    <td className="px-4 py-3 text-sm font-bold text-slate-800">{d.material_id}</td>
+                                                                                                    <td className="px-4 py-3 text-sm font-bold text-slate-800">
+                                                                                                        {d.material_id}
+                                                                                                        {d.material_id && (
+                                                                                                            <span className="text-xs text-slate-400 truncate block">
+                                                                                                                {materials.find(m => m.material_id === d.material_id)?.material_name || ""}
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                    </td>
                                                                                                     <td className="px-4 py-3 text-right text-sm font-semibold text-blue-600">{Number(d.invoice_total_gross_qty).toFixed(3)}</td>
                                                                                                     <td className="px-4 py-3 text-right text-sm font-semibold text-blue-600">{Number(d.invoice_total_tare_qty).toFixed(3)}</td>
                                                                                                     <td className="px-4 py-3 text-right text-sm font-semibold text-blue-600">{Number(d.invoice_total_nett_qty).toFixed(3)}</td>

@@ -387,13 +387,16 @@ export default function TransactionTablePage() {
         loadPackSizes();
     }, []);
 
-    // Load BOM products whenever the batch's product_id changes
+    // Load BOM products: find all finished products where batch's product_id is a material
     useEffect(() => {
         const batchProductId = formData.product_id || selectedTransaction?.product_id;
         if (!batchProductId) { setBomProducts([]); return; }
-        productBomAPI.getByProductId(batchProductId).then((boms: { product_id: string }[]) => {
-            const bomProductIds = new Set(boms.map((b: { product_id: string }) => b.product_id));
-            setBomProducts(products.filter(p => bomProductIds.has(p.product_id)));
+        productBomAPI.getByMaterialId(batchProductId).then((boms: { product_id: string }[]) => {
+            const seen = new Set<string>();
+            const distinct = boms.filter(b => b.product_id && !seen.has(b.product_id) && seen.add(b.product_id));
+            setBomProducts(
+                distinct.map(b => products.find(p => p.product_id === b.product_id)).filter(Boolean) as typeof products
+            );
         }).catch(console.error);
     }, [formData.product_id, selectedTransaction?.product_id, products]);
 
@@ -1843,9 +1846,9 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Pack Size</th>
                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Packs *</th>
                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sachets</th>
-                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Steri/Pack</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Pack/Steri</th>
                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Steri Cartons</th>
-                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Shipper/Pack</th>
+                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Pack/Shipper</th>
                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Shipper Cartons</th>
                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Remarks</th>
                                                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Action</th>
@@ -1888,7 +1891,10 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                                 className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
                                                             >
                                                                 <option value="">Select Product</option>
-                                                                {bomProducts.map(p => (
+                                                                {bomProducts.filter(p =>
+                                                                    p.product_id === detail.product_id ||
+                                                                    !productDetails.some((d, i) => i !== index && d.product_id === p.product_id)
+                                                                ).map(p => (
                                                                     <option key={p.product_id} value={p.product_id}>
                                                                         {p.product_id} - {p.product_name}
                                                                     </option>
@@ -2403,7 +2409,10 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                                                 className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
                                                                             >
                                                                                 <option value="">Select Product</option>
-                                                                                {bomProducts.map(p => (
+                                                                                {bomProducts.filter(p =>
+                                                                                    p.product_id === detail.product_id ||
+                                                                                    !editPacksizeDetails.some((d, i) => i !== index && d.product_id === p.product_id)
+                                                                                ).map(p => (
                                                                                     <option key={p.product_id} value={p.product_id}>
                                                                                         {p.product_id} - {p.product_name}
                                                                                     </option>
