@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, ChevronDown, ChevronUp, X, CheckCircle2, Printer } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { coaGenerationAPI, userAPI, companyAPI } from "@/services/api";
+import { coaGenerationAPI, userAPI, companyAPI, productAPI, employeeAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -151,6 +151,8 @@ export default function COAGenerationPage() {
   const [printDetails,        setPrintDetails]        = useState<any[]>([]);
   const [printMetaMap,        setPrintMetaMap]        = useState<Record<number, any>>({});
   const [printCompany,        setPrintCompany]        = useState<any>(null);
+  const [printProductName,    setPrintProductName]    = useState<string>('');
+  const [printUserNames,      setPrintUserNames]      = useState<Record<string, string>>({});
   const [selectedCOA,         setSelectedCOA]         = useState<COAHeader | null>(null);
 
   // Add / edit form state
@@ -193,7 +195,7 @@ export default function COAGenerationPage() {
 
   // ── Expand rows ─────────────────────────────────────────────────────────────
 
-  const toggleRow = async (coaNo: string) => {
+  const toggleRow = async (coaNo: string, checklistId: string) => {
     setExpandedRows(prev => {
       const next = new Set(prev);
       next.has(coaNo) ? next.delete(coaNo) : next.add(coaNo);
@@ -201,8 +203,24 @@ export default function COAGenerationPage() {
     });
     if (!detailCache[coaNo]) {
       try {
-        const res = await coaGenerationAPI.getById(coaNo);
-        setDetailCache(prev => ({ ...prev, [coaNo]: res.details || [] }));
+        const [res, items] = await Promise.all([
+          coaGenerationAPI.getById(coaNo),
+          coaGenerationAPI.getChecklistItems(checklistId).catch(() => []),
+        ]);
+        const metaMap: Record<number, any> = {};
+        (Array.isArray(items) ? items : []).forEach((item: any) => { metaMap[item.checklist_sno] = item; });
+        const merged = (res.details || []).map((d: any) => {
+          const m = metaMap[d.checklist_sno] || {};
+          return {
+            ...d,
+            checklist_parameter: m.checklist_parameter || d.checklist_parameter || '',
+            expected_result:     m.expected_result     || d.expected_result     || '',
+            expected_value_1:    m.expected_value_1    ?? d.expected_value_1,
+            expected_value_2:    m.expected_value_2    ?? d.expected_value_2,
+            expected_text:       m.expected_text       || d.expected_text       || '',
+          };
+        });
+        setDetailCache(prev => ({ ...prev, [coaNo]: merged }));
       } catch {
         setDetailCache(prev => ({ ...prev, [coaNo]: [] }));
       }
@@ -483,12 +501,34 @@ export default function COAGenerationPage() {
     setPrintDetails([]);
     setPrintMetaMap({});
     setPrintCompany(null);
+    setPrintProductName('');
+    setPrintUserNames({});
     try {
-      const [res, items, allCompanies] = await Promise.all([
+      const [res, items, allCompanies, productInfo, allUsers, allEmployees] = await Promise.all([
         coaGenerationAPI.getById(coa.coa_no),
         coaGenerationAPI.getChecklistItems(coa.coa_checklist_id).catch(() => []),
         companyAPI.getAll().catch(() => []),
+        productAPI.getById(coa.product_id).catch(() => null),
+        userAPI.getAll().catch(() => []),
+        employeeAPI.getAll().catch(() => []),
       ]);
+
+      // emp_id → emp_name
+      const empNameMap: Record<string, string> = {};
+      (Array.isArray(allEmployees) ? allEmployees : []).forEach((e: any) => {
+        if (e.emp_id && e.emp_name) empNameMap[e.emp_id] = e.emp_name;
+      });
+
+      // user_id → emp_name (via employee_id)
+      const nameMap: Record<string, string> = {};
+      (Array.isArray(allUsers) ? allUsers : []).forEach((u: any) => {
+        if (u.user_id && u.employee_id && empNameMap[u.employee_id]) {
+          nameMap[u.user_id] = empNameMap[u.employee_id];
+        }
+      });
+      setPrintUserNames(nameMap);
+
+      setPrintProductName(productInfo?.product_name || '');
       const meta: Record<number, any> = {};
       (Array.isArray(items) ? items : []).forEach((item: any) => { meta[item.checklist_sno] = item; });
       setPrintMetaMap(meta);
@@ -814,7 +854,7 @@ export default function COAGenerationPage() {
                         >
                           <td className="px-3 py-4 text-center">
                             <button
-                              onClick={() => toggleRow(coa.coa_no)}
+                              onClick={() => toggleRow(coa.coa_no, coa.coa_checklist_id)}
                               className="text-muted-foreground hover:text-foreground transition-colors"
                             >
                               {expandedRows.has(coa.coa_no) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -866,13 +906,15 @@ export default function COAGenerationPage() {
                                   </Button>
                                 </>
                               )}
-                              <Button
-                                variant="ghost" size="sm"
-                                onClick={() => handleOpenPrint(coa)}
-                                className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 text-xs px-2 h-7 flex items-center gap-1"
-                              >
-                                <Printer className="w-3.5 h-3.5" /> Print
-                              </Button>
+                              {(coa.status === 'A' || coa.status === 'E') && (
+                                <Button
+                                  variant="ghost" size="sm"
+                                  onClick={() => handleOpenPrint(coa)}
+                                  className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 text-xs px-2 h-7 flex items-center gap-1"
+                                >
+                                  <Printer className="w-3.5 h-3.5" /> Print
+                                </Button>
+                              )}
                             </div>
                           </td>
                         </motion.tr>
@@ -897,6 +939,11 @@ export default function COAGenerationPage() {
                                     <thead>
                                       <tr className="bg-gray-50 border-b border-border">
                                         <th className="px-3 py-2 text-left font-semibold">Sno</th>
+                                        <th className="px-3 py-2 text-left font-semibold">Parameter</th>
+                                        <th className="px-3 py-2 text-left font-semibold">Expected Result Type</th>
+                                        <th className="px-3 py-2 text-left font-semibold">Expected Value 1</th>
+                                        <th className="px-3 py-2 text-left font-semibold">Expected Value 2</th>
+                                        <th className="px-3 py-2 text-left font-semibold">Expected Text</th>
                                         <th className="px-3 py-2 text-center font-semibold">Actual Value</th>
                                         <th className="px-3 py-2 text-left font-semibold">Actual Text</th>
                                         <th className="px-3 py-2 text-center font-semibold">Actual Result</th>
@@ -906,6 +953,11 @@ export default function COAGenerationPage() {
                                       {detailCache[coa.coa_no].map((d: any) => (
                                         <tr key={d.checklist_sno} className="hover:bg-muted/20">
                                           <td className="px-3 py-1.5 font-mono">{d.checklist_sno}</td>
+                                          <td className="px-3 py-1.5">{d.checklist_parameter || '-'}</td>
+                                          <td className="px-3 py-1.5">{d.expected_result || '-'}</td>
+                                          <td className="px-3 py-1.5 text-center font-mono">{d.expected_value_1 !== undefined ? d.expected_value_1 : '-'}</td>
+                                          <td className="px-3 py-1.5 text-center font-mono">{d.expected_value_2 !== undefined ? d.expected_value_2 : '-'}</td>
+                                          <td className="px-3 py-1.5">{d.expected_text || '-'}</td>
                                           <td className="px-3 py-1.5 text-center font-mono">{d.actual_value !== undefined ? d.actual_value : '-'}</td>
                                           <td className="px-3 py-1.5">{d.actual_text || '-'}</td>
                                           <td className="px-3 py-1.5 text-center">
@@ -1230,7 +1282,7 @@ export default function COAGenerationPage() {
                       <tbody>
                         {[
                           { l1: 'COA No.',        v1: printCOA.coa_no,                                      l2: 'COA Date',          v2: fmt(printCOA.coa_date) },
-                          { l1: 'Product',         v1: printCOA.product_id,                                  l2: 'Batch No.',         v2: printCOA.batch_no },
+                          { l1: 'Product',         v1: printProductName ? `${printProductName} (${printCOA.product_id})` : printCOA.product_id, l2: 'Batch No.',         v2: printCOA.batch_no },
                           { l1: 'Checklist',       v1: printCOA.coa_checklist_id,                            l2: 'Manufactured Date', v2: fmt(printCOA.manufactured_date) },
                           { l1: 'Overall Result',  v1: printCOA.coa_overall_result === 'P' ? 'Pass' : 'Fail', v1Bold: true, l2: 'Expiry Date', v2: fmt(printCOA.expiry_date) },
                         ].map((row, i) => (
@@ -1323,9 +1375,9 @@ export default function COAGenerationPage() {
                         </tr>
                         <tr>
                           <td style={{ border: '1px solid #555', padding: '8px 12px', fontWeight: 'bold', color: '#1a4fa8', whiteSpace: 'nowrap' }}>Name :</td>
-                          <td style={{ border: '1px solid #555', padding: '8px 12px' }}>{printCOA.entered_by_user_id || '\u00A0'}</td>
-                          <td style={{ border: '1px solid #555', padding: '8px 12px' }}>{printCOA.review_by_user_id || '\u00A0'}</td>
-                          <td style={{ border: '1px solid #555', padding: '8px 12px' }}>{printCOA.approved_by_user_id || '\u00A0'}</td>
+                          <td style={{ border: '1px solid #555', padding: '8px 12px' }}>{printCOA.entered_by_user_id ? (printUserNames[printCOA.entered_by_user_id] || printCOA.entered_by_user_id) : '\u00A0'}</td>
+                          <td style={{ border: '1px solid #555', padding: '8px 12px' }}>{printCOA.review_by_user_id ? (printUserNames[printCOA.review_by_user_id] || printCOA.review_by_user_id) : '\u00A0'}</td>
+                          <td style={{ border: '1px solid #555', padding: '8px 12px', fontStyle: printCOA.status !== 'A' ? 'italic' : 'normal', color: printCOA.status !== 'A' ? '#888' : 'inherit' }}>{printCOA.status === 'A' ? (printCOA.approved_by_user_id ? (printUserNames[printCOA.approved_by_user_id] || printCOA.approved_by_user_id) : '\u00A0') : 'COA Not yet Approved'}</td>
                         </tr>
                         <tr>
                           <td style={{ border: '1px solid #555', padding: '8px 12px', fontWeight: 'bold', color: '#1a4fa8', whiteSpace: 'nowrap' }}>Date :</td>
@@ -1337,9 +1389,7 @@ export default function COAGenerationPage() {
                     </table>
 
                     {/* ── Footer ── */}
-                    <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#555', marginTop: '10px' }}>
-                      * This is a system generated COA
-                    </div>
+                    <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#555', marginTop: '10px', whiteSpace: 'nowrap' }}>* This is a system-generated COA and does not require a physical signature. For any queries, contact accumed.devices@gmail.com</div>
                   </div>
                 </div>
 
