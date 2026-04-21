@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { machineEventAPI, machineEventTypeAPI, machineStopReasonAPI, employeeAPI, materialStockAPI, productBomAPI, availableRollsAPI, machineEventMaterialAPI, batchMaterialSummaryAPI, materialAPI } from "@/services/api";
+import { machineEventAPI, machineEventTypeAPI, machineStopReasonAPI, employeeAPI, materialStockAPI, productBomAPI, availableRollsAPI, machineEventMaterialAPI, batchMaterialSummaryAPI, materialAPI, transactionAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
@@ -414,6 +414,9 @@ export default function MachineEventPage() {
                     uom: closeQtyRecord.uom || addForm.mat_uom || undefined,
                 } : {}),
             });
+            if (addForm.machine_event_type_id === 'NB') {
+                await transactionAPI.update(addForm.batch_no, { current_batch_status_id: 'W' });
+            }
             toast({ title: "Success", description: "Machine event created successfully" });
             setIsAddModalOpen(false);
             loadEvents();
