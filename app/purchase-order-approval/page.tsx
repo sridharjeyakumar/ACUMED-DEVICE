@@ -13,6 +13,9 @@ import { purchaseOrderAPI, purchaseOrderDetailAPI, vendorAPI, materialAPI, compa
 import { getSessionUser } from "@/lib/auth";
 
 interface PurchaseOrder {
+    po_basic_amount: null;
+    po_gst_amount: null;
+    po_total_amount: null;
     _id?: string;
     po_no: string;
     po_date: string;
@@ -822,7 +825,8 @@ export default function PurchaseOrderApprovalPage() {
                                             <th className="px-2 py-3 w-8"></th>
                                             <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">PO No.</th>
                                             <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">PO Date</th>
-                                            <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Vendor</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">PO Time</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Vendor Id</th>
                                             <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Vendor Ref. Doc. No.</th>
                                             <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Vendor Ref. Doc. Date</th>
                                             <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Delivery Text</th>
@@ -834,6 +838,11 @@ export default function PurchaseOrderApprovalPage() {
                                             <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Approval Remarks</th>
                                             <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Approved By</th>
                                             <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Approved Date & Time</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Basic Amt</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">GST Amt</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Total Amt</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Vendor Email</th>
+                                            <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Mail Status</th>
                                             <th className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap">Status</th>
                                             <th className="px-4 py-3 text-xs font-semibold text-center whitespace-nowrap">Action</th>
                                         </tr>
@@ -871,6 +880,7 @@ export default function PurchaseOrderApprovalPage() {
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDate(order.po_date)}</td>
+                                                        <td className="px-4 py-3 text-sm font-mono">{order.po_time || "-"}</td>
                                                         <td className="px-4 py-3 text-sm">
                                                             <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs whitespace-nowrap">
                                                                 {getVendorDisplay(order.vendor_id)}
@@ -929,7 +939,11 @@ export default function PurchaseOrderApprovalPage() {
                                                                 ? formatDateTime(order.approved_date_time)
                                                                 : formatDateTime(new Date().toISOString())}
                                                         </td>
-
+                                                        <td className="px-4 py-3 text-sm text-right">{order.po_basic_amount != null ? `₹ ${Number(order.po_basic_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-right">{order.po_gst_amount != null ? `₹ ${Number(order.po_gst_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-right font-semibold text-blue-700">{order.po_total_amount != null ? `₹ ${Number(order.po_total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-500">{vendors.find(v => v.vendor_id === order.vendor_id)?.contact_email_id || '—'}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-400">{order.mail_sent_status || '—'}</td>
                                                         {/* Status badge */}
                                                         <td className="px-4 py-3">
                                                             <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${STATUS_LABELS[order.status]?.color || 'bg-gray-100 text-gray-600'}`}>
@@ -955,15 +969,19 @@ export default function PurchaseOrderApprovalPage() {
                                                                     ) : (
                                                                         <table className="w-full text-xs border rounded-lg overflow-hidden">
                                                                             <thead>
-                                                                                <tr className="bg-blue-100">
+                                                                                       <tr className="bg-blue-100">
                                                                                     <th className="px-3 py-2 text-left font-semibold">SNO</th>
                                                                                     <th className="px-3 py-2 text-left font-semibold">Material ID</th>
                                                                                     <th className="px-3 py-2 text-left font-semibold">PO Qty</th>
                                                                                     <th className="px-3 py-2 text-left font-semibold">UOM</th>
+                                                                                    <th className="px-3 py-2 text-right font-semibold">Unit Price</th>
+                                                                                    <th className="px-3 py-2 text-right font-semibold">Basic Amt</th>
+                                                                                    <th className="px-3 py-2 text-right font-semibold">GST %</th>
+                                                                                    <th className="px-3 py-2 text-right font-semibold">GST Amt</th>
+                                                                                    <th className="px-3 py-2 text-right font-semibold">Total Amt</th>
+                                                                                    <th className="px-3 py-2 text-left font-semibold">Exp. Delivery</th>
                                                                                     <th className="px-3 py-2 text-left font-semibold">Material Spec</th>
                                                                                     <th className="px-3 py-2 text-left font-semibold">Remarks</th>
-                                                                                    <th className="px-3 py-2 text-left font-semibold">GR Qty</th>
-                                                                                    <th className="px-3 py-2 text-left font-semibold">Balance Qty</th>
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody className="divide-y divide-blue-100">
@@ -971,12 +989,19 @@ export default function PurchaseOrderApprovalPage() {
                                                                                     <tr key={detail._id} className="bg-white hover:bg-blue-50/50">
                                                                                         <td className="px-3 py-2">{detail.sno}</td>
                                                                                         <td className="px-3 py-2 font-mono font-semibold text-blue-700">{detail.material_id}</td>
-                                                                                        <td className="px-3 py-2">{detail.po_qty}</td>
+                                                                                        <td className="px-3 py-2">{detail.po_qty != null ? Number(detail.po_qty).toLocaleString('en-IN') : '-'}</td>
                                                                                         <td className="px-3 py-2">{detail.uom}</td>
+                                                                                        <td className="px-3 py-2 text-right">{detail.unit_price != null ? Number(detail.unit_price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right">{detail.basic_amount != null ? Number(detail.basic_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right text-gray-500">{detail.gst_percentage != null ? `${detail.gst_percentage}%` : '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right">{detail.gst_amount != null ? Number(detail.gst_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right font-semibold text-blue-700">{detail.total_amount != null ? Number(detail.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+                                                                                        <td className="px-3 py-2 whitespace-nowrap">{detail.expected_delivery_date ? new Date(detail.expected_delivery_date).toLocaleDateString('en-GB') : '-'}</td>
+
                                                                                         <td className="px-3 py-2 max-w-[200px] truncate text-gray-500" title={detail.material_spec}>{detail.material_spec || '-'}</td>
                                                                                         <td className="px-3 py-2">{detail.remarks || '-'}</td>
-                                                                                        <td className="px-3 py-2">{detail.gr_qty}</td>
-                                                                                        <td className="px-3 py-2">{detail.balance_qty}</td>
+                                                                                        {/* <td className="px-3 py-2">{detail.gr_qty}</td>
+                                                                                        <td className="px-3 py-2">{detail.balance_qty}</td> */}
                                                                                     </tr>
                                                                                 ))}
                                                                             </tbody>
@@ -1064,13 +1089,13 @@ export default function PurchaseOrderApprovalPage() {
                                                 <button
                                                     type="button"
                                                     onClick={() => window.open(pdfAttachment.blobUrl, '_blank')}
-                                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm hover:bg-red-100 transition-colors"
+                                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm hover:bg-blue-100 transition-colors"
                                                 >
                                                     <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd"/>
                                                     </svg>
                                                     {pdfAttachment.filename}
-                                                    <span className="text-xs text-red-400 ml-1">(click to preview)</span>
+                                                    <span className="text-xs text-blue-400 ml-1">(click to preview)</span>
                                                 </button>
                                             ) : (
                                                 <span className="text-sm text-gray-400">No attachment</span>
