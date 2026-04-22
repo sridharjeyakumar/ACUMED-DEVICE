@@ -42,6 +42,7 @@ interface Transaction {
 }
 
 interface Product {
+    product_type: string;
     product_id: string;
     product_name: string;
     product_shortname: string;
@@ -1441,7 +1442,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-100">
                                 <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Batch.No</th>
+                                    {/* <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Batch.No</th> */}
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">S.No</th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Product ID</th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase">Pack Size ID</th>
@@ -1459,7 +1460,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {details.map((detail, idx) => (
                                     <tr key={idx} className="hover:bg-gray-50">
-                                        <td className="px-4 py-2 text-sm">{detail.batch_no}</td>
+                                        {/* <td className="px-4 py-2 text-sm">{detail.batch_no}</td> */}
                                         <td className="px-4 py-2 text-sm">{detail.sno || idx + 1}</td>
                                         <td className="px-4 py-2 text-sm">{detail.product_id}</td>
                                         <td className="px-4 py-2 text-sm">{packSizes.find(p => p.pack_size_id === detail.packsize_id)?.pack_size_name || detail.packsize_id}</td>
@@ -1625,7 +1626,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                             required
                                         >
                                             <option value="">Select Product Master</option>
-                                            {products.filter(p => p.active).map((p) => (
+                                            {products.filter(p => p.active&&p.product_type==="SFG").map((p) => (
                                                 <option key={p.product_id} value={p.product_id}>{p.product_name}</option>
                                             ))}
                                         </select>
@@ -1786,7 +1787,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
 
                                 <div className="space-y-3">
                                     <div>
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block">Current Event Type ID</label>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block">Machine Event Type ID</label>
                                         <div className="bg-[#f8fafc] border border-slate-200 rounded-xl px-4 py-2 text-sm font-medium text-slate-500">
                                             {formData.current_batch_event_type_id || 'NB (New Batch)'}
                                         </div>
@@ -1801,12 +1802,12 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                             </div>
                         </div>
 
-                        {/* Product Plan Details Section */}
+                        {/* Production Plan Details Section */}
                         <div className="mt-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-2">
                                     <span className="text-blue-500">📋</span>
-                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Product Plan Details</h2>
+                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Production Plan Details</h2>
                                 </div>
                                 <button
                                     type="button"
@@ -2283,7 +2284,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                             {/* Event Type & Status */}
                                             <div className="space-y-4">
                                                 <div>
-                                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block">Event Type ID</label>
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block">Machine Event Type ID</label>
                                                     {selectedTransaction?.current_batch_status_id === 'P' ? (
                                                         <input type="text" name="current_batch_event_type_id" value={formData.current_batch_event_type_id}
                                                             onChange={handleInputChange} maxLength={2}
@@ -2325,13 +2326,13 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                         </div>
                                     </div>
 
-                                    {/* Product Plan Details — editable for status 'P' */}
+                                    {/* Production Plan Details — editable for status 'P' */}
                                     {selectedTransaction?.current_batch_status_id === 'P' && (
                                         <div className="mt-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                                             <div className="flex items-center justify-between mb-6">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-blue-500">📋</span>
-                                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Product Plan Details</h2>
+                                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Production Plan Details</h2>
                                                 </div>
                                                 <button
                                                     type="button"
@@ -2483,13 +2484,13 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                         </div>
                                     )}
 
-                                    {/* Product Plan Details for 'R', 'W', and 'S' */}
+                                    {/* Production Plan Details for 'R', 'W', and 'S' */}
                                     {(selectedTransaction?.current_batch_status_id === 'R' || selectedTransaction?.current_batch_status_id === 'W' || selectedTransaction?.current_batch_status_id === 'S') && (
                                         <div className="mt-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                                             <div className="flex items-center justify-between mb-6">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-blue-500">📋</span>
-                                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Product Plan Details</h2>
+                                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Production Plan Details</h2>
                                                 </div>
                                                 <div className="flex items-center gap-4">
                                                     <p className="text-xs text-slate-500">

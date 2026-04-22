@@ -760,7 +760,7 @@ export default function MachineEventPage() {
                                                 <td className="px-4 py-4">
                                                     <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">{ev.machine_event_type_id}</span>
                                                 </td>
-                                                <td className="px-4 py-4"><span className="text-sm">{ev.event_date ? new Date(ev.event_date).toLocaleDateString() : "-"}</span></td>
+                                                <td className="px-4 py-4"><span className="text-sm">{ev.event_date ? (() => { const d = new Date(ev.event_date); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`; })() : "-"}</span></td>
                                                 <td className="px-4 py-4"><span className="text-sm font-mono">{ev.event_time}</span></td>
                                                 <td className="px-4 py-4"><span className="text-sm font-mono">{ev.batch_status_id || "-"}</span></td>
                                                 <td className="px-4 py-4"><span className="text-sm">{ev.machine_stop_reason_id || "-"}</span></td>
