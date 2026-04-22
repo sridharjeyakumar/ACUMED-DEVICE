@@ -247,10 +247,10 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                                                 className="w-24 text-xs h-7 px-2"
                                             />
                                         </td>
-                                        <td className="px-3 py-2 text-right text-gray-700 whitespace-nowrap">{row.basic_amount.toFixed(2)}</td>
+                                        <td className="px-3 py-2 text-right text-gray-700 whitespace-nowrap">{Number(row.basic_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         <td className="px-3 py-2 text-right text-gray-500 whitespace-nowrap">{row.gst_percentage}%</td>
-                                        <td className="px-3 py-2 text-right text-gray-700 whitespace-nowrap">{row.gst_amount.toFixed(2)}</td>
-                                        <td className="px-3 py-2 text-right font-semibold text-blue-700 whitespace-nowrap">{row.total_amount.toFixed(2)}</td>
+                                        <td className="px-3 py-2 text-right text-gray-700 whitespace-nowrap">{Number(row.gst_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-blue-700 whitespace-nowrap">{Number(row.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         <td className="px-3 py-2">
                                             <Input
                                                 type="date"
@@ -338,11 +338,21 @@ export default function PurchaseOrdersPage() {
 
     const [formData, setFormData] = useState({ ...emptyForm });
     const [detailRows, setDetailRows] = useState<DetailRow[]>([]);
+    const [sessionUserName, setSessionUserName] = useState<string>("");
 
     // Expand state
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [expandedDetails, setExpandedDetails] = useState<Record<string, PODetail[]>>({});
     const [detailsLoading, setDetailsLoading] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        const sessionUser = getSessionUser();
+        if (sessionUser?.employee_id) {
+            employeeAPI.getById(sessionUser.employee_id)
+                .then((emp: any) => setSessionUserName(emp?.emp_name || ""))
+                .catch(() => setSessionUserName(""));
+        }
+    }, []);
 
     const loadOrders = useCallback(async () => {
         try {
@@ -1302,9 +1312,9 @@ export default function PurchaseOrdersPage() {
                                                             ) : "-"}
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">{formatDateTime(order.approved_date_time)}</td>
-                                                        <td className="px-4 py-3 text-sm text-right">{order.po_basic_amount != null ? `₹ ${Number(order.po_basic_amount).toFixed(2)}` : '-'}</td>
-                                                        <td className="px-4 py-3 text-sm text-right">{order.po_gst_amount != null ? `₹ ${Number(order.po_gst_amount).toFixed(2)}` : '-'}</td>
-                                                        <td className="px-4 py-3 text-sm text-right font-semibold text-blue-700">{order.po_total_amount != null ? `₹ ${Number(order.po_total_amount).toFixed(2)}` : '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-right">{order.po_basic_amount != null ? `₹ ${Number(order.po_basic_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-right">{order.po_gst_amount != null ? `₹ ${Number(order.po_gst_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-right font-semibold text-blue-700">{order.po_total_amount != null ? `₹ ${Number(order.po_total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>
                                                         <td className="px-4 py-3 text-sm text-gray-500">{vendors.find(v => v.vendor_id === order.vendor_id)?.contact_email_id || '—'}</td>
                                                         <td className="px-4 py-3 text-sm text-gray-400">{order.mail_sent_status || '—'}</td>
                                                         <td className="px-4 py-3">
@@ -1393,13 +1403,13 @@ export default function PurchaseOrdersPage() {
                                                                                             {detail.material_id}
                                                                                             {(() => { const m = activeMaterials.find(m => m.material_id === detail.material_id); return m ? <span className="block text-xs font-normal font-sans text-gray-500">{m.material_name}</span> : null; })()}
                                                                                         </td>
-                                                                                        <td className="px-3 py-2">{detail.po_qty}</td>
+                                                                                        <td className="px-3 py-2">{detail.po_qty != null ? Number(detail.po_qty).toLocaleString('en-IN') : '-'}</td>
                                                                                         <td className="px-3 py-2">{detail.uom}</td>
-                                                                                        <td className="px-3 py-2 text-right">{detail.unit_price != null ? Number(detail.unit_price).toFixed(2) : '-'}</td>
-                                                                                        <td className="px-3 py-2 text-right">{detail.basic_amount != null ? Number(detail.basic_amount).toFixed(2) : '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right">{detail.unit_price != null ? Number(detail.unit_price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right">{detail.basic_amount != null ? Number(detail.basic_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
                                                                                         <td className="px-3 py-2 text-right text-gray-500">{detail.gst_percentage != null ? `${detail.gst_percentage}%` : '-'}</td>
-                                                                                        <td className="px-3 py-2 text-right">{detail.gst_amount != null ? Number(detail.gst_amount).toFixed(2) : '-'}</td>
-                                                                                        <td className="px-3 py-2 text-right font-semibold text-blue-700">{detail.total_amount != null ? Number(detail.total_amount).toFixed(2) : '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right">{detail.gst_amount != null ? Number(detail.gst_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+                                                                                        <td className="px-3 py-2 text-right font-semibold text-blue-700">{detail.total_amount != null ? Number(detail.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
                                                                                         <td className="px-3 py-2 whitespace-nowrap">{detail.expected_delivery_date ? new Date(detail.expected_delivery_date).toLocaleDateString('en-GB') : '-'}</td>
                                                                                         <td className="px-3 py-2 max-w-[180px] truncate text-gray-500" title={detail.material_spec}>{detail.material_spec || '-'}</td>
                                                                                         <td className="px-3 py-2">{detail.remarks || '-'}</td>
@@ -1527,23 +1537,36 @@ export default function PurchaseOrdersPage() {
                                             <Input name="remarks" value={formData.remarks} onChange={handleInputChange} maxLength={100} />
                                         </div>
                                         <div className="col-span-2">
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Entered By User ID <span className="text-red-500">*</span></label>
-                                            <Input name="entered_by_user_id" value={formData.entered_by_user_id} onChange={handleInputChange} maxLength={5} required />
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Entered By</label>
+                                            <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border bg-muted/40">
+                                                <span className="inline-flex px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 font-mono text-xs font-semibold">
+                                                    {formData.entered_by_user_id}
+                                                </span>
+                                                {sessionUserName && (
+                                                    <span className="text-sm text-foreground font-medium">{sessionUserName}</span>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* PO Totals (display only) */}
-                                        <div className="col-span-2 grid grid-cols-4 gap-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                                        <div className="col-span-2 grid grid-cols-5 gap-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
                                             <div>
                                                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Basic Amount</p>
-                                                <p className="text-sm font-semibold text-gray-800">₹ {poBasicAmount.toFixed(2)}</p>
+                                                <p className="text-sm font-semibold text-gray-800">₹ {poBasicAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">GST Amount</p>
-                                                <p className="text-sm font-semibold text-gray-800">₹ {poGstAmount.toFixed(2)}</p>
+                                                <p className="text-sm font-semibold text-gray-800">₹ {poGstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Total Amount</p>
-                                                <p className="text-base font-bold text-blue-700">₹ {poTotalAmount.toFixed(2)}</p>
+                                                <p className="text-base font-bold text-blue-700">₹ {poTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Vendor Email</p>
+                                                <p className="text-sm text-foreground">
+                                                    {vendors.find(v => v.vendor_id === formData.vendor_id)?.contact_email_id || '—'}
+                                                </p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Mail Sent Status</p>
@@ -1666,15 +1689,15 @@ export default function PurchaseOrdersPage() {
                                         <div className="col-span-2 grid grid-cols-5 gap-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
                                             <div>
                                                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Basic Amount</p>
-                                                <p className="text-sm font-semibold text-gray-800">₹ {poBasicAmount.toFixed(2)}</p>
+                                                <p className="text-sm font-semibold text-gray-800">₹ {poBasicAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">GST Amount</p>
-                                                <p className="text-sm font-semibold text-gray-800">₹ {poGstAmount.toFixed(2)}</p>
+                                                <p className="text-sm font-semibold text-gray-800">₹ {poGstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Total Amount</p>
-                                                <p className="text-base font-bold text-blue-700">₹ {poTotalAmount.toFixed(2)}</p>
+                                                <p className="text-base font-bold text-blue-700">₹ {poTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Vendor Email</p>
