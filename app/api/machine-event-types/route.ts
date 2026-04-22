@@ -28,6 +28,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     await ensureConnection();
+    // Drop the legacy unique index if it still exists in MongoDB
+    await MachineEventTypeMaster.collection.dropIndex('machine_event_type_id_1').catch(() => {});
     const body = await request.json();
     const type = new MachineEventTypeMaster({
       machine_event_type_id: body.machine_event_type_id,
@@ -49,12 +51,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(type, { status: 201 });
   } catch (error: any) {
     console.error('Error creating machine event type:', error);
-    if (error.code === 11000) {
-      return NextResponse.json(
-        { error: 'Machine Event Type ID already exists' },
-        { status: 400 }
-      );
-    }
     if (error.name === 'ValidationError') {
       return NextResponse.json(
         { error: 'Validation failed', details: error.message },

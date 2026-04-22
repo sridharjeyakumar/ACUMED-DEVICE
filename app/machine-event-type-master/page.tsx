@@ -95,6 +95,7 @@ export default function MachineEventTypeMasterPage() {
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({ ...emptyForm });
+    const [isDuplicateWarningOpen, setIsDuplicateWarningOpen] = useState(false);
 
     useEffect(() => {
         if (isAddModalOpen) setFormData({ ...emptyForm });
@@ -165,9 +166,7 @@ export default function MachineEventTypeMasterPage() {
         last_modified_user_id: "ADMIN",
     });
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
+    const doCreate = async () => {
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         try {
@@ -181,6 +180,19 @@ export default function MachineEventTypeMasterPage() {
         } finally {
             isSubmittingRef.current = false;
         }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const isDuplicate = types.some(
+            t => t.machine_event_type_id.toUpperCase() === formData.machine_event_type_id.toUpperCase()
+        );
+        if (isDuplicate) {
+            setIsDuplicateWarningOpen(true);
+            return;
+        }
+        await doCreate();
     };
 
     const handleDelete = (type: MachineEventType) => {
@@ -852,6 +864,27 @@ export default function MachineEventTypeMasterPage() {
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => { setIsCancelItemDialogOpen(false); setTypeToCancel(null); }}>No, Keep Active</AlertDialogCancel>
                         <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700">Yes, Cancel Event Type</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Duplicate ID warning dialog */}
+            <AlertDialog open={isDuplicateWarningOpen} onOpenChange={setIsDuplicateWarningOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Duplicate Event Type ID</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Event Type ID <strong>{formData.machine_event_type_id}</strong> already exists. Do you still want to save this record?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsDuplicateWarningOpen(false)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => { setIsDuplicateWarningOpen(false); doCreate(); }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                            Yes, Save Anyway
+                        </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

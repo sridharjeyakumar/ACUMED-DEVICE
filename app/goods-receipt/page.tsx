@@ -103,6 +103,7 @@ interface Material {
     gr_tolerance_percent?: number;
     qc_required?: boolean;
     coa_checklist_id?: string;
+    supplier_coa_required?: string;
     material_image?: string;
     material_image_icon?: string;
     last_modified_user_id?: string;
@@ -273,11 +274,8 @@ export default function GoodsReceiptHeaderPage() {
         const url = URL.createObjectURL(blob);
         window.open(url, "_blank");
     };
-    const todayStr   = () => new Date().toISOString().split("T")[0];
-    const nowTimeStr = () => {
-        const n = new Date();
-        return `${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}`;
-    };
+    const todayStr   = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const nowTimeStr = () => new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' });
 
     const emptyForm = {
         material_doc_no:    "",
@@ -462,6 +460,23 @@ export default function GoodsReceiptHeaderPage() {
         });
     };
 
+    const showSupplierCoa = materialRows.some(row =>
+        row.material_id.trim() &&
+        materials.find(m => m.material_id === row.material_id.toUpperCase())?.supplier_coa_required === 'Y'
+    );
+
+    const checkDraftDuplicate = (poNo: string, excludeDocNo?: string): string | null => {
+        const existing = items.find(i =>
+            i.po_no === poNo &&
+            i.status === "D" &&
+            i.active !== false &&
+            i.material_doc_no !== excludeDocNo
+        );
+        return existing
+            ? `Already a GR doc ${existing.material_doc_no} exists in Draft status for this PO, Save that GR first`
+            : null;
+    };
+
     const submitWithStatus = async (status: "D" | "A", e: React.MouseEvent) => {
         e.preventDefault();
         const dataWithStatus = { ...formData, status };
@@ -470,6 +485,13 @@ export default function GoodsReceiptHeaderPage() {
             setFieldErrors(errors);
             toast({ title: "Validation Error", description: "Please fix the highlighted fields.", variant: "destructive" });
             return;
+        }
+        if (status === "D") {
+            const draftError = checkDraftDuplicate(formData.po_no);
+            if (draftError) {
+                toast({ title: "Draft Already Exists", description: draftError, variant: "destructive" });
+                return;
+            }
         }
         if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
@@ -667,9 +689,10 @@ export default function GoodsReceiptHeaderPage() {
         });
         setFieldErrors({});
         try {
-            const [details, units]: [any[], any[]] = await Promise.all([
+            const [details, units, poDetails]: [any[], any[], any[]] = await Promise.all([
                 goodsReceiptDetailAPI.getByDocNo(item.material_doc_no),
                 goodsReceiptUnitsAPI.getByDocNo(item.material_doc_no),
+                item.po_no ? purchaseOrderDetailAPI.getByPoNo(item.po_no).catch(() => []) : Promise.resolve([]),
             ]);
             if (details.length > 0) {
                 const rows: MaterialRow[] = details.map((d: any) => {
@@ -688,14 +711,15 @@ export default function GoodsReceiptHeaderPage() {
                             balance_qty: String(u.balance_qty ?? u.gross_qty ?? ""),
                         }));
                     const editMeta = resolveMaterialMeta(d.material_id || "");
+                    const poDetail = poDetails.find((p: any) => p.material_id === d.material_id);
                     return {
                         id:                      d._id || newId(),
                         _id:                     d._id,
                         sno:                     d.sno ?? 1,
                         material_id:             d.material_id || "",
-                        po_qty:                  String(d.po_qty      ?? ""),
-                        gr_qty:                  String(d.gr_qty      ?? ""),
-                        balance_qty:             String(d.balance_qty ?? ""),
+                        po_qty:                  String(poDetail?.po_qty      ?? ""),
+                        gr_qty:                  String(poDetail?.gr_qty      ?? ""),
+                        balance_qty:             String(poDetail?.balance_qty ?? ""),
                         uom:                     d.uom || "",
                         invoice_total_gross_qty: String(d.invoice_total_gross_qty ?? ""),
                         invoice_total_tare_qty:  String(d.invoice_total_tare_qty  ?? ""),
@@ -720,13 +744,21 @@ export default function GoodsReceiptHeaderPage() {
         setIsEditModalOpen(true);
     };
 
-    const handleEditSubmit = async (e: React.FormEvent) => {
+    const handleEditSubmit = async (e: React.FormEvent, saveStatus?: "D" | "A") => {
         e.preventDefault(); e.stopPropagation();
+        const statusToSave = saveStatus ?? formData.status ?? "D";
         const errors = validateForm(formData, true);
         if (Object.keys(errors).length > 0) {
             setFieldErrors(errors);
             toast({ title: "Validation Error", description: "Please fix the highlighted fields.", variant: "destructive" });
             return;
+        }
+        if (statusToSave === "D") {
+            const draftError = checkDraftDuplicate(formData.po_no, selectedItem?.material_doc_no);
+            if (draftError) {
+                toast({ title: "Draft Already Exists", description: draftError, variant: "destructive" });
+                return;
+            }
         }
         if (isSubmittingRef.current || !selectedItem) return;
         isSubmittingRef.current = true;
@@ -735,6 +767,7 @@ export default function GoodsReceiptHeaderPage() {
             const docNo = selectedItem.material_doc_no;
             await goodsReceiptHeaderAPI.update(docNo, {
                 ...formData,
+                status:                  statusToSave,
                 last_modified_user_id:   "ADMIN",
                 last_modified_date_time: new Date(),
             });
@@ -768,12 +801,12 @@ export default function GoodsReceiptHeaderPage() {
                             roll_no:         unit.roll_no,
                             gross_qty:       Number(unit.gross_qty),
                             uom:             row.uom.trim().toUpperCase(),
-                            status:          formData.status || "D",
+                            status:          statusToSave || "D",
                         });
                     }
                 }
                 // ── Only update stocks + PO on Active save ────────────────────
-                if (formData.status === "A") {
+                if (statusToSave === "A") {
                     await updateMaterialStock(row);
                     await purchaseOrderDetailAPI.addGrQty(formData.po_no, row.material_id.trim().toUpperCase(), nettQty);
                 }
@@ -1057,7 +1090,8 @@ export default function GoodsReceiptHeaderPage() {
                         <span className="text-[10px] text-slate-400 ml-auto">{formData.remarks.length}/100</span>
                     </div>
 
-                    {/* Supplier COA Attachment */}
+                    {/* Supplier COA Attachment — shown only when at least one material in the grid requires COA */}
+                    {showSupplierCoa && (
                     <div className="mt-3 pt-3 border-t border-slate-100">
                         <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Supplier COA <span className="text-slate-300 font-normal normal-case">(PDF / JPG · max 2 MB)</span></label>
                         <div className="flex items-center gap-2">
@@ -1087,6 +1121,7 @@ export default function GoodsReceiptHeaderPage() {
                         <input ref={supplierCoaInputRef} type="file" accept=".pdf,.jpg,.jpeg"
                             className="hidden" onChange={handleSupplierCoaUpload} />
                     </div>
+                    )}
                 </div>
 
                 {/* ── MATERIALS GRID ── */}
@@ -1390,13 +1425,26 @@ export default function GoodsReceiptHeaderPage() {
                                     Save Draft
                                 </Button>
                             )}
+                            {isEdit && formData.status === "D" && (
+                                <Button type="button" variant="outline"
+                                    className="border-slate-300 text-slate-700 hover:bg-slate-100"
+                                    disabled={isSubmittingRef.current}
+                                    onClick={(e) => handleEditSubmit(e as any, "D")}>
+                                    Save as Draft
+                                </Button>
+                            )}
                             <Button type="button"
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-5 flex items-center gap-2"
                                 disabled={isSubmittingRef.current}
-                                onClick={(e) => isEdit ? handleEditSubmit(e as any) : submitWithStatus("A", e)}>
-                                {isEdit ? "Update GR Header" : (
-                                    <><span className="w-4 h-4 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold">✓</span> Submit for Review</>
-                                )}
+                                onClick={(e) => isEdit
+                                    ? handleEditSubmit(e as any, formData.status === "D" ? "A" : undefined)
+                                    : submitWithStatus("A", e)}>
+                                {isEdit
+                                    ? formData.status === "D"
+                                        ? <><span className="w-4 h-4 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold">✓</span> Save as Active</>
+                                        : "Update GR Header"
+                                    : <><span className="w-4 h-4 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold">✓</span> Submit for Review</>
+                                }
                             </Button>
                         </div>
                     </div>
