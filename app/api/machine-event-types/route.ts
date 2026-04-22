@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       accept_open_qty: body.accept_open_qty || '',
       accept_close_qty: body.accept_close_qty || '',
       accept_reason: body.accept_reason || '',
+      allow_event_time_edited: body.allow_event_time_edited || '',
       active: body.active !== false,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),

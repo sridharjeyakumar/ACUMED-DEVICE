@@ -26,6 +26,7 @@ export interface IMaterialMaster extends Document {
   core_weight?: number; // N(6,3)
   default_gst_percent?: number; // N(2,2) - Default GST percentage for the material
   default_unit_price?: number; // N(7,2) - Default unit price for the material
+  supplier_coa_required?:string; // Char(1) - 'Y' or 'N' to indicate if supplier COA is required
 }
 
 const MaterialMasterSchema: Schema = new Schema({
@@ -171,6 +172,12 @@ const MaterialMasterSchema: Schema = new Schema({
     required: false,
     min: 0,
     max: 99999.99,
+  },
+  supplier_coa_required: {
+    type: String,
+    required: false,
+    maxlength: 1,
+    trim: true,
   },
 }, {
   timestamps: true,

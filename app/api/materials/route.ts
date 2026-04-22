@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       core_weight: safeNumber(body.core_weight) || undefined,
       default_gst_percent: safeNumber(body.default_gst_percent) ?? undefined,
       default_unit_price: safeNumber(body.default_unit_price) ?? undefined,
+      supplier_coa_required: body.supplier_coa_required || undefined,
       active: body.active !== undefined ? body.active : true,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),

@@ -14,6 +14,7 @@ export interface IMachineEventTypeMaster extends Document {
   last_modified_user_id?: string;        // Char(5)
   last_modified_date_time?: Date;
   active: boolean;
+  allow_event_time_edited?: string;       // Char(1)
 }
 
 const MachineEventTypeMasterSchema: Schema = new Schema({
@@ -91,6 +92,12 @@ const MachineEventTypeMasterSchema: Schema = new Schema({
     type: Boolean,
     required: true,
     default: true
+  },
+  allow_event_time_edited: {
+    type: String,
+    maxlength: 1,
+    trim: true,
+    uppercase: true
   }
 }, {
   timestamps: true

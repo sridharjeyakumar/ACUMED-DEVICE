@@ -74,6 +74,7 @@ export async function PUT(
     if (body.accept_open_qty !== undefined) updateData.accept_open_qty = body.accept_open_qty || '';
     if (body.accept_close_qty !== undefined) updateData.accept_close_qty = body.accept_close_qty || '';
     if (body.accept_reason !== undefined) updateData.accept_reason = body.accept_reason || '';
+    if (body.allow_event_time_edited !== undefined) updateData.allow_event_time_edited = body.allow_event_time_edited || '';
     if (body.active !== undefined) updateData.active = body.active !== false;
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();

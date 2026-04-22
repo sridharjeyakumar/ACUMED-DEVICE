@@ -93,6 +93,7 @@ export async function PUT(
     if (body.default_unit_price !== undefined) updateData.default_unit_price = body.default_unit_price !== null ? safeNumber(body.default_unit_price) : null;
     if (body.material_image !== undefined) updateData.material_image = cleanValue(body.material_image);
     if (body.material_image_icon !== undefined) updateData.material_image_icon = cleanValue(body.material_image_icon);
+    if (body.supplier_coa_required !== undefined) updateData.supplier_coa_required = body.supplier_coa_required;
     if (body.active !== undefined) updateData.active = body.active !== false;
     
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
