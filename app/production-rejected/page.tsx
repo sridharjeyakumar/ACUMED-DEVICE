@@ -41,6 +41,7 @@ interface MachineStatus {
 }
 
 interface CollectionBin {
+    bin_type: string;
     bin_id: string;
     bin_name: string;
     bin_short_name: string;
@@ -287,6 +288,12 @@ export default function ProductionRejectedPage() {
                 last_modified_user_id: "ADMIN",
                 last_modified_date_time: new Date(),
             });
+            if (formData.net_weight_kgs && formData.batch_no) {
+                const newNet = parseFloat(formData.net_weight_kgs) || 0;
+                const txn = await transactionAPI.getById(formData.batch_no);
+                const newTotal = (txn?.total_rejected_qty_kg || 0) + newNet;
+                await transactionAPI.patch(formData.batch_no, { total_rejected_qty_kg: newTotal });
+            }
             toast({ title: "Success", description: "Production rejection recorded successfully" });
             setIsAddModalOpen(false);
             loadRejections();
@@ -348,6 +355,16 @@ export default function ProductionRejectedPage() {
                 last_modified_user_id: "ADMIN",
                 last_modified_date_time: new Date(),
             });
+            if (formData.batch_no) {
+                const oldNet = selectedRejection.net_weight_kgs || 0;
+                const newNet = formData.net_weight_kgs ? parseFloat(formData.net_weight_kgs) || 0 : 0;
+                const delta = newNet - oldNet;
+                if (delta !== 0) {
+                    const txn = await transactionAPI.getById(formData.batch_no);
+                    const newTotal = (txn?.total_rejected_qty_kg || 0) + delta;
+                    await transactionAPI.patch(formData.batch_no, { total_rejected_qty_kg: newTotal });
+                }
+            }
             setLastAction({ type: 'edit', data: previousData });
             toast({
                 title: "Success", description: "Rejection record updated successfully",
@@ -491,7 +508,7 @@ export default function ProductionRejectedPage() {
                     <select value={formData.collection_bin_no} onChange={e => handleBinChange(e.target.value)} required
                         className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100">
                         <option value="">Select Bin</option>
-                        {collectionBins.map(b => (
+                        {collectionBins.filter(b => b.bin_type === 'N' && b.active).map(b => (
                             <option key={b.bin_id} value={b.bin_id}>{b.bin_short_name} ({b.bin_id})</option>
                         ))}
                     </select>

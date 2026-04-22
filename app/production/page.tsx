@@ -54,6 +54,7 @@ interface CollectionBin {
     bin_id: string;
     bin_name: string;
     bin_short_name: string;
+    bin_type: string;
     tare_weight_kg?: number;
     gross_capacity_kg?: number;
     active: boolean;
@@ -127,6 +128,9 @@ export default function ProductionPage() {
     const [addMachineId, setAddMachineId] = useState<string>("");
     const [addBatchNo, setAddBatchNo] = useState<string>("");
     const [addProductId, setAddProductId] = useState<string>("");
+    const [addProductName, setAddProductName] = useState<string>("");
+    const [addWeightUom, setAddWeightUom] = useState<string>("");
+    const [productMap, setProductMap] = useState<Record<string, string>>({});
     const [addMachineError, setAddMachineError] = useState<string>("");
     const [addSelectedBin, setAddSelectedBin] = useState<CollectionBin | null>(null);
     const [addTareWeight, setAddTareWeight] = useState<number>(0);
@@ -148,7 +152,7 @@ export default function ProductionPage() {
     // ── Edit form state (simple string form) ──
     const emptyEditForm = {
         production_id: "", production_date: "", machine_id: "", batch_no: "",
-        product_id: "", collection_bin_no: "", tare_weight_kgs: "", gross_weight_kgs: "",
+        product_id: "", product_name: "", weight_per_piece: "", weight_uom: "", collection_bin_no: "", tare_weight_kgs: "", gross_weight_kgs: "",
         net_weight_kgs: "", calculated_total_qty: "", // machine_count_qty: "",
         remarks: "", status: "W",
     };
@@ -172,8 +176,11 @@ export default function ProductionPage() {
     // ── Load reference data once ──
     useEffect(() => {
         fetch('/api/machine-statuses').then(r => r.json()).then(d => setMachineStatuses(Array.isArray(d) ? d : [])).catch(() => {});
+        fetch('/api/products').then(r => r.json()).then((d: { product_id: string; product_name: string }[]) => {
+            if (Array.isArray(d)) setProductMap(Object.fromEntries(d.map(p => [p.product_id, p.product_name])));
+        }).catch(() => {});
         fetch('/api/collection-bins').then(r => r.json()).then(d => {
-            setActiveBins(Array.isArray(d) ? d.filter((b: CollectionBin) => b.active) : []);
+            setActiveBins(Array.isArray(d) ? d.filter((b: CollectionBin) => b.active && b.bin_type === 'N') : []);
         }).catch(() => {});
     }, []);
 
@@ -185,7 +192,7 @@ export default function ProductionPage() {
             .then(d => setAddProductionId(d.production_id || 0))
             .catch(() => {});
         // Reset all add form fields
-        setAddMachineId(""); setAddBatchNo(""); setAddProductId("");
+        setAddMachineId(""); setAddBatchNo(""); setAddProductId(""); setAddProductName(""); setAddWeightUom("");
         setAddMachineError(""); setAddSelectedBin(null); setAddTareWeight(0);
         setAddGrossWeight(""); setAddGrossError(""); 
         setAddRemarks(""); setAddStatus("W"); setAddWeightPerPiece(0);
@@ -218,8 +225,12 @@ export default function ProductionPage() {
             const pRes = await fetch(`/api/products/${machine.product_id}`);
             const product = await pRes.json();
             setAddWeightPerPiece(product?.weight_per_piece || 0);
+            setAddProductName(product?.product_name || "");
+            setAddWeightUom(product?.weight_uom || "");
         } catch {
             setAddWeightPerPiece(0);
+            setAddProductName("");
+            setAddWeightUom("");
         }
     };
 
@@ -315,6 +326,9 @@ export default function ProductionPage() {
             machine_id: item.machine_id,
             batch_no: item.batch_no,
             product_id: item.product_id,
+            product_name: "",
+            weight_per_piece: "",
+            weight_uom: "",
             collection_bin_no: String(item.collection_bin_no),
             tare_weight_kgs: item.tare_weight_kgs !== undefined ? String(item.tare_weight_kgs) : "",
             gross_weight_kgs: item.gross_weight_kgs !== undefined ? String(item.gross_weight_kgs) : "",
@@ -324,6 +338,10 @@ export default function ProductionPage() {
             remarks: item.remarks || '',
             status: item.status || 'W',
         });
+        fetch(`/api/products/${item.product_id}`)
+            .then(r => r.json())
+            .then(p => setEditFormData(f => ({ ...f, product_name: p?.product_name || "", weight_per_piece: p?.weight_per_piece != null ? String(p.weight_per_piece) : "", weight_uom: p?.weight_uom || "" })))
+            .catch(() => {});
         setIsEditModalOpen(true);
     };
 
@@ -519,7 +537,7 @@ export default function ProductionPage() {
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Prod Date</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Machine</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Batch No</th>
-                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Product ID</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Product</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Bin No</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Tare Wt (kg)</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-right text-foreground whitespace-nowrap">Gross Wt (kg)</th>
@@ -555,7 +573,7 @@ export default function ProductionPage() {
                                                     <td className="px-6 py-4"><span className="text-sm text-foreground">{formatDate(item.production_date)}</span></td>
                                                     <td className="px-6 py-4"><span className="text-sm font-mono text-foreground">{item.machine_id}</span></td>
                                                     <td className="px-6 py-4"><span className="text-sm font-mono text-foreground">{item.batch_no}</span></td>
-                                                    <td className="px-6 py-4"><span className="text-sm font-mono text-foreground">{item.product_id}</span></td>
+                                                    <td className="px-6 py-4"><span className="text-sm font-mono text-foreground">{productMap[item.product_id] ? `${item.product_id}-${productMap[item.product_id]}` : item.product_id}</span></td>
                                                     <td className="px-6 py-4"><span className="text-sm text-foreground">{item.collection_bin_no}</span></td>
                                                     <td className="px-6 py-4 text-right"><span className="text-sm text-foreground">{item.tare_weight_kgs !== undefined ? item.tare_weight_kgs.toFixed(3) : "-"}</span></td>
                                                     <td className="px-6 py-4 text-right"><span className="text-sm text-foreground">{item.gross_weight_kgs !== undefined ? item.gross_weight_kgs.toFixed(3) : "-"}</span></td>
@@ -692,9 +710,9 @@ export default function ProductionPage() {
                                                 />
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Product ID</p>
+                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Product</p>
                                                 <input
-                                                    value={addProductId}
+                                                    value={addProductName ? `${addProductId} - ${addProductName}` : addProductId}
                                                     disabled
                                                     placeholder="—"
                                                     className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
@@ -754,7 +772,7 @@ export default function ProductionPage() {
                                             </div>
                                         </div>
 
-                                        {/* Net Weight + Machine Count */}
+                                        {/* Net Weight + Weight Per Piece */}
                                         <div className="grid grid-cols-2 gap-6">
                                             <div>
                                                 <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Net Weight (KG)</p>
@@ -767,16 +785,14 @@ export default function ProductionPage() {
                                                     <p className="text-[10px] text-red-500 mt-1">Must be &gt; 0</p>
                                                 )}
                                             </div>
-                                            {/* <div>
-                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Machine Count Qty</p>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Weight Per Piece</p>
                                                 <input
-                                                    type="number"
-                                                    value={addMachineCountQty}
-                                                    onChange={(e) => setAddMachineCountQty(e.target.value)}
-                                                    placeholder="Enter count"
-                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                                                    value={addWeightPerPiece > 0 ? `${addWeightPerPiece}${addWeightUom ? ' ' + addWeightUom : ''}` : "—"}
+                                                    disabled
+                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
                                                 />
-                                            </div> */}
+                                            </div>
                                         </div>
 
                                         {/* Calc Qty (hidden row — auto value shown inline) */}
@@ -892,9 +908,9 @@ export default function ProductionPage() {
                                                 />
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Product ID</p>
+                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Product</p>
                                                 <input
-                                                    value={editFormData.product_id}
+                                                    value={editFormData.product_name ? `${editFormData.product_id} - ${editFormData.product_name}` : editFormData.product_id}
                                                     disabled
                                                     className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
                                                 />
@@ -921,7 +937,7 @@ export default function ProductionPage() {
                                             </div>
                                         </div>
 
-                                        {/* Gross Weight + Machine Count */}
+                                        {/* Gross Weight + Weight Per Piece */}
                                         <div className="grid grid-cols-2 gap-6">
                                             <div>
                                                 <p className="text-[10px] font-bold text-orange-500 tracking-widest uppercase mb-1.5">Gross Weight (KG) *</p>
@@ -934,16 +950,14 @@ export default function ProductionPage() {
                                                     className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
                                                 />
                                             </div>
-                                            {/* <div>
-                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Machine Count Qty</p>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Weight Per Piece</p>
                                                 <input
-                                                    type="number"
-                                                    value={editFormData.machine_count_qty}
-                                                    onChange={(e) => setEditFormData(f => ({ ...f, machine_count_qty: e.target.value }))}
-                                                    placeholder="Enter count"
-                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                                                    value={editFormData.weight_per_piece ? `${editFormData.weight_per_piece}${editFormData.weight_uom ? ' ' + editFormData.weight_uom : ''}` : "—"}
+                                                    disabled
+                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
                                                 />
-                                            </div> */}
+                                            </div>
                                         </div>
 
                                         {/* Net Weight + Calc Qty */}
