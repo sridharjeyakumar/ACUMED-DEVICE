@@ -52,13 +52,13 @@ export default function CollectionBinMasterPage() {
         binId: "",
         binName: "",
         binShortName: "",
-        binType: "Normal",
+        binType: "N",
         color: "",
         tareWeightKg: "",
         grossCapacityKg: "",
         active: true,
     });
-    
+
     // Helper function to convert snake_case to camelCase
     const toCamelCase = (data: any): BinRecord => {
         return {
@@ -119,7 +119,7 @@ export default function CollectionBinMasterPage() {
                 binId: "",
                 binName: "",
                 binShortName: "",
-                binType: "Normal",
+                binType: "N",
                 color: "",
                 tareWeightKg: "",
                 grossCapacityKg: "",
@@ -200,7 +200,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                 binId: "",
                 binName: "",
                 binShortName: "",
-                binType: "Normal",
+                binType: "N",
                 color: "",
                 tareWeightKg: "",
                 grossCapacityKg: "",
@@ -266,7 +266,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectEle
                 binId: "",
                 binName: "",
                 binShortName: "",
-                binType: "Normal",
+                binType: "N",
                 color: "",
                 tareWeightKg: "",
                 grossCapacityKg: "",
@@ -407,23 +407,23 @@ const confirmCancelItem = async () => {
                                                         <Label htmlFor="bintype-all" className="text-sm font-normal cursor-pointer text-foreground">All</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
-                                                        <input 
-                                                            type="radio" 
-                                                            id="bintype-normal" 
+                                                        <input
+                                                            type="radio"
+                                                            id="bintype-normal"
                                                             name="binTypeFilter"
-                                                            checked={filterBinType === "Normal"}
-                                                            onChange={() => setFilterBinType("Normal")}
+                                                            checked={filterBinType === "N"}
+                                                            onChange={() => setFilterBinType("N")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
                                                         <Label htmlFor="bintype-normal" className="text-sm font-normal cursor-pointer text-foreground">Normal</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
-                                                        <input 
-                                                            type="radio" 
-                                                            id="bintype-rejected" 
+                                                        <input
+                                                            type="radio"
+                                                            id="bintype-rejected"
                                                             name="binTypeFilter"
-                                                            checked={filterBinType === "Rejected"}
-                                                            onChange={() => setFilterBinType("Rejected")}
+                                                            checked={filterBinType === "R"}
+                                                            onChange={() => setFilterBinType("R")}
                                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                         />
                                                         <Label htmlFor="bintype-rejected" className="text-sm font-normal cursor-pointer text-foreground">Rejected</Label>
@@ -597,12 +597,12 @@ const confirmCancelItem = async () => {
         <td className="px-6 py-6 text-sm text-center align-middle">
           <span
             className={`inline-flex px-2 py-1 rounded text-xs font-semibold ${
-              item.binType === "Normal"
+              item.binType === "N"
                 ? "bg-blue-50 text-blue-600"
                 : "bg-red-50 text-red-600"
             }`}
           >
-            {item.binType}
+            {item.binType === "N" ? "Normal" : "Rejected"}
           </span>
         </td>
 
@@ -851,8 +851,8 @@ const confirmCancelItem = async () => {
                                                 required
                                                 
                                             >
-                                                <option value="Normal">Normal</option>
-                                                <option value="Rejected">Rejected</option>
+                                                <option value="N">N - Normal</option>
+                                                <option value="R">R - Rejected</option>
                                             </select>
                                         </div>
 
@@ -1016,8 +1016,8 @@ const confirmCancelItem = async () => {
                                                 required
 
                                             >
-                                                <option value="Normal">Normal</option>
-                                                <option value="Rejected">Rejected</option>
+                                                <option value="N">N - Normal</option>
+                                                <option value="R">R - Rejected</option>
                                             </select>
                                         </div>
 

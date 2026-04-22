@@ -51,6 +51,7 @@ interface Product {
     last_modified_user_id?: string;
     last_modified_date_time?: Date;
     active?: boolean;
+    product_type?: string;
 }
 interface CartonType {
     carton_type_id: string; // Char(2) - PK
@@ -978,7 +979,7 @@ const getPMMaterialDisplay = (materialId: string) => {
         required
     >
         <option value="">Select a product</option>
-        {products.filter((product) => product.active).map(product => (
+        {products.filter((product) => product.active && product.product_type === "FG").map(product => (
             <option key={product.product_id} value={product.product_id}>
                 {product.product_id} - {product.product_name}
             </option>
@@ -1208,7 +1209,7 @@ const getPMMaterialDisplay = (materialId: string) => {
         required
     >
         <option value="">Select a product</option>
-        {products.filter((product) => product.active).map(product => (
+        {products.filter((product) => product.active && product.product_type === "FG").map(product => (
             <option key={product.product_id} value={product.product_id}>
                 {product.product_id} - {product.product_name}
             </option>

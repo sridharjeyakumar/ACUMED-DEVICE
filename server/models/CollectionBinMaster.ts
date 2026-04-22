@@ -4,7 +4,7 @@ export interface ICollectionBinMaster extends Document {
   bin_id: string; // Char(10) - PK
   bin_name: string; // Char(200)
   bin_short_name: string; // Char(100)
-  bin_type: string; // Char(50) - Normal, etc.
+  bin_type: string; // Char(1) - N=Normal, R=Rejected
   color: string; // Char(50)
   tare_weight_kg?: number; // N(10,2)
   gross_capacity_kg?: number; // N(10,2)
@@ -37,7 +37,7 @@ const CollectionBinMasterSchema: Schema = new Schema({
   bin_type: {
     type: String,
     required: true,
-    maxlength: 50,
+    maxlength: 1,
     trim: true,
   },
   color: {

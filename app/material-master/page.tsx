@@ -38,6 +38,7 @@ interface Material {
     core_weight?: number;
     default_gst_percent?: number;
     default_unit_price?: number;
+    supplier_coa_required?: string;
     last_modified_user_id?: string;
     last_modified_date_time?: Date;
     active?: boolean;
@@ -132,6 +133,7 @@ export default function MaterialMasterPage() {
         core_weight: "",
         default_gst_percent: "",
         default_unit_price: "",
+        supplier_coa_required: false,
     });
     const isSuperAdmin = getSessionUser()?.super_admin === true;
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -244,6 +246,7 @@ useEffect(() => {
                 core_weight: "",
                 default_gst_percent: "",
                 default_unit_price: "",
+                supplier_coa_required: false,
             });
         }
     }, [isAddModalOpen]);
@@ -371,6 +374,7 @@ const getChecklistDisplay = (checklistId: string) => {
                 core_weight: formData.core_weight ? Number(formData.core_weight) : undefined,
                 default_gst_percent: formData.default_gst_percent ? Number(formData.default_gst_percent) : undefined,
                 default_unit_price: formData.default_unit_price ? Number(formData.default_unit_price) : undefined,
+                supplier_coa_required: formData.supplier_coa_required ? "Y" : "N",
             };
 
             await materialAPI.create(formattedData);
@@ -403,6 +407,7 @@ const getChecklistDisplay = (checklistId: string) => {
                 core_weight: "",
                 default_gst_percent: "",
                 default_unit_price: "",
+                supplier_coa_required: false,
             });
             loadMaterials();
         } catch (error: any) {
@@ -442,6 +447,7 @@ const getChecklistDisplay = (checklistId: string) => {
             core_weight: material.core_weight?.toString() || "",
             default_gst_percent: material.default_gst_percent?.toString() || "",
             default_unit_price: material.default_unit_price?.toString() || "",
+            supplier_coa_required: (material as any).supplier_coa_required === "Y",
         });
         setIsEditModalOpen(true);
     };
@@ -477,6 +483,7 @@ const getChecklistDisplay = (checklistId: string) => {
                 core_weight: formData.core_weight ? Number(formData.core_weight) : null,
                 default_gst_percent: formData.default_gst_percent ? Number(formData.default_gst_percent) : null,
                 default_unit_price: formData.default_unit_price ? Number(formData.default_unit_price) : null,
+                supplier_coa_required: formData.supplier_coa_required ? "Y" : "N",
             };
 
             await materialAPI.update(selectedMaterial!.material_id, formattedData);
@@ -834,6 +841,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">GR Tolerance per %</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">QC Required</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">COA Checklist ID</th>
+    <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Supplier COA Required</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Image</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Material Image Icon</th>
     <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Vendor ID</th>
@@ -938,6 +946,18 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
               </span>
           ) : "-"}
         </td>
+
+        {/* SUPPLIER COA REQUIRED */}
+        <td className="px-4 py-3">
+          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+            material.supplier_coa_required === "Y"
+              ? "bg-green-50 text-green-600"
+              : "bg-gray-100 text-gray-500"
+          }`}>
+            {material.supplier_coa_required === "Y" ? "YES" : "NO"}
+          </span>
+        </td>
+
         <td className="px-4 py-3 text-sm">
           {material.material_image ? (
             <img src={material.material_image} className="w-8 h-8 rounded-full object-cover" alt="Material" />
@@ -1460,6 +1480,21 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                             </label>
                                         </div>
 
+                                        {/* Supplier COA Required */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="supplier_coa_required_add"
+                                                name="supplier_coa_required"
+                                                checked={formData.supplier_coa_required}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="supplier_coa_required_add" className="text-sm font-semibold text-foreground">
+                                                Supplier COA Required
+                                            </label>
+                                        </div>
+
                                         {/* COA Checklist ID */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
@@ -1948,6 +1983,21 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                                             />
                                             <label htmlFor="qc_required_edit" className="text-sm font-semibold text-foreground">
                                                 QC Required
+                                            </label>
+                                        </div>
+
+                                        {/* Supplier COA Required */}
+                                        <div className="flex items-center space-x-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="supplier_coa_required_edit"
+                                                name="supplier_coa_required"
+                                                checked={formData.supplier_coa_required}
+                                                onChange={handleInputChange}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="supplier_coa_required_edit" className="text-sm font-semibold text-foreground">
+                                                Supplier COA Required
                                             </label>
                                         </div>
 

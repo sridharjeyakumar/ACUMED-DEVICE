@@ -35,6 +35,7 @@ interface MachineEventType {
     accept_open_qty?: string;                   // Char(1)
     accept_close_qty?: string;                  // Char(1)
     accept_reason?: string;                     // Char(1)
+    allow_event_time_edited?: string;           // Char(1)
     active: boolean;
     last_modified_user_id?: string;             // Char(5)
     last_modified_date_time?: Date;
@@ -56,6 +57,7 @@ const emptyForm = {
     accept_open_qty: "",
     accept_close_qty: "",
     accept_reason: "",
+    allow_event_time_edited: "N",
     active: true,
 };
 
@@ -158,6 +160,7 @@ export default function MachineEventTypeMasterPage() {
         accept_open_qty: data.accept_open_qty || '',
         accept_close_qty: data.accept_close_qty || '',
         accept_reason: data.accept_reason || '',
+        allow_event_time_edited: data.allow_event_time_edited || '',
         active: isNew ? true : data.active,
         last_modified_user_id: "ADMIN",
     });
@@ -215,6 +218,7 @@ export default function MachineEventTypeMasterPage() {
             accept_open_qty: type.accept_open_qty || "",
             accept_close_qty: type.accept_close_qty || "",
             accept_reason: type.accept_reason || "",
+            allow_event_time_edited: type.allow_event_time_edited || "N",
             active: type.active,
         });
         setIsEditModalOpen(true);
@@ -269,6 +273,7 @@ export default function MachineEventTypeMasterPage() {
                     accept_open_qty: d.accept_open_qty || '',
                     accept_close_qty: d.accept_close_qty || '',
                     accept_reason: d.accept_reason || '',
+                    allow_event_time_edited: d.allow_event_time_edited || '',
                     active: d.active,
                     last_modified_user_id: "ADMIN",
                 });
@@ -303,6 +308,7 @@ export default function MachineEventTypeMasterPage() {
                 accept_open_qty: typeToCancel.accept_open_qty || '',
                 accept_close_qty: typeToCancel.accept_close_qty || '',
                 accept_reason: typeToCancel.accept_reason || '',
+                allow_event_time_edited: typeToCancel.allow_event_time_edited || '',
                 active: false,
                 last_modified_user_id: "ADMIN",
             });
@@ -455,6 +461,20 @@ export default function MachineEventTypeMasterPage() {
                             </label>
                         </div>
                     ))}
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            id={`allow_event_time_edited-${isEdit ? 'edit' : 'add'}`}
+                            checked={formData.allow_event_time_edited === "Y"}
+                            onChange={(e) =>
+                                setFormData({ ...formData, allow_event_time_edited: e.target.checked ? "Y" : "N" })
+                            }
+                            className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor={`allow_event_time_edited-${isEdit ? 'edit' : 'add'}`} className="text-sm font-medium text-foreground cursor-pointer">
+                            Allow Event Time Edit
+                        </label>
+                    </div>
                 </div>
             </div>
             <div className="md:col-span-2">
@@ -598,6 +618,7 @@ export default function MachineEventTypeMasterPage() {
                                             <th className="px-4 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Open Qty</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Close Qty</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Reason</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Allow Event Time Edit</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">Status</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col"><span>Last Modified</span><span>User Id</span></div>
@@ -611,13 +632,13 @@ export default function MachineEventTypeMasterPage() {
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={14} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={15} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading machine event types...
                                                 </td>
                                             </tr>
                                         ) : filteredTypes.length === 0 ? (
                                             <tr>
-                                                <td colSpan={14} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={15} className="px-6 py-4 text-center text-muted-foreground">
                                                     No machine event types found
                                                 </td>
                                             </tr>
@@ -657,6 +678,13 @@ export default function MachineEventTypeMasterPage() {
                                                             )}
                                                         </td>
                                                     ))}
+                                                    <td className="px-4 py-4 text-center">
+                                                        {type.allow_event_time_edited === "Y" ? (
+                                                            <span className="inline-flex items-center justify-center w-6 h-6 bg-green-100 text-green-700 rounded-full text-xs font-bold">Y</span>
+                                                        ) : (
+                                                            <span className="text-muted-foreground text-sm">-</span>
+                                                        )}
+                                                    </td>
                                                     <td className="px-4 py-4">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${type.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                                                             {type.active ? "Active" : "Inactive"}
