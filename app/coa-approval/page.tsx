@@ -494,15 +494,14 @@ export default function COAApprovalPage() {
                                   <CheckCircle2 className="w-3.5 h-3.5" /> Approve
                                 </Button>
                               )}
-                              {(coa.status === 'A' || coa.status === 'E') && (
-                                <Button
-                                  variant="ghost" size="sm"
-                                  onClick={() => handleOpenPrint(coa)}
-                                  className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 text-xs px-2 h-7 flex items-center gap-1"
-                                >
-                                  <Printer className="w-3.5 h-3.5" /> Print
-                                </Button>
-                              )}
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => handleOpenPrint(coa)}
+                                disabled={coa.status === 'X'}
+                                className={`text-xs px-2 h-7 flex items-center gap-1 ${coa.status === 'X' ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'}`}
+                              >
+                                <Printer className="w-3.5 h-3.5" /> 
+                              </Button>
                             </div>
                           </td>
                         </motion.tr>
