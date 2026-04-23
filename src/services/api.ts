@@ -1131,6 +1131,7 @@ export const coaGenerationAPI = {
   getById: (coaNo: string) => fetchAPI(`/coa-generation/${encodeURIComponent(coaNo)}`),
   create: (data: any) => fetchAPI('/coa-generation', { method: 'POST', body: JSON.stringify(data) }),
   update: (coaNo: string, data: any) => fetchAPI(`/coa-generation/${encodeURIComponent(coaNo)}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (coaNo: string) => fetchAPI(`/coa-generation/${encodeURIComponent(coaNo)}`, { method: 'DELETE' }),
   getCompletedBatches: () => fetchAPI('/coa-generation/batches'),
   getBatchInfo: (batchNo: string) => fetchAPI(`/coa-generation/batch-info/${encodeURIComponent(batchNo)}`),
   getChecklistItems: (checklistId: string) => fetchAPI(`/coa-generation/checklist-items/${encodeURIComponent(checklistId)}`),

@@ -5,7 +5,8 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, ChevronDown, ChevronUp, X, Pencil } from "lucide-react";
+import { Search, Plus, ChevronDown, ChevronUp, X, Pencil, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { coaGenerationAPI } from "@/services/api";
@@ -122,6 +123,7 @@ export default function COAGenerationPage() {
   const { toast } = useToast();
   const isSubmittingRef = useRef(false);
   const userId = getSessionUser()?.user_id || 'ADMIN';
+  const isSuperAdmin = getSessionUser()?.super_admin === true;
 
   // List state
   const [coaList, setCoaList]           = useState<COAHeader[]>([]);
@@ -137,6 +139,8 @@ export default function COAGenerationPage() {
   const [isAddModalOpen,  setIsAddModalOpen]  = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCOA,     setSelectedCOA]     = useState<COAHeader | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [itemToDelete,       setItemToDelete]       = useState<COAHeader | null>(null);
 
   // Add / edit form state
   const [completedBatches, setCompletedBatches] = useState<CompletedBatch[]>([]);
@@ -375,6 +379,21 @@ export default function COAGenerationPage() {
       toast({ title: 'Error', description: err.message || 'Failed to update COA', variant: 'destructive' });
     } finally {
       isSubmittingRef.current = false;
+    }
+  };
+
+  // ── Delete ──────────────────────────────────────────────────────────────────
+
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+    try {
+      await coaGenerationAPI.delete(itemToDelete.coa_no);
+      toast({ title: 'Deleted', description: `COA ${itemToDelete.coa_no} deleted successfully` });
+      setIsDeleteDialogOpen(false);
+      setItemToDelete(null);
+      loadList();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to delete COA', variant: 'destructive' });
     }
   };
 
@@ -693,14 +712,25 @@ export default function COAGenerationPage() {
                             </span>
                           </td>
                           <td className="px-4 py-4 text-center">
-                            <Button
-                              variant="ghost" size="sm"
-                              onClick={() => coa.status === 'E' && handleOpenEdit(coa)}
-                              disabled={coa.status !== 'E'}
-                              className={`text-xs px-2 h-7 flex items-center gap-1 mx-auto ${coa.status === 'E' ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => coa.status === 'E' && handleOpenEdit(coa)}
+                                disabled={coa.status !== 'E'}
+                                className={`text-xs px-2 h-7 flex items-center gap-1 ${coa.status === 'E' ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                              {isSuperAdmin && (
+                                <Button
+                                  variant="ghost" size="sm"
+                                  onClick={() => { setItemToDelete(coa); setIsDeleteDialogOpen(true); }}
+                                  className="text-xs px-2 h-7 flex items-center gap-1 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         </motion.tr>
 
@@ -854,6 +884,21 @@ export default function COAGenerationPage() {
           </>
         )}
       </AnimatePresence>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete COA</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <span className="font-mono font-semibold">{itemToDelete?.coa_no}</span>? This will also delete all its checklist detail records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700 text-white">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
