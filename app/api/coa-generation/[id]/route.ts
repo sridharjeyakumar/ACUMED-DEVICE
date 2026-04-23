@@ -102,3 +102,22 @@ export async function PUT(
     return NextResponse.json({ error: error.message || 'Failed to update COA' }, { status: 500 });
   }
 }
+
+// DELETE /api/coa-generation/[id] - Delete COA header + details by coa_no
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    await ensureConnection();
+    const header = await (COAHeader as any).findOne({ coa_no: id });
+    if (!header) return NextResponse.json({ error: 'COA not found' }, { status: 404 });
+    await (COADetail as any).deleteMany({ coa_no: id });
+    await (COAHeader as any).deleteOne({ coa_no: id });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting COA:', error);
+    return NextResponse.json({ error: error.message || 'Failed to delete COA' }, { status: 500 });
+  }
+}

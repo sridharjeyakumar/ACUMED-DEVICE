@@ -28,7 +28,7 @@ export async function GET(
     const existingCOA = await (COAHeader as any).findOne({ batch_no }).lean();
     if (existingCOA) {
       return NextResponse.json(
-        { error: `COA ${(existingCOA as any).coa_no} already generated for this Batch` },
+        { error: `COA already generated for this Batch ( ${(existingCOA as any).coa_no} )` },
         { status: 409 }
       );
     }
