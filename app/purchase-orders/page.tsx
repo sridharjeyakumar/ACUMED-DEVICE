@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { purchaseOrderAPI, vendorAPI, materialAPI, purchaseOrderDetailAPI, companyAPI, employeeAPI, sendMailAPI } from "@/services/api";
+import { purchaseOrderAPI, vendorAPI, materialAPI, purchaseOrderDetailAPI, companyAPI, employeeAPI, userAPI, sendMailAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 interface PurchaseOrder {
@@ -45,11 +45,13 @@ interface Vendor {
     default_terms_of_payment?: string;
     contact_person?: string;
     contact_email_id?: string;
+    default_material_type?: string;
 }
 
 interface ActiveMaterial {
     material_id: string;
     material_name: string;
+    material_type?: string;
     uom: string;
     material_spec?: string;
     min_order_qty?: number;
@@ -156,13 +158,18 @@ function generatePoNo(existing: PurchaseOrder[]): string {
 interface PODetailTableProps {
     detailRows: DetailRow[];
     activeMaterials: ActiveMaterial[];
+    selectedVendor?: Vendor;
+    readOnly?: boolean;
     onAddRow: () => void;
     onMaterialChange: (idx: number, materialId: string) => void;
     onChange: (idx: number, field: keyof DetailRow, value: any) => void;
     onRemoveRow: (idx: number) => void;
 }
 
-function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange, onChange, onRemoveRow }: PODetailTableProps) {
+function PODetailTable({ detailRows, activeMaterials, selectedVendor, readOnly, onAddRow, onMaterialChange, onChange, onRemoveRow }: PODetailTableProps) {
+    const filteredMaterials = selectedVendor?.default_material_type
+        ? activeMaterials.filter(m => m.material_type === selectedVendor.default_material_type)
+        : activeMaterials;
     const visibleRows = detailRows.filter(r => !r._deleted);
     return (
         <div className="col-span-2 mt-4">
@@ -195,7 +202,7 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                     <tbody className="divide-y divide-border">
                         {visibleRows.length === 0 ? (
                             <tr>
-                                <td colSpan={15} className="px-4 py-6 text-center text-muted-foreground">
+                                <td colSpan={13} className="px-4 py-6 text-center text-muted-foreground">
                                     No items added. Click &quot;+ Add Row&quot; to add materials.
                                 </td>
                             </tr>
@@ -203,10 +210,18 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                             detailRows.map((row, idx) => {
                                 if (row._deleted) return null;
                                 const sno = detailRows.slice(0, idx + 1).filter(r => !r._deleted).length;
+                                const matLabel = (() => {
+                                    const m = filteredMaterials.find(m => m.material_id === row.material_id) ||
+                                              activeMaterials.find(m => m.material_id === row.material_id);
+                                    return m ? `${m.material_id} - ${m.material_name}` : (row.material_id || '-');
+                                })();
                                 return (
                                     <tr key={idx} className="hover:bg-gray-50">
                                         <td className="px-3 py-2 text-center font-mono text-gray-500 w-10">{sno}</td>
                                         <td className="px-3 py-2">
+                                            {readOnly ? (
+                                                <span className="font-semibold text-blue-700">{matLabel}</span>
+                                            ) : (
                                             <select
                                                 value={row.material_id}
                                                 onChange={e => onMaterialChange(idx, e.target.value)}
@@ -214,7 +229,7 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                                                 required
                                             >
                                                 <option value="">Select material</option>
-                                                {activeMaterials.map(m => (
+                                                {filteredMaterials.map(m => (
                                                     <option
                                                         key={m.material_id}
                                                         value={m.material_id}
@@ -224,8 +239,12 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                                                     </option>
                                                 ))}
                                             </select>
+                                            )}
                                         </td>
                                         <td className="px-3 py-2">
+                                            {readOnly ? (
+                                                <span>{row.po_qty != null ? Number(row.po_qty).toLocaleString('en-IN') : '-'}</span>
+                                            ) : (
                                             <Input
                                                 type="number"
                                                 value={row.po_qty}
@@ -235,9 +254,13 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                                                 className="w-24 text-xs h-7 px-2"
                                                 required
                                             />
+                                            )}
                                         </td>
                                         <td className="px-3 py-2 font-mono text-gray-600 whitespace-nowrap">{row.uom || '-'}</td>
                                         <td className="px-3 py-2">
+                                            {readOnly ? (
+                                                <span>{row.unit_price != null ? Number(row.unit_price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</span>
+                                            ) : (
                                             <Input
                                                 type="number"
                                                 value={row.unit_price}
@@ -246,12 +269,16 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                                                 onChange={e => onChange(idx, 'unit_price', e.target.value)}
                                                 className="w-24 text-xs h-7 px-2"
                                             />
+                                            )}
                                         </td>
                                         <td className="px-3 py-2 text-right text-gray-700 whitespace-nowrap">{Number(row.basic_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         <td className="px-3 py-2 text-right text-gray-500 whitespace-nowrap">{row.gst_percentage}%</td>
                                         <td className="px-3 py-2 text-right text-gray-700 whitespace-nowrap">{Number(row.gst_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         <td className="px-3 py-2 text-right font-semibold text-blue-700 whitespace-nowrap">{Number(row.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         <td className="px-3 py-2">
+                                            {readOnly ? (
+                                                <span>{row.expected_delivery_date ? new Date(row.expected_delivery_date).toLocaleDateString('en-GB') : '-'}</span>
+                                            ) : (
                                             <Input
                                                 type="date"
                                                 value={row.expected_delivery_date}
@@ -259,9 +286,13 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                                                 onChange={e => onChange(idx, 'expected_delivery_date', e.target.value)}
                                                 className="w-36 text-xs h-7 px-2"
                                             />
+                                            )}
                                         </td>
                                         <td className="px-3 py-2 text-gray-500 max-w-[180px] truncate" title={row.material_spec}>{row.material_spec || '-'}</td>
                                         <td className="px-3 py-2">
+                                            {readOnly ? (
+                                                <span className="text-gray-500">{row.remarks || '-'}</span>
+                                            ) : (
                                             <Input
                                                 type="text"
                                                 value={row.remarks}
@@ -269,6 +300,7 @@ function PODetailTable({ detailRows, activeMaterials, onAddRow, onMaterialChange
                                                 maxLength={100}
                                                 className="w-28 text-xs h-7 px-2"
                                             />
+                                            )}
                                         </td>
                                         <td className="px-3 py-2">
                                             <button type="button" onClick={() => onRemoveRow(idx)}
@@ -320,6 +352,8 @@ export default function PurchaseOrdersPage() {
     const [orders, setOrders] = useState<PurchaseOrder[]>([]);
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [activeMaterials, setActiveMaterials] = useState<ActiveMaterial[]>([]);
+    const [users, setUsers] = useState<any[]>([]);
+    const [employees, setEmployees] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -369,12 +403,16 @@ export default function PurchaseOrdersPage() {
     useEffect(() => {
         const load = async () => {
             try {
-                const [vendorData, materialData] = await Promise.all([
+                const [vendorData, materialData, userData, employeeData] = await Promise.all([
                     vendorAPI.getAll(),
                     materialAPI.getActive(),
+                    userAPI.getAll(),
+                    employeeAPI.getAll(),
                 ]);
                 setVendors(vendorData);
                 setActiveMaterials(materialData);
+                setUsers(userData || []);
+                setEmployees(employeeData || []);
             } catch {
                 console.error("Failed to load vendors/materials");
             }
@@ -774,6 +812,15 @@ export default function PurchaseOrdersPage() {
         return vendor ? `${vendor.vendor_id} - ${vendor.vendor_name}` : vendorId;
     };
 
+    const getUserName = (userId: string) => {
+        if (!userId) return "-";
+        const user = users.find(u => u.user_id === userId);
+        if (!user) return userId;
+        const emp = employees.find(e => (e.emp_id || e._id) === user.employee_id);
+        const name = emp ? (emp.emp_name || emp.empName || '') : '';
+        return name ? `${userId} - ${name}` : userId;
+    };
+
     const confirmDelete = async () => {
         if (!orderToDelete) return;
         try {
@@ -788,6 +835,34 @@ export default function PurchaseOrdersPage() {
         }
     };
 
+
+    const numberToIndianWords = (amount: number): string => {
+        const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE',
+            'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
+        const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+
+        const uptoNinetyNine = (n: number): string => {
+            if (n < 20) return ones[n];
+            return (tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '')).trim();
+        };
+
+        const toWords = (n: number): string => {
+            if (n === 0) return 'ZERO';
+            const parts: string[] = [];
+            if (n >= 10000000) { parts.push(toWords(Math.floor(n / 10000000)) + ' CRORE'); n %= 10000000; }
+            if (n >= 100000)   { parts.push(uptoNinetyNine(Math.floor(n / 100000)) + ' LAKH'); n %= 100000; }
+            if (n >= 1000)     { parts.push(uptoNinetyNine(Math.floor(n / 1000)) + ' THOUSAND'); n %= 1000; }
+            if (n >= 100)      { parts.push(ones[Math.floor(n / 100)] + ' HUNDRED'); n %= 100; }
+            if (n > 0)         { parts.push(uptoNinetyNine(n)); }
+            return parts.join(' ');
+        };
+
+        const rupees = Math.floor(amount);
+        const paise = Math.round((amount - rupees) * 100);
+        let words = 'RUPEES ' + toWords(rupees);
+        if (paise > 0) words += ' AND ' + uptoNinetyNine(paise) + ' PAISE';
+        return words + ' ONLY';
+    };
 
     const handlePrint = async (order: PurchaseOrder) => {
         try {
@@ -981,6 +1056,11 @@ export default function PurchaseOrdersPage() {
         <td style="text-align:center;font-weight:bold;"> ${fmtNum(totalGst)}</td>
         <td style="text-align:center;font-weight:bold;"> ${fmtNum(totalAmt)}</td>
       </tr>
+      <tr>
+        <td colspan="8" style="padding:6px 8px;font-size:11px;border:1px solid #aaa;">
+          <strong>Amount in words :</strong>&nbsp;&nbsp;${numberToIndianWords(totalAmt)}
+        </td>
+      </tr>
     </tbody>
   </table>
   <table class="bottom-tbl">
@@ -991,7 +1071,7 @@ export default function PurchaseOrdersPage() {
       </td>
       <td style="width:45%;text-align:center;">
         ${order.status === 'A' ? `
-        <div style="margin-bottom:16px;">for ${c1?.company_short_name || c1?.company_name || ''}</div>
+        <div style="margin-bottom:16px;">for ${c1?.company_name || c1?.company_short_name || ''}</div>
         ${signImgHtml}
         <div style="margin-top:16px;">${authorisedName}</div>
         <div style="margin-top:4px;">( Authorised Signatory )</div>
@@ -1298,18 +1378,12 @@ export default function PurchaseOrdersPage() {
                                                         <td className="px-4 py-3 text-sm">{order.terms_of_payment || "-"}</td>
                                                         <td className="px-4 py-3 text-sm">{order.remarks || "-"}</td>
                                                         <td className="px-4 py-3 text-sm">
-                                                            <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-                                                                {order.entered_by_user_id}
-                                                            </span>
+                                                            {getUserName(order.entered_by_user_id)}
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">{formatDateTime(order.entered_date_time)}</td>
                                                         <td className="px-4 py-3 text-sm">{order.approval_remarks || "-"}</td>
                                                         <td className="px-4 py-3 text-sm">
-                                                            {order.approved_by_user_id ? (
-                                                                <span className="inline-flex px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-mono text-xs">
-                                                                    {order.approved_by_user_id}
-                                                                </span>
-                                                            ) : "-"}
+                                                            {order.approved_by_user_id ? getUserName(order.approved_by_user_id) : "-"}
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">{formatDateTime(order.approved_date_time)}</td>
                                                         <td className="px-4 py-3 text-sm text-right">{order.po_basic_amount != null ? `₹ ${Number(order.po_basic_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>
@@ -1578,6 +1652,7 @@ export default function PurchaseOrdersPage() {
                                         <PODetailTable
                                             detailRows={detailRows}
                                             activeMaterials={activeMaterials}
+                                            selectedVendor={vendors.find(v => v.vendor_id === formData.vendor_id)}
                                             onAddRow={handleAddDetailRow}
                                             onMaterialChange={handleDetailMaterialChange}
                                             onChange={handleDetailChange}
@@ -1715,6 +1790,8 @@ export default function PurchaseOrdersPage() {
                                         <PODetailTable
                                             detailRows={detailRows}
                                             activeMaterials={activeMaterials}
+                                            selectedVendor={vendors.find(v => v.vendor_id === formData.vendor_id)}
+                                            readOnly
                                             onAddRow={handleAddDetailRow}
                                             onMaterialChange={handleDetailMaterialChange}
                                             onChange={handleDetailChange}
