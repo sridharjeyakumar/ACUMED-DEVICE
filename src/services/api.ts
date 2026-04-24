@@ -732,6 +732,8 @@ export const goodsReceiptHeaderAPI = {
     /** Cancel a header (set active=false) */
     cancel: (docNo: string) =>
         fetchAPI(`/goods-receipt-headers/${docNo}`, { method: 'PATCH', body: JSON.stringify({ active: false }) }),
+    cancelWithRemarks: (docNo: string, remarks: string) =>
+        fetchAPI(`/goods-receipt-headers/${docNo}`, { method: 'PATCH', body: JSON.stringify({ active: false, remarks }) }),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

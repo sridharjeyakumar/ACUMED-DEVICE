@@ -17,7 +17,7 @@ export interface IGoodsReceiptHeader extends Document {
   last_modified_date_time: Date;     // Date
   status: string;                    // Char(1) (e.g., 'A' for Active, 'P' for Pending)
   active: boolean;                   // Virtual field to indicate if the record is active (status === 'A')
-  
+  vendor_id:string; //char(5)
 }
 
 const GoodsReceiptHeaderSchema: Schema = new Schema({
@@ -67,7 +67,8 @@ const GoodsReceiptHeaderSchema: Schema = new Schema({
   supplier_coa: { type: String, required: false }, // Attachment - Supplier COA
   last_modified_user_id: { type: String, maxlength: 5 },
   last_modified_date_time: { type: Date, default: Date.now },
-  status: { type: String, maxlength: 1, default: '1' }
+  status: { type: String, maxlength: 1, default: '1' },
+  vendor_id: { type: String, maxlength: 5, trim: true }
 }, {
   timestamps: true, // Automatically manages createdAt and updatedAt
 });

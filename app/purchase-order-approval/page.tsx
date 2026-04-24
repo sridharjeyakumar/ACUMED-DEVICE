@@ -250,6 +250,10 @@ export default function PurchaseOrderApprovalPage() {
     // Action: Approve / Cancel / Close
     const handleAction = async (poNo: string, newStatus: 'A' | 'X' | 'C') => {
         if (submitting.has(poNo)) return;
+        if (!approvalRemarks[poNo]?.trim()) {
+            toast({ title: "Validation Error", description: "Approval Remarks is mandatory.", variant: "destructive" });
+            return;
+        }
         setSubmitting(prev => new Set(prev).add(poNo));
         try {
             await purchaseOrderAPI.update(poNo, {
@@ -268,6 +272,34 @@ export default function PurchaseOrderApprovalPage() {
         } finally {
             setSubmitting(prev => { const s = new Set(prev); s.delete(poNo); return s; });
         }
+    };
+
+    const numberToIndianWords = (amount: number): string => {
+        const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE',
+            'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
+        const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+
+        const uptoNinetyNine = (n: number): string => {
+            if (n < 20) return ones[n];
+            return (tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '')).trim();
+        };
+
+        const toWords = (n: number): string => {
+            if (n === 0) return 'ZERO';
+            const parts: string[] = [];
+            if (n >= 10000000) { parts.push(toWords(Math.floor(n / 10000000)) + ' CRORE'); n %= 10000000; }
+            if (n >= 100000)   { parts.push(uptoNinetyNine(Math.floor(n / 100000)) + ' LAKH'); n %= 100000; }
+            if (n >= 1000)     { parts.push(uptoNinetyNine(Math.floor(n / 1000)) + ' THOUSAND'); n %= 1000; }
+            if (n >= 100)      { parts.push(ones[Math.floor(n / 100)] + ' HUNDRED'); n %= 100; }
+            if (n > 0)         { parts.push(uptoNinetyNine(n)); }
+            return parts.join(' ');
+        };
+
+        const rupees = Math.floor(amount);
+        const paise = Math.round((amount - rupees) * 100);
+        let words = 'RUPEES ' + toWords(rupees);
+        if (paise > 0) words += ' AND ' + uptoNinetyNine(paise) + ' PAISE';
+        return words + ' ONLY';
     };
 
     const buildPOHtml = (
@@ -440,6 +472,11 @@ export default function PurchaseOrderApprovalPage() {
         <td style="text-align:center;font-weight:bold;"> ${fmtNum(totalGst)}</td>
         <td style="text-align:center;font-weight:bold;"> ${fmtNum(totalAmt)}</td>
       </tr>
+      <tr>
+        <td colspan="8" style="padding:6px 8px;font-size:11px;border:1px solid #aaa;">
+          <strong>Amount in words :</strong>&nbsp;&nbsp;${numberToIndianWords(totalAmt)}
+        </td>
+      </tr>
     </tbody>
   </table>
   <table class="bottom-tbl">
@@ -450,7 +487,7 @@ export default function PurchaseOrderApprovalPage() {
       </td>
       <td style="width:45%;text-align:center;">
         ${order.status === 'A' ? `
-        <div style="margin-bottom:16px;">for ${c1?.company_short_name || c1?.company_name || ''}</div>
+        <div style="margin-bottom:16px;">for ${c1?.company_name || c1?.company_short_name || ''}</div>
         ${signImgHtml}
         <div style="margin-top:16px;">${authorisedName}</div>
         <div style="margin-top:4px;">( Authorised Signatory )</div>
@@ -504,6 +541,11 @@ export default function PurchaseOrderApprovalPage() {
     const getVendorDisplay = (id: string) => {
         const v = vendors.find(v => v.vendor_id === id);
         return v ? `${id} - ${v.vendor_name}` : id;
+    };
+
+    const getMaterialDisplay = (id: string) => {
+        const m = materials.find(m => m.material_id === id);
+        return m ? `${id} - ${m.material_name}` : id;
     };
 
     const handleOpenMailModal = async (order: PurchaseOrder) => {
@@ -988,7 +1030,7 @@ export default function PurchaseOrderApprovalPage() {
                                                                                 {(expandedDetails[order.po_no] || []).map(detail => (
                                                                                     <tr key={detail._id} className="bg-white hover:bg-blue-50/50">
                                                                                         <td className="px-3 py-2">{detail.sno}</td>
-                                                                                        <td className="px-3 py-2 font-mono font-semibold text-blue-700">{detail.material_id}</td>
+                                                                                        <td className="px-3 py-2 font-semibold text-blue-700">{getMaterialDisplay(detail.material_id)}</td>
                                                                                         <td className="px-3 py-2">{detail.po_qty != null ? Number(detail.po_qty).toLocaleString('en-IN') : '-'}</td>
                                                                                         <td className="px-3 py-2">{detail.uom}</td>
                                                                                         <td className="px-3 py-2 text-right">{detail.unit_price != null ? Number(detail.unit_price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>

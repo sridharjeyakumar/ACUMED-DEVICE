@@ -24,6 +24,7 @@ import {
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
 interface GoodsReceiptHeader {
+    vendor_id: string;
     active: boolean;
     _id?: string;
     material_doc_no: string;
@@ -176,6 +177,7 @@ export default function GoodsReceiptHeaderPage() {
     const [itemToDelete, setItemToDelete] = useState<GoodsReceiptHeader | null>(null);
     const [isCancelItemDialogOpen, setIsCancelItemDialogOpen] = useState(false);
     const [itemToCancel, setItemToCancel] = useState<GoodsReceiptHeader | null>(null);
+    const [cancelRemarks, setCancelRemarks] = useState("");
     const isSuperAdmin = getSessionUser()?.super_admin === true;
 
     // ── Expandable rows state ─────────────────────────────────────────────────
@@ -225,6 +227,7 @@ export default function GoodsReceiptHeaderPage() {
     const [isAddModalOpen,  setIsAddModalOpen]  = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedItem,    setSelectedItem]    = useState<GoodsReceiptHeader | null>(null);
+    const [selectedSaveStatus, setSelectedSaveStatus] = useState<"D" | "A" | "X">("D");
 
     // ── Form state ───────────────────────────────────────────────────────────
     const isSubmittingRef = useRef(false);
@@ -286,6 +289,7 @@ export default function GoodsReceiptHeaderPage() {
         invoice_date:       "",
         po_no:              "",
         po_date:            "",
+        vendor_id:          "",
         received_by_emp_id: getSessionUser()?.user_id || "",
         checked_by_emp_id:  getSessionUser()?.user_id || "",
         remarks:            "",
@@ -357,7 +361,7 @@ export default function GoodsReceiptHeaderPage() {
         return matchSearch && matchStatus;
     });
 
-    const sortedItems    = [...filteredItems].sort((a, b) => new Date(b.material_doc_date).getTime() - new Date(a.material_doc_date).getTime());
+    const sortedItems    = [...filteredItems].sort((a, b) => b.material_doc_no.localeCompare(a.material_doc_no));
     const totalPages     = Math.ceil(sortedItems.length / rowsPerPage);
     const startIndex     = (currentPage - 1) * rowsPerPage;
     const endIndex       = startIndex + rowsPerPage;
@@ -385,10 +389,11 @@ export default function GoodsReceiptHeaderPage() {
         else if (data.invoice_no.trim()) {
             const dup = items.some(i => {
                 if (isEdit && i.material_doc_no === selectedItem?.material_doc_no) return false;
-                return i.invoice_no?.toLowerCase() === data.invoice_no.trim().toLowerCase() &&
+                return i.vendor_id === data.vendor_id &&
+                    i.invoice_no?.toLowerCase() === data.invoice_no.trim().toLowerCase() &&
                     i.invoice_date && new Date(i.invoice_date).toISOString().split("T")[0] === data.invoice_date;
             });
-            if (dup) { errors.invoice_no = "Invoice No + Date combo already exists."; errors.invoice_date = "Invoice No + Date combo already exists."; }
+            if (dup) { errors.invoice_no = "Invoice No + Date combo already exists for this Vendor."; errors.invoice_date = "Invoice No + Date combo already exists for this Vendor."; }
         }
 
         if (!data.po_no.trim()) errors.po_no = "PO No is required.";
@@ -420,7 +425,8 @@ export default function GoodsReceiptHeaderPage() {
         if (name === "po_no") {
             const selectedPO = purchaseOrders.find(po => po.po_no === value);
             const poDate = selectedPO?.po_date ? new Date(selectedPO.po_date).toISOString().split("T")[0] : "";
-            setFormData(prev => ({ ...prev, po_no: value, po_date: poDate }));
+            const vendorId = selectedPO?.vendor_id || "";
+            setFormData(prev => ({ ...prev, po_no: value, po_date: poDate, vendor_id: vendorId }));
             setFieldErrors(prev => { const n = { ...prev }; delete n.po_no; delete n.po_date; return n; });
             if (value) {
                 purchaseOrderDetailAPI.getByPoNo(value).then((details: any[]) => {
@@ -477,6 +483,30 @@ export default function GoodsReceiptHeaderPage() {
             : null;
     };
 
+    const checkActiveDuplicate = (poNo: string, excludeDocNo?: string): string | null => {
+        const existing = items.find(i =>
+            i.po_no === poNo &&
+            i.status === "A" &&
+            i.active !== false &&
+            i.material_doc_no !== excludeDocNo
+        );
+        return existing
+            ? `A GR doc ${existing.material_doc_no} already exists in Active status for this PO`
+            : null;
+    };
+
+    const validateNettQty = (): string | null => {
+        for (const row of materialRows) {
+            if (!row.unit_split || !row.material_id.trim()) continue;
+            const unitNettSum = row.units.reduce((s, u) => s + (parseFloat(u.nett_qty) || 0), 0);
+            const invoiceNett = (parseFloat(row.invoice_total_gross_qty) || 0) - (parseFloat(row.invoice_total_tare_qty) || 0);
+            if (Math.abs(unitNettSum - invoiceNett) > 0.001) {
+                return `Material ${row.material_id}: Invoice Total Nett Qty (${invoiceNett.toFixed(3)}) must equal sum of Unit Nett Qty (${unitNettSum.toFixed(3)}).`;
+            }
+        }
+        return null;
+    };
+
     const submitWithStatus = async (status: "D" | "A", e: React.MouseEvent) => {
         e.preventDefault();
         const dataWithStatus = { ...formData, status };
@@ -490,6 +520,18 @@ export default function GoodsReceiptHeaderPage() {
             const draftError = checkDraftDuplicate(formData.po_no);
             if (draftError) {
                 toast({ title: "Draft Already Exists", description: draftError, variant: "destructive" });
+                return;
+            }
+        }
+        if (status === "A") {
+            const activeError = checkActiveDuplicate(formData.po_no);
+            if (activeError) {
+                toast({ title: "Active GR Already Exists", description: activeError, variant: "destructive" });
+                return;
+            }
+            const nettError = validateNettQty();
+            if (nettError) {
+                toast({ title: "Nett Qty Mismatch", description: nettError, variant: "destructive" });
                 return;
             }
         }
@@ -633,19 +675,25 @@ export default function GoodsReceiptHeaderPage() {
 
     const handleCancelItem = (item: GoodsReceiptHeader) => {
         setItemToCancel(item);
+        setCancelRemarks("");
         setIsCancelItemDialogOpen(true);
     };
 
     const confirmCancelItem = async () => {
         if (!itemToCancel) return;
+        if (!cancelRemarks.trim()) {
+            toast({ title: "Remarks Required", description: "Please enter remarks before cancelling.", variant: "destructive" });
+            return;
+        }
         try {
-            await goodsReceiptHeaderAPI.cancel(itemToCancel.material_doc_no);
+            await goodsReceiptHeaderAPI.cancelWithRemarks(itemToCancel.material_doc_no, cancelRemarks.trim());
             setItems(prev => prev.map(i =>
-                i.material_doc_no === itemToCancel.material_doc_no ? { ...i, active: false } : i
+                i.material_doc_no === itemToCancel.material_doc_no ? { ...i, active: false, remarks: cancelRemarks.trim() } : i
             ));
             toast({ title: "Cancelled", description: `GR ${itemToCancel.material_doc_no} has been cancelled` });
             setIsCancelItemDialogOpen(false);
             setItemToCancel(null);
+            setCancelRemarks("");
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "Failed to cancel goods receipt", variant: "destructive" });
         }
@@ -681,6 +729,7 @@ export default function GoodsReceiptHeaderPage() {
             invoice_date:       item.invoice_date ? new Date(item.invoice_date).toISOString().split("T")[0] : "",
             po_no:              item.po_no || "",
             po_date:            item.po_date ? new Date(item.po_date).toISOString().split("T")[0] : "",
+            vendor_id:          item.vendor_id || "",
             received_by_emp_id: item.received_by_emp_id || "",
             checked_by_emp_id:  item.checked_by_emp_id || "",
             remarks:            item.remarks || "",
@@ -741,6 +790,7 @@ export default function GoodsReceiptHeaderPage() {
         } catch {
             setMaterialRows([makeMaterialRow()]);
         }
+        setSelectedSaveStatus("D");
         setIsEditModalOpen(true);
     };
 
@@ -757,6 +807,18 @@ export default function GoodsReceiptHeaderPage() {
             const draftError = checkDraftDuplicate(formData.po_no, selectedItem?.material_doc_no);
             if (draftError) {
                 toast({ title: "Draft Already Exists", description: draftError, variant: "destructive" });
+                return;
+            }
+        }
+        if (statusToSave === "A") {
+            const activeError = checkActiveDuplicate(formData.po_no, selectedItem?.material_doc_no);
+            if (activeError) {
+                toast({ title: "Active GR Already Exists", description: activeError, variant: "destructive" });
+                return;
+            }
+            const nettError = validateNettQty();
+            if (nettError) {
+                toast({ title: "Nett Qty Mismatch", description: nettError, variant: "destructive" });
                 return;
             }
         }
@@ -1026,6 +1088,12 @@ export default function GoodsReceiptHeaderPage() {
                                     {formData.po_date ? formatDate(formData.po_date) : "-"}
                                 </div>
                                 {fieldErrors.po_date && <p className="text-red-500 text-[10px] mt-0.5">{fieldErrors.po_date}</p>}
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Vendor ID</label>
+                                <div className="h-9 px-2 border border-slate-200 rounded-md bg-slate-50 text-xs flex items-center text-slate-700 font-mono">
+                                    {formData.vendor_id || "-"}
+                                </div>
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Invoice No. *</label>
@@ -1339,7 +1407,7 @@ export default function GoodsReceiptHeaderPage() {
                                                 onChange={e => updateUnit(row.id, unit.sno, "roll_no", e.target.value)}
                                                 placeholder="ROLL-01" maxLength={10}
                                                 className={`h-8 text-xs px-2 ${dupRoll ? "border-red-500 bg-red-50" : !unit.roll_no ? "border-slate-200" : "border-slate-200"}`} />
-                                            {/* Gross Qty - entry; Enter key auto-adds next row */}
+                                            {/* Gross Qty - entry; must be > 0; Enter key auto-adds next row */}
                                             <Input value={unit.gross_qty}
                                                 onChange={e => {
                                                     const val = e.target.value;
@@ -1349,13 +1417,13 @@ export default function GoodsReceiptHeaderPage() {
                                                 onKeyDown={e => {
                                                     if (e.key === "Enter" && unit.packet_no && unit.roll_no && parseFloat(unit.gross_qty) > 0) {
                                                         e.preventDefault();
-                                                        const prev = unit;
-                                                        const rollStem = prev.roll_no.slice(0, -1);
-                                                        addUnit(row.id, { packet_no: prev.packet_no, roll_no: rollStem });
+                                                        const newSno = row.units.length + 1;
+                                                        setPendingFocusKey(`${row.id}_${newSno}`);
+                                                        addUnit(row.id, { packet_no: unit.packet_no, roll_no: unit.roll_no.slice(0, -1) });
                                                     }
                                                 }}
                                                 placeholder="0.000" type="text" inputMode="decimal"
-                                                className={`h-8 text-xs text-right px-2 ${!unit.gross_qty || parseFloat(unit.gross_qty) <= 0 ? "border-slate-200" : "border-slate-200"}`} />
+                                                className={`h-8 text-xs text-right px-2 ${unit.gross_qty && parseFloat(unit.gross_qty) <= 0 ? "border-red-400 bg-red-50" : "border-slate-200"}`} />
                                             {/* Tare Qty - display only (core_weight) */}
                                             <div className="h-8 flex items-center justify-end pr-2 border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-500 font-mono select-none">
                                                 {unit.tare_qty || "0"}
@@ -1375,6 +1443,24 @@ export default function GoodsReceiptHeaderPage() {
                                         </div>
                                         );
                                     })}
+                                    {row.units.length > 0 && (() => {
+                                        const totalGross = row.units.reduce((s, u) => s + (parseFloat(u.gross_qty) || 0), 0);
+                                        const totalTare  = row.units.reduce((s, u) => s + (parseFloat(u.tare_qty)  || 0), 0);
+                                        const totalNett  = row.units.reduce((s, u) => s + (parseFloat(u.nett_qty)  || 0), 0);
+                                        const fmt = (n: number) => n.toFixed(3);
+                                        return (
+                                            <div className="grid items-center px-4 py-1.5 gap-x-2 bg-slate-100 border-t border-slate-200"
+                                                style={{ gridTemplateColumns: "28px 1.2fr 1.2fr 0.9fr 0.9fr 0.9fr 0.7fr 24px" }}>
+                                                <span />
+                                                <span className="text-[10px] font-bold text-slate-600 uppercase col-span-2">Total</span>
+                                                <div className="h-8 flex items-center justify-end pr-2 text-xs font-bold text-slate-800">{fmt(totalGross)}</div>
+                                                <div className="h-8 flex items-center justify-end pr-2 text-xs font-bold text-slate-800">{fmt(totalTare)}</div>
+                                                <div className="h-8 flex items-center justify-end pr-2 text-xs font-bold text-slate-800">{fmt(totalNett)}</div>
+                                                <span />
+                                                <span />
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             )}
                         </div>
@@ -1414,38 +1500,59 @@ export default function GoodsReceiptHeaderPage() {
                         <div className="flex-1 overflow-y-auto px-6 py-5">
                             {renderFormFields(isEdit)}
                         </div>
-                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/80 shrink-0">
-                            <Button type="button" variant="outline" onClick={closeModal}
-                                className="border-slate-300 text-slate-600 hover:bg-slate-100">Discard</Button>
-                            {!isEdit && (
-                                <Button type="button" variant="outline"
-                                    className="border-slate-300 text-slate-700 hover:bg-slate-100"
+                        <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/80 shrink-0">
+                            {/* Status toggle buttons */}
+                            <div className="flex gap-1">
+                                {(["D", "A"] as const).map(s => (
+                                    <button key={s} type="button"
+                                        onClick={() => setSelectedSaveStatus(s)}
+                                        className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
+                                            selectedSaveStatus === s
+                                                ? s === "D"
+                                                    ? "bg-yellow-100 border-yellow-400 text-yellow-800"
+                                                    : "bg-green-100 border-green-400 text-green-800"
+                                                : "bg-white border-slate-300 text-slate-500 hover:bg-slate-50"
+                                        }`}>
+                                        {s === "D" ? "D - Draft" : "A - Active"}
+                                    </button>
+                                ))}
+                                {isEdit && (
+                                    <button type="button"
+                                        onClick={() => setSelectedSaveStatus("X")}
+                                        className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
+                                            selectedSaveStatus === "X"
+                                                ? "bg-red-100 border-red-400 text-red-800"
+                                                : "bg-white border-slate-300 text-slate-500 hover:bg-slate-50"
+                                        }`}>
+                                        X - Cancel
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex gap-3">
+                                <Button type="button" variant="outline" onClick={closeModal}
+                                    className="border-slate-300 text-slate-600 hover:bg-slate-100">Discard</Button>
+                                <Button type="button"
+                                    className={`px-5 text-white flex items-center gap-2 ${
+                                        selectedSaveStatus === "X"
+                                            ? "bg-red-600 hover:bg-red-700"
+                                            : selectedSaveStatus === "A"
+                                                ? "bg-green-600 hover:bg-green-700"
+                                                : "bg-blue-600 hover:bg-blue-700"
+                                    }`}
                                     disabled={isSubmittingRef.current}
-                                    onClick={(e) => submitWithStatus("D", e)}>
-                                    Save Draft
+                                    onClick={(e) => {
+                                        if (selectedSaveStatus === "X" && isEdit && selectedItem) {
+                                            closeModal();
+                                            handleCancelItem(selectedItem);
+                                        } else if (isEdit) {
+                                            handleEditSubmit(e as any, selectedSaveStatus as "D" | "A");
+                                        } else {
+                                            submitWithStatus(selectedSaveStatus as "D" | "A", e as any);
+                                        }
+                                    }}>
+                                    Save
                                 </Button>
-                            )}
-                            {isEdit && formData.status === "D" && (
-                                <Button type="button" variant="outline"
-                                    className="border-slate-300 text-slate-700 hover:bg-slate-100"
-                                    disabled={isSubmittingRef.current}
-                                    onClick={(e) => handleEditSubmit(e as any, "D")}>
-                                    Save as Draft
-                                </Button>
-                            )}
-                            <Button type="button"
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-5 flex items-center gap-2"
-                                disabled={isSubmittingRef.current}
-                                onClick={(e) => isEdit
-                                    ? handleEditSubmit(e as any, formData.status === "D" ? "A" : undefined)
-                                    : submitWithStatus("A", e)}>
-                                {isEdit
-                                    ? formData.status === "D"
-                                        ? <><span className="w-4 h-4 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold">✓</span> Save as Active</>
-                                        : "Update GR Header"
-                                    : <><span className="w-4 h-4 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold">✓</span> Submit for Review</>
-                                }
-                            </Button>
+                            </div>
                         </div>
                     </div>
                 </motion.div>
@@ -1465,7 +1572,7 @@ export default function GoodsReceiptHeaderPage() {
                                 <h1 className="text-3xl font-bold text-foreground mb-2">Goods Receipt</h1>
                                 <p className="text-muted-foreground">Manage Goods Receipt records</p>
                             </div>
-                            <Button onClick={() => setIsAddModalOpen(true)}
+                            <Button onClick={() => { setSelectedSaveStatus("D"); setIsAddModalOpen(true); }}
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all">
                                 <Plus className="w-5 h-5" /> Add New GR
                             </Button>
@@ -1538,6 +1645,7 @@ export default function GoodsReceiptHeaderPage() {
                                                 { label: ["Invoice","Date"] },
                                                 { label: "PO No" },
                                                 { label: ["PO","Date"] },
+                                                { label: ["Vendor","ID"] },
                                                 { label: ["Supplier","Coa"] },
                                                 { label: ["Received By","Emp ID"] },
                                                 { label: ["Checked By","Emp ID"] },
@@ -1592,6 +1700,7 @@ export default function GoodsReceiptHeaderPage() {
                                                         <td className="px-4 py-4 text-sm align-middle">{item.invoice_date ? formatDate(item.invoice_date) : "-"}</td>
                                                         <td className="px-4 py-4 text-sm align-middle">{item.po_no || "-"}</td>
                                                         <td className="px-4 py-4 text-sm align-middle">{item.po_date ? formatDate(item.po_date) : "-"}</td>
+                                                        <td className="px-4 py-4 text-sm align-middle font-mono">{item.vendor_id || "-"}</td>
                                                         <td className="px-4 py-4 text-sm align-middle">
                                                             {item.supplier_coa ? (
                                                                 item.supplier_coa.startsWith("data:image") ? (
@@ -1631,13 +1740,14 @@ export default function GoodsReceiptHeaderPage() {
                                                                     title={item.status !== "D" ? "Only Draft records can be edited" : "Edit"}>
                                                                     <Pencil className="w-4 h-4" />
                                                                 </Button>
-                                                                <Button variant="ghost" size="sm"
-                                                                    onClick={e => { e.stopPropagation(); handleCancelItem(item); }}
-                                                                    disabled={item.active === false}
-                                                                    className={item.active !== false ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "text-gray-400 cursor-not-allowed"}
-                                                                    title={item.active !== false ? "Cancel GR" : "Already cancelled"}>
-                                                                    <X className="w-4 h-4" />
-                                                                </Button>
+                                                                {item.status === "D" && item.active !== false && (
+                                                                    <Button variant="ghost" size="sm"
+                                                                        onClick={e => { e.stopPropagation(); handleCancelItem(item); }}
+                                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                        title="Cancel GR">
+                                                                        <X className="w-4 h-4" />
+                                                                    </Button>
+                                                                )}
                                                                 {isSuperAdmin && (
                                                                     <Button variant="ghost" size="sm"
                                                                         onClick={e => { e.stopPropagation(); handleDelete(item); }}
@@ -1837,8 +1947,19 @@ export default function GoodsReceiptHeaderPage() {
                             Are you sure you want to cancel GR &quot;{itemToCancel?.material_doc_no}&quot;? It will be set to inactive.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+                    <div className="px-1 py-2">
+                        <label className="text-xs font-semibold text-slate-600 block mb-1">Remarks <span className="text-red-500">*</span></label>
+                        <textarea
+                            value={cancelRemarks}
+                            onChange={e => setCancelRemarks(e.target.value)}
+                            placeholder="Enter reason for cancellation..."
+                            maxLength={100}
+                            rows={3}
+                            className="w-full text-sm border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+                        />
+                    </div>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => { setIsCancelItemDialogOpen(false); setItemToCancel(null); }}>
+                        <AlertDialogCancel onClick={() => { setIsCancelItemDialogOpen(false); setItemToCancel(null); setCancelRemarks(""); }}>
                             No, Keep Active
                         </AlertDialogCancel>
                         <AlertDialogAction onClick={confirmCancelItem} className="bg-red-600 hover:bg-red-700 text-white">
