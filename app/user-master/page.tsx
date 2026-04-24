@@ -34,6 +34,7 @@ interface User {
     last_login_date?: Date | string; // Date
     last_login_time?: string; // Time
     active: boolean; // Boolean
+    super_admin?: boolean;
 }
 
 // Helper function to format dates consistently (prevents hydration errors)
@@ -118,6 +119,7 @@ export default function UserMasterPage() {
                 last_login_date: u.last_login_date || u.Date_last_login_date,
                 last_login_time: u.last_login_time || u.Time_last_login_time,
                 active: u.active !== false,
+                super_admin: u.super_admin || false,
             })));
             setRoles(rolesData);
             setEmployees(employeesData || []);
@@ -144,16 +146,18 @@ export default function UserMasterPage() {
     const roleMap = new Map(roles.map(r => [r.roll_id, r.roll_description]));
 
     const filteredUsers = users.filter((user) => {
+        if (user.super_admin) return false;
+
         const matchesSearch = user.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             user.employee_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (user.role_id && user.role_id.toLowerCase().includes(searchQuery.toLowerCase()));
-        
-        const matchesActive = filterActive === "all" || 
+
+        const matchesActive = filterActive === "all" ||
             (filterActive === "active" && user.active === true) ||
             (filterActive === "inactive" && user.active === false);
-        
+
         const matchesRole = filterRole === "all" || user.role_id === filterRole;
-        
+
         return matchesSearch && matchesActive && matchesRole;
     });
 
@@ -788,13 +792,12 @@ const getEmployeeDisplay = (employeeId: string) => {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Employee ID <span className="text-red-500">*</span>
+                                                Employee ID
                                             </label>
                                             <select
                                                 name="employee_id"
                                                 value={formData.employee_id}
                                                 onChange={handleInputChange}
-                                                required
                                                 className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                             >
                                                 <option value="">Select Employee ID</option>
@@ -905,13 +908,12 @@ const getEmployeeDisplay = (employeeId: string) => {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
-                                                Employee ID <span className="text-red-500">*</span>
+                                                Employee ID
                                             </label>
                                             <select
                                                 name="employee_id"
                                                 value={formData.employee_id}
                                                 onChange={handleInputChange}
-                                                required
                                                 className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                             >
                                                 <option value="">Select Employee ID</option>

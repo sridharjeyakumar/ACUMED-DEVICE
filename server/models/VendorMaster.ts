@@ -24,6 +24,7 @@ export interface IVendorMaster extends Document {
   active: boolean; // Boolean
   default_shipping_instruction?: string; // Char(500)
   default_terms_of_payment?: string; // Char(500)
+  default_material_type?:string; //Chart(2)
 }
 
 const VendorMasterSchema: Schema = new Schema({
@@ -165,6 +166,12 @@ const VendorMasterSchema: Schema = new Schema({
     type: String,
     required: false,
     maxlength: 500,
+    trim: true,
+  },
+  default_material_type: {
+    type: String,
+    required: false,
+    maxlength: 2,
     trim: true,
   },
 }, {

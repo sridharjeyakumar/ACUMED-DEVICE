@@ -85,6 +85,7 @@ export async function PUT(
     if (body.active !== undefined) updateData.active = body.active !== false;
     if (body.default_shipping_instruction !== undefined) updateData.default_shipping_instruction = cleanValue(body.default_shipping_instruction);
     if (body.default_terms_of_payment !== undefined) updateData.default_terms_of_payment = cleanValue(body.default_terms_of_payment);
+    if (body.default_material_type !== undefined) updateData.default_material_type = cleanValue(body.default_material_type);
 
     updateData.last_modified_user_id = body.last_modified_user_id || 'ADMIN';
     updateData.last_modified_date_time = new Date();
