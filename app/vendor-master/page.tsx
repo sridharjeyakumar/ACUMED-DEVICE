@@ -37,6 +37,7 @@ interface Vendor {
     active?: boolean;
     default_shipping_instruction?: string;
     default_terms_of_payment?: string;
+    default_material_type?: string;
 }
 
 function formatDateTime(date: Date | string | undefined): string {
@@ -74,6 +75,7 @@ const emptyForm = {
     active: true,
     default_shipping_instruction: "",
     default_terms_of_payment: "",
+    default_material_type: "",
 };
 
 export default function VendorMasterPage() {
@@ -209,6 +211,7 @@ export default function VendorMasterPage() {
                 last_modified_user_id: "ADMIN",
                 default_shipping_instruction: formData.default_shipping_instruction || undefined,
                 default_terms_of_payment: formData.default_terms_of_payment || undefined,
+                default_material_type: formData.default_material_type || undefined,
             };
 
             await vendorAPI.create(formattedData);
@@ -251,6 +254,7 @@ export default function VendorMasterPage() {
             active: vendor.active !== undefined ? vendor.active : true,
             default_shipping_instruction: vendor.default_shipping_instruction || "",
             default_terms_of_payment: vendor.default_terms_of_payment || "",
+            default_material_type: vendor.default_material_type || "",
         });
         setIsEditModalOpen(true);
     };
@@ -283,6 +287,7 @@ export default function VendorMasterPage() {
                 last_modified_user_id: "ADMIN",
                 default_shipping_instruction: formData.default_shipping_instruction || undefined,
                 default_terms_of_payment: formData.default_terms_of_payment || undefined,
+                default_material_type: formData.default_material_type || undefined,
             };
 
             await vendorAPI.update(selectedVendor!.vendor_id, formattedData);
@@ -648,6 +653,20 @@ export default function VendorMasterPage() {
                 </h3>
             </div>
 
+            <div>
+                <label className="block text-sm font-semibold text-foreground mb-2">Default Material Type</label>
+                <select
+                    name="default_material_type"
+                    value={formData.default_material_type}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                    <option value="">-- Select --</option>
+                    <option value="RM">RM - Raw Material</option>
+                    <option value="PM">PM - Packing Material</option>
+                </select>
+            </div>
+
             <div className="col-span-2">
                 <label className="block text-sm font-semibold text-foreground mb-2">Default Shipping Instruction</label>
                 <textarea
@@ -847,6 +866,7 @@ export default function VendorMasterPage() {
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Contact No.</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Email</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Website</th>
+                                            <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Default Material Type</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Default Shipping Instruction</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Default Terms of Payment</th>
                                             <th className="px-4 py-3 text-sm font-semibold text-left whitespace-nowrap">Last Modified User</th>
@@ -891,6 +911,13 @@ export default function VendorMasterPage() {
                                                     <td className="px-4 py-3 text-sm">{vendor.contact_no ?? "-"}</td>
                                                     <td className="px-4 py-3 text-sm">{vendor.contact_email_id || "-"}</td>
                                                     <td className="px-4 py-3 text-sm">{vendor.website || "-"}</td>
+                                                    <td className="px-4 py-3 text-sm">
+                                                        {vendor.default_material_type ? (
+                                                            <span className={`inline-flex px-2 py-1 rounded-md font-mono text-xs ${vendor.default_material_type === 'RM' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}>
+                                                                {vendor.default_material_type === 'RM' ? 'RM - Raw Material' : 'PM - Packing Material'}
+                                                            </span>
+                                                        ) : "-"}
+                                                    </td>
                                                     <td className="px-4 py-3 text-sm">{vendor.default_shipping_instruction || "-"}</td>
                                                     <td className="px-4 py-3 text-sm">{vendor.default_terms_of_payment || "-"}</td>
 

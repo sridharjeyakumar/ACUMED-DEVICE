@@ -26,7 +26,7 @@ const UserMasterSchema: Schema = new Schema({
   },
   employee_id: {
     type: String,
-    required: true,
+    required: false,
     maxlength: 5,
     trim: true,
   },

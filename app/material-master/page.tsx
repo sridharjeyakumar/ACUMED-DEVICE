@@ -1741,7 +1741,7 @@ const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         <option value="">Select a category</option>
         {categories.filter((category) => category.active !== false).map(category => (
             <option key={category.material_category_id} value={category.material_category_id}>
-            {category.material_category_id}
+            {category.material_category_id} - {category.material_category_name}
             </option>
         ))}
     </select>
