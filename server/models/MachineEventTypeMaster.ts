@@ -21,7 +21,7 @@ const MachineEventTypeMasterSchema: Schema = new Schema({
   machine_event_type_id: {
     type: String,
     required: true,
-    // unique: true,        // PK
+    unique: true,        // PK
     maxlength: 2,
     trim: true,
     uppercase: true

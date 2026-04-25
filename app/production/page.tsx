@@ -284,6 +284,8 @@ export default function ProductionPage() {
                 remarks: addRemarks || '',
                 status: addStatus,
                 last_modified_user_id: "ADMIN",
+                _old_net_weight_kgs: productions.find(p => p._id === lastAction.data._id)?.net_weight_kgs ?? 0,
+                _old_calculated_total_qty: productions.find(p => p._id === lastAction.data._id)?.calculated_total_qty ?? 0,
             });
             toast({ title: "Success", description: "Production record created successfully" });
             setIsAddModalOpen(false);
@@ -917,38 +919,66 @@ export default function ProductionPage() {
                                             </div>
                                         </div>
 
-                                        {/* Collection Bin + Tare Weight */}
+                                        {/* Collection Bin No. (full width) */}
+                                        <div>
+                                            <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Collection Bin No.</p>
+                                            <input
+                                                value={editFormData.collection_bin_no}
+                                                disabled
+                                                className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
+                                            />
+                                        </div>
+
+                                        {/* Tare Weight + Gross Weight */}
                                         <div className="grid grid-cols-2 gap-6">
-                                            <div>
-                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Collection Bin No.</p>
-                                                <input
-                                                    value={editFormData.collection_bin_no}
-                                                    disabled
-                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
-                                                />
-                                            </div>
                                             <div>
                                                 <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Tare Weight (KG)</p>
                                                 <input
-                                                    value={editFormData.tare_weight_kgs}
+                                                    value={editFormData.tare_weight_kgs !== "" ? parseFloat(editFormData.tare_weight_kgs).toFixed(3) : "—"}
                                                     disabled
                                                     className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
                                                 />
                                             </div>
-                                        </div>
-
-                                        {/* Gross Weight + Weight Per Piece */}
-                                        <div className="grid grid-cols-2 gap-6">
                                             <div>
                                                 <p className="text-[10px] font-bold text-orange-500 tracking-widest uppercase mb-1.5">Gross Weight (KG) *</p>
                                                 <input
                                                     type="number"
                                                     step="0.001"
                                                     value={editFormData.gross_weight_kgs}
-                                                    onChange={(e) => setEditFormData(f => ({ ...f, gross_weight_kgs: e.target.value }))}
+                                                    onChange={(e) => {
+                                                        const gross = e.target.value;
+                                                        const tare = parseFloat(editFormData.tare_weight_kgs) || 0;
+                                                        const grossNum = parseFloat(gross);
+                                                        const netWeight = !isNaN(grossNum) ? grossNum - tare : null;
+                                                        const wpp = parseFloat(editFormData.weight_per_piece) || 0;
+                                                        const calcQty = netWeight !== null && netWeight > 0 && wpp > 0
+                                                            ? Math.round((netWeight * 1000) / wpp)
+                                                            : null;
+                                                        setEditFormData(f => ({
+                                                            ...f,
+                                                            gross_weight_kgs: gross,
+                                                            net_weight_kgs: netWeight !== null ? netWeight.toFixed(2) : "",
+                                                            calculated_total_qty: calcQty !== null ? String(calcQty) : "",
+                                                        }));
+                                                    }}
                                                     placeholder="0.00"
                                                     className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
                                                 />
+                                            </div>
+                                        </div>
+
+                                        {/* Net Weight + Weight Per Piece */}
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Net Weight (KG)</p>
+                                                <input
+                                                    value={editFormData.net_weight_kgs || "0.00"}
+                                                    disabled
+                                                    className={`w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium outline-none ${editFormData.net_weight_kgs && parseFloat(editFormData.net_weight_kgs) <= 0 ? 'text-red-500' : 'text-gray-700'}`}
+                                                />
+                                                {editFormData.net_weight_kgs && parseFloat(editFormData.net_weight_kgs) <= 0 && (
+                                                    <p className="text-[10px] text-red-500 mt-1">Must be &gt; 0</p>
+                                                )}
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Weight Per Piece</p>
@@ -960,25 +990,13 @@ export default function ProductionPage() {
                                             </div>
                                         </div>
 
-                                        {/* Net Weight + Calc Qty */}
-                                        <div className="grid grid-cols-2 gap-6">
-                                            <div>
-                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Net Weight (KG)</p>
-                                                <input
-                                                    value={editFormData.net_weight_kgs}
-                                                    disabled
-                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
-                                                />
+                                        {/* Calc Qty banner */}
+                                        {editFormData.calculated_total_qty && (
+                                            <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 rounded-lg border border-orange-100">
+                                                <span className="text-[10px] font-bold text-orange-400 tracking-widest uppercase">Calculated Total Qty:</span>
+                                                <span className="text-sm font-bold text-orange-600">{editFormData.calculated_total_qty}</span>
                                             </div>
-                                            <div>
-                                                <p className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1.5">Calculated Total Qty</p>
-                                                <input
-                                                    value={editFormData.calculated_total_qty}
-                                                    disabled
-                                                    className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-700 outline-none"
-                                                />
-                                            </div>
-                                        </div>
+                                        )}
 
                                         {/* Remarks */}
                                         <div>

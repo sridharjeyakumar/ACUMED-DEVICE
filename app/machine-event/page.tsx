@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { machineEventAPI, machineEventTypeAPI, machineStopReasonAPI, employeeAPI, materialStockAPI, productBomAPI, availableRollsAPI, machineEventMaterialAPI, batchMaterialSummaryAPI, materialAPI, transactionAPI } from "@/services/api";
+import { machineEventAPI, machineEventTypeAPI, machineStopReasonAPI, employeeAPI, materialStockAPI, productBomAPI, availableRollsAPI, machineEventMaterialAPI, batchMaterialSummaryAPI, materialAPI, transactionAPI, productAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
@@ -43,6 +43,7 @@ interface MachineEvent {
 }
 
 interface MachineEventType {
+    allow_event_time_edited: string;
     machine_event_type_id: string;
     machine_event_type_name: string;
     seq_no: number;
@@ -124,11 +125,13 @@ export default function MachineEventPage() {
     const [stopReasons, setStopReasons] = useState<StopReason[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [machines, setMachines] = useState<Machine[]>([]);
+    const [products, setProducts] = useState<{ product_id: string; product_name: string }[]>([]);
 
     // Add form state
     const [addForm, setAddForm] = useState({ ...emptyAddForm, event_time: getCurrentTime() });
     const [prevEventTypeId, setPrevEventTypeId] = useState("");
     const [prevEventInfo, setPrevEventInfo] = useState<{ type_id: string; date: string; time: string } | null>(null);
+    const [batchOptions, setBatchOptions] = useState<{ batch_no: string; product_id: string }[]>([]);
     const [stockData, setStockData] = useState<MaterialStock | null>(null);
     const [bomMaterials, setBomMaterials] = useState<{ material_id: string; input_uom: string }[]>([]);
     const [availableRolls, setAvailableRolls] = useState<{ roll_no: string; balance_qty: number; uom: string; status: string }[]>([]);
@@ -196,14 +199,16 @@ export default function MachineEventPage() {
 
     const loadReferenceData = useCallback(async () => {
         try {
-            const [typesRes, reasonsRes, empsRes] = await Promise.all([
+            const [typesRes, reasonsRes, empsRes, prodsRes] = await Promise.all([
                 machineEventTypeAPI.getAll(),
                 machineStopReasonAPI.getAll(),
                 employeeAPI.getAll(),
+                productAPI.getAll(),
             ]);
             setEventTypes((typesRes || []).filter((t: MachineEventType) => t.active));
             setStopReasons((reasonsRes || []).filter((r: StopReason) => r.active));
             setEmployees((empsRes || []).filter((e: Employee) => e.active));
+            setProducts(prodsRes || []);
         } catch { /* non-blocking */ }
     }, []);
 
@@ -247,7 +252,7 @@ export default function MachineEventPage() {
 
     const handleMachineChange = useCallback(async (machineId: string) => {
         setAddForm(prev => ({ ...prev, machine_id: machineId, machine_event_type_id: "", batch_no: "", product_id: "", batch_status_id: "", stop_reason_id: "" }));
-        setPrevEventTypeId(""); setPrevEventInfo(null);
+        setPrevEventTypeId(""); setPrevEventInfo(null); setBatchOptions([]);
         if (!machineId) return;
         try {
             const data = await machineEventAPI.getAll({ machine_id: machineId });
@@ -280,22 +285,36 @@ export default function MachineEventPage() {
                 }
             }
         }
-        // NB → look for batch with status 'R' (Released)
-        // all other event types → look for batch with status 'W' (Work-In-Progress)
-        const lookupStatus = typeId === "NB" ? "R" : "W";
+        // NB → try 'R' first, fall back to 'W' if none found; others → 'W' only
+        setBatchOptions([]);
         try {
-            const res = await fetch(`/api/transactions?current_batch_status_id=${lookupStatus}`);
-            if (res.ok) {
-                const txns = await res.json();
-                if (txns && txns.length > 0) {
-                    setAddForm(prev => ({ ...prev, batch_no: txns[0].batch_no, product_id: txns[0].product_id }));
-                } else {
-                    const msg = lookupStatus === "R"
-                        ? "No batch found with status 'Ready for Production'. {T301}"
-                        : "No batch found with status 'Work in Progress'. {T302}";
-                    toast({ title: "Warning", description: msg, variant: "destructive" });
+            const fetchByStatus = async (status: string) => {
+                const res = await fetch(`/api/transactions?current_batch_status_id=${status}`);
+                if (!res.ok) return [];
+                const data = await res.json();
+                return Array.isArray(data) ? data : [];
+            };
+
+            let txns: any[] = [];
+            if (typeId === "NB") {
+                txns = await fetchByStatus("R");
+                if (txns.length === 0) txns = await fetchByStatus("W");
+                if (txns.length === 0) {
+                    toast({ title: "Warning", description: "No batch found with status 'Released' or 'Work in Progress'. {T301}", variant: "destructive" });
                     setAddForm(prev => ({ ...prev, batch_no: "", product_id: "" }));
                 }
+            } else {
+                txns = await fetchByStatus("W");
+                if (txns.length === 0) {
+                    toast({ title: "Warning", description: "No batch found with status 'Work in Progress'. {T302}", variant: "destructive" });
+                    setAddForm(prev => ({ ...prev, batch_no: "", product_id: "" }));
+                }
+            }
+
+            if (txns.length > 0) {
+                const options = txns.map((t: any) => ({ batch_no: t.batch_no, product_id: t.product_id }));
+                setBatchOptions(options);
+                setAddForm(prev => ({ ...prev, batch_no: options[0].batch_no, product_id: options[0].product_id }));
             }
         } catch { /* ignore */ }
     }, [eventTypes, toast]);
@@ -756,7 +775,12 @@ export default function MachineEventPage() {
                                                 <td className="px-4 py-4"><span className="text-sm font-mono text-muted-foreground">{ev.machine_event_id}</span></td>
                                                 <td className="px-4 py-4"><span className="text-sm font-semibold">{ev.machine_id}</span></td>
                                                 <td className="px-4 py-4"><span className="text-sm">{ev.batch_no}</span></td>
-                                                <td className="px-4 py-4"><span className="text-sm">{ev.product_id}</span></td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm font-medium">{ev.product_id}</span>
+                                                    {products.find(p => p.product_id === ev.product_id)?.product_name && (
+                                                        <span className="block text-xs text-muted-foreground">{products.find(p => p.product_id === ev.product_id)?.product_name}</span>
+                                                    )}
+                                                </td>
                                                 <td className="px-4 py-4">
                                                     <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">{ev.machine_event_type_id}</span>
                                                 </td>
@@ -764,7 +788,12 @@ export default function MachineEventPage() {
                                                 <td className="px-4 py-4"><span className="text-sm font-mono">{ev.event_time}</span></td>
                                                 <td className="px-4 py-4"><span className="text-sm font-mono">{ev.batch_status_id || "-"}</span></td>
                                                 <td className="px-4 py-4"><span className="text-sm">{ev.machine_stop_reason_id || "-"}</span></td>
-                                                <td className="px-4 py-4"><span className="text-sm">{ev.done_by_emp_id || "-"}</span></td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm font-medium">{ev.done_by_emp_id || "-"}</span>
+                                                    {ev.done_by_emp_id && employees.find(e => e.emp_id === ev.done_by_emp_id)?.emp_name && (
+                                                        <span className="block text-xs text-muted-foreground">{employees.find(e => e.emp_id === ev.done_by_emp_id)?.emp_name}</span>
+                                                    )}
+                                                </td>
                                                 <td className="px-4 py-4"><span className="text-sm font-mono">{ev.last_modified_user_id || "-"}</span></td>
                                                 <td className="px-4 py-4"><span className="text-sm">{formatDateTime(ev.last_modified_date_time)}</span></td>
                                                 <td className="px-4 py-4">
@@ -954,9 +983,9 @@ export default function MachineEventPage() {
                                                         <label className="block text-sm font-medium text-muted-foreground mb-1.5">Latest Event Date &amp; Time</label>
                                                         <Input
                                                             value={prevEventInfo ? (() => {
-                                                                const d = new Date(prevEventInfo.date);
-                                                                const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-                                                                return dateStr === getCurrentDate() ? prevEventInfo.time : `${d.toLocaleDateString()} ${prevEventInfo.time}`;
+                                                                const datePart = prevEventInfo.date.substring(0, 10);
+                                                                const combined = new Date(`${datePart}T${prevEventInfo.time}`);
+                                                                return formatDateTime(combined);
                                                             })() : "—"}
                                                             disabled className="bg-muted/40 text-muted-foreground text-sm font-mono" />
                                                     </div>
@@ -990,7 +1019,22 @@ export default function MachineEventPage() {
                                                     {/* Batch Number */}
                                                     <div>
                                                         <label className="block text-sm font-medium text-muted-foreground mb-1.5">Batch Number</label>
-                                                        <Input value={addForm.batch_no} disabled className="bg-muted/40 text-muted-foreground text-sm" placeholder="Auto filled" />
+                                                        {batchOptions.length > 1 ? (
+                                                            <select
+                                                                value={addForm.batch_no}
+                                                                onChange={e => {
+                                                                    const selected = batchOptions.find(b => b.batch_no === e.target.value);
+                                                                    setAddForm(prev => ({ ...prev, batch_no: e.target.value, product_id: selected?.product_id || "" }));
+                                                                }}
+                                                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
+                                                            >
+                                                                {batchOptions.map(b => (
+                                                                    <option key={b.batch_no} value={b.batch_no}>{b.batch_no}</option>
+                                                                ))}
+                                                            </select>
+                                                        ) : (
+                                                            <Input value={addForm.batch_no} disabled className="bg-muted/40 text-muted-foreground text-sm" placeholder="Auto filled" />
+                                                        )}
                                                     </div>
 
                                                     {/* Product ID */}
@@ -1012,20 +1056,30 @@ export default function MachineEventPage() {
                                                     </div>
 
                                                     {/* Event Time */}
-                                                {/* Event Time */}
-<div>
-    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
-        <Clock className="w-3.5 h-3.5 inline mr-1 text-muted-foreground" />
-        Event Time
-    </label>
-    <Input 
-        type="text" 
-        value={addForm.event_time} 
-        readOnly 
-        className="bg-muted/40 text-muted-foreground text-sm cursor-not-allowed" 
-    />
-    <p className="text-xs text-muted-foreground mt-1">Auto-set to current time</p>
-</div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
+                                                        <Clock className="w-3.5 h-3.5 inline mr-1 text-muted-foreground" />
+                                                        Event Time
+                                                    </label>
+                                                    {selectedMetm?.allow_event_time_edited === 'Y' ? (
+                                                        <Input
+                                                            type="time"
+                                                            value={addForm.event_time}
+                                                            onChange={e => setAddForm(prev => ({ ...prev, event_time: e.target.value }))}
+                                                            className="text-sm"
+                                                        />
+                                                    ) : (
+                                                        <Input
+                                                            type="text"
+                                                            value={addForm.event_time}
+                                                            readOnly
+                                                            className="bg-muted/40 text-muted-foreground text-sm cursor-not-allowed"
+                                                        />
+                                                    )}
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        {selectedMetm?.allow_event_time_edited === 'Y' ? 'Enter event time' : 'Auto-set to current time'}
+                                                    </p>
+                                                </div>
 
                                                     {/* Done By */}
                                                     <div>

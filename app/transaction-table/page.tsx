@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { cartonCapacityAPI, packSizeAPI, productAPI, transactionAPI, productionPlanDetailAPI, productionRejectedAPI, holidaysAPI, weeklyOffAPI, productBomAPI } from "@/services/api";
+import { cartonCapacityAPI, packSizeAPI, productAPI, transactionAPI, productionPlanDetailAPI, productionRejectedAPI, holidaysAPI, weeklyOffAPI, productBomAPI, productionPlanStatusHistoryAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 interface Transaction {
@@ -616,8 +616,9 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
             const psId = field === 'packsize_id' ? value : next[index].packsize_id;
             const packs = field === 'no_of_packs' ? parseInt(value) || 0 : next[index].no_of_packs;
             const ps = packSizes.find(p => p.pack_size_id === psId);
-            const steriPer = getPacksPerCartonForProduct(selectedTransaction.product_id, psId, 'ST');
-            const shipPer = getPacksPerCartonForProduct(selectedTransaction.product_id, psId, 'SH');
+            const rowProductId = next[index].product_id || selectedTransaction.product_id;
+            const steriPer = getPacksPerCartonForProduct(rowProductId, psId, 'ST');
+            const shipPer = getPacksPerCartonForProduct(rowProductId, psId, 'SH');
             d.no_of_sachets = ps ? packs * ps.qty_per_carton : 0;
             d.packs_per_steri_carton = steriPer;
             d.no_of_sterilization_cartons = steriPer > 0 ? Math.ceil(packs / steriPer) : 0;
@@ -683,7 +684,13 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
             });
             
             console.log('Batch created successfully:', newBatch);
-            
+
+            productionPlanStatusHistoryAPI.create({
+                batch_no: formData.batch_no.toUpperCase(),
+                batch_status_id: formData.current_batch_status_id || 'P',
+                last_modified_user_id: getSessionUser()?.user_id || 'ADMIN',
+            }).catch(e => console.error('[StatusHistory] create failed:', e));
+
             // After successful batch creation, create all production plan details
             if (productDetails.length > 0) {
                 const productionPlanDetails = productDetails.map((detail, index) => ({
@@ -857,6 +864,11 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                         last_modified_user_id: "ADMIN",
                         last_modified_date_time: new Date(),
                     });
+                    productionPlanStatusHistoryAPI.create({
+                        batch_no: selectedTransaction.batch_no,
+                        batch_status_id: 'S',
+                        last_modified_user_id: getSessionUser()?.user_id || 'ADMIN',
+                    }).catch(e => console.error('[StatusHistory] create failed:', e));
                     toast({ title: "Success", description: "Status updated to Stop." });
                 } else {
                     toast({ title: "Success", description: "New pack size rows saved." });
@@ -954,6 +966,14 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                 last_modified_date_time: new Date(),
             });
 
+            if (formData.current_batch_status_id !== selectedTransaction.current_batch_status_id) {
+                productionPlanStatusHistoryAPI.create({
+                    batch_no: selectedTransaction.batch_no,
+                    batch_status_id: formData.current_batch_status_id,
+                    last_modified_user_id: getSessionUser()?.user_id || 'ADMIN',
+                }).catch(e => console.error('[StatusHistory] create failed:', e));
+            }
+
             // Save updated existing rows and create new rows
             const existingDetailRows = editPacksizeDetails.filter(d => d.sno);
             const newDetailRows = editPacksizeDetails.filter(d => !d.sno);
@@ -1050,6 +1070,11 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                 last_modified_user_id: "ADMIN",
                 last_modified_date_time: new Date(),
             });
+            productionPlanStatusHistoryAPI.create({
+                batch_no: selectedTransaction.batch_no,
+                batch_status_id: 'C',
+                last_modified_user_id: getSessionUser()?.user_id || 'ADMIN',
+            }).catch(e => console.error('[StatusHistory] create failed:', e));
             await productionRejectedAPI.closeBatch(selectedTransaction.batch_no);
             toast({ title: "Batch Closed", description: `Batch ${selectedTransaction.batch_no} marked as Completed.` });
             setShowCloseConfirmDialog(false);
