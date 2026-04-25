@@ -278,7 +278,7 @@ export default function GoodsReceiptHeaderPage() {
         window.open(url, "_blank");
     };
     const todayStr   = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-    const nowTimeStr = () => new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' });
+    const nowTimeStr = () => { const ist = new Date(Date.now() + 5.5 * 3600000); return `${String(ist.getUTCHours()).padStart(2,'0')}:${String(ist.getUTCMinutes()).padStart(2,'0')}`; };
 
     const emptyForm = {
         material_doc_no:    "",
@@ -567,13 +567,17 @@ export default function GoodsReceiptHeaderPage() {
                 if (row.unit_split) {
                     const validUnits = row.units.filter(u => u.packet_no && u.roll_no && parseFloat(u.gross_qty) > 0);
                     for (const unit of validUnits) {
+                        const uGross = Number(unit.gross_qty);
+                        const uTare  = Number(unit.tare_qty) || 0;
                         await goodsReceiptUnitsAPI.create({
                             material_doc_no: docNo,
                             material_id:     row.material_id.trim().toUpperCase(),
                             packet_no:       unit.packet_no,
                             roll_no:         unit.roll_no,
-                            gross_qty:       Number(unit.gross_qty),
-                            balance_qty:     unit.balance_qty !== "" ? Number(unit.balance_qty) : Number(unit.gross_qty),
+                            gross_qty:       uGross,
+                            tare_qty:        uTare,
+                            nett_qty:        Number(unit.nett_qty) || (uGross - uTare),
+                            balance_qty:     unit.balance_qty !== "" ? Number(unit.balance_qty) : uGross,
                             uom:             row.uom.trim().toUpperCase(),
                             status:          status,
                         });
@@ -651,12 +655,17 @@ export default function GoodsReceiptHeaderPage() {
                 if (row.unit_split) {
                     const validUnits = row.units.filter(u => u.packet_no && u.roll_no && parseFloat(u.gross_qty) > 0);
                     for (const unit of validUnits) {
+                        const uGross = Number(unit.gross_qty);
+                        const uTare  = Number(unit.tare_qty) || 0;
                         await goodsReceiptUnitsAPI.create({
                             material_doc_no: docNo,
                             material_id:     row.material_id.trim().toUpperCase(),
                             packet_no:       unit.packet_no,
                             roll_no:         unit.roll_no,
-                            gross_qty:       Number(unit.gross_qty),
+                            gross_qty:       uGross,
+                            tare_qty:        uTare,
+                            nett_qty:        Number(unit.nett_qty) || (uGross - uTare),
+                            balance_qty:     unit.balance_qty !== "" ? Number(unit.balance_qty) : uGross,
                             uom:             row.uom.trim().toUpperCase(),
                             status:          formData.status || "D",
                         });
@@ -856,12 +865,17 @@ export default function GoodsReceiptHeaderPage() {
                 if (row.unit_split) {
                     const validUnits = row.units.filter(u => u.packet_no && u.roll_no && parseFloat(u.gross_qty) > 0);
                     for (const unit of validUnits) {
+                        const uGross = Number(unit.gross_qty);
+                        const uTare  = Number(unit.tare_qty) || 0;
                         await goodsReceiptUnitsAPI.create({
                             material_doc_no: docNo,
                             material_id:     row.material_id.trim().toUpperCase(),
                             packet_no:       unit.packet_no,
                             roll_no:         unit.roll_no,
-                            gross_qty:       Number(unit.gross_qty),
+                            gross_qty:       uGross,
+                            tare_qty:        uTare,
+                            nett_qty:        Number(unit.nett_qty) || (uGross - uTare),
+                            balance_qty:     unit.balance_qty !== "" ? Number(unit.balance_qty) : uGross,
                             uom:             row.uom.trim().toUpperCase(),
                             status:          statusToSave || "D",
                         });
@@ -1849,8 +1863,8 @@ export default function GoodsReceiptHeaderPage() {
                                                                                                                     <table className="w-full text-sm">
                                                                                                                         <thead>
                                                                                                                             <tr className="border-b border-slate-100">
-                                                                                                                                <th className="px-4 py-2 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Doc No</th>
-                                                                                                                                <th className="px-4 py-2 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Material ID</th>
+                                                                                                                                {/* <th className="px-4 py-2 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Doc No</th> */}
+                                                                                                                                {/* <th className="px-4 py-2 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Material ID</th> */}
                                                                                                                                 <th className="px-4 py-2 text-center text-[10px] font-semibold text-slate-400 uppercase tracking-wider">SNO</th>
                                                                                                                                 <th className="px-4 py-2 text-center text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Packet</th>
                                                                                                                                 <th className="px-4 py-2 text-center text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Roll</th>
@@ -1868,8 +1882,8 @@ export default function GoodsReceiptHeaderPage() {
                                                                                                                         <tbody>
                                                                                                                             {units.map((u: any) => (
                                                                                                                                 <tr key={u.sno} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60 transition-colors">
-                                                                                                                                    <td className="px-4 py-2.5 text-xs font-mono text-slate-400">{docNo}</td>
-                                                                                                                                    <td className="px-4 py-2.5 text-xs font-mono text-slate-500">{d.material_id}</td>
+                                                                                                                                    {/* <td className="px-4 py-2.5 text-xs font-mono text-slate-400">{docNo}</td> */}
+                                                                                                                                    {/* <td className="px-4 py-2.5 text-xs font-mono text-slate-500">{d.material_id}</td> */}
                                                                                                                                     <td className="px-4 py-2.5 text-center text-xs text-slate-500">{u.sno}</td>
                                                                                                                                     <td className="px-4 py-2.5 text-center text-xs font-mono text-slate-600">{u.packet_no || "—"}</td>
                                                                                                                                     <td className="px-4 py-2.5 text-center text-xs font-mono text-slate-600">{u.roll_no || "—"}</td>
