@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureConnection } from '@/server/db/connection';
 import Production from '@/server/models/Production';
+import ProductionStock from '@/server/models/ProductionStock';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,6 +48,24 @@ export async function POST(request: NextRequest) {
       status: body.status || 'A',
     });
     await record.save();
+
+    // Upsert ProductionStock: add this production's weights/qty to the batch total
+    await ProductionStock.findOneAndUpdate(
+      { batch_no: record.batch_no, product_id: record.product_id },
+      {
+        $inc: {
+          net_weight_kgs: record.net_weight_kgs || 0,
+          calculated_total_qty: record.calculated_total_qty || 0,
+        },
+        $set: {
+          last_modified_user_id: body.last_modified_user_id || 'ADMIN',
+          last_modified_date_time: new Date(),
+          status: body.status || 'W',
+        },
+      },
+      { upsert: true, new: true }
+    );
+
     return NextResponse.json(record, { status: 201 });
   } catch (error: any) {
     console.error('Error creating production:', error);

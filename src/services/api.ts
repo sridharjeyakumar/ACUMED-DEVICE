@@ -1128,6 +1128,26 @@ export const productMovementAPI = {
 };
 
 // COA Generation API
+export const productionPlanStatusHistoryAPI = {
+    getByBatchNo: async (batchNo: string) => {
+        const response = await fetch(`/api/production-plan-status-history/${batchNo}`);
+        if (!response.ok) throw new Error('Failed to fetch status history');
+        return response.json();
+    },
+    create: async (data: { batch_no: string; batch_status_id: string; last_modified_user_id?: string }) => {
+        const response = await fetch('/api/production-plan-status-history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create status history');
+        }
+        return response.json();
+    },
+};
+
 export const coaGenerationAPI = {
   getAll: () => fetchAPI('/coa-generation'),
   getById: (coaNo: string) => fetchAPI(`/coa-generation/${encodeURIComponent(coaNo)}`),
