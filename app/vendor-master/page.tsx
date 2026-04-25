@@ -211,7 +211,7 @@ export default function VendorMasterPage() {
                 last_modified_user_id: "ADMIN",
                 default_shipping_instruction: formData.default_shipping_instruction || undefined,
                 default_terms_of_payment: formData.default_terms_of_payment || undefined,
-                default_material_type: formData.default_material_type || undefined,
+                default_material_type: formData.default_material_type || null,
             };
 
             await vendorAPI.create(formattedData);
@@ -287,7 +287,7 @@ export default function VendorMasterPage() {
                 last_modified_user_id: "ADMIN",
                 default_shipping_instruction: formData.default_shipping_instruction || undefined,
                 default_terms_of_payment: formData.default_terms_of_payment || undefined,
-                default_material_type: formData.default_material_type || undefined,
+                default_material_type: formData.default_material_type || null,
             };
 
             await vendorAPI.update(selectedVendor!.vendor_id, formattedData);

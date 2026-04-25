@@ -61,7 +61,7 @@ export async function PUT(
     await ensureDbConnection();
     const body = await request.json();
 
-    const cleanValue = (value: any) => (value === '' || value === null) ? undefined : value;
+    const cleanValue = (value: any) => (value === '' || value === null) ? null : value;
 
     const updateData: any = {};
 

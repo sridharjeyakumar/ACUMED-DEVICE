@@ -108,13 +108,14 @@ export async function POST(request: NextRequest) {
             material_doc_no: docNo,
             material_id:     materialId,
             sno,
-            packet_no:  body.packet_no.trim(),
-            roll_no:    rollNo,
-            gross_qty:  grossQty,
-            tare_qty:   tareQty,
-            nett_qty:   nettQty,
-            uom:        (detail as any).uom || body.uom?.trim().toUpperCase() || '',
-            status:     body.status.trim(),
+            packet_no:   body.packet_no.trim(),
+            roll_no:     rollNo,
+            gross_qty:   grossQty,
+            tare_qty:    tareQty,
+            nett_qty:    nettQty,
+            balance_qty: grossQty,
+            uom:         (detail as any).uom || body.uom?.trim().toUpperCase() || '',
+            status:      body.status.trim(),
         });
 
         await unit.save();

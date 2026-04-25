@@ -1791,7 +1791,6 @@ export default function PurchaseOrdersPage() {
                                             detailRows={detailRows}
                                             activeMaterials={activeMaterials}
                                             selectedVendor={vendors.find(v => v.vendor_id === formData.vendor_id)}
-                                            readOnly
                                             onAddRow={handleAddDetailRow}
                                             onMaterialChange={handleDetailMaterialChange}
                                             onChange={handleDetailChange}
