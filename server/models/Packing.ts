@@ -4,7 +4,8 @@ export interface IPacking extends Document {
     packing_id: number;           
     packing_date: Date;             
     batch_no: string;              
-    product_id: string;            
+    product_id: string;
+    input_product_id: string;
     packsize_id: string;            
     no_of_packs: number;
     no_of_sachets: number;
@@ -37,10 +38,14 @@ const PackingSchema: Schema = new Schema({
         required: true,
         maxlength: 6 // Char (6)
     },
-    product_id: { 
-        type: String, 
+    product_id: {
+        type: String,
         required: true,
         maxlength: 5 // Char (5)
+    },
+    input_product_id: {
+        type: String,
+        maxlength: 5 // Char (5) - FK
     },
     packsize_id: { 
         type: String, 
