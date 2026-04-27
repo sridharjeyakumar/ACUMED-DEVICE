@@ -64,8 +64,9 @@ async function generateMaterialDocNo(): Promise<string> {
 // Server-side validation for POST/PUT
 async function validateGRHeader(body: any, isEdit = false) {
     const errors = [];
-    const today = new Date(); today.setHours(23, 59, 59, 999);
-    const now = new Date();
+    const nowIST = new Date(Date.now() + 5.5 * 3600 * 1000);
+    const today = new Date(nowIST); today.setUTCHours(23, 59, 59, 999);
+    const now = nowIST;
 
     const toDate = (val: any) => val ? new Date(val) : null;
 
@@ -91,13 +92,13 @@ async function validateGRHeader(body: any, isEdit = false) {
     // Material Doc Time: if today, must be <= current time
     if (body.material_doc_time && docDate) {
         const docDateStr = docDate.toISOString().split('T')[0];
-        const todayStr = now.toISOString().split('T')[0];
+        const todayStr = nowIST.toISOString().split('T')[0];
         if (docDateStr === todayStr) {
             const [h, m] = body.material_doc_time.split(':').map(Number);
             const inputMinutes = h * 60 + m;
-            const nowMinutes = now.getHours() * 60 + now.getMinutes();
+            const nowMinutes = nowIST.getUTCHours() * 60 + nowIST.getUTCMinutes();
             if (inputMinutes > nowMinutes) {
-                errors.push(`Material Doc Time cannot be in the future (current: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}).`);
+                errors.push(`Material Doc Time cannot be in the future (current IST: ${String(nowIST.getUTCHours()).padStart(2,'0')}:${String(nowIST.getUTCMinutes()).padStart(2,'0')}).`);
             }
         }
     }
