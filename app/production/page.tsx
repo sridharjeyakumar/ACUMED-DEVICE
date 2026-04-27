@@ -138,7 +138,7 @@ export default function ProductionPage() {
     const [addGrossError, setAddGrossError] = useState<string>("");
     const [addMachineCountQty, setAddMachineCountQty] = useState<string>("");
     const [addRemarks, setAddRemarks] = useState<string>("");
-    const [addStatus, setAddStatus] = useState<string>("W");
+    const [addStatus, setAddStatus] = useState<string>("C");
     const [addWeightPerPiece, setAddWeightPerPiece] = useState<number>(0);
 
     // ── Derived add values ──
@@ -154,7 +154,7 @@ export default function ProductionPage() {
         production_id: "", production_date: "", machine_id: "", batch_no: "",
         product_id: "", product_name: "", weight_per_piece: "", weight_uom: "", collection_bin_no: "", tare_weight_kgs: "", gross_weight_kgs: "",
         net_weight_kgs: "", calculated_total_qty: "", // machine_count_qty: "",
-        remarks: "", status: "W",
+        remarks: "", status: "C",
     };
     const [editFormData, setEditFormData] = useState({ ...emptyEditForm });
 
@@ -195,7 +195,7 @@ export default function ProductionPage() {
         setAddMachineId(""); setAddBatchNo(""); setAddProductId(""); setAddProductName(""); setAddWeightUom("");
         setAddMachineError(""); setAddSelectedBin(null); setAddTareWeight(0);
         setAddGrossWeight(""); setAddGrossError(""); 
-        setAddRemarks(""); setAddStatus("W"); setAddWeightPerPiece(0);
+        setAddRemarks(""); setAddStatus("C"); setAddWeightPerPiece(0);
     }, [isAddModalOpen]);
 
     // ── Machine button selection ──
@@ -501,7 +501,7 @@ export default function ProductionPage() {
                                             <div className="space-y-3">
                                                 <Label className="text-sm font-semibold text-foreground">Status</Label>
                                                 <div className="space-y-2">
-                                                    {[{ value: "all", label: "All" }, { value: "active", label: "WIP" }, { value: "inactive", label: "Closed" }].map(({ value, label }) => (
+                                                    {[{ value: "all", label: "All" }, { value: "active", label: "Partially Closed" }, { value: "inactive", label: "Fully Closed" }].map(({ value, label }) => (
                                                         <div key={value} className="flex items-center space-x-2">
                                                             <input type="radio" id={`prod-status-${value}`} name="prodStatus" checked={filterStatus === value} onChange={() => setFilterStatus(value)} className="h-4 w-4 text-blue-600 focus:ring-blue-500" />
                                                             <Label htmlFor={`prod-status-${value}`} className="text-sm font-normal cursor-pointer text-foreground">{label}</Label>
@@ -585,7 +585,7 @@ export default function ProductionPage() {
                                                     <td className="px-6 py-4"><span className="text-sm text-foreground">{item.remarks || "-"}</span></td>
                                                     <td className="px-6 py-4">
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${item.status === 'W' ? "bg-yellow-100 text-yellow-800" : item.status === 'C' ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
-                                                            {item.status === 'W' ? "WIP" : item.status === 'C' ? "Closed" : item.status || "-"}
+                                                            {item.status === 'W' ? "Partially Closed" : item.status === 'C' ? "Fully Closed" : item.status || "-"}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4"><span className="text-sm font-mono text-foreground">{item.last_modified_user_id || "-"}</span></td>
@@ -822,10 +822,10 @@ export default function ProductionPage() {
                                         <div className="flex items-center justify-between pt-1">
                                             <div>
                                                 <p className="text-sm font-bold text-gray-700">Production Status</p>
-                                                <p className="text-xs text-gray-400 mt-0.5">Mark as &apos;Closed&apos; when batch finishes</p>
+                                                <p className="text-xs text-gray-400 mt-0.5">Mark as &apos;Partially Closed&apos;, if the Bin is not Full</p>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <span className={`text-xs font-bold tracking-wide ${addStatus === 'W' ? 'text-orange-500' : 'text-gray-400'}`}>WIP</span>
+                                                <span className={`text-xs font-bold tracking-wide ${addStatus === 'W' ? 'text-orange-500' : 'text-gray-400'}`}>Partially Closed</span>
                                                 <button
                                                     type="button"
                                                     onClick={() => setAddStatus(addStatus === 'W' ? 'C' : 'W')}
@@ -833,7 +833,7 @@ export default function ProductionPage() {
                                                 >
                                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${addStatus === 'W' ? 'translate-x-1' : 'translate-x-6'}`} />
                                                 </button>
-                                                <span className={`text-xs font-bold tracking-wide ${addStatus === 'C' ? 'text-gray-700' : 'text-gray-400'}`}>CLOSED</span>
+                                                <span className={`text-xs font-bold tracking-wide ${addStatus === 'C' ? 'text-gray-700' : 'text-gray-400'}`}>Fully Closed</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1015,10 +1015,10 @@ export default function ProductionPage() {
                                         <div className="flex items-center justify-between pt-1">
                                             <div>
                                                 <p className="text-sm font-bold text-gray-700">Production Status</p>
-                                                <p className="text-xs text-gray-400 mt-0.5">Mark as &apos;Closed&apos; when batch finishes</p>
+                                                <p className="text-xs text-gray-400 mt-0.5">Mark as &apos;Partially Closed&apos; if the Bin is not full</p>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <span className={`text-xs font-bold tracking-wide ${editFormData.status === 'W' ? 'text-orange-500' : 'text-gray-400'}`}>WIP</span>
+                                                <span className={`text-xs font-bold tracking-wide ${editFormData.status === 'W' ? 'text-orange-500' : 'text-gray-400'}`}>Partially Closed</span>
                                                 <button
                                                     type="button"
                                                     onClick={() => setEditFormData(f => ({ ...f, status: f.status === 'W' ? 'C' : 'W' }))}
@@ -1026,7 +1026,7 @@ export default function ProductionPage() {
                                                 >
                                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${editFormData.status === 'W' ? 'translate-x-1' : 'translate-x-6'}`} />
                                                 </button>
-                                                <span className={`text-xs font-bold tracking-wide ${editFormData.status === 'C' ? 'text-gray-700' : 'text-gray-400'}`}>CLOSED</span>
+                                                <span className={`text-xs font-bold tracking-wide ${editFormData.status === 'C' ? 'text-gray-700' : 'text-gray-400'}`}>Fully Closed</span>
                                             </div>
                                         </div>
                                     </div>
