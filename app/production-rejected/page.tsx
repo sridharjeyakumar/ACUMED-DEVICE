@@ -264,6 +264,12 @@ export default function ProductionRejectedPage() {
         e.stopPropagation();
         if (isSubmittingRef.current) return;
 
+        // Validate remarks
+        if (!formData.remarks?.trim()) {
+            toast({ title: "Validation Error", description: "Remarks is required", variant: "destructive" });
+            return;
+        }
+
         // Validate gross weight
         if (formData.gross_weight_kgs) {
             const err = validateGrossWeight(formData.gross_weight_kgs);
@@ -332,6 +338,11 @@ export default function ProductionRejectedPage() {
         e.preventDefault();
         e.stopPropagation();
         if (isSubmittingRef.current || !selectedRejection) return;
+
+        if (!formData.remarks?.trim()) {
+            toast({ title: "Validation Error", description: "Remarks is required", variant: "destructive" });
+            return;
+        }
 
         if (formData.gross_weight_kgs) {
             const err = validateGrossWeight(formData.gross_weight_kgs);
@@ -451,10 +462,11 @@ export default function ProductionRejectedPage() {
 
                 {/* Remarks */}
                 <div>
-                    <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Remarks</label>
+                    <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Remarks <span className="text-red-500">*</span></label>
                     <textarea name="remarks" value={formData.remarks} onChange={handleInputChange}
-                        placeholder="Enter remarks..." maxLength={100}
+                        placeholder="Enter remarks..." maxLength={100} required
                         className="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm min-h-[72px] resize-none outline-none focus:ring-2 focus:ring-blue-100" />
+                    {!formData.remarks?.trim() && <p className="text-red-500 text-xs mt-1">Remarks is required</p>}
                 </div>
             </div>
 
@@ -629,18 +641,19 @@ export default function ProductionRejectedPage() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-100 border-b border-gray-300">
-                                            {["Rejection ID", "Entry Date", "Machine ID", "Batch No", "Product ID", "Net Wt (KG)", "Total Qty", "Status", "Last Modified", "Actions"].map(h => (
+                                            {["Rejection ID", "Entry Date", "Machine ID", "Batch No", "Product", "Gross Wt (KG)", "Tare Wt (KG)", "Net Wt (KG)", "Total Qty", "Remarks", "Status", "Last Modified", "Last Modified By", "Actions"].map(h => (
                                                 <th key={h} className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
-                                            <tr><td colSpan={10} className="px-6 py-8 text-center text-muted-foreground">Loading...</td></tr>
+                                            <tr><td colSpan={14} className="px-6 py-8 text-center text-muted-foreground">Loading...</td></tr>
                                         ) : paginatedRejections.length === 0 ? (
-                                            <tr><td colSpan={10} className="px-6 py-8 text-center text-muted-foreground">No rejection records found</td></tr>
+                                            <tr><td colSpan={14} className="px-6 py-8 text-center text-muted-foreground">No rejection records found</td></tr>
                                         ) : paginatedRejections.map((item, index) => {
                                             const StatusIcon = statusConfig[item.status].icon;
+                                            const prod = products.find(p => p.product_id === item.product_id);
                                             return (
                                                 <motion.tr key={item._id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
                                                     transition={{ duration: 0.3, delay: index * 0.05 }}
@@ -653,15 +666,22 @@ export default function ProductionRejectedPage() {
                                                         <span className="inline-flex px-2 py-1 rounded-md bg-purple-50 text-purple-700 font-mono text-xs">{item.machine_id || "—"}</span>
                                                     </td>
                                                     <td className="px-6 py-4 text-sm font-mono align-middle">{item.batch_no}</td>
-                                                    <td className="px-6 py-4 text-sm align-middle">{item.product_id}</td>
+                                                    <td className="px-6 py-4 align-middle">
+                                                        <p className="text-sm font-medium text-foreground">{prod?.product_name || "—"}</p>
+                                                        <p className="text-xs text-muted-foreground font-mono">{item.product_id}</p>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-right align-middle">{item.gross_weight_kgs?.toFixed(3) || "—"}</td>
+                                                    <td className="px-6 py-4 text-sm text-right align-middle">{item.tare_weight_kgs?.toFixed(3) || "—"}</td>
                                                     <td className="px-6 py-4 text-sm text-right align-middle">{item.net_weight_kgs?.toFixed(3) || "—"}</td>
                                                     <td className="px-6 py-4 text-sm text-right align-middle">{item.calculated_total_qty?.toLocaleString() || "—"}</td>
+                                                    <td className="px-6 py-4 text-sm align-middle max-w-[160px] truncate" title={item.remarks || ""}>{item.remarks || "—"}</td>
                                                     <td className="px-6 py-4 align-middle">
                                                         <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${statusConfig[item.status].color}`}>
                                                             <StatusIcon className="w-3 h-3" />{statusConfig[item.status].label}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-sm align-middle">{formatDateTime(item.last_modified_date_time)}</td>
+                                                    <td className="px-6 py-4 text-sm align-middle">{item.last_modified_user_id || "—"}</td>
                                                     <td className="px-6 py-4 text-center align-middle" onClick={e => e.stopPropagation()}>
                                                         <div className="flex items-center justify-center gap-2">
                                                             {item.status === 'E' && (
