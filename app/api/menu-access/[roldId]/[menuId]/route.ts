@@ -61,7 +61,7 @@ export async function PUT(
       can_cancel: can_cancel !== false,
       last_modified_user_id: body.last_modified_user_id || 'ADMIN',
       last_modified_date_time: new Date(),
-      active: body.active !== false,
+      active: body.active === true || body.active === false ? body.active : true,
     };
     const menuAccess = await MenuAccessMaster.findOneAndUpdate(
       { rold_id: roldId, menu_id: menuId },

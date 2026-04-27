@@ -256,6 +256,7 @@ export default function MenuAccessMasterPage() {
                         can_edit: formData.can_edit,
                         can_view: formData.can_view,
                         can_cancel: formData.can_cancel,
+                        active: formData.active,
                         last_modified_user_id: "ADMIN",
                     };
                     await menuAccessAPI.update(formData.rold_id, formData.menu_id, updatePayload);
@@ -282,6 +283,7 @@ export default function MenuAccessMasterPage() {
                         can_edit: formData.can_edit,
                         can_view: formData.can_view,
                         can_cancel: formData.can_cancel,
+                        active: formData.active,
                     });
                 }
                 // Store last action for undo with new IDs
@@ -298,6 +300,7 @@ export default function MenuAccessMasterPage() {
                     can_edit: formData.can_edit,
                     can_view: formData.can_view,
                     can_cancel: formData.can_cancel,
+                    active: formData.active,
                     last_modified_user_id: "ADMIN",
                 };
                 await menuAccessAPI.update(selectedAccess.rold_id, selectedAccess.menu_id, updatePayload);
@@ -679,6 +682,7 @@ const getRoleDisplay = (roleId: string) => {
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Can Edit</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Can View</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Can Cancel</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-center text-foreground whitespace-nowrap">Active</th>
                                             <th className="px-6 py-3 text-sm font-semibold text-left text-foreground whitespace-nowrap">
                                                 <div className="flex flex-col">
                                                     <span>Last Modified</span>
@@ -697,13 +701,13 @@ const getRoleDisplay = (roleId: string) => {
                                     <tbody className="divide-y divide-border">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={11} className="px-6 py-4 text-center text-muted-foreground">
                                                     Loading...
                                                 </td>
                                             </tr>
                                         ) : filteredAccesses.length === 0 ? (
                                             <tr>
-                                                <td colSpan={10} className="px-6 py-4 text-center text-muted-foreground">
+                                                <td colSpan={11} className="px-6 py-4 text-center text-muted-foreground">
                                                     No menu accesses found
                                                 </td>
                                             </tr>
@@ -744,6 +748,11 @@ const getRoleDisplay = (roleId: string) => {
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <span className={`w-3 h-3 rounded-full inline-block ${access.can_cancel ? "bg-green-500" : "bg-red-500"}`}></span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${access.active !== false ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                                                        {access.active !== false ? "Active" : "Cancelled"}
+                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {access.last_modified_user_id ? (
