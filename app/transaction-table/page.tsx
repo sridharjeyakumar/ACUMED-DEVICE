@@ -628,6 +628,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
             d.no_of_shipper_cartons = shipPer > 0 ? Math.ceil(packs / shipPer) : 0;
         }
         next[index] = d;
+        updatePlannedTotals(next);
         return next;
     });
 };
@@ -821,6 +822,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
         try {
             const details = await productionPlanDetailAPI.getByBatchNo(transaction.batch_no);
             setEditPacksizeDetails(details);
+            updatePlannedTotals(details);
         } catch {
             setEditPacksizeDetails([]);
         }
@@ -1913,34 +1915,74 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                     </span>
                                 </div>
 
-                                <div className="grid grid-cols-4 gap-4 mb-6">
-                                    <div className="bg-[#f8fafc] p-4 rounded-xl">
+                                {/* Planned totals */}
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Planned</p>
+                                <div className="grid grid-cols-3 gap-3 mb-4">
+                                    <div className="bg-[#f8fafc] p-3 rounded-xl">
                                         <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Total Sachets</span>
-                                        <span className="text-2xl font-black text-slate-800 ">
-                                            {/* {productDetails.reduce((sum, d) => sum + (d.no_of_sachets || 0), 0)} */}0
+                                        <span className="text-xl font-black text-slate-800">
+                                            {productDetails.reduce((sum, d) => sum + (d.no_of_sachets || 0), 0)}
                                         </span>
                                     </div>
-                                    <div className="bg-[#f8fafc] p-4 rounded-xl">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Steriliz. Cartons</span>
-                                        <span className="text-2xl font-black text-slate-800">
-                                            {/* {productDetails.reduce((sum, d) => sum + (d.sterilization_cartons || 0), 0)} */}0
+                                    <div className="bg-[#f8fafc] p-3 rounded-xl">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Steri. Cartons</span>
+                                        <span className="text-xl font-black text-slate-800">
+                                            {productDetails.reduce((sum, d) => sum + (d.no_of_sterilization_cartons || 0), 0)}
                                         </span>
                                     </div>
-                                    <div className="bg-[#f8fafc] p-4 rounded-xl">
+                                    <div className="bg-[#f8fafc] p-3 rounded-xl">
                                         <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Shipper Cartons</span>
-                                        <span className="text-2xl font-black text-slate-800">
-                                            {/* {productDetails.reduce((sum, d) => sum + (d.shipper_cartons || 0), 0)} */}0
+                                        <span className="text-xl font-black text-slate-800">
+                                            {productDetails.reduce((sum, d) => sum + (d.no_of_shipper_cartons || 0), 0)}
                                         </span>
                                     </div>
-                                    <div className="bg-[#fffbeb] p-4 rounded-xl border border-amber-100">
-                                        <span className="text-[10px] font-bold text-amber-600 uppercase block mb-1">Rejected Qty (KG)</span>
+                                </div>
+
+                                {/* Actual totals */}
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Actual</p>
+                                <div className="grid grid-cols-4 gap-3 mb-6">
+                                    <div className="bg-[#f8fafc] p-3 rounded-xl">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Sachets</span>
+                                        <input
+                                            type="number"
+                                            name="actual_total_sachets"
+                                            value={formData.actual_total_sachets}
+                                            onChange={handleInputChange}
+                                            className="text-xl font-black text-slate-800 bg-transparent w-full outline-none"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="bg-[#f8fafc] p-3 rounded-xl">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Steri. Cartons</span>
+                                        <input
+                                            type="number"
+                                            name="actual_total_sterilization_cartons"
+                                            value={formData.actual_total_sterilization_cartons}
+                                            onChange={handleInputChange}
+                                            className="text-xl font-black text-slate-800 bg-transparent w-full outline-none"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="bg-[#f8fafc] p-3 rounded-xl">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Shipper Cartons</span>
+                                        <input
+                                            type="number"
+                                            name="actual_total_shipper_cartons"
+                                            value={formData.actual_total_shipper_cartons}
+                                            onChange={handleInputChange}
+                                            className="text-xl font-black text-slate-800 bg-transparent w-full outline-none"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="bg-[#fffbeb] p-3 rounded-xl border border-amber-100">
+                                        <span className="text-[10px] font-bold text-amber-600 uppercase block mb-1">Rejected (KG)</span>
                                         <input
                                             type="number"
                                             step="0.01"
                                             name="total_rejected_qty_kg"
                                             value={formData.total_rejected_qty_kg}
                                             onChange={handleInputChange}
-                                            className="text-2xl font-black text-amber-700 bg-transparent w-full outline-none"
+                                            className="text-xl font-black text-amber-700 bg-transparent w-full outline-none"
                                             placeholder="0.00"
                                         />
                                     </div>
