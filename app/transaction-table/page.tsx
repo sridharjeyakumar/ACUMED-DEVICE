@@ -198,15 +198,16 @@ function BatchStatusStepper({
         { id: 'C', label: 'Completed', pastCls: 'bg-slate-500 text-white',  currCls: 'bg-slate-600 text-white ring-4 ring-slate-200',  nextCls: 'bg-white border-2 border-slate-400 text-slate-600 hover:bg-slate-50',  lineCls: 'bg-slate-400',  labelCls: 'text-slate-700'  },
     ];
     const currentIdx = steps.findIndex(s => s.id === currentValue);
-    const nextAllowedMap: Record<string, string> = { P: 'R', W: 'S', S: 'C' };
-    const clickableId = existingStatus ? (nextAllowedMap[existingStatus] ?? null) : null;
+    // P and W: 1 step forward only. S: 1 step backward (W) or forward (C). R and C: display only.
+    const allowedMap: Record<string, string[]> = { P: ['R'], W: ['S'], S: ['W', 'C'] };
+    const clickableIds = existingStatus ? (allowedMap[existingStatus] ?? []) : [];
 
     return (
         <div className="flex items-start w-full">
             {steps.map((step, idx) => {
                 const isPast = idx < currentIdx;
                 const isCurrent = step.id === currentValue;
-                const isClickable = clickableId === step.id && !!onChange;
+                const isClickable = clickableIds.includes(step.id) && !!onChange;
                 const circleCls = isCurrent ? step.currCls : isPast ? step.pastCls : isClickable ? step.nextCls : 'bg-white border-2 border-slate-200 text-slate-300';
                 const lbCls = isCurrent || isPast || isClickable ? step.labelCls : 'text-slate-300';
                 return (
@@ -299,6 +300,7 @@ export default function TransactionTablePage() {
     const [initialTotalSachets, setInitialTotalSachets] = useState<number>(0);
     const [editPacksizeDetails, setEditPacksizeDetails] = useState<ProductDetail[]>([]);
     const [editNewRows, setEditNewRows] = useState<ProductDetail[]>([]);
+    const [deletedSnos, setDeletedSnos] = useState<number[]>([]);
 
     // BOM products (products that use the batch's product_id as a raw material)
     const [bomProducts, setBomProducts] = useState<Product[]>([]);
@@ -541,12 +543,12 @@ useEffect(() => {
     const updatePlannedTotals = (details: ProductDetail[]) => {
         const totals = details.reduce((acc, detail) => ({
             total_sachets: (acc.total_sachets || 0) + (detail.no_of_sachets || 0),
-            total_sterilization_cartons: (acc.total_sterilization_cartons || 0) + (detail.sterilization_cartons || 0),
-            total_shipper_cartons: (acc.total_shipper_cartons || 0) + (detail.shipper_cartons || 0)
-        }), { 
-            total_sachets: 0, 
-            total_sterilization_cartons: 0, 
-            total_shipper_cartons: 0 
+            total_sterilization_cartons: (acc.total_sterilization_cartons || 0) + (detail.no_of_sterilization_cartons || 0),
+            total_shipper_cartons: (acc.total_shipper_cartons || 0) + (detail.no_of_shipper_cartons || 0)
+        }), {
+            total_sachets: 0,
+            total_sterilization_cartons: 0,
+            total_shipper_cartons: 0
         });
 
         setFormData(prev => ({
@@ -701,9 +703,9 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                     no_of_packs: detail.no_of_packs,
                     no_of_sachets: detail.no_of_sachets,
                     packs_per_steri_carton: detail.packs_per_steri_carton,
-                    no_of_sterilization_cartons: detail.sterilization_cartons,
+                    no_of_sterilization_cartons: detail.no_of_sterilization_cartons,
                     packs_per_shipper_carton: detail.packs_per_shipper_carton,
-                    no_of_shipper_cartons: detail.shipper_cartons,
+                    no_of_shipper_cartons: detail.no_of_shipper_cartons,
                     remarks: detail.remarks || '',
                     last_modified_user_id: "ADMIN",
                     last_modified_date_time: new Date(),
@@ -810,6 +812,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
         // Capture original total sachets for validation in 'R', 'W', and 'S' modes
         setInitialTotalSachets(transaction.total_sachets || 0);
         setEditNewRows([]);
+        setDeletedSnos([]);
 
         const product = products.find(p => p.product_id === transaction.product_id);
         setSelectedProduct(product || null);
@@ -836,12 +839,56 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
 
         const currentStatus = selectedTransaction.current_batch_status_id;
 
-        // Status 'R' (Released): only save new packsize rows, no data or status changes
+        // Status 'R' (Released): edit packsize grid only, total sachets must stay equal to planned
         if (currentStatus === 'R') {
+            const currentTotal = editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
+            if (currentTotal !== initialTotalSachets) {
+                toast({ title: "Validation", description: `Total sachets (${currentTotal}) must equal the planned total (${initialTotalSachets}).`, variant: "destructive" });
+                return;
+            }
             isSubmittingRef.current = true;
             try {
-                await saveEditNewRows();
-                toast({ title: "Success", description: "New pack size rows saved." });
+                for (const sno of deletedSnos) {
+                    await productionPlanDetailAPI.delete(selectedTransaction.batch_no, sno);
+                }
+                const existingRows = editPacksizeDetails.filter(d => d.sno);
+                for (const detail of existingRows) {
+                    await productionPlanDetailAPI.update(selectedTransaction.batch_no, detail.sno!, {
+                        product_id: (detail.product_id || selectedTransaction.product_id).toUpperCase(),
+                        packsize_id: detail.packsize_id,
+                        no_of_packs: detail.no_of_packs,
+                        no_of_sachets: detail.no_of_sachets,
+                        packs_per_steri_carton: detail.packs_per_steri_carton,
+                        no_of_sterilization_cartons: detail.no_of_sterilization_cartons,
+                        packs_per_shipper_carton: detail.packs_per_shipper_carton,
+                        no_of_shipper_cartons: detail.no_of_shipper_cartons,
+                        remarks: detail.remarks || '',
+                        last_modified_user_id: 'ADMIN',
+                        last_modified_date_time: new Date(),
+                    });
+                }
+                const newRows = editPacksizeDetails.filter(d => !d.sno);
+                if (newRows.length > 0) {
+                    const freshDetails = await productionPlanDetailAPI.getByBatchNo(selectedTransaction.batch_no);
+                    const maxSno = freshDetails.length > 0 ? Math.max(...freshDetails.map((d: any) => d.sno || 0)) : 0;
+                    const toCreate = newRows.map((row, idx) => ({
+                        batch_no: selectedTransaction.batch_no,
+                        sno: maxSno + idx + 1,
+                        product_id: (row.product_id || selectedTransaction.product_id).toUpperCase(),
+                        packsize_id: row.packsize_id,
+                        no_of_packs: row.no_of_packs,
+                        no_of_sachets: row.no_of_sachets,
+                        packs_per_steri_carton: row.packs_per_steri_carton,
+                        no_of_sterilization_cartons: row.no_of_sterilization_cartons,
+                        packs_per_shipper_carton: row.packs_per_shipper_carton,
+                        no_of_shipper_cartons: row.no_of_shipper_cartons,
+                        remarks: row.remarks || '',
+                        last_modified_user_id: 'ADMIN',
+                        last_modified_date_time: new Date(),
+                    }));
+                    await productionPlanDetailAPI.createMany(toCreate);
+                }
+                toast({ title: "Success", description: "Pack size details updated." });
                 setIsEditModalOpen(false);
                 setSelectedTransaction(null);
                 loadTransactions();
@@ -853,15 +900,20 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
             return;
         }
 
-        // Status 'W' (Work-In-Progress): save new rows + optionally change status to 'S'
+        // Status 'W' (Work-In-Progress): full grid edit, total sachets locked, optionally move to 'S'
         if (currentStatus === 'W') {
+            const currentTotal = editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
+            if (currentTotal !== initialTotalSachets) {
+                toast({ title: "Validation", description: `Total sachets (${currentTotal}) must equal the planned total (${initialTotalSachets}).`, variant: "destructive" });
+                return;
+            }
             isSubmittingRef.current = true;
             try {
-                await saveEditNewRows();
+                await saveEditGridChanges();
                 if (formData.current_batch_status_id === 'S') {
                     await transactionAPI.update(selectedTransaction.batch_no, {
                         current_batch_status_id: 'S',
-                        last_modified_user_id: "ADMIN",
+                        last_modified_user_id: getSessionUser()?.user_id || 'ADMIN',
                         last_modified_date_time: new Date(),
                     });
                     productionPlanStatusHistoryAPI.create({
@@ -871,7 +923,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                     }).catch(e => console.error('[StatusHistory] create failed:', e));
                     toast({ title: "Success", description: "Status updated to Stop." });
                 } else {
-                    toast({ title: "Success", description: "New pack size rows saved." });
+                    toast({ title: "Success", description: "Pack size details updated." });
                 }
                 setIsEditModalOpen(false);
                 setSelectedTransaction(null);
@@ -884,8 +936,17 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
             return;
         }
 
-        // Status 'S' (Stop): save new rows + optionally trigger close dialog (status 'C')
+        // Status 'S' (Stop): full grid edit, total sachets locked; backward to 'W' or forward to 'C'
         if (currentStatus === 'S') {
+            // Validate sachets total for all paths except C (C uses confirm dialog with its own flow)
+            if (formData.current_batch_status_id !== 'C') {
+                const currentTotal = editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
+                if (currentTotal !== initialTotalSachets) {
+                    toast({ title: "Validation", description: `Total sachets (${currentTotal}) must equal the planned total (${initialTotalSachets}).`, variant: "destructive" });
+                    return;
+                }
+            }
+
             if (formData.current_batch_status_id === 'C') {
                 if (!formData.completed_remarks?.trim()) {
                     toast({ title: "Validation", description: "Completed Remarks are required before closing the batch.", variant: "destructive" });
@@ -893,20 +954,41 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                 }
                 isSubmittingRef.current = true;
                 try {
-                    const details = await productionPlanDetailAPI.getByBatchNo(selectedTransaction.batch_no);
-                    const sum = details.reduce((s: number, d: any) => s + (d.no_of_sachets || 0), 0);
+                    const sum = editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
                     setPlannedSachetsSum(sum);
                     setShowCloseConfirmDialog(true);
-                } catch {
-                    setShowCloseConfirmDialog(true);
+                } finally {
+                    isSubmittingRef.current = false;
+                }
+            } else if (formData.current_batch_status_id === 'W') {
+                // Backward: S → W
+                isSubmittingRef.current = true;
+                try {
+                    await saveEditGridChanges();
+                    await transactionAPI.update(selectedTransaction.batch_no, {
+                        current_batch_status_id: 'W',
+                        last_modified_user_id: getSessionUser()?.user_id || 'ADMIN',
+                        last_modified_date_time: new Date(),
+                    });
+                    productionPlanStatusHistoryAPI.create({
+                        batch_no: selectedTransaction.batch_no,
+                        batch_status_id: 'W',
+                        last_modified_user_id: getSessionUser()?.user_id || 'ADMIN',
+                    }).catch(e => console.error('[StatusHistory] create failed:', e));
+                    toast({ title: "Success", description: "Status reverted to Work-In-Progress." });
+                    setIsEditModalOpen(false);
+                    setSelectedTransaction(null);
+                    loadTransactions();
+                } catch (error: any) {
+                    toast({ title: "Error", description: error.message || "Failed to save", variant: "destructive" });
                 } finally {
                     isSubmittingRef.current = false;
                 }
             } else {
                 isSubmittingRef.current = true;
                 try {
-                    await saveEditNewRows();
-                    toast({ title: "Success", description: "New pack size rows saved." });
+                    await saveEditGridChanges();
+                    toast({ title: "Success", description: "Pack size details updated." });
                     setIsEditModalOpen(false);
                     setSelectedTransaction(null);
                     loadTransactions();
@@ -1022,6 +1104,52 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
         }
     };
 
+    // Full grid save: delete removed rows, update existing, create new (used by R, W, S)
+    const saveEditGridChanges = async () => {
+        if (!selectedTransaction) return;
+        for (const sno of deletedSnos) {
+            await productionPlanDetailAPI.delete(selectedTransaction.batch_no, sno);
+        }
+        const existingRows = editPacksizeDetails.filter(d => d.sno);
+        for (const detail of existingRows) {
+            await productionPlanDetailAPI.update(selectedTransaction.batch_no, detail.sno!, {
+                product_id: (detail.product_id || selectedTransaction.product_id).toUpperCase(),
+                packsize_id: detail.packsize_id,
+                no_of_packs: detail.no_of_packs,
+                no_of_sachets: detail.no_of_sachets,
+                packs_per_steri_carton: detail.packs_per_steri_carton,
+                no_of_sterilization_cartons: detail.no_of_sterilization_cartons,
+                packs_per_shipper_carton: detail.packs_per_shipper_carton,
+                no_of_shipper_cartons: detail.no_of_shipper_cartons,
+                remarks: detail.remarks || '',
+                last_modified_user_id: 'ADMIN',
+                last_modified_date_time: new Date(),
+            });
+        }
+        const newRows = editPacksizeDetails.filter(d => !d.sno);
+        if (newRows.length > 0) {
+            const freshDetails = await productionPlanDetailAPI.getByBatchNo(selectedTransaction.batch_no);
+            const maxSno = freshDetails.length > 0 ? Math.max(...freshDetails.map((d: any) => d.sno || 0)) : 0;
+            const toCreate = newRows.map((row, idx) => ({
+                batch_no: selectedTransaction.batch_no,
+                sno: maxSno + idx + 1,
+                product_id: (row.product_id || selectedTransaction.product_id).toUpperCase(),
+                packsize_id: row.packsize_id,
+                no_of_packs: row.no_of_packs,
+                no_of_sachets: row.no_of_sachets,
+                packs_per_steri_carton: row.packs_per_steri_carton,
+                no_of_sterilization_cartons: row.no_of_sterilization_cartons,
+                packs_per_shipper_carton: row.packs_per_shipper_carton,
+                no_of_shipper_cartons: row.no_of_shipper_cartons,
+                remarks: row.remarks || '',
+                last_modified_user_id: 'ADMIN',
+                last_modified_date_time: new Date(),
+            }));
+            await productionPlanDetailAPI.createMany(toCreate);
+        }
+        setDeletedSnos([]);
+    };
+
     // Save new packsize rows added during 'R', 'W', or 'S' edit
     const saveEditNewRows = async () => {
         if (!selectedTransaction || editNewRows.length === 0) return;
@@ -1046,12 +1174,17 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
         setEditNewRows([]);
     };
 
-    // Confirm closing batch: status 'W' → 'C'
+    // Confirm closing batch: status 'S' → 'C'
     const handleConfirmClose = async () => {
         if (!selectedTransaction) return;
         isSubmittingRef.current = true;
         try {
-            await saveEditNewRows();
+            await saveEditGridChanges();
+
+            // Compute totals from the packsize grid
+            const gridTotalSachets = editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
+            const gridTotalSteriCartons = editPacksizeDetails.reduce((s, d) => s + (d.no_of_sterilization_cartons || 0), 0);
+            const gridTotalShipperCartons = editPacksizeDetails.reduce((s, d) => s + (d.no_of_shipper_cartons || 0), 0);
 
             // Sum net_weight_kgs from ProductionRejected for this batch + product
             let totalRejectedKg = 0;
@@ -1066,6 +1199,9 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                 current_batch_status_id: 'C',
                 completed_remarks: formData.completed_remarks,
                 actual_end_date: new Date(),
+                total_sachets: gridTotalSachets || undefined,
+                total_sterilization_cartons: gridTotalSteriCartons || undefined,
+                total_shipper_cartons: gridTotalShipperCartons || undefined,
                 total_rejected_qty_kg: totalRejectedKg,
                 last_modified_user_id: "ADMIN",
                 last_modified_date_time: new Date(),
@@ -1908,8 +2044,8 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                                         packs_per_steri_carton: steriPerPack,
                                                                         packs_per_shipper_carton: shipperPerPack,
                                                                         no_of_sachets: ps ? packs * ps.qty_per_carton : 0,
-                                                                        sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
-                                                                        shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
+                                                                        no_of_sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
+                                                                        no_of_shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
                                                                     };
                                                                     setProductDetails(newDetails);
                                                                     updatePlannedTotals(newDetails);
@@ -1955,8 +2091,8 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                                         ...detail,
                                                                         no_of_packs: packs,
                                                                         no_of_sachets: sachets,
-                                                                        sterilization_cartons: steriCartons,
-                                                                        shipper_cartons: shipperCartons
+                                                                        no_of_sterilization_cartons: steriCartons,
+                                                                        no_of_shipper_cartons: shipperCartons
                                                                     };
                                                                     setProductDetails(newDetails);
                                                                     updatePlannedTotals(newDetails);
@@ -1969,9 +2105,9 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                         {/* Calculated fields */}
                                                         <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_sachets || 0}</td>
                                                         <td className="px-4 py-3 text-sm bg-slate-50">{detail.packs_per_steri_carton || 0}</td>
-                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.sterilization_cartons || 0}</td>
+                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_sterilization_cartons || 0}</td>
                                                         <td className="px-4 py-3 text-sm bg-slate-50">{detail.packs_per_shipper_carton || 0}</td>
-                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.shipper_cartons || 0}</td>
+                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_shipper_cartons || 0}</td>
                                                         
                                                         {/* Remarks */}
                                                         <td className="px-4 py-3">
@@ -2076,7 +2212,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                                             </svg>
                                             {isSubmittingRef.current ? 'Saving...' :
-                                             selectedTransaction?.current_batch_status_id === 'R' ? 'Save New Rows' :
+                                             selectedTransaction?.current_batch_status_id === 'R' ? 'Save Pack Details' :
                                              selectedTransaction?.current_batch_status_id === 'W' ? 'Save / Update Status' :
                                              selectedTransaction?.current_batch_status_id === 'S' ? 'Save / Close Batch' :
                                              'Update Plan'}
@@ -2111,51 +2247,25 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                         </svg>
                                                     </div>
                                                 </div>
-                                                {/* Product — editable if P, locked otherwise */}
+                                                {/* Product — always display-only in edit */}
                                                 <div>
-                                                    <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Product <span className="text-red-500">*</span></label>
-                                                    {selectedTransaction?.current_batch_status_id === 'P' ? (
-                                                        <select name="product_id" value={formData.product_id} onChange={handleInputChange}
-                                                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100" required>
-                                                            <option value="">Select Product Master</option>
-                                                            {products.filter(p => p.active).map((p) => (
-                                                                <option key={p.product_id} value={p.product_id}>{p.product_name}</option>
-                                                            ))}
-                                                        </select>
-                                                    ) : (
-                                                        <input
-                                                            type="text"
-                                                            value={products.find(p => p.product_id === formData.product_id)?.product_name || formData.product_id}
-                                                            readOnly
-                                                            className="w-full bg-[#f1f5f9] border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 cursor-not-allowed"
-                                                        />
-                                                    )}
+                                                    <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Product</label>
+                                                    <input
+                                                        type="text"
+                                                        value={products.find(p => p.product_id === formData.product_id)?.product_name || formData.product_id}
+                                                        readOnly
+                                                        className="w-full bg-[#f1f5f9] border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 cursor-not-allowed"
+                                                    />
                                                 </div>
-                                                {/* Month-Year — editable if P, locked otherwise */}
+                                                {/* Month-Year — always display-only in edit */}
                                                 <div>
-                                                    <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Month Year <span className="text-red-500">*</span></label>
-                                                    {selectedTransaction?.current_batch_status_id === 'P' ? (
-                                                        <>
-                                                            <select name="month_year" value={formData.month_year} onChange={handleInputChange}
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100" required>
-                                                                <option value="">Select Month-Year</option>
-                                                                {generateMonthYearOptions().map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                                                            </select>
-                                                            {isDuplicateBatch && (
-                                                                <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
-                                                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
-                                                                    {duplicateMessage}
-                                                                </p>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        <input
-                                                            type="text"
-                                                            value={formatMonthYear(formData.month_year)}
-                                                            readOnly
-                                                            className="w-full bg-[#f1f5f9] border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 cursor-not-allowed"
-                                                        />
-                                                    )}
+                                                    <label className="text-[11px] font-bold text-slate-400 uppercase mb-1.5 block">Month Year</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formatMonthYear(formData.month_year)}
+                                                        readOnly
+                                                        className="w-full bg-[#f1f5f9] border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 cursor-not-allowed"
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
@@ -2199,19 +2309,15 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                 </div>
                                                 <div>
                                                     <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Actual Start</label>
-                                                    <input type="date" name="actual_start_date" value={formData.actual_start_date}
-                                                        onChange={handleInputChange}
-                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
-                                                        className={`w-full border border-slate-200 rounded-xl px-2 py-2 text-xs text-center outline-none focus:ring-2 focus:ring-blue-100 ${selectedTransaction?.current_batch_status_id !== 'P' ? 'bg-[#f1f5f9] text-slate-400 cursor-not-allowed' : ''}`}
-                                                    />
+                                                    <div className="w-full bg-[#f1f5f9] border border-slate-200 rounded-xl px-2 py-2 text-xs text-center text-slate-500">
+                                                        {formData.actual_start_date || '—'}
+                                                    </div>
                                                 </div>
                                                 <div>
                                                     <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Actual End</label>
-                                                    <input type="date" name="actual_end_date" value={formData.actual_end_date}
-                                                        onChange={handleInputChange}
-                                                        disabled={selectedTransaction?.current_batch_status_id !== 'P'}
-                                                        className={`w-full border border-slate-200 rounded-xl px-2 py-2 text-xs text-center outline-none focus:ring-2 focus:ring-blue-100 ${selectedTransaction?.current_batch_status_id !== 'P' ? 'bg-[#f1f5f9] text-slate-400 cursor-not-allowed' : ''}`}
-                                                    />
+                                                    <div className="w-full bg-[#f1f5f9] border border-slate-200 rounded-xl px-2 py-2 text-xs text-center text-slate-500">
+                                                        {formData.actual_end_date || '—'}
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div>
@@ -2427,8 +2533,8 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                                                         packs_per_steri_carton: steriPerPack,
                                                                                         packs_per_shipper_carton: shipperPerPack,
                                                                                         no_of_sachets: ps ? packs * ps.qty_per_carton : 0,
-                                                                                        sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
-                                                                                        shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
+                                                                                        no_of_sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
+                                                                                        no_of_shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
                                                                                     };
                                                                                     setEditPacksizeDetails(updatedDetails);
                                                                                 }}
@@ -2509,10 +2615,10 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                         </div>
                                     )}
 
-                                    {/* Production Plan Details for 'R', 'W', and 'S' */}
-                                    {(selectedTransaction?.current_batch_status_id === 'R' || selectedTransaction?.current_batch_status_id === 'W' || selectedTransaction?.current_batch_status_id === 'S') && (
+                                    {/* Production Plan Details — fully editable for status 'R' (total sachets locked) */}
+                                    {selectedTransaction?.current_batch_status_id === 'R' && (
                                         <div className="mt-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                                            <div className="flex items-center justify-between mb-6">
+                                            <div className="flex items-center justify-between mb-4">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-blue-500">📋</span>
                                                     <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Production Plan Details</h2>
@@ -2520,18 +2626,16 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                 <div className="flex items-center gap-4">
                                                     <p className="text-xs text-slate-500">
                                                         Planned: <span className="font-mono font-bold text-slate-700">{initialTotalSachets}</span>
-                                                        {' · '}Used: <span className="font-mono font-bold text-slate-700">
-                                                            {editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) + editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0)}
+                                                        {' · '}Current: <span className={`font-mono font-bold ${editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) === initialTotalSachets ? 'text-green-600' : 'text-red-600'}`}>
+                                                            {editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0)}
                                                         </span>
-                                                        {' · '}Remaining: <span className={`font-mono font-bold ${
-                                                            initialTotalSachets - editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) - editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0) < 0 ? 'text-red-600' : 'text-green-600'
-                                                        }`}>
-                                                            {initialTotalSachets - editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) - editNewRows.reduce((s, d) => s + (d.no_of_sachets || 0), 0)}
+                                                        {' · '}Remaining: <span className={`font-mono font-bold ${initialTotalSachets - editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) === 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                            {initialTotalSachets - editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0)}
                                                         </span>
                                                     </p>
                                                     <button
                                                         type="button"
-                                                        onClick={() => setEditNewRows(prev => [...prev, {
+                                                        onClick={() => setEditPacksizeDetails(prev => [...prev, {
                                                             product_id: '',
                                                             packsize_id: '',
                                                             no_of_packs: 0,
@@ -2553,8 +2657,7 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                     </button>
                                                 </div>
                                             </div>
-
-                                            {(editPacksizeDetails.length > 0 || editNewRows.length > 0) ? (
+                                            {editPacksizeDetails.length > 0 ? (
                                                 <div className="overflow-x-auto rounded-xl border border-slate-200">
                                                     <table className="min-w-full divide-y divide-slate-200">
                                                         <thead className="bg-slate-50">
@@ -2573,136 +2676,257 @@ const handleEditPacksizeChange = (index: number, field: string, value: string) =
                                                             </tr>
                                                         </thead>
                                                         <tbody className="bg-white divide-y divide-slate-200">
-                                                            {/* Existing rows — read-only */}
-                                                            {editPacksizeDetails.map((d, i) => {
-                                                                const ps = packSizes.find(p => p.pack_size_id === d.packsize_id);
-                                                                const prod = products.find(p => p.product_id === d.product_id);
+                                                            {editPacksizeDetails.map((detail, index) => {
+                                                                const selectedPackSize = packSizes.find(ps => ps.pack_size_id === detail.packsize_id);
+                                                                const selectedBomProductEdit = bomProducts.find(p => p.product_id === detail.product_id);
                                                                 return (
-                                                                    <tr key={i} className="hover:bg-slate-50">
-                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{d.sno || i + 1}</td>
-                                                                        <td className="px-4 py-3 text-sm bg-slate-50 text-slate-600">{prod?.product_name || d.product_id || '—'}</td>
-                                                                        <td className="px-4 py-3 text-sm bg-slate-50 text-slate-600">{ps?.pack_size_name || d.packsize_id || '—'}</td>
-                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{d.no_of_packs}</td>
-                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{d.no_of_sachets || 0}</td>
-                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{d.packs_per_steri_carton || 0}</td>
-                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{d.no_of_sterilization_cartons || 0}</td>
-                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{d.packs_per_shipper_carton || 0}</td>
-                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{d.no_of_shipper_cartons || 0}</td>
-                                                                        <td className="px-4 py-3 text-sm bg-slate-50 text-slate-500">{d.remarks || '—'}</td>
-                                                                        <td className="px-4 py-3 bg-slate-50"></td>
-                                                                    </tr>
-                                                                );
-                                                            })}
-                                                            {/* New rows — inline editable */}
-                                                            {editNewRows.map((row, i) => {
-                                                                const selectedPs = packSizes.find(p => p.pack_size_id === row.packsize_id);
-                                                                const selectedBomProd = bomProducts.find(p => p.product_id === row.product_id);
-                                                                return (
-                                                                    <tr key={`new-${i}`} className="hover:bg-slate-50">
-                                                                        <td className="px-4 py-3 text-sm font-mono">{editPacksizeDetails.length + i + 1}</td>
-
-                                                                        {/* Product select */}
+                                                                    <tr key={index} className="hover:bg-slate-50">
+                                                                        <td className="px-4 py-3 text-sm font-mono">{detail.sno || '—'}</td>
+                                                                        {/* Product */}
                                                                         <td className="px-4 py-3">
                                                                             <select
-                                                                                value={row.product_id || ''}
+                                                                                value={detail.product_id || ''}
                                                                                 onChange={(e) => {
                                                                                     const selProd = bomProducts.find(p => p.product_id === e.target.value);
                                                                                     const newPackSizeId = selProd?.default_pack_size_id || '';
+                                                                                    const updatedDetails = [...editPacksizeDetails];
                                                                                     const ps = packSizes.find(p => p.pack_size_id === newPackSizeId);
                                                                                     const steriPerPack = getPacksPerCartonForProduct(e.target.value, newPackSizeId, 'ST');
                                                                                     const shipperPerPack = getPacksPerCartonForProduct(e.target.value, newPackSizeId, 'SH');
-                                                                                    const packs = row.no_of_packs || 0;
-                                                                                    const newSachets = ps ? packs * ps.qty_per_carton : 0;
-                                                                                    const existingSum = editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
-                                                                                    const newRowsSum = editNewRows.reduce((s, d, idx) => idx === i ? s : s + (d.no_of_sachets || 0), 0);
-                                                                                    if (existingSum + newRowsSum + newSachets > initialTotalSachets) {
-                                                                                        toast({ title: "Sachets Limit Exceeded", description: `Total would exceed planned (${initialTotalSachets})`, variant: "destructive" });
-                                                                                        return;
-                                                                                    }
-                                                                                    setEditNewRows(prev => prev.map((r, idx) => idx !== i ? r : {
-                                                                                        ...r,
+                                                                                    const packs = detail.no_of_packs || 0;
+                                                                                    updatedDetails[index] = {
+                                                                                        ...detail,
                                                                                         product_id: e.target.value,
                                                                                         packsize_id: newPackSizeId,
                                                                                         packs_per_steri_carton: steriPerPack,
                                                                                         packs_per_shipper_carton: shipperPerPack,
-                                                                                        no_of_sachets: newSachets,
+                                                                                        no_of_sachets: ps ? packs * ps.qty_per_carton : 0,
                                                                                         no_of_sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
                                                                                         no_of_shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
-                                                                                        sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
-                                                                                        shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
-                                                                                    }));
+                                                                                    };
+                                                                                    setEditPacksizeDetails(updatedDetails);
                                                                                 }}
                                                                                 className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
                                                                             >
                                                                                 <option value="">Select Product</option>
-                                                                                {bomProducts.map(p => (
-                                                                                    <option key={p.product_id} value={p.product_id}>{p.product_id} - {p.product_name}</option>
+                                                                                {bomProducts.filter(p =>
+                                                                                    p.product_id === detail.product_id ||
+                                                                                    !editPacksizeDetails.some((d, i) => i !== index && d.product_id === p.product_id)
+                                                                                ).map(p => (
+                                                                                    <option key={p.product_id} value={p.product_id}>
+                                                                                        {p.product_id} - {p.product_name}
+                                                                                    </option>
                                                                                 ))}
                                                                             </select>
                                                                         </td>
-
                                                                         {/* Pack Size — display only */}
                                                                         <td className="px-4 py-3 text-sm text-slate-600 bg-slate-50">
-                                                                            {selectedBomProd ? (selectedPs?.pack_size_name || row.packsize_id || '—') : '—'}
+                                                                            {selectedBomProductEdit
+                                                                                ? (selectedPackSize?.pack_size_name || detail.packsize_id || '—')
+                                                                                : '—'}
                                                                         </td>
-
                                                                         {/* No. of Packs */}
                                                                         <td className="px-4 py-3">
                                                                             <input
                                                                                 type="number"
                                                                                 min="0"
-                                                                                value={row.no_of_packs || ''}
-                                                                                onChange={(e) => {
-                                                                                    const packs = parseInt(e.target.value) || 0;
-                                                                                    const ps = packSizes.find(p => p.pack_size_id === row.packsize_id);
-                                                                                    const newSachets = ps ? packs * ps.qty_per_carton : 0;
-                                                                                    const existingSum = editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0);
-                                                                                    const newRowsSum = editNewRows.reduce((s, d, idx) => idx === i ? s : s + (d.no_of_sachets || 0), 0);
-                                                                                    if (existingSum + newRowsSum + newSachets > initialTotalSachets) {
-                                                                                        toast({ title: "Sachets Limit Exceeded", description: `Total would exceed planned (${initialTotalSachets})`, variant: "destructive" });
-                                                                                        return;
-                                                                                    }
-                                                                                    const steriPerPack = row.packs_per_steri_carton || 0;
-                                                                                    const shipperPerPack = row.packs_per_shipper_carton || 0;
-                                                                                    setEditNewRows(prev => prev.map((r, idx) => idx !== i ? r : {
-                                                                                        ...r,
-                                                                                        no_of_packs: packs,
-                                                                                        no_of_sachets: newSachets,
-                                                                                        no_of_sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
-                                                                                        no_of_shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
-                                                                                        sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
-                                                                                        shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
-                                                                                    }));
-                                                                                }}
-                                                                                placeholder="0"
+                                                                                value={detail.no_of_packs || ''}
+                                                                                onChange={(e) => handleEditPacksizeChange(index, 'no_of_packs', e.target.value)}
                                                                                 className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                                                placeholder="0"
                                                                             />
                                                                         </td>
-
-                                                                        {/* Calculated */}
-                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{row.no_of_sachets || 0}</td>
-                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{row.packs_per_steri_carton || 0}</td>
-                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{row.no_of_sterilization_cartons || 0}</td>
-                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{row.packs_per_shipper_carton || 0}</td>
-                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{row.no_of_shipper_cartons || 0}</td>
-
+                                                                        {/* Calculated fields */}
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_sachets || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{detail.packs_per_steri_carton || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_sterilization_cartons || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{detail.packs_per_shipper_carton || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_shipper_cartons || 0}</td>
                                                                         {/* Remarks */}
                                                                         <td className="px-4 py-3">
                                                                             <input
                                                                                 type="text"
-                                                                                value={row.remarks || ''}
-                                                                                onChange={(e) => setEditNewRows(prev => prev.map((r, idx) => idx !== i ? r : { ...r, remarks: e.target.value }))}
-                                                                                placeholder="Remarks"
+                                                                                value={detail.remarks || ''}
+                                                                                onChange={(e) => handleEditPacksizeChange(index, 'remarks', e.target.value)}
                                                                                 maxLength={100}
+                                                                                placeholder="Remarks"
                                                                                 className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
                                                                             />
                                                                         </td>
-
                                                                         {/* Delete */}
                                                                         <td className="px-4 py-3 text-center">
                                                                             <button
                                                                                 type="button"
-                                                                                onClick={() => setEditNewRows(prev => prev.filter((_, idx) => idx !== i))}
+                                                                                onClick={() => {
+                                                                                    if (detail.sno) setDeletedSnos(prev => [...prev, detail.sno!]);
+                                                                                    setEditPacksizeDetails(prev => prev.filter((_, i) => i !== index));
+                                                                                }}
+                                                                                className="text-red-600 hover:text-red-800 transition-colors"
+                                                                                title="Delete row"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </button>
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                                                    <p className="text-slate-500 mb-3">No product details added yet</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Production Plan Details — fully editable for 'W' and 'S' (total sachets locked) */}
+                                    {(selectedTransaction?.current_batch_status_id === 'W' || selectedTransaction?.current_batch_status_id === 'S') && (
+                                        <div className="mt-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-blue-500">📋</span>
+                                                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Production Plan Details</h2>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <p className="text-xs text-slate-500">
+                                                        Planned: <span className="font-mono font-bold text-slate-700">{initialTotalSachets}</span>
+                                                        {' · '}Current: <span className={`font-mono font-bold ${editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) === initialTotalSachets ? 'text-green-600' : 'text-red-600'}`}>
+                                                            {editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0)}
+                                                        </span>
+                                                        {' · '}Remaining: <span className={`font-mono font-bold ${initialTotalSachets - editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0) === 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                            {initialTotalSachets - editPacksizeDetails.reduce((s, d) => s + (d.no_of_sachets || 0), 0)}
+                                                        </span>
+                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setEditPacksizeDetails(prev => [...prev, {
+                                                            product_id: '',
+                                                            packsize_id: '',
+                                                            no_of_packs: 0,
+                                                            remarks: '',
+                                                            no_of_sachets: 0,
+                                                            packs_per_steri_carton: 0,
+                                                            sterilization_cartons: 0,
+                                                            packs_per_shipper_carton: 0,
+                                                            shipper_cartons: 0,
+                                                            no_of_shipper_cartons: 0,
+                                                            no_of_sterilization_cartons: 0,
+                                                            last_modified_user_id: 'ADMIN',
+                                                            last_modified_date_time: new Date(),
+                                                        }])}
+                                                        className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                        Add New Row
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {editPacksizeDetails.length > 0 ? (
+                                                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                                    <table className="min-w-full divide-y divide-slate-200">
+                                                        <thead className="bg-slate-50">
+                                                            <tr>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sno</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Product *</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Pack Size</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Packs *</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Sachets</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Steri/Pack</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Steri Cartons</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Shipper/Pack</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Shipper Cartons</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Remarks</th>
+                                                                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-400">Action</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="bg-white divide-y divide-slate-200">
+                                                            {editPacksizeDetails.map((detail, index) => {
+                                                                const selectedPackSize = packSizes.find(ps => ps.pack_size_id === detail.packsize_id);
+                                                                const selectedBomProductEdit = bomProducts.find(p => p.product_id === detail.product_id);
+                                                                return (
+                                                                    <tr key={index} className="hover:bg-slate-50">
+                                                                        <td className="px-4 py-3 text-sm font-mono">{detail.sno || '—'}</td>
+                                                                        {/* Product */}
+                                                                        <td className="px-4 py-3">
+                                                                            <select
+                                                                                value={detail.product_id || ''}
+                                                                                onChange={(e) => {
+                                                                                    const selProd = bomProducts.find(p => p.product_id === e.target.value);
+                                                                                    const newPackSizeId = selProd?.default_pack_size_id || '';
+                                                                                    const updatedDetails = [...editPacksizeDetails];
+                                                                                    const ps = packSizes.find(p => p.pack_size_id === newPackSizeId);
+                                                                                    const steriPerPack = getPacksPerCartonForProduct(e.target.value, newPackSizeId, 'ST');
+                                                                                    const shipperPerPack = getPacksPerCartonForProduct(e.target.value, newPackSizeId, 'SH');
+                                                                                    const packs = detail.no_of_packs || 0;
+                                                                                    updatedDetails[index] = {
+                                                                                        ...detail,
+                                                                                        product_id: e.target.value,
+                                                                                        packsize_id: newPackSizeId,
+                                                                                        packs_per_steri_carton: steriPerPack,
+                                                                                        packs_per_shipper_carton: shipperPerPack,
+                                                                                        no_of_sachets: ps ? packs * ps.qty_per_carton : 0,
+                                                                                        no_of_sterilization_cartons: steriPerPack > 0 ? Math.ceil(packs / steriPerPack) : 0,
+                                                                                        no_of_shipper_cartons: shipperPerPack > 0 ? Math.ceil(packs / shipperPerPack) : 0,
+                                                                                    };
+                                                                                    setEditPacksizeDetails(updatedDetails);
+                                                                                }}
+                                                                                className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
+                                                                            >
+                                                                                <option value="">Select Product</option>
+                                                                                {bomProducts.filter(p =>
+                                                                                    p.product_id === detail.product_id ||
+                                                                                    !editPacksizeDetails.some((d, i) => i !== index && d.product_id === p.product_id)
+                                                                                ).map(p => (
+                                                                                    <option key={p.product_id} value={p.product_id}>
+                                                                                        {p.product_id} - {p.product_name}
+                                                                                    </option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </td>
+                                                                        {/* Pack Size — display only */}
+                                                                        <td className="px-4 py-3 text-sm text-slate-600 bg-slate-50">
+                                                                            {selectedBomProductEdit
+                                                                                ? (selectedPackSize?.pack_size_name || detail.packsize_id || '—')
+                                                                                : '—'}
+                                                                        </td>
+                                                                        {/* No. of Packs */}
+                                                                        <td className="px-4 py-3">
+                                                                            <input
+                                                                                type="number"
+                                                                                min="0"
+                                                                                value={detail.no_of_packs || ''}
+                                                                                onChange={(e) => handleEditPacksizeChange(index, 'no_of_packs', e.target.value)}
+                                                                                className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                                                placeholder="0"
+                                                                            />
+                                                                        </td>
+                                                                        {/* Calculated fields */}
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_sachets || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{detail.packs_per_steri_carton || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_sterilization_cartons || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm bg-slate-50">{detail.packs_per_shipper_carton || 0}</td>
+                                                                        <td className="px-4 py-3 text-sm font-mono bg-slate-50">{detail.no_of_shipper_cartons || 0}</td>
+                                                                        {/* Remarks */}
+                                                                        <td className="px-4 py-3">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={detail.remarks || ''}
+                                                                                onChange={(e) => handleEditPacksizeChange(index, 'remarks', e.target.value)}
+                                                                                maxLength={100}
+                                                                                placeholder="Remarks"
+                                                                                className="w-full px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                                            />
+                                                                        </td>
+                                                                        {/* Delete */}
+                                                                        <td className="px-4 py-3 text-center">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    if (detail.sno) setDeletedSnos(prev => [...prev, detail.sno!]);
+                                                                                    setEditPacksizeDetails(prev => prev.filter((_, i) => i !== index));
+                                                                                }}
                                                                                 className="text-red-600 hover:text-red-800 transition-colors"
                                                                                 title="Delete row"
                                                                             >
