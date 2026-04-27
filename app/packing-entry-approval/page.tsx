@@ -9,7 +9,7 @@ import { Search, CheckCircle, ChevronLeft, ChevronRight, X, ChevronDown, Chevron
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { cartonCapacityAPI, packingAPI, packSizeAPI, productMovementAPI, productStatusAPI, productStatusTransitionAPI, productStockAPI } from "@/services/api";
+import { goodsMovementAPI, materialAPI, packingAPI, productAPI, productionStockAPI, productMovementAPI, productStatusAPI, productStatusTransitionAPI, productStockAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -18,11 +18,15 @@ interface Packing {
     packing_id: number;
     packing_date: string | Date;
     batch_no: string;
+    input_product_id?: string;
     product_id: string;
     packsize_id: string;
     no_of_packs: number;
     no_of_sachets: number;
     total_machine_time_in_min: number;
+    product_status_id?: string;
+    carton_type_id?: string;
+    packing_material_id?: string;
     remarks: string;
     entered_by_user_id: string;
     entered_date_time: string | Date;
@@ -168,147 +172,127 @@ export default function PackingEntryApprovalPage() {
         if (!selectedPacking) return;
 
         if (!approvalData.approval_remarks.trim()) {
-            toast({
-                title: "Validation Error",
-                description: "Please enter approval remarks",
-                variant: "destructive",
-            });
+            toast({ title: "Validation Error", description: "Please enter approval remarks", variant: "destructive" });
             return;
         }
 
         isSubmittingRef.current = true;
-
         const previousData = { ...selectedPacking };
         const newStatus = approvalData.status;
-        let movementId: number | null = null;
 
         try {
             if (newStatus === 'A') {
-                const productStatusList = await productStatusAPI.getByMovementType('I');
-                if (!productStatusList || productStatusList.length === 0) {
-                    throw new Error('No product status found with movement type I');
-                }
-                const fromProductStatus = productStatusList[0];
+                const toProductStatusId = selectedPacking.product_status_id || '';
+                const inputProductId   = selectedPacking.input_product_id   || '';
+                const packingMaterialId = selectedPacking.packing_material_id || '';
 
-                const transitions = await productStatusTransitionAPI.getByFromStatus(fromProductStatus.prod_status_id);
-                if (!transitions || transitions.length === 0) {
-                    throw new Error('No transition found for the product status');
-                }
-                const transition = transitions[0];
-
-                const packSizes = await packSizeAPI.getAll();
-                const packSize = packSizes.find((ps: any) => ps.pack_size_id === selectedPacking.packsize_id);
-                if (!packSize) {
-                    throw new Error('Pack size not found');
+                // ── Step 3: Decrement ProductionStock for batch + input_product_id ──
+                if (inputProductId) {
+                    const productMaster = await productAPI.getById(inputProductId);
+                    const weightPerPiece = productMaster?.weight_per_piece || 0;
+                    const netWeightDelta = -((selectedPacking.no_of_sachets * weightPerPiece) / 1000);
+                    await productionStockAPI.update(
+                        selectedPacking.batch_no,
+                        inputProductId,
+                        { net_weight_kgs_delta: netWeightDelta, calculated_total_qty_delta: -selectedPacking.no_of_sachets }
+                    );
                 }
 
-                const cartonCapacities = await cartonCapacityAPI.getAll({
-                    productId: selectedPacking.product_id,
-                    packSizeId: selectedPacking.packsize_id,
-                    cartonTypeId: fromProductStatus.carton_type_id,
-                    active: true
-                });
-                const cartonCapacity = cartonCapacities.length > 0 ? cartonCapacities[0] : null;
-
-                const noOfSachets = selectedPacking.no_of_packs * (packSize.qty_per_carton || 0);
-
-                movementId = await generateMovementId();
-
-                const movementData = {
-                    prod_movement_id: movementId,
-                    movement_date: selectedPacking.packing_date,
-                    batch_no: selectedPacking.batch_no,
-                    product_id: selectedPacking.product_id,
-                    pack_size_id: selectedPacking.packsize_id,
-                    to_prod_status_id: transition.product_status_id,
-                    from_prod_status_id: fromProductStatus.prod_status_id,
-                    carton_type_id: fromProductStatus.carton_type_id || '',
-                    carton_capacity_id: cartonCapacity?.carton_capacity_id || '',
-                    no_of_cartons: selectedPacking.no_of_packs,
-                    no_of_packs: selectedPacking.no_of_packs,
-                    no_of_sachets: noOfSachets,
-                    remarks: selectedPacking.remarks || '',
-                    entered_by_user_id: selectedPacking.entered_by_user_id,
-                    entered_date_time: selectedPacking.entered_date_time,
-                    approval_remarks: approvalData.approval_remarks,
-                    approved_by_user_id: "ADMIN",
-                    approved_date_time: new Date(),
-                    status: 'A',
-                };
-
-                await productMovementAPI.create(movementData);
-
-                const existingStock = await productStockAPI.getByBatchNo(selectedPacking.batch_no);
-
-                let stockData;
+                // ── Step 4: Increment ProductStock (upsert by batch_no) ───────────
+                let existingStock: any = null;
+                try { existingStock = await productStockAPI.getByBatchNo(selectedPacking.batch_no); } catch { /* no record yet */ }
                 if (existingStock) {
-                    stockData = {
-                        batch_no: selectedPacking.batch_no,
-                        product_id: selectedPacking.product_id,
-                        pack_size_id: selectedPacking.packsize_id,
-                        product_status_id: transition.product_status_id,
-                        total_no_of_packs: existingStock.total_no_of_packs + selectedPacking.no_of_packs,
-                        total_no_of_sachets: existingStock.total_no_of_sachets + noOfSachets,
-                        carton_type_id: fromProductStatus.carton_type_id || existingStock.carton_type_id,
-                        total_no_of_cartons: existingStock.total_no_of_cartons + selectedPacking.no_of_packs,
-                        last_modified_user_id: "ADMIN",
+                    await productStockAPI.update(selectedPacking.batch_no, {
+                        product_status_id:   toProductStatusId,
+                        total_no_of_packs:   existingStock.total_no_of_packs   + selectedPacking.no_of_packs,
+                        total_no_of_sachets: existingStock.total_no_of_sachets + selectedPacking.no_of_sachets,
+                        last_modified_user_id:   "ADMIN",
                         last_modified_date_time: new Date(),
-                    };
-                    await productStockAPI.update(selectedPacking.batch_no, stockData);
-                    toast({
-                        title: "Stock Updated",
-                        description: `Added ${selectedPacking.no_of_packs} packs to existing stock. New total: ${stockData.total_no_of_packs}`,
                     });
                 } else {
-                    stockData = {
-                        batch_no: selectedPacking.batch_no,
-                        product_id: selectedPacking.product_id,
-                        pack_size_id: selectedPacking.packsize_id,
-                        product_status_id: transition.product_status_id,
-                        total_no_of_packs: selectedPacking.no_of_packs,
-                        total_no_of_sachets: noOfSachets,
-                        carton_type_id: fromProductStatus.carton_type_id || '',
-                        total_no_of_cartons: selectedPacking.no_of_packs,
-                        last_modified_user_id: "ADMIN",
+                    await productStockAPI.create({
+                        batch_no:          selectedPacking.batch_no,
+                        product_id:        selectedPacking.product_id,
+                        pack_size_id:      selectedPacking.packsize_id,
+                        product_status_id: toProductStatusId,
+                        total_no_of_packs:   selectedPacking.no_of_packs,
+                        total_no_of_sachets: selectedPacking.no_of_sachets,
+                        carton_type_id:      selectedPacking.carton_type_id || '',
+                        total_no_of_cartons: 0,
+                        last_modified_user_id:   "ADMIN",
                         last_modified_date_time: new Date(),
-                    };
-                    await productStockAPI.create(stockData);
-                    toast({
-                        title: "Stock Created",
-                        description: `New stock record created with ${selectedPacking.no_of_packs} packs`,
                     });
                 }
 
-                toast({
-                    title: "Movement Created",
-                    description: `Product movement ID: ${movementId} created successfully`,
+                // ── Step 5: Create ProductMovement ────────────────────────────────
+                // Query: T.from_product_status_id WHERE T.product_status_id = toProductStatusId
+                const transitions = await productStatusTransitionAPI.getAll({ toStatus: toProductStatusId });
+                const fromProductStatusId = transitions.length > 0 ? transitions[0].from_product_status_id : '';
+
+                const movementId = await generateMovementId();
+                await productMovementAPI.create({
+                    prod_movement_id:    movementId,
+                    movement_date:       selectedPacking.packing_date,
+                    batch_no:            selectedPacking.batch_no,
+                    product_id:          selectedPacking.product_id,
+                    pack_size_id:        selectedPacking.packsize_id,
+                    to_prod_status_id:   toProductStatusId,
+                    from_prod_status_id: fromProductStatusId,
+                    carton_type_id:      selectedPacking.carton_type_id || '',
+                    carton_capacity_id:  '',
+                    no_of_cartons:       0,
+                    no_of_packs:         selectedPacking.no_of_packs,
+                    no_of_sachets:       selectedPacking.no_of_sachets,
+                    packing_material_id: packingMaterialId,
+                    remarks:             selectedPacking.remarks || '',
+                    entered_by_user_id:  selectedPacking.entered_by_user_id,
+                    entered_date_time:   selectedPacking.entered_date_time,
+                    approval_remarks:    approvalData.approval_remarks,
+                    approved_by_user_id: "ADMIN",
+                    approved_date_time:  new Date(),
+                    status: 'A',
                 });
+
+                // ── Steps 6+7: Create GoodsMovement (server auto-updates MaterialStocks) ──
+                if (packingMaterialId) {
+                    const productStatusRecord = toProductStatusId
+                        ? await productStatusAPI.getById(toProductStatusId) : null;
+                    const materialStatusId = productStatusRecord?.material_status_id || '';
+
+                    const materialRecord = await materialAPI.getById(packingMaterialId);
+                    const uom = materialRecord?.uom || '';
+
+                    await goodsMovementAPI.create({
+                        gm_date:             selectedPacking.packing_date,
+                        material_status_id:  materialStatusId,
+                        material_id:         packingMaterialId,
+                        total_nett_qty:      selectedPacking.no_of_packs * (-1),
+                        uom,
+                        remarks:             `Material movement from Packing Entry : ${selectedPacking.packing_id}`,
+                        entered_by_user_id:  selectedPacking.entered_by_user_id,
+                        entered_date_time:   selectedPacking.entered_date_time,
+                        approval_remarks:    'Auto Approved',
+                        approved_by_user_id: "ADMIN",
+                        approved_date_time:  new Date(),
+                        status: 'A',
+                        // status='A' triggers server-side MaterialStocks decrement
+                    });
+                }
             }
 
+            // ── Step 1: Update Packing — only the 4 approval fields ───────────
             await packingAPI.update(selectedPacking.packing_id.toString(), {
-                packing_date: selectedPacking.packing_date,
-                batch_no: selectedPacking.batch_no,
-                product_id: selectedPacking.product_id,
-                packsize_id: selectedPacking.packsize_id,
-                no_of_packs: selectedPacking.no_of_packs,
-                no_of_sachets: selectedPacking.no_of_sachets,
-                total_machine_time_in_min: selectedPacking.total_machine_time_in_min,
-                remarks: selectedPacking.remarks,
-                entered_by_user_id: selectedPacking.entered_by_user_id,
-                entered_date_time: selectedPacking.entered_date_time,
-                approval_remarks: approvalData.approval_remarks,
-                status: newStatus,
+                approval_remarks:    approvalData.approval_remarks,
+                status:              newStatus,
                 approved_by_user_id: "ADMIN",
-                approved_date_time: new Date(),
+                approved_date_time:  new Date(),
             });
 
             setLastAction({ type: newStatus === 'A' ? 'approve' : 'reject', data: previousData });
 
             toast({
                 title: "Success",
-                description: movementId
-                    ? `Packing record approved successfully. Movement ID: ${movementId}`
-                    : `Packing record ${newStatus === 'A' ? 'approved' : 'rejected'} successfully`,
+                description: `Packing record ${newStatus === 'A' ? 'approved' : 'rejected'} successfully`,
                 action: (
                     <ToastAction altText="Undo" onClick={handleUndo}>
                         Undo
@@ -666,12 +650,28 @@ export default function PackingEntryApprovalPage() {
                                                 <div className="text-sm font-medium text-foreground bg-white p-2 rounded border">{selectedPacking.batch_no}</div>
                                             </div>
                                             <div>
+                                                <label className="block text-xs font-semibold text-muted-foreground mb-1">Input Product ID</label>
+                                                <div className="text-sm font-medium text-foreground bg-white p-2 rounded border">{selectedPacking.input_product_id || '-'}</div>
+                                            </div>
+                                            <div>
                                                 <label className="block text-xs font-semibold text-muted-foreground mb-1">Product ID</label>
                                                 <div className="text-sm font-medium text-foreground bg-white p-2 rounded border">{selectedPacking.product_id}</div>
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-muted-foreground mb-1">Packsize ID</label>
                                                 <div className="text-sm font-medium text-foreground bg-white p-2 rounded border">{selectedPacking.packsize_id}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-muted-foreground mb-1">Product Status ID</label>
+                                                <div className="text-sm font-medium text-foreground bg-white p-2 rounded border">{selectedPacking.product_status_id || '-'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-muted-foreground mb-1">Carton Type ID</label>
+                                                <div className="text-sm font-medium text-foreground bg-white p-2 rounded border">{selectedPacking.carton_type_id || '-'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-muted-foreground mb-1">Packing Material ID</label>
+                                                <div className="text-sm font-medium text-foreground bg-white p-2 rounded border">{selectedPacking.packing_material_id || '-'}</div>
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-muted-foreground mb-1">No of Packs</label>

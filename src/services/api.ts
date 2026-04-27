@@ -977,9 +977,25 @@ export const productStockAPI = {
         method: 'PUT', 
         body: JSON.stringify(data) 
     }),
-    delete: (batchNo: string) => fetchAPI(`/product-stock/${batchNo}`, { 
-        method: 'DELETE' 
+    delete: (batchNo: string) => fetchAPI(`/product-stock/${batchNo}`, {
+        method: 'DELETE'
     }),
+};
+
+export const packingDeriveStatusAPI = {
+    get: () => fetchAPI('/packing-derive-status'),
+};
+
+export const productionStockAPI = {
+    getByProductId: (productId: string) =>
+        fetchAPI(`/production-stock?productId=${encodeURIComponent(productId)}`),
+    getByBatchNo: (batchNo: string) =>
+        fetchAPI(`/production-stock?batchNo=${encodeURIComponent(batchNo)}`),
+    update: (batchNo: string, productId: string, delta: { net_weight_kgs_delta: number; calculated_total_qty_delta: number }) =>
+        fetchAPI(`/production-stock?batchNo=${encodeURIComponent(batchNo)}&productId=${encodeURIComponent(productId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(delta),
+        }),
 };
 
 // Update productStatusAPI to include movement type filter

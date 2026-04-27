@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { cartonCapacityAPI, packingAPI, packSizeAPI, productionPlanDetailAPI, productMovementAPI, productStatusAPI, productStatusTransitionAPI, productStockAPI, transactionAPI } from "@/services/api";
+import { cartonCapacityAPI, packingAPI, packingDeriveStatusAPI, packSizeAPI, productionPlanDetailAPI, productionStockAPI, productMovementAPI, productStatusAPI, productStatusTransitionAPI, productStockAPI, transactionAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -59,7 +59,7 @@ interface Transaction {
     last_modified_user_id?: string;
     last_modified_date_time?: Date;
     current_batch_event_type_id?: string;
-    current_batch_status_id: 'P' | 'X' | 'W' | 'C';
+    current_batch_status_id: 'P' | 'R' | 'X' | 'W' | 'S' | 'C';
     createdAt?: string;
     updatedAt?: string;
 }
@@ -132,9 +132,9 @@ export default function PackingMasterPage() {
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [formData, setFormData] = useState({
-        // packing_id: "",
         packing_date: new Date().toISOString().split('T')[0],
         batch_no: "",
+        input_product_id: "",
         product_id: "",
         packsize_id: "",
         no_of_packs: "",
@@ -148,6 +148,8 @@ export default function PackingMasterPage() {
         approval_remarks: "",
         status: "E",
     });
+    const [productionStock, setProductionStock] = useState<{ net_weight_kgs: number; calculated_total_qty: number } | null>(null);
+    const [batchProductOptions, setBatchProductOptions] = useState<{ product_id: string; packsize_id: string }[]>([]);
     // Derived status data loaded once at page mount
     const [derivedStatusData, setDerivedStatusData] = useState<{ productStatusId: string; cartonTypeId: string } | null>(null);
     const [approvalData, setApprovalData] = useState({
@@ -164,6 +166,12 @@ export default function PackingMasterPage() {
     const [stockCache, setStockCache] = useState<Record<string, any>>({});
     
      const today = new Date().toISOString().split('T')[0];
+     const minPackingDate = packings.length > 0
+        ? packings
+            .map(p => (typeof p.packing_date === 'string' ? p.packing_date : new Date(p.packing_date).toISOString()).split('T')[0])
+            .sort()
+            .pop() || '2000-01-01'
+        : '2000-01-01';
      
         useEffect(() => {
              const loadPackSizes = async () => {
@@ -213,9 +221,9 @@ useEffect(() => {
     useEffect(() => {
         if (isAddModalOpen) {
             setFormData({
-                // packing_id: "",
                 packing_date: new Date().toISOString().split('T')[0],
                 batch_no: "",
+                input_product_id: "",
                 product_id: "",
                 packsize_id: "",
                 no_of_packs: "",
@@ -229,54 +237,68 @@ useEffect(() => {
                 approval_remarks: "",
                 status: "E",
             });
+            setProductionStock(null);
+            setBatchProductOptions([]);
         }
     }, [isAddModalOpen]);
 
-    // ── Load derived status data (product_status_id + carton_type_id) once at mount ──
+    // ── Load derived status data via single server-side join ──
     useEffect(() => {
-        const loadDerivedStatusData = async () => {
-            try {
-                const productStatusList = await productStatusAPI.getByMovementType('I');
-                if (productStatusList?.length > 0) {
-                    const fromStatus = productStatusList[0];
-                    const transitions = await productStatusTransitionAPI.getByFromStatus(fromStatus.prod_status_id);
-                    if (transitions?.length > 0) {
-                        setDerivedStatusData({
-                            productStatusId: transitions[0].product_status_id,
-                            cartonTypeId: fromStatus.carton_type_id || '',
-                        });
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to load status derivation data", err);
-            }
-        };
-        loadDerivedStatusData();
+        packingDeriveStatusAPI.get()
+            .then((data: { product_status_id: string; carton_type_id: string }) => {
+                setDerivedStatusData({
+                    productStatusId: data.product_status_id || '',
+                    cartonTypeId: data.carton_type_id || '',
+                });
+            })
+            .catch((err: any) => console.error('Failed to load packing derive status:', err));
     }, []);
 
-    // ── Auto-derive packing_material_id when product_id + packsize_id + cartonTypeId are all known ──
+    // ── Fetch ProductionStock when input_product_id is known ──
     useEffect(() => {
-        const lookupPackMaterial = async () => {
-            const pid = formData.product_id;
-            const psid = formData.packsize_id;
-            const ctid = derivedStatusData?.cartonTypeId;
-            if (pid && psid && ctid) {
-                try {
-                    const caps = await cartonCapacityAPI.getAll({ productId: pid, packSizeId: psid, cartonTypeId: ctid, active: true });
-                    setFormData(prev => ({
-                        ...prev,
-                        product_status_id: derivedStatusData?.productStatusId || '',
-                        carton_type_id: ctid,
-                        packing_material_id: caps[0]?.pack_matl_id || '',
-                    }));
-                } catch {
-                    // silent — leave values empty if lookup fails
+        if (!formData.input_product_id) { setProductionStock(null); return; }
+        productionStockAPI.getByProductId(formData.input_product_id)
+            .then((records: any[]) => {
+                if (records.length > 0) {
+                    const total = records.reduce(
+                        (acc: any, r: any) => ({
+                            net_weight_kgs: acc.net_weight_kgs + (r.net_weight_kgs || 0),
+                            calculated_total_qty: acc.calculated_total_qty + (r.calculated_total_qty || 0),
+                        }),
+                        { net_weight_kgs: 0, calculated_total_qty: 0 }
+                    );
+                    setProductionStock(total);
+                } else {
+                    setProductionStock(null);
                 }
-            }
-        };
-        lookupPackMaterial();
+            })
+            .catch(() => setProductionStock(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [formData.product_id, formData.packsize_id, derivedStatusData]);
+    }, [formData.input_product_id]);
+
+    // ── Step 1: Set product_status_id + carton_type_id as soon as product and derived data are ready ──
+    useEffect(() => {
+        if (!derivedStatusData || !formData.product_id) return;
+        setFormData(prev => ({
+            ...prev,
+            product_status_id: derivedStatusData.productStatusId,
+            carton_type_id: derivedStatusData.cartonTypeId,
+        }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.product_id, derivedStatusData]);
+
+    // ── Step 2: Look up packing_material_id once product_id + packsize_id + carton_type_id are set ──
+    useEffect(() => {
+        const pid = formData.product_id;
+        const psid = formData.packsize_id;
+        const ctid = formData.carton_type_id;
+        if (!pid || !psid || !ctid) { setFormData(prev => ({ ...prev, packing_material_id: '' })); return; }
+        cartonCapacityAPI
+            .getAll({ productId: pid, packSizeId: psid, cartonTypeId: ctid, active: true })
+            .then((caps: any[]) => setFormData(prev => ({ ...prev, packing_material_id: caps[0]?.pack_matl_id || '' })))
+            .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.product_id, formData.packsize_id, formData.carton_type_id]);
 
     const loadPackings = useCallback(async () => {
         try {
@@ -367,59 +389,78 @@ const calculateSachets = (packSizeId: string, noOfPacks: number): number => {
         if (name === 'packsize_id' || name === 'no_of_packs') {
             const packSizeId = name === 'packsize_id' ? processedValue : prev.packsize_id;
             const noOfPacks = name === 'no_of_packs' ? parseInt(processedValue) || 0 : parseInt(prev.no_of_packs) || 0;
-            
+
             if (packSizeId && noOfPacks > 0) {
                 const sachets = calculateSachets(packSizeId, noOfPacks);
                 newData.no_of_sachets = sachets.toString();
+                if (productionStock && sachets > productionStock.calculated_total_qty) {
+                    setTimeout(() => toast({
+                        title: "Qty Exceeded",
+                        description: `No. of Sachets (${sachets}) exceeds Production Qty (${productionStock.calculated_total_qty})`,
+                        variant: "destructive",
+                    }), 0);
+                }
             } else {
                 newData.no_of_sachets = '';
             }
         }
-        
+
         return newData;
     });
 };
-// 1. Filter the transactions to get only those with status 'W'
+// Filter batches with status 'W' or 'S'
 const activeBatches = transactions.filter(
-    (t) => t.current_batch_status_id === 'W'
+    (t) => t.current_batch_status_id === 'W' || t.current_batch_status_id === 'S'
 );
-
 
 const handleBatchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedBatchNo = e.target.value;
     const selectedBatchData = activeBatches.find(b => b.batch_no === selectedBatchNo);
+    const inputProductId = selectedBatchData?.product_id || '';
 
-    const batchPackDetails = batchDetails.get(selectedBatchNo);
-    
-    let packsizeId = '';
-    if (batchPackDetails && batchPackDetails.length > 0) {
-        packsizeId = batchPackDetails[0].packsize_id;
-        
-        if (batchPackDetails.length > 1) {
-            toast({
-                title: "Multiple Pack Sizes",
-                description: `This batch has ${batchPackDetails.length} pack sizes. Please verify.`,
-                duration: 3000,
-            });
+    const batchPackDetails = batchDetails.get(selectedBatchNo) || [];
+
+    // Build unique product options from plan details, falling back to transaction product
+    const productOptions: { product_id: string; packsize_id: string }[] = [];
+    const seenProducts = new Set<string>();
+    batchPackDetails.forEach((d: ProductDetail) => {
+        if (d.product_id && !seenProducts.has(d.product_id)) {
+            seenProducts.add(d.product_id);
+            productOptions.push({ product_id: d.product_id, packsize_id: d.packsize_id });
         }
-    }
+    });
+    setBatchProductOptions(productOptions);
+
+    // Auto-select product & packsize when only one option
+    const autoProduct = productOptions.length === 1 ? productOptions[0].product_id : '';
+    const autoPacksize = productOptions.length === 1 ? productOptions[0].packsize_id : '';
 
     setFormData(prev => {
         const newData = {
             ...prev,
             batch_no: selectedBatchNo,
-            product_id: selectedBatchData ? selectedBatchData.product_id : '',
-            packsize_id: packsizeId
+            input_product_id: inputProductId,
+            product_id: autoProduct,
+            packsize_id: autoPacksize,
+            no_of_sachets: '',
         };
-        
-        // Calculate sachets if we have both packsize_id and no_of_packs
-        if (packsizeId && parseInt(prev.no_of_packs) > 0) {
-            const sachets = calculateSachets(packsizeId, parseInt(prev.no_of_packs) || 0);
-            newData.no_of_sachets = sachets.toString();
+        if (autoPacksize && parseInt(prev.no_of_packs) > 0) {
+            newData.no_of_sachets = calculateSachets(autoPacksize, parseInt(prev.no_of_packs) || 0).toString();
         }
-        
         return newData;
     });
+};
+
+// When product_id is selected from the dropdown (multiple product options)
+const handleProductSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedProductId = e.target.value;
+    const option = batchProductOptions.find(o => o.product_id === selectedProductId);
+    setFormData(prev => ({
+        ...prev,
+        product_id: selectedProductId,
+        packsize_id: option?.packsize_id || '',
+        no_of_sachets: '',
+    }));
 };
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -437,9 +478,9 @@ const handleBatchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         
         try {
             await packingAPI.create({
-                // packing_id: parseInt(formData.packing_id),
                 packing_date: new Date(formData.packing_date),
                 batch_no: formData.batch_no,
+                input_product_id: formData.input_product_id,
                 product_id: formData.product_id,
                 packsize_id: formData.packsize_id,
                 no_of_packs: parseInt(formData.no_of_packs) || 0,
@@ -502,9 +543,9 @@ const handleBatchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         
         setSelectedPacking(packing);
         setFormData({
-            // packing_id: packing.packing_id.toString(),
             packing_date: new Date(packing.packing_date).toISOString().split('T')[0],
             batch_no: packing.batch_no,
+            input_product_id: (packing as any).input_product_id || "",
             product_id: packing.product_id,
             packsize_id: packing.packsize_id,
             no_of_packs: packing.no_of_packs.toString(),
@@ -884,6 +925,19 @@ const handleUndo = async () => {
     }
 };
 
+    const handleNewClick = () => {
+        const hasPending = packings.some(p => p.status === 'E');
+        if (hasPending) {
+            toast({
+                title: "Pending Approval",
+                description: "Complete the Approval for pending 'Packing Entry'",
+                variant: "destructive",
+            });
+            return;
+        }
+        setIsAddModalOpen(true);
+    };
+
     return (
         <div className="flex min-h-screen bg-background">
             <Sidebar />
@@ -902,7 +956,7 @@ const handleUndo = async () => {
                                 <p className="text-muted-foreground">Manage packing records and approvals</p>
                             </div>
                             <Button
-                                onClick={() => setIsAddModalOpen(true)}
+                                onClick={handleNewClick}
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                             >
                                 <Plus className="w-5 h-5" />
@@ -1371,81 +1425,121 @@ const handleUndo = async () => {
                                                 type="date"
                                                 value={formData.packing_date}
                                                 onChange={handleInputChange}
-                                                min={today}
+                                                min={minPackingDate}
+                                                max={today}
                                                 required
                                             />
                                         </div>
 
                                         {/* Batch No */}
-                                       <div>
-    <label className="block text-sm font-semibold text-foreground mb-2">
-        Batch No <span className="text-red-500">*</span>
-    </label>
-    <select
-        name="batch_no"
-        value={formData.batch_no}
-        onChange={handleBatchChange}
-        required
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-        <option value="">-- Select Active Batch (W) --</option>
-        {activeBatches.length > 0 ? (
-            activeBatches.map((t) => (
-                <option key={`${t.batch_no}-${t.month_year}`} value={t.batch_no}>
-                    {t.batch_no} (Product: {t.product_id})
-                </option>
-            ))
-        ) : (
-            <option disabled>No batches in W status</option>
-        )}
-    </select>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Batch No <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                name="batch_no"
+                                                value={formData.batch_no}
+                                                onChange={handleBatchChange}
+                                                required
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <option value="">-- Select Batch (W / S) --</option>
+                                                {activeBatches.length > 0 ? (
+                                                    activeBatches.map((t) => (
+                                                        <option key={`${t.batch_no}-${t.month_year}`} value={t.batch_no}>
+                                                            {t.batch_no} [{t.current_batch_status_id}]
+                                                        </option>
+                                                    ))
+                                                ) : (
+                                                    <option disabled>No batches in W or S status</option>
+                                                )}
+                                            </select>
+                                        </div>
 
-    {/* Optional: Helpful hint if no batches are found */}
-    {activeBatches.length === 0 && (
-        <p className="text-xs text-amber-500 mt-1">
-            Note: Only batches with Work in Progress status are shown.
-        </p>
-    )}
-</div>
+                                        {/* Input Product ID — display only from TransactionTable */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Input Product ID
+                                            </label>
+                                            <Input
+                                                value={formData.input_product_id}
+                                                readOnly
+                                                disabled
+                                                className="bg-gray-100 cursor-not-allowed uppercase"
+                                                placeholder="Auto-filled from batch"
+                                            />
+                                        </div>
 
-                                        {/* Product ID */}
+                                        {/* Production Stock in KGs — display only, not saved */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Production Stock in KGs
+                                            </label>
+                                            <Input
+                                                value={productionStock ? productionStock.net_weight_kgs.toString() : ''}
+                                                readOnly
+                                                disabled
+                                                className="bg-gray-100 cursor-not-allowed"
+                                                placeholder="Auto-filled from production stock"
+                                            />
+                                        </div>
+
+                                        {/* Production Qty in Nos. (Approx) — display only, not saved */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Production Qty in Nos. (Approx)
+                                            </label>
+                                            <Input
+                                                value={productionStock ? productionStock.calculated_total_qty.toString() : ''}
+                                                readOnly
+                                                disabled
+                                                className="bg-gray-100 cursor-not-allowed"
+                                                placeholder="Auto-filled from production stock"
+                                            />
+                                        </div>
+
+                                        {/* Product ID — dropdown when multiple plan products exist */}
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">
                                                 Product ID <span className="text-red-500">*</span>
                                             </label>
-                                            <Input
-                                                name="product_id"
-                                                value={formData.product_id}
-                                                // onChange={handleInputChange}
-                                                readOnly
-                                                placeholder="Enter Product ID"
-                                                maxLength={5}
-                                                required
-                                                className="uppercase"
-                                            />
+                                            {batchProductOptions.length > 1 ? (
+                                                <select
+                                                    name="product_id"
+                                                    value={formData.product_id}
+                                                    onChange={handleProductSelect}
+                                                    required
+                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                >
+                                                    <option value="">-- Select Product --</option>
+                                                    {batchProductOptions.map(o => (
+                                                        <option key={o.product_id} value={o.product_id}>{o.product_id}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <Input
+                                                    value={formData.product_id}
+                                                    readOnly
+                                                    disabled
+                                                    className="bg-gray-100 cursor-not-allowed uppercase"
+                                                    placeholder="Auto-filled from plan details"
+                                                />
+                                            )}
                                         </div>
 
-                                        {/* Packsize ID */}
- <div>
-    <label className="block text-sm font-semibold text-foreground mb-2">
-        Packsize ID <span className="text-red-500">*</span>
-    </label>
-    <Input
-        name="packsize_id"
-        value={formData.packsize_id}
-        onChange={handleInputChange}
-        placeholder={formData.batch_no ? "Auto-filled from batch" : "Select a batch first"}
-        maxLength={4}
-        required
-        className="uppercase"
-        readOnly={!!formData.batch_no} // Makes it read-only once batch is selected
-    />
-    {formData.batch_no && !formData.packsize_id && (
-        <p className="text-xs text-amber-500 mt-1">
-            No packsize found for this batch. Please enter manually.
-        </p>
-    )}
-</div>
+                                        {/* Packsize ID — display only from ProductionPlanDetails */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">
+                                                Packsize ID <span className="text-red-500">*</span>
+                                            </label>
+                                            <Input
+                                                value={formData.packsize_id}
+                                                readOnly
+                                                disabled
+                                                className="bg-gray-100 cursor-not-allowed uppercase"
+                                                placeholder="Auto-filled from plan details"
+                                            />
+                                        </div>
 
                                         {/* Product Status ID — auto-derived */}
                                         <div>
