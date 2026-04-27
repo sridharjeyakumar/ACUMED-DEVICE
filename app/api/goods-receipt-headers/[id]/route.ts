@@ -39,8 +39,9 @@ export async function GET(
 // Server-side validation for edit (PUT)
 async function validateGRHeaderEdit(body: any) {
     const errors: string[] = [];
-    const today = new Date(); today.setHours(23, 59, 59, 999);
-    const now = new Date();
+    const nowIST = new Date(Date.now() + 5.5 * 3600 * 1000);
+    const today = new Date(nowIST); today.setUTCHours(23, 59, 59, 999);
+    const now = nowIST;
     const toDate = (val: any) => val ? new Date(val) : null;
 
     const docDate = toDate(body.material_doc_date);
@@ -52,10 +53,10 @@ async function validateGRHeaderEdit(body: any) {
 
     if (body.material_doc_time && docDate) {
         const docDateStr = docDate.toISOString().split('T')[0];
-        const todayStr = now.toISOString().split('T')[0];
+        const todayStr = nowIST.toISOString().split('T')[0];
         if (docDateStr === todayStr) {
             const [h, m] = body.material_doc_time.split(':').map(Number);
-            if ((h * 60 + m) > (now.getHours() * 60 + now.getMinutes())) {
+            if ((h * 60 + m) > (nowIST.getUTCHours() * 60 + nowIST.getUTCMinutes())) {
                 errors.push(`Material Doc Time cannot be in the future.`);
             }
         }

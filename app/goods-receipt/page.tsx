@@ -524,9 +524,9 @@ export default function GoodsReceiptHeaderPage() {
             }
         }
         if (status === "A") {
-            const activeError = checkActiveDuplicate(formData.po_no);
-            if (activeError) {
-                toast({ title: "Active GR Already Exists", description: activeError, variant: "destructive" });
+            const draftErrorOnActive = checkDraftDuplicate(formData.po_no);
+            if (draftErrorOnActive) {
+                toast({ title: "Draft Already Exists", description: draftErrorOnActive, variant: "destructive" });
                 return;
             }
             const nettError = validateNettQty();
@@ -820,9 +820,9 @@ export default function GoodsReceiptHeaderPage() {
             }
         }
         if (statusToSave === "A") {
-            const activeError = checkActiveDuplicate(formData.po_no, selectedItem?.material_doc_no);
-            if (activeError) {
-                toast({ title: "Active GR Already Exists", description: activeError, variant: "destructive" });
+            const draftErrorOnActive = checkDraftDuplicate(formData.po_no, selectedItem?.material_doc_no);
+            if (draftErrorOnActive) {
+                toast({ title: "Draft Already Exists", description: draftErrorOnActive, variant: "destructive" });
                 return;
             }
             const nettError = validateNettQty();
