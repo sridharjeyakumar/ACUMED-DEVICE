@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { machineEventAPI, machineEventTypeAPI, machineStopReasonAPI, employeeAPI, materialStockAPI, productBomAPI, availableRollsAPI, machineEventMaterialAPI, batchMaterialSummaryAPI, materialAPI, transactionAPI, productAPI } from "@/services/api";
+import { machineEventAPI, machineEventTypeAPI, machineStopReasonAPI, employeeAPI, materialStockAPI, productBomAPI, availableRollsAPI, machineEventMaterialAPI, batchMaterialSummaryAPI, materialAPI, transactionAPI, productAPI, batchStatusAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog,
@@ -126,6 +126,8 @@ export default function MachineEventPage() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [machines, setMachines] = useState<Machine[]>([]);
     const [products, setProducts] = useState<{ product_id: string; product_name: string }[]>([]);
+    const [batchStatuses, setBatchStatuses] = useState<{ batch_status_id: string; batch_status_name: string }[]>([]);
+    const [allMaterials, setAllMaterials] = useState<{ material_id: string; material_name: string }[]>([]);
 
     // Add form state
     const [addForm, setAddForm] = useState({ ...emptyAddForm, event_time: getCurrentTime() });
@@ -199,16 +201,20 @@ export default function MachineEventPage() {
 
     const loadReferenceData = useCallback(async () => {
         try {
-            const [typesRes, reasonsRes, empsRes, prodsRes] = await Promise.all([
+            const [typesRes, reasonsRes, empsRes, prodsRes, batchStatusRes, materialsRes] = await Promise.all([
                 machineEventTypeAPI.getAll(),
                 machineStopReasonAPI.getAll(),
                 employeeAPI.getAll(),
                 productAPI.getAll(),
+                batchStatusAPI.getAll(),
+                materialAPI.getAll(),
             ]);
             setEventTypes((typesRes || []).filter((t: MachineEventType) => t.active));
             setStopReasons((reasonsRes || []).filter((r: StopReason) => r.active));
             setEmployees((empsRes || []).filter((e: Employee) => e.active));
             setProducts(prodsRes || []);
+            setBatchStatuses(batchStatusRes || []);
+            setAllMaterials(materialsRes || []);
         } catch { /* non-blocking */ }
     }, []);
 
@@ -597,6 +603,7 @@ export default function MachineEventPage() {
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-1.5">Product ID</label>
                         <Input value={selectedEvent?.product_id ?? ""} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                        {selectedEvent?.product_id && (() => { const p = products.find(p => p.product_id === selectedEvent.product_id); return p ? <p className="text-xs text-muted-foreground mt-1">{p.product_name}</p> : null; })()}
                     </div>
                     {/* Event Date */}
                     <div>
@@ -607,6 +614,7 @@ export default function MachineEventPage() {
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-1.5">Batch Status</label>
                         <Input value={selectedEvent?.batch_status_id ?? ""} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                        {selectedEvent?.batch_status_id && (() => { const b = batchStatuses.find(b => b.batch_status_id === selectedEvent.batch_status_id); return b ? <p className="text-xs text-muted-foreground mt-1">{b.batch_status_name}</p> : null; })()}
                     </div>
                     {/* Event Time */}
                     <div>
@@ -633,6 +641,7 @@ export default function MachineEventPage() {
                             <option value="">-- Select Employee --</option>
                             {employees.filter(emp => emp.active).map(emp => <option key={emp.emp_id} value={emp.emp_id}>{emp.emp_id} - {emp.emp_name}</option>)}
                         </select>
+                        {editForm.done_by_emp_id && (() => { const e = employees.find(e => e.emp_id === editForm.done_by_emp_id); return e ? <p className="text-xs text-muted-foreground mt-1">{e.emp_name}</p> : null; })()}
                     </div>
                     {/* Stop Reason (conditional) */}
                     {editRequiresStopReason && (
@@ -783,10 +792,14 @@ export default function MachineEventPage() {
                                                 </td>
                                                 <td className="px-4 py-4">
                                                     <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">{ev.machine_event_type_id}</span>
+                                                    {ev.machine_event_type_id && (() => { const t = eventTypes.find(t => t.machine_event_type_id === ev.machine_event_type_id); return t ? <span className="block text-xs text-muted-foreground mt-0.5">{t.machine_event_type_name}</span> : null; })()}
                                                 </td>
                                                 <td className="px-4 py-4"><span className="text-sm">{ev.event_date ? (() => { const d = new Date(ev.event_date); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`; })() : "-"}</span></td>
                                                 <td className="px-4 py-4"><span className="text-sm font-mono">{ev.event_time}</span></td>
-                                                <td className="px-4 py-4"><span className="text-sm font-mono">{ev.batch_status_id || "-"}</span></td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm font-mono">{ev.batch_status_id || "-"}</span>
+                                                    {ev.batch_status_id && (() => { const b = batchStatuses.find(b => b.batch_status_id === ev.batch_status_id); return b ? <span className="block text-xs text-muted-foreground mt-0.5">{b.batch_status_name}</span> : null; })()}
+                                                </td>
                                                 <td className="px-4 py-4"><span className="text-sm">{ev.machine_stop_reason_id || "-"}</span></td>
                                                 <td className="px-4 py-4">
                                                     <span className="text-sm font-medium">{ev.done_by_emp_id || "-"}</span>
@@ -833,7 +846,10 @@ export default function MachineEventPage() {
                                                                                 <tr key={i} className="bg-white hover:bg-blue-50">
                                                                                     <td className="px-3 py-2 font-mono">{m.machine_event_id}</td>
                                                                                     <td className="px-3 py-2 font-mono">{m.machine_id}</td>
-                                                                                    <td className="px-3 py-2 font-mono">{m.material_id}</td>
+                                                                                    <td className="px-3 py-2">
+                                                                                        <span className="font-mono">{m.material_id}</span>
+                                                                                        {m.material_id && (() => { const mat = allMaterials.find(x => x.material_id === m.material_id); return mat ? <div className="text-[10px] text-muted-foreground mt-0.5">{mat.material_name}</div> : null; })()}
+                                                                                    </td>
                                                                                     <td className="px-3 py-2 font-mono">{m.roll_no}</td>
                                                                                     <td className="px-3 py-2">{m.actual_open_qty ?? "-"}</td>
                                                                                     <td className="px-3 py-2">{m.actual_close_qty ?? "-"}</td>
@@ -864,8 +880,14 @@ export default function MachineEventPage() {
                                                                             {data.summary.map((s, i) => (
                                                                                 <tr key={i} className="bg-white hover:bg-green-50">
                                                                                     <td className="px-3 py-2 font-mono">{s.batch_no}</td>
-                                                                                    <td className="px-3 py-2 font-mono">{s.product_id}</td>
-                                                                                    <td className="px-3 py-2 font-mono">{s.material_id}</td>
+                                                                                    <td className="px-3 py-2">
+                                                                                        <span className="font-mono">{s.product_id}</span>
+                                                                                        {s.product_id && (() => { const p = products.find(p => p.product_id === s.product_id); return p ? <div className="text-[10px] text-muted-foreground mt-0.5">{p.product_name}</div> : null; })()}
+                                                                                    </td>
+                                                                                    <td className="px-3 py-2">
+                                                                                        <span className="font-mono">{s.material_id}</span>
+                                                                                        {s.material_id && (() => { const mat = allMaterials.find(x => x.material_id === s.material_id); return mat ? <div className="text-[10px] text-muted-foreground mt-0.5">{mat.material_name}</div> : null; })()}
+                                                                                    </td>
                                                                                     <td className="px-3 py-2">{s.total_consumed_qty}</td>
                                                                                     <td className="px-3 py-2">{s.uom}</td>
                                                                                     <td className="px-3 py-2">{s.total_no_of_rolls}</td>
@@ -976,6 +998,7 @@ export default function MachineEventPage() {
                                                     <div>
                                                         <label className="block text-sm font-medium text-muted-foreground mb-1.5">Latest Event Type ID</label>
                                                         <Input value={prevEventTypeId || "—"} disabled className="bg-muted/40 text-muted-foreground text-sm font-mono" />
+                                                        {prevEventTypeId && (() => { const t = eventTypes.find(t => t.machine_event_type_id === prevEventTypeId); return t ? <p className="text-xs text-muted-foreground mt-1">{t.machine_event_type_name}</p> : null; })()}
                                                     </div>
 
                                                     {/* Latest Event Date & Time */}
@@ -1041,6 +1064,7 @@ export default function MachineEventPage() {
                                                     <div>
                                                         <label className="block text-sm font-medium text-muted-foreground mb-1.5">Product ID</label>
                                                         <Input value={addForm.product_id} disabled className="bg-muted/40 text-muted-foreground text-sm" placeholder="Auto filled" />
+                                                        {addForm.product_id && (() => { const p = products.find(p => p.product_id === addForm.product_id); return p ? <p className="text-xs text-muted-foreground mt-1">{p.product_name}</p> : null; })()}
                                                     </div>
 
                                                     {/* Event Date */}
@@ -1053,6 +1077,7 @@ export default function MachineEventPage() {
                                                     <div>
                                                         <label className="block text-sm font-medium text-muted-foreground mb-1.5">Batch Status</label>
                                                         <Input value={addForm.batch_status_id} disabled className="bg-muted/40 text-muted-foreground text-sm" placeholder="Auto filled" />
+                                                        {addForm.batch_status_id && (() => { const b = batchStatuses.find(b => b.batch_status_id === addForm.batch_status_id); return b ? <p className="text-xs text-muted-foreground mt-1">{b.batch_status_name}</p> : null; })()}
                                                     </div>
 
                                                     {/* Event Time */}
@@ -1088,6 +1113,7 @@ export default function MachineEventPage() {
                                                             Done By
                                                         </label>
                                                         <Input value={addForm.done_by_emp_id || "—"} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                                                        {addForm.done_by_emp_id && (() => { const e = employees.find(e => e.emp_id === addForm.done_by_emp_id); return e ? <p className="text-xs text-muted-foreground mt-1">{e.emp_name}</p> : null; })()}
                                                     </div>
 
                                                     {/* Stop Reason (conditional) */}
@@ -1158,9 +1184,10 @@ export default function MachineEventPage() {
                                                                 }}
                                                                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                                                 <option value="">-- Select Material --</option>
-                                                                {bomMaterials.map(b => (
-                                                                    <option key={b.material_id} value={b.material_id}>{b.material_id}</option>
-                                                                ))}
+                                                                {bomMaterials.map(b => {
+                                                                    const mat = allMaterials.find(m => m.material_id === b.material_id);
+                                                                    return <option key={b.material_id} value={b.material_id}>{b.material_id}{mat ? ` — ${mat.material_name}` : ""}</option>;
+                                                                })}
                                                             </select>
                                                             {!addForm.product_id && (
                                                                 <p className="text-xs text-amber-500 mt-1">Select Event Type first to load materials</p>
