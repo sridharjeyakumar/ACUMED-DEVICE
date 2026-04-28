@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { employeeAPI, goodsReceiptHeaderAPI, goodsReceiptDetailAPI, goodsReceiptUnitsAPI, materialStatusAPI, materialAPI, materialStockAPI, purchaseOrderAPI, purchaseOrderDetailAPI, materialCategoryAPI } from "@/services/api";
+import { employeeAPI, vendorAPI, goodsReceiptHeaderAPI, goodsReceiptDetailAPI, goodsReceiptUnitsAPI, materialStatusAPI, materialAPI, materialStockAPI, purchaseOrderAPI, purchaseOrderDetailAPI, materialCategoryAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -239,6 +239,7 @@ export default function GoodsReceiptHeaderPage() {
     const [materials,         setMaterials]         = useState<Material[]>([]);
     const [materialCategories, setMaterialCategories] = useState<{ material_category_id: string; unit_split?: boolean }[]>([]);
     const [purchaseOrders, setPurchaseOrders] = useState<{ po_no: string; vendor_id: string; po_date: string; status: string }[]>([]);
+    const [vendors, setVendors] = useState<{ vendor_id: string; vendor_name: string }[]>([]);
 
     // ── Material grid state ──────────────────────────────────────────────────
     const [pendingFocusKey, setPendingFocusKey] = useState<string | null>(null);
@@ -309,6 +310,7 @@ export default function GoodsReceiptHeaderPage() {
     }, [isAddModalOpen]);
 
     useEffect(() => { employeeAPI.getAll().then(setRecords).catch(console.error); }, []);
+    useEffect(() => { vendorAPI.getAll().then(setVendors).catch(console.error); }, []);
     useEffect(() => {
         materialStatusAPI.getAll().then(data => {
             setStatuses(data);
@@ -1087,14 +1089,22 @@ export default function GoodsReceiptHeaderPage() {
                         <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">PO No. *</label>
-                                <select name="po_no" value={formData.po_no} onChange={handleInputChange}
-                                    className={`h-9 text-xs border border-slate-200 rounded-md w-full px-2 bg-background focus:ring-2 focus:ring-blue-500 outline-none ${fieldErrors.po_no ? "border-red-500 bg-red-50" : ""}`}>
-                                    <option value="">Select PO No.</option>
-                                    {purchaseOrders.filter(po =>po.status === 'A').map(po => (
-                                        <option key={po.po_no} value={po.po_no}>{po.po_no}</option>
-                                    ))}
-                                </select>
-                                {fieldErrors.po_no && <p className="text-red-500 text-[10px] mt-0.5">{fieldErrors.po_no}</p>}
+                                {disabled ? (
+                                    <div className="h-9 px-2 border border-slate-200 rounded-md bg-slate-50 text-xs flex items-center text-slate-700 font-mono">
+                                        {formData.po_no || "-"}
+                                    </div>
+                                ) : (
+                                    <>
+                                        <select name="po_no" value={formData.po_no} onChange={handleInputChange}
+                                            className={`h-9 text-xs border border-slate-200 rounded-md w-full px-2 bg-background focus:ring-2 focus:ring-blue-500 outline-none ${fieldErrors.po_no ? "border-red-500 bg-red-50" : ""}`}>
+                                            <option value="">Select PO No.</option>
+                                            {purchaseOrders.filter(po => po.status === 'A').map(po => (
+                                                <option key={po.po_no} value={po.po_no}>{po.po_no}</option>
+                                            ))}
+                                        </select>
+                                        {fieldErrors.po_no && <p className="text-red-500 text-[10px] mt-0.5">{fieldErrors.po_no}</p>}
+                                    </>
+                                )}
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">PO Date *</label>
@@ -1105,8 +1115,9 @@ export default function GoodsReceiptHeaderPage() {
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Vendor ID</label>
-                                <div className="h-9 px-2 border border-slate-200 rounded-md bg-slate-50 text-xs flex items-center text-slate-700 font-mono">
-                                    {formData.vendor_id || "-"}
+                                <div className="h-9 px-2 border border-slate-200 rounded-md bg-slate-50 text-xs flex items-center gap-1.5 text-slate-700 font-mono">
+                                    <span>{formData.vendor_id || "-"}</span>
+                                    {formData.vendor_id && (() => { const v = vendors.find(v => v.vendor_id === formData.vendor_id); return v ? <span className="font-sans text-slate-500 truncate">— {v.vendor_name}</span> : null; })()}
                                 </div>
                             </div>
                             <div>
@@ -1138,6 +1149,7 @@ export default function GoodsReceiptHeaderPage() {
                                         <option value="">Select</option>
                                         {records.filter(r => r.active).map(r => <option key={r.id} value={r.emp_id}>{r.emp_id}-{r.emp_name}</option>)}
                                     </select>
+                                    {formData.received_by_emp_id && (() => { const e = records.find(r => r.emp_id === formData.received_by_emp_id); return e ? <p className="text-[10px] text-slate-500 mt-0.5 font-medium">{e.emp_name}</p> : null; })()}
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Checked By *</label>
@@ -1146,6 +1158,7 @@ export default function GoodsReceiptHeaderPage() {
                                         <option value="">Select</option>
                                         {records.filter(r => r.active).map(r => <option key={r.id} value={r.emp_id}>{r.emp_id}-{r.emp_name}</option>)}
                                     </select>
+                                    {formData.checked_by_emp_id && (() => { const e = records.find(r => r.emp_id === formData.checked_by_emp_id); return e ? <p className="text-[10px] text-slate-500 mt-0.5 font-medium">{e.emp_name}</p> : null; })()}
                                 </div>
                             </div>
                             <div>
@@ -1714,7 +1727,10 @@ export default function GoodsReceiptHeaderPage() {
                                                         <td className="px-4 py-4 text-sm align-middle">{item.invoice_date ? formatDate(item.invoice_date) : "-"}</td>
                                                         <td className="px-4 py-4 text-sm align-middle">{item.po_no || "-"}</td>
                                                         <td className="px-4 py-4 text-sm align-middle">{item.po_date ? formatDate(item.po_date) : "-"}</td>
-                                                        <td className="px-4 py-4 text-sm align-middle font-mono">{item.vendor_id || "-"}</td>
+                                                        <td className="px-4 py-4 text-sm align-middle">
+                                                            <span className="font-mono">{item.vendor_id || "-"}</span>
+                                                            {item.vendor_id && (() => { const v = vendors.find(v => v.vendor_id === item.vendor_id); return v ? <div className="text-[10px] text-slate-500 mt-0.5">{v.vendor_name}</div> : null; })()}
+                                                        </td>
                                                         <td className="px-4 py-4 text-sm align-middle">
                                                             {item.supplier_coa ? (
                                                                 item.supplier_coa.startsWith("data:image") ? (
@@ -1733,8 +1749,14 @@ export default function GoodsReceiptHeaderPage() {
                                                             )}
                                                         </td>
 
-                                                        <td className="px-4 py-4 text-sm align-middle font-mono">{item.received_by_emp_id}</td>
-                                                        <td className="px-4 py-4 text-sm align-middle font-mono">{item.checked_by_emp_id}</td>
+                                                        <td className="px-4 py-4 text-sm align-middle">
+                                                            <span className="font-mono">{item.received_by_emp_id}</span>
+                                                            {item.received_by_emp_id && (() => { const e = records.find(r => r.emp_id === item.received_by_emp_id); return e ? <div className="text-[10px] text-slate-500 mt-0.5">{e.emp_name}</div> : null; })()}
+                                                        </td>
+                                                        <td className="px-4 py-4 text-sm align-middle">
+                                                            <span className="font-mono">{item.checked_by_emp_id}</span>
+                                                            {item.checked_by_emp_id && (() => { const e = records.find(r => r.emp_id === item.checked_by_emp_id); return e ? <div className="text-[10px] text-slate-500 mt-0.5">{e.emp_name}</div> : null; })()}
+                                                        </td>
                                                         <td className="px-4 py-4 text-sm align-middle max-w-[120px] truncate text-muted-foreground">{item.remarks || "-"}</td>
                                                         <td className="px-4 py-4 text-sm align-middle font-mono">{item.last_modified_user_id || "-"}</td>
                                                         <td className="px-4 py-4 text-sm align-middle whitespace-nowrap">{item.last_modified_date_time ? formatDateTime(item.last_modified_date_time) : "-"}</td>
