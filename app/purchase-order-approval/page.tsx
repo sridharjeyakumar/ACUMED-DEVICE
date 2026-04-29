@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Search, ChevronDown, ChevronLeft, ChevronRight, Printer, Mail, X } from
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
-import { purchaseOrderAPI, purchaseOrderDetailAPI, vendorAPI, materialAPI, companyAPI, employeeAPI, sendMailAPI } from "@/services/api";
+import { purchaseOrderAPI, purchaseOrderDetailAPI, vendorAPI, materialAPI, companyAPI, employeeAPI, sendMailAPI, mailLogsAPI } from "@/services/api";
 import { getSessionUser } from "@/lib/auth";
 
 interface PurchaseOrder {
@@ -141,11 +141,14 @@ export default function PurchaseOrderApprovalPage() {
 
     // Mail modal
     const [isMailModalOpen, setIsMailModalOpen] = useState(false);
-    const [mailData, setMailData] = useState({ to: '', cc: '', subject: '', body: '' });
+    const [mailData, setMailData] = useState({ to: [] as string[], cc: [] as string[], subject: '', body: '' });
+    const [mailToInput, setMailToInput] = useState('');
+    const [mailCcInput, setMailCcInput] = useState('');
     const [mailSending, setMailSending] = useState(false);
     const [selectedMailOrder, setSelectedMailOrder] = useState<PurchaseOrder | null>(null);
     const [pdfAttachment, setPdfAttachment] = useState<{ base64: string; blobUrl: string; filename: string } | null>(null);
     const [pdfGenerating, setPdfGenerating] = useState(false);
+    const bodyEditorRef = useRef<HTMLDivElement>(null);
 
     // Rows being submitted
     const [submitting, setSubmitting] = useState<Set<string>>(new Set());
@@ -208,6 +211,11 @@ export default function PurchaseOrderApprovalPage() {
 
     useEffect(() => { loadOrders(); }, [loadOrders]);
     useEffect(() => { setCurrentPage(1); }, [filterStatus, searchQuery]);
+    useEffect(() => {
+        if (isMailModalOpen && bodyEditorRef.current) {
+            bodyEditorRef.current.innerHTML = mailData.body;
+        }
+    }, [isMailModalOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Filter + search
     const filteredOrders = orders.filter(o => {
@@ -569,7 +577,7 @@ export default function PurchaseOrderApprovalPage() {
             const bodyHtml = `
 <p>Dear ${vendor?.contact_person || 'Sir/Madam'},</p>
 <p>We are pleased to place the Order for the below material.</p>
-<table style="border-collapse:collapse;width:100%;margin:12px 0;">
+<table contenteditable="false" style="border-collapse:collapse;width:100%;margin:12px 0;">
   <thead>
     <tr style="background:#f0f4ff;">
       <th style="border:1px solid #ccc;padding:6px 10px;">S.No</th>
@@ -584,11 +592,13 @@ export default function PurchaseOrderApprovalPage() {
 <br/>
 <p>Thanks and Regards,<br/>${c1?.company_name || 'ACUMED DEVICES'}</p>`;
             setMailData({
-                to: vendor?.contact_email_id || '',
-                cc: 'acumed.devices@gmail.com',
+                to: vendor?.contact_email_id ? [vendor.contact_email_id] : [],
+                cc: ['acumed.devices@gmail.com'],
                 subject: `Purchase Order ${order.po_no} from ${c1?.company_short_name || c1?.company_name || ''}`,
                 body: bodyHtml,
             });
+            setMailToInput('');
+            setMailCcInput('');
             setSelectedMailOrder(order);
             setPdfAttachment(null);
             setIsMailModalOpen(true);
@@ -666,25 +676,60 @@ export default function PurchaseOrderApprovalPage() {
     };
 
     const handleSendMail = async () => {
-        if (!mailData.to) {
-            toast({ title: "No recipient", description: "Vendor has no email address on record.", variant: "destructive" });
+        const toList = mailToInput.trim()
+            ? [...mailData.to, mailToInput.trim()]
+            : mailData.to;
+        const ccList = mailCcInput.trim()
+            ? [...mailData.cc, mailCcInput.trim()]
+            : mailData.cc;
+
+        if (toList.length === 0) {
+            toast({ title: "No recipient", description: "Please add at least one To email address.", variant: "destructive" });
             return;
         }
         setMailSending(true);
+        const sentAt = new Date().toISOString();
+        const toStr = toList.join(', ');
+        const ccStr = ccList.join(', ');
         try {
             const attachments: { filename: string; content: string; encoding: string; contentType: string }[] = [];
             if (pdfAttachment) {
                 attachments.push({ filename: pdfAttachment.filename, content: pdfAttachment.base64, encoding: 'base64', contentType: 'application/pdf' });
             }
-            await sendMailAPI.send({ to: mailData.to, cc: mailData.cc, subject: mailData.subject, html: mailData.body, attachments });
+            await sendMailAPI.send({
+                to: toStr,
+                cc: ccStr,
+                subject: mailData.subject,
+                html: mailData.body,
+                attachments,
+            });
             if (selectedMailOrder) {
                 await purchaseOrderAPI.update(selectedMailOrder.po_no, { mail_sent_status: 'Y' });
                 setOrders(prev => prev.map(o => o.po_no === selectedMailOrder.po_no ? { ...o, mail_sent_status: 'Y' } : o));
             }
-            toast({ title: "Mail Sent", description: `Mail sent to ${mailData.to}` });
+            mailLogsAPI.create({
+                mail_template_id: 'PO',
+                mail_to: toStr,
+                mail_cc: ccStr,
+                mail_subject: mailData.subject,
+                mail_sent_date_time: sentAt,
+                mail_sent_status: 'S',
+                log_message: 'Mail sent successfully',
+            }).catch(() => {});
+            toast({ title: "Mail Sent", description: `Mail sent to ${toStr}` });
             setIsMailModalOpen(false);
         } catch (err: any) {
-            toast({ title: "Mail Error", description: err.message || "Failed to send mail", variant: "destructive" });
+            const errMsg = err.message || 'Failed to send mail';
+            mailLogsAPI.create({
+                mail_template_id: 'PO',
+                mail_to: toStr,
+                mail_cc: ccStr,
+                mail_subject: mailData.subject,
+                mail_sent_date_time: sentAt,
+                mail_sent_status: 'F',
+                log_message: errMsg.slice(0, 100),
+            }).catch(() => {});
+            toast({ title: "Mail Error", description: errMsg, variant: "destructive" });
         } finally {
             setMailSending(false);
         }
@@ -1101,15 +1146,88 @@ export default function PurchaseOrderApprovalPage() {
                                     </button>
                                 </div>
                                 <div className="px-6 py-4 space-y-4">
+                                    {/* To field */}
                                     <div>
                                         <Label className="text-xs font-semibold text-gray-600 uppercase">To</Label>
-                                        <Input value={mailData.to} onChange={e => setMailData(p => ({ ...p, to: e.target.value }))}
-                                            className="mt-1 text-sm" placeholder="Recipient email" />
+                                        <div
+                                            className="mt-1 min-h-[40px] flex flex-wrap gap-1.5 items-center border border-input rounded-md px-2 py-1.5 bg-white focus-within:ring-2 focus-within:ring-ring cursor-text"
+                                            onClick={() => (document.getElementById('mail-to-input') as HTMLInputElement)?.focus()}
+                                        >
+                                            {mailData.to.map((email, i) => (
+                                                <span key={i} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                                                    {email}
+                                                    <button
+                                                        type="button"
+                                                        onClick={e => { e.stopPropagation(); setMailData(p => ({ ...p, to: p.to.filter((_, idx) => idx !== i) })); }}
+                                                        className="text-blue-500 hover:text-blue-800 leading-none"
+                                                    >×</button>
+                                                </span>
+                                            ))}
+                                            <input
+                                                id="mail-to-input"
+                                                type="email"
+                                                value={mailToInput}
+                                                onChange={e => setMailToInput(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter' || e.key === ',') {
+                                                        e.preventDefault();
+                                                        const v = mailToInput.trim().replace(/,$/, '');
+                                                        if (v) { setMailData(p => ({ ...p, to: [...p.to, v] })); setMailToInput(''); }
+                                                    } else if (e.key === 'Backspace' && !mailToInput) {
+                                                        setMailData(p => ({ ...p, to: p.to.slice(0, -1) }));
+                                                    }
+                                                }}
+                                                onBlur={() => {
+                                                    const v = mailToInput.trim().replace(/,$/, '');
+                                                    if (v) { setMailData(p => ({ ...p, to: [...p.to, v] })); setMailToInput(''); }
+                                                }}
+                                                placeholder={mailData.to.length === 0 ? 'Type email and press Enter or comma...' : ''}
+                                                className="flex-1 min-w-[180px] outline-none text-sm bg-transparent py-0.5"
+                                            />
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-1">Press Enter or comma to add. Click × to remove.</p>
                                     </div>
+
+                                    {/* CC field */}
                                     <div>
                                         <Label className="text-xs font-semibold text-gray-600 uppercase">CC</Label>
-                                        <Input value={mailData.cc} onChange={e => setMailData(p => ({ ...p, cc: e.target.value }))}
-                                            className="mt-1 text-sm" placeholder="CC email" />
+                                        <div
+                                            className="mt-1 min-h-[40px] flex flex-wrap gap-1.5 items-center border border-input rounded-md px-2 py-1.5 bg-white focus-within:ring-2 focus-within:ring-ring cursor-text"
+                                            onClick={() => (document.getElementById('mail-cc-input') as HTMLInputElement)?.focus()}
+                                        >
+                                            {mailData.cc.map((email, i) => (
+                                                <span key={i} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                                                    {email}
+                                                    <button
+                                                        type="button"
+                                                        onClick={e => { e.stopPropagation(); setMailData(p => ({ ...p, cc: p.cc.filter((_, idx) => idx !== i) })); }}
+                                                        className="text-gray-400 hover:text-gray-700 leading-none"
+                                                    >×</button>
+                                                </span>
+                                            ))}
+                                            <input
+                                                id="mail-cc-input"
+                                                type="email"
+                                                value={mailCcInput}
+                                                onChange={e => setMailCcInput(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter' || e.key === ',') {
+                                                        e.preventDefault();
+                                                        const v = mailCcInput.trim().replace(/,$/, '');
+                                                        if (v) { setMailData(p => ({ ...p, cc: [...p.cc, v] })); setMailCcInput(''); }
+                                                    } else if (e.key === 'Backspace' && !mailCcInput) {
+                                                        setMailData(p => ({ ...p, cc: p.cc.slice(0, -1) }));
+                                                    }
+                                                }}
+                                                onBlur={() => {
+                                                    const v = mailCcInput.trim().replace(/,$/, '');
+                                                    if (v) { setMailData(p => ({ ...p, cc: [...p.cc, v] })); setMailCcInput(''); }
+                                                }}
+                                                placeholder={mailData.cc.length === 0 ? 'Type email and press Enter or comma...' : ''}
+                                                className="flex-1 min-w-[180px] outline-none text-sm bg-transparent py-0.5"
+                                            />
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-1">Press Enter or comma to add. Click × to remove.</p>
                                     </div>
                                     <div>
                                         <Label className="text-xs font-semibold text-gray-600 uppercase">Subject</Label>
@@ -1145,9 +1263,17 @@ export default function PurchaseOrderApprovalPage() {
                                         </div>
                                     </div>
                                     <div>
-                                        <Label className="text-xs font-semibold text-gray-600 uppercase">Body Preview</Label>
-                                        <div className="mt-1 border rounded-lg p-4 text-sm bg-gray-50 max-h-60 overflow-y-auto"
-                                            dangerouslySetInnerHTML={{ __html: mailData.body }} />
+                                        <Label className="text-xs font-semibold text-gray-600 uppercase">Body</Label>
+                                        <div
+                                            ref={bodyEditorRef}
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            onInput={() => {
+                                                if (bodyEditorRef.current)
+                                                    setMailData(p => ({ ...p, body: bodyEditorRef.current!.innerHTML }));
+                                            }}
+                                            className="mt-1 border rounded-lg p-4 text-sm bg-white max-h-60 overflow-y-auto outline-none focus:ring-2 focus:ring-blue-300 cursor-text"
+                                        />
                                     </div>
                                 </div>
                                 <div className="flex justify-end gap-3 px-6 py-4 border-t">

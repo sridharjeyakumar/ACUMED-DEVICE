@@ -1100,6 +1100,19 @@ export const sendMailAPI = {
         fetchAPI('/send-mail', { method: 'POST', body: JSON.stringify(data) }),
 };
 
+export const mailLogsAPI = {
+    getAll: () => fetchAPI('/mail-logs'),
+    create: (data: {
+        mail_template_id?: string;
+        mail_to: string;
+        mail_cc?: string;
+        mail_subject: string;
+        mail_sent_date_time: string;
+        mail_sent_status: 'S' | 'F';
+        log_message?: string;
+    }) => fetchAPI('/mail-logs', { method: 'POST', body: JSON.stringify(data) }),
+};
+
 
 
 export const purchaseOrderDetailAPI = {

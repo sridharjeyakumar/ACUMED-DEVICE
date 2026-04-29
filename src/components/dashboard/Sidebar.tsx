@@ -29,7 +29,8 @@ import {
   TableProperties,
   ClipboardList,
   Activity,
-  MapPin
+  MapPin,
+  Mail
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -86,8 +87,8 @@ const navSections: NavSection[] = [
       { icon: Ruler, label: "UOM Master", href: "/uom-master" },
       { icon: CalendarDays, label: "Holidays Master", href: "/holidays-master" },
       { icon: CalendarOff, label: "Weekly Off Master", href: "/weekly-off-master" },
-
-
+      { icon: Mail, label: "Mail Logs", href: "/mail-logs" },
+      
     ],
   },
   {
