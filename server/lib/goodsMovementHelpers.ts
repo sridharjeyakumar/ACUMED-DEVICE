@@ -48,7 +48,7 @@ export async function applyApprovalStockUpdates(
         const rollNos = gmUnits.map(u => u.roll_no);
         await GoodsReceiptUnits.updateMany(
             { material_doc_no, roll_no: { $in: rollNos } },
-            { $set: { balance_qty: 0, status: 'C' } },
+            [{ $set: { rejected_qty: '$balance_qty', balance_qty: 0, status: 'C' } }],
             { session }
         );
 
