@@ -562,7 +562,7 @@ export default function GoodsReceiptHeaderPage() {
                     uom:                     row.uom.trim().toUpperCase(),
                     total_pockets:           row.unit_split && row.total_pockets !== "" ? Number(row.total_pockets) : undefined,
                     total_rolls:             row.unit_split && row.total_rolls   !== "" ? Number(row.total_rolls)   : undefined,
-                    existing_stock_qty:      (Number(row.existing_stock_qty)   || 0) + nettQty,
+                    existing_stock_qty:      parseFloat(((Number(row.existing_stock_qty) || 0) + nettQty).toFixed(3)),
                     existing_total_rolls:    (Number(row.existing_total_rolls) || 0) + totalRolls,
                 });
                 // ── Unit rows (only when unit_split) ──────────────────────────
@@ -651,7 +651,7 @@ export default function GoodsReceiptHeaderPage() {
                     uom:                     row.uom.trim().toUpperCase(),
                     total_pockets:           row.unit_split && row.total_pockets !== "" ? Number(row.total_pockets) : undefined,
                     total_rolls:             totalRolls || undefined,
-                    existing_stock_qty:      (Number(row.existing_stock_qty)   || 0) + nettQty,
+                    existing_stock_qty:      parseFloat(((Number(row.existing_stock_qty) || 0) + nettQty).toFixed(3)),
                     existing_total_rolls:    (Number(row.existing_total_rolls) || 0) + totalRolls,
                 });
                 if (row.unit_split) {
@@ -861,7 +861,7 @@ export default function GoodsReceiptHeaderPage() {
                     uom:                     row.uom.trim().toUpperCase(),
                     total_pockets:           row.unit_split && row.total_pockets !== "" ? Number(row.total_pockets) : undefined,
                     total_rolls:             totalRolls || undefined,
-                    existing_stock_qty:      (Number(row.existing_stock_qty)   || 0) + nettQty,
+                    existing_stock_qty:      parseFloat(((Number(row.existing_stock_qty) || 0) + nettQty).toFixed(3)),
                     existing_total_rolls:    (Number(row.existing_total_rolls) || 0) + totalRolls,
                 });
                 if (row.unit_split) {
@@ -970,7 +970,7 @@ export default function GoodsReceiptHeaderPage() {
     const updateMaterialStock = async (row: MaterialRow) => {
         const material_id = row.material_id.trim().toUpperCase();
         const nettQty     = (Number(row.invoice_total_gross_qty) || 0) - (Number(row.invoice_total_tare_qty) || 0);
-        const newStockQty = (Number(row.existing_stock_qty)   || 0) + nettQty;
+        const newStockQty = parseFloat(((Number(row.existing_stock_qty) || 0) + nettQty).toFixed(3));
         const newTotRolls = (Number(row.existing_total_rolls) || 0) + (Number(row.total_rolls) || 0);
         // uom is required by MaterialStocks schema — pass from row, fallback to "KG"
         const uom         = row.uom?.trim().toUpperCase() || "KG";
@@ -1360,7 +1360,7 @@ export default function GoodsReceiptHeaderPage() {
                                 )}
                                 {/* Exist Stock - display only */}
                                 <div className="h-9 flex items-center justify-center border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-400 select-none">
-                                    {row.existing_stock_qty || "—"}
+                                    {row.existing_stock_qty !== "" && row.existing_stock_qty != null ? Number(row.existing_stock_qty).toFixed(3) : "—"}
                                 </div>
                                 {/* Exist Rolls - display only */}
                                 <div className="h-9 flex items-center justify-center border border-slate-100 rounded-md bg-slate-50 text-xs text-slate-400 select-none">
@@ -1865,7 +1865,7 @@ export default function GoodsReceiptHeaderPage() {
                                                                                                     <td className="px-4 py-3 text-center text-xs text-slate-500">{d.uom}</td>
                                                                                                     <td className="px-4 py-3 text-center text-xs text-slate-600">{d.total_pockets ?? 0}</td>
                                                                                                     <td className="px-4 py-3 text-right text-xs text-slate-600">{d.total_rolls ?? 0}</td>
-                                                                                                    <td className="px-4 py-3 text-right text-xs text-slate-600">{d.existing_stock_qty ?? 0}</td>
+                                                                                                    <td className="px-4 py-3 text-right text-xs text-slate-600">{Number(d.existing_stock_qty ?? 0).toFixed(3)}</td>
                                                                                                     <td className="px-4 py-3 text-right text-xs text-slate-600">{d.existing_total_rolls ?? 0}</td>
                                                                                                 
                                                                                                 </tr>
