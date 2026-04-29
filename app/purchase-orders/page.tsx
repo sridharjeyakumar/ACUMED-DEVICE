@@ -374,6 +374,19 @@ export default function PurchaseOrdersPage() {
     const [detailRows, setDetailRows] = useState<DetailRow[]>([]);
     const [sessionUserName, setSessionUserName] = useState<string>("");
 
+    const today = new Date().toISOString().split('T')[0];
+
+    const latestPoDate = orders.reduce((max, o) => {
+        const d = toDateInput(o.po_date);
+        return d > max ? d : max;
+    }, "");
+
+    const latestPoDateExcluding = (excludePoNo: string) => orders.reduce((max, o) => {
+        if (o.po_no === excludePoNo) return max;
+        const d = toDateInput(o.po_date);
+        return d > max ? d : max;
+    }, "");
+
     // Expand state
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [expandedDetails, setExpandedDetails] = useState<Record<string, PODetail[]>>({});
@@ -583,10 +596,26 @@ export default function PurchaseOrdersPage() {
         return true;
     };
 
+    const validatePoDate = (poDate: string, excludePoNo?: string): boolean => {
+        if (!poDate) return true;
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (poDate > todayStr) {
+            toast({ title: "Validation Error", description: "PO Date cannot be a future date.", variant: "destructive" });
+            return false;
+        }
+        const minDate = excludePoNo ? latestPoDateExcluding(excludePoNo) : latestPoDate;
+        if (minDate && poDate < minDate) {
+            toast({ title: "Validation Error", description: `PO Date cannot be earlier than the latest PO date (${formatDate(minDate)}).`, variant: "destructive" });
+            return false;
+        }
+        return true;
+    };
+
     // ── Submit: Add ───────────────────────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (isSubmittingRef.current) return;
+        if (!validatePoDate(formData.po_date)) return;
         if (!validateDetailRows()) return;
 
         isSubmittingRef.current = true;
@@ -699,6 +728,7 @@ export default function PurchaseOrdersPage() {
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (isSubmittingRef.current || !selectedOrder) return;
+        if (!validatePoDate(formData.po_date, formData.po_no)) return;
         if (!validateDetailRows()) return;
 
         isSubmittingRef.current = true;
@@ -1564,7 +1594,7 @@ export default function PurchaseOrdersPage() {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">PO Date <span className="text-red-500">*</span></label>
-                                            <Input type="date" name="po_date" value={formData.po_date} onChange={handleInputChange} required />
+                                            <Input type="date" name="po_date" value={formData.po_date} onChange={handleInputChange} required min={latestPoDate || undefined} max={today} />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">PO Time <span className="text-red-500">*</span></label>
@@ -1703,18 +1733,12 @@ export default function PurchaseOrdersPage() {
                                             <Input value={formData.po_no} disabled className="bg-gray-50 font-mono" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-foreground mb-2">Status <span className="text-red-500">*</span></label>
-                                            <select name="status" value={formData.status} onChange={handleInputChange}
-                                                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-blue-500 outline-none" required>
-                                                <option value="E">E - Entered</option>
-                                                <option value="A">A - Active</option>
-                                                <option value="X">X - Cancelled</option>
-                                                <option value="C">C - Closed</option>
-                                            </select>
+                                            <label className="block text-sm font-semibold text-foreground mb-2">Status</label>
+                                            <Input value={`${formData.status} - ${STATUS_LABELS[formData.status]?.label ?? formData.status}`} disabled className="bg-gray-50" />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">PO Date <span className="text-red-500">*</span></label>
-                                            <Input type="date" name="po_date" value={formData.po_date} onChange={handleInputChange} required />
+                                            <Input type="date" name="po_date" value={formData.po_date} onChange={handleInputChange} required min={latestPoDateExcluding(formData.po_no) || undefined} max={today} />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-foreground mb-2">PO Time <span className="text-red-500">*</span></label>

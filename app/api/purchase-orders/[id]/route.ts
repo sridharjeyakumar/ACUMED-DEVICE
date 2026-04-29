@@ -86,6 +86,9 @@ export async function PUT(
     if (body.approved_date_time !== undefined) updateData.approved_date_time = body.approved_date_time ? new Date(body.approved_date_time) : undefined;
     if (body.status !== undefined) updateData.status = body.status;
     if (body.mail_sent_status !== undefined) updateData.mail_sent_status = body.mail_sent_status;
+    if (body.po_basic_amount !== undefined) updateData.po_basic_amount = body.po_basic_amount;
+    if (body.po_gst_amount !== undefined) updateData.po_gst_amount = body.po_gst_amount;
+    if (body.po_total_amount !== undefined) updateData.po_total_amount = body.po_total_amount;
 
     const order = await PurchaseOrder.findOneAndUpdate(
       { po_no: id },
