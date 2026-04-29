@@ -359,7 +359,11 @@ export default function MachineEventPage() {
 
     const enabledEventTypeIds = new Set(
         addForm.machine_id
-            ? eventTypes.filter(t => t.prerequisite_machine_event_type_id === prevEventTypeId).map(t => t.machine_event_type_id)
+            ? eventTypes
+                .filter(t => prevEventTypeId
+                    ? t.prerequisite_machine_event_type_id === prevEventTypeId
+                    : !t.prerequisite_machine_event_type_id)
+                .map(t => t.machine_event_type_id)
             : []
     );
 
