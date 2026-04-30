@@ -85,6 +85,13 @@ function getCurrentDate(): string {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
+function formatDateDMY(date: string | undefined): string {
+    if (!date) return "-";
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return date;
+    return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+}
+
 const emptyAddForm = {
     machine_id: "", machine_event_type_id: "", batch_no: "", product_id: "",
     batch_status_id: "", event_time: "", stop_reason_id: "", done_by_emp_id: "", remarks: "",
@@ -133,7 +140,7 @@ export default function MachineEventPage() {
     const [addForm, setAddForm] = useState({ ...emptyAddForm, event_time: getCurrentTime() });
     const [prevEventTypeId, setPrevEventTypeId] = useState("");
     const [prevEventInfo, setPrevEventInfo] = useState<{ type_id: string; date: string; time: string } | null>(null);
-    const [batchOptions, setBatchOptions] = useState<{ batch_no: string; product_id: string }[]>([]);
+    const [batchOptions, setBatchOptions] = useState<{ batch_no: string; product_id: string; current_batch_status_id: string }[]>([]);
     const [stockData, setStockData] = useState<MaterialStock | null>(null);
     const [bomMaterials, setBomMaterials] = useState<{ material_id: string; input_uom: string }[]>([]);
     const [availableRolls, setAvailableRolls] = useState<{ roll_no: string; balance_qty: number; uom: string; status: string }[]>([]);
@@ -318,9 +325,9 @@ export default function MachineEventPage() {
             }
 
             if (txns.length > 0) {
-                const options = txns.map((t: any) => ({ batch_no: t.batch_no, product_id: t.product_id }));
+                const options = txns.map((t: any) => ({ batch_no: t.batch_no, product_id: t.product_id, current_batch_status_id: t.current_batch_status_id || "" }));
                 setBatchOptions(options);
-                setAddForm(prev => ({ ...prev, batch_no: options[0].batch_no, product_id: options[0].product_id }));
+                setAddForm(prev => ({ ...prev, batch_no: options[0].batch_no, product_id: options[0].product_id, batch_status_id: options[0].current_batch_status_id }));
             }
         } catch { /* ignore */ }
     }, [eventTypes, toast]);
@@ -612,7 +619,7 @@ export default function MachineEventPage() {
                     {/* Event Date */}
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-1.5">Event Date</label>
-                        <Input value={selectedEvent?.event_date ?? ""} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                        <Input value={formatDateDMY(selectedEvent?.event_date)} disabled className="bg-muted/40 text-muted-foreground text-sm" />
                     </div>
                     {/* Batch Status */}
                     <div>
@@ -798,7 +805,7 @@ export default function MachineEventPage() {
                                                     <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">{ev.machine_event_type_id}</span>
                                                     {ev.machine_event_type_id && (() => { const t = eventTypes.find(t => t.machine_event_type_id === ev.machine_event_type_id); return t ? <span className="block text-xs text-muted-foreground mt-0.5">{t.machine_event_type_name}</span> : null; })()}
                                                 </td>
-                                                <td className="px-4 py-4"><span className="text-sm">{ev.event_date ? (() => { const d = new Date(ev.event_date); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`; })() : "-"}</span></td>
+                                                <td className="px-4 py-4"><span className="text-sm">{formatDateDMY(ev.event_date)}</span></td>
                                                 <td className="px-4 py-4"><span className="text-sm font-mono">{ev.event_time}</span></td>
                                                 <td className="px-4 py-4">
                                                     <span className="text-sm font-mono">{ev.batch_status_id || "-"}</span>
@@ -815,8 +822,8 @@ export default function MachineEventPage() {
                                                 <td className="px-4 py-4"><span className="text-sm">{formatDateTime(ev.last_modified_date_time)}</span></td>
                                                 <td className="px-4 py-4">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); handleEdit(ev); }}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"><Pencil className="w-4 h-4" /></Button>
+                                                        {/* <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); handleEdit(ev); }}
+                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"><Pencil className="w-4 h-4" /></Button> */}
                                                         {isSuperAdmin && (
                                                             <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); handleCancel(ev); }}
                                                                 className="text-red-700 hover:text-red-800 hover:bg-red-50" title="Permanently delete"><Trash2 className="w-4 h-4" /></Button>
@@ -950,7 +957,7 @@ export default function MachineEventPage() {
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <Button type="button" variant="outline" className="flex items-center gap-2" onClick={() => handleCancelClick("add")}>
-                                            <History className="w-4 h-4" />View History
+                                            <History className="w-4 h-4" />Discard
                                         </Button>
                                         <Button form="add-event-form" type="submit"
                                             className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
@@ -1051,7 +1058,7 @@ export default function MachineEventPage() {
                                                                 value={addForm.batch_no}
                                                                 onChange={e => {
                                                                     const selected = batchOptions.find(b => b.batch_no === e.target.value);
-                                                                    setAddForm(prev => ({ ...prev, batch_no: e.target.value, product_id: selected?.product_id || "" }));
+                                                                    setAddForm(prev => ({ ...prev, batch_no: e.target.value, product_id: selected?.product_id || "", batch_status_id: selected?.current_batch_status_id || "" }));
                                                                 }}
                                                                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
                                                             >
@@ -1074,7 +1081,7 @@ export default function MachineEventPage() {
                                                     {/* Event Date */}
                                                     <div>
                                                         <label className="block text-sm font-medium text-muted-foreground mb-1.5">Event Date</label>
-                                                        <Input value={getCurrentDate()} disabled className="bg-muted/40 text-muted-foreground text-sm" />
+                                                        <Input value={formatDateDMY(getCurrentDate())} disabled className="bg-muted/40 text-muted-foreground text-sm" />
                                                     </div>
 
                                                     {/* Batch Status */}
@@ -1149,7 +1156,7 @@ export default function MachineEventPage() {
                                             </div>
 
                                             {/* Material Selection — OPEN QTY mode (accept_open_qty = Y) */}
-                                            {acceptMaterial && (
+                                            {acceptOpenQty && (
                                                 <div className="bg-white rounded-lg border border-border p-5">
                                                     <div className="flex items-center gap-2 mb-4">
                                                         <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
@@ -1204,7 +1211,7 @@ export default function MachineEventPage() {
                                                             <Input value={addForm.mat_uom} disabled className="bg-muted/40 text-muted-foreground text-sm" placeholder="Auto filled" />
                                                         </div>
 
-                                                        {/* Roll No — selection from GRU (status IN A/I, balance>0, ASC) */}
+                                                        {/* Roll No — selection from GRU (status=A, balance_qty>0, ASC) */}
                                                         <div className="col-span-2">
                                                             <label className="block text-sm font-medium text-foreground mb-1.5">
                                                                 Roll No <span className="text-red-500">*</span>
@@ -1223,7 +1230,7 @@ export default function MachineEventPage() {
                                                                 ))}
                                                             </select>
                                                             {availableRolls.length === 0 && addForm.selected_material_id && (
-                                                                <p className="text-xs text-amber-500 mt-1">No stock found (status A/I, balance &gt; 0)</p>
+                                                                <p className="text-xs text-amber-500 mt-1">No stock found (status A, balance &gt; 0)</p>
                                                             )}
                                                         </div>
 
@@ -1393,7 +1400,7 @@ export default function MachineEventPage() {
                                             </div>
 
                                             {/* Complete Transaction */}
-                                            <div className="bg-blue-600 rounded-lg p-4">
+                                            {/* <div className="bg-blue-600 rounded-lg p-4">
                                                 <h3 className="text-sm font-semibold text-white mb-1">Complete Transaction</h3>
                                                 <p className="text-xs text-blue-200 mb-3">Verify all machine parameters and material counts before finalizing.</p>
                                                 <div className="space-y-2">
@@ -1407,7 +1414,7 @@ export default function MachineEventPage() {
                                                         Cancel
                                                     </Button>
                                                 </div>
-                                            </div>
+                                            </div> */}
 
                                             {/* Machine Status */}
                                             {addForm.machine_id && (

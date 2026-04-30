@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 // GET /api/goods-receipt-units
 //   ?material_doc_no=M2500001                        → all units for a header
 //   ?material_doc_no=M2500001&material_id=MAT01      → units for one detail row
-//   ?material_id=MAT01&available=true                → status=A, sorted roll_no DESC
+//   ?material_id=MAT01&available=true                → status=A, balance_qty>0, sorted roll_no ASC
 // ─────────────────────────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
     try {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         if (docNo)      filter.material_doc_no = docNo.toUpperCase();
         if (materialId) filter.material_id     = materialId.toUpperCase();
         if (available === 'true') {
-            filter.status = { $in: ['A', 'I'] };
+            filter.status = 'A';
             filter.balance_qty = { $gt: 0 };
         }
 
