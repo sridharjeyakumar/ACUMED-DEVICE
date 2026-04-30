@@ -95,7 +95,6 @@ export default function MachineEventTypeMasterPage() {
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [formData, setFormData] = useState({ ...emptyForm });
-    const [isDuplicateWarningOpen, setIsDuplicateWarningOpen] = useState(false);
 
     useEffect(() => {
         if (isAddModalOpen) setFormData({ ...emptyForm });
@@ -189,7 +188,7 @@ export default function MachineEventTypeMasterPage() {
             t => t.machine_event_type_id.toUpperCase() === formData.machine_event_type_id.toUpperCase()
         );
         if (isDuplicate) {
-            setIsDuplicateWarningOpen(true);
+            toast({ title: "Duplicate Event Type ID", description: `Event Type ID "${formData.machine_event_type_id}" already exists. Please use a different ID.`, variant: "destructive" });
             return;
         }
         await doCreate();
@@ -868,26 +867,6 @@ export default function MachineEventTypeMasterPage() {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* Duplicate ID warning dialog */}
-            <AlertDialog open={isDuplicateWarningOpen} onOpenChange={setIsDuplicateWarningOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Duplicate Event Type ID</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Event Type ID <strong>{formData.machine_event_type_id}</strong> already exists. Do you still want to save this record?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setIsDuplicateWarningOpen(false)}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={() => { setIsDuplicateWarningOpen(false); doCreate(); }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            Yes, Save Anyway
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </div>
     );
 }
